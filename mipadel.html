@@ -884,16 +884,13 @@
   <!-- ══ CLASES — HUB ════════════════════════════ -->
   <div id="pantalla-clases" class="pantalla">
     <div class="cabecera">
-      <button class="btn-volver" onclick="irA('pantalla-inicio')">‹ Inicio</button>
+      <button class="btn-volver" id="clases-volver-btn" onclick="clasesVolver()">‹ Inicio</button>
       <div class="cab-titulo">Mis clases</div>
       <div class="cab-sub" id="sub-clases">0 sesiones</div>
     </div>
-    <div class="filtros-zona">
-      <div class="filtros" id="filtros-tema-clases"></div>
-    </div>
     <div class="contenido">
-      <div id="lista-sesiones"></div>
-      <button class="btn btn-verde" onclick="irA('pantalla-nueva-sesion')">＋ Registrar sesión de hoy</button>
+      <div id="clases-hub"></div>
+      <div id="lista-sesiones" style="display:none"></div>
     </div>
   </div>
 
@@ -1716,7 +1713,7 @@
       if (id === 'pantalla-categorias')      mostrarCategorias();
       if (id === 'pantalla-ejercicios')      mostrarEjercicios();
       if (id === 'pantalla-nuevo-ejercicio') prepararFormEjercicio(ejEditandoId);
-      if (id === 'pantalla-clases')          mostrarClases();
+      if (id === 'pantalla-clases')          { filtroClasesTema = null; mostrarClases(); }
       if (id === 'pantalla-nueva-sesion')    prepararNuevaSesion();
       if (id === 'pantalla-marcador')        renderizarMarcador();
       if (id === 'pantalla-stats-jugador')   renderStatsJugador();
@@ -2363,11 +2360,23 @@
     function renderFiltrosTemaClases() {
       var cont = document.getElementById('filtros-tema-clases');
       if (!cont) return;
-      var html = '<div class="fpill' + (filtroClasesTema === null ? ' activo' : '') + '" onclick="aplicarFiltroTemaClases(null)">Todas</div>';
-      TEMATICAS.forEach(function(t) {
-        html += '<div class="fpill' + (filtroClasesTema === t ? ' activo' : '') + '" onclick="aplicarFiltroTemaClases(\'' + t + '\')">' + t + '</div>';
-      });
-      cont.innerHTML = html;
+      // (renderFiltrosTemaClases ya no se usa — sustituido por hub de tarjetas)
+    }
+
+    var TIPOS_CLASES = [
+      { tipo: 'técnica',     icono: '🎯', label: 'Técnica'     },
+      { tipo: 'táctica',     icono: '🧠', label: 'Táctica'     },
+      { tipo: 'mixta',       icono: '⚡', label: 'Mixta'       },
+      { tipo: 'competición', icono: '🏆', label: 'Competición' },
+      { tipo: 'juego',       icono: '🎮', label: 'Juego libre' },
+    ];
+
+    function clasesVolver() {
+      if (filtroClasesTema !== null) {
+        aplicarFiltroTemaClases(null);
+      } else {
+        irA('pantalla-inicio');
+      }
     }
 
     function aplicarFiltroTemaClases(tema) {
@@ -2377,65 +2386,69 @@
 
     function mostrarClases() {
       var todasClases = leerClases();
-      var ejs         = leerEjercicios();
+      var hub         = document.getElementById('clases-hub');
+      var listaCont   = document.getElementById('lista-sesiones');
+      var volverBtn   = document.getElementById('clases-volver-btn');
+      var subClases   = document.getElementById('sub-clases');
 
-      var clases = filtroClasesTema === null
-        ? todasClases
-        : todasClases.filter(function(c){ return c.tematica === filtroClasesTema; });
+      if (filtroClasesTema === null) {
+        // ── HUB: tarjetas por tipo ──
+        listaCont.style.display = 'none';
+        volverBtn.textContent   = '‹ Inicio';
+        subClases.textContent   = todasClases.length + ' sesión' + (todasClases.length !== 1 ? 'es' : '');
 
-      document.getElementById('sub-clases').textContent =
-        todasClases.length + ' sesión' + (todasClases.length !== 1 ? 'es' : '');
+        var counts = {};
+        TIPOS_CLASES.forEach(function(t){ counts[t.tipo] = 0; });
+        todasClases.forEach(function(c){
+          if (counts[c.tematica] !== undefined) counts[c.tematica]++;
+        });
 
-      renderFiltrosTemaClases();
+        var html = '<div class="tarjeta-grid">';
+        TIPOS_CLASES.forEach(function(cfg, i) {
+          var n = counts[cfg.tipo] || 0;
+          var spanAll = (i === TIPOS_CLASES.length - 1 && TIPOS_CLASES.length % 2 !== 0)
+            ? ' style="grid-column:1/-1"' : '';
+          html += '<div class="tarjeta-col"' + spanAll + ' onclick="aplicarFiltroTemaClases(\'' + cfg.tipo + '\')">' +
+            '<div class="menu-icono">' + cfg.icono + '</div>' +
+            '<div>' +
+              '<div class="menu-nombre">' + cfg.label + '</div>' +
+              '<div class="menu-desc">' + n + ' sesión' + (n !== 1 ? 'es' : '') + '</div>' +
+            '</div>' +
+          '</div>';
+        });
+        html += '</div>';
+        hub.innerHTML    = html;
+        hub.style.display = 'block';
 
-      var ejMap = {};
-      ejs.forEach(function(e) { ejMap[e.id] = e; });
-
-      var contSes = document.getElementById('lista-sesiones');
-      if (!clases.length) {
-        contSes.innerHTML = '<div class="vacio" style="padding:1rem;"><p style="font-size:13px;">' +
-          (filtroClasesTema ? 'Sin sesiones de <strong>' + filtroClasesTema + '</strong>.' : 'Aún no has registrado ninguna sesión.') +
-          '</p></div>';
-        return;
-      }
-
-      function renderSesionCard(c) {
-        var titulo  = c.nombre || c.objetivo || 'Sesión sin nombre';
-        var num     = (c.ejercicioIds||[]).length;
-        var fechaStr = c.fecha ? '<span>' + formatearFecha(c.fecha) + '</span>' : '';
-        var numStr  = '<span>' + num + ' ej' + (num !== 1 ? 's' : '') + '</span>';
-        return '<div class="sesion-item' + (c.trabajada ? ' trabajada' : '') + '" data-sesid="' + c.id + '">' +
-          '<div class="sesion-handle" ontouchstart="sesDragStart(event,' + c.id + ')">≡</div>' +
-          '<div class="sesion-body" onclick="verSesion(' + c.id + ')">' +
-            '<div class="sesion-titulo">' + titulo + '</div>' +
-            '<div class="sesion-meta">' + fechaStr + (fechaStr && numStr ? ' · ' : '') + numStr + '</div>' +
-          '</div>' +
-          '<button class="sesion-check-btn' + (c.trabajada ? ' trabajada' : '') + '" onclick="toggleSesionTrabajada(' + c.id + ');event.stopPropagation()">✓</button>' +
-        '</div>';
-      }
-
-      if (filtroClasesTema !== null) {
-        // Vista filtrada: lista plana sin cabecera de grupo
-        contSes.innerHTML = clases.map(renderSesionCard).join('');
       } else {
-        // Vista completa: agrupada por tipo en el orden de Obsidian
-        var TIPOS_ORDEN = ['técnica','táctica','mixta','competición','juego',''];
-        var grupos = {};
-        TIPOS_ORDEN.forEach(function(t){ grupos[t] = []; });
-        clases.forEach(function(c){
-          var t = c.tematica && TIPOS_ORDEN.indexOf(c.tematica) !== -1 ? c.tematica : '';
-          grupos[t].push(c);
-        });
-        var html = '';
-        TIPOS_ORDEN.forEach(function(tipo) {
-          var items = grupos[tipo];
-          if (!items.length) return;
-          var label = tipo ? (tipo.charAt(0).toUpperCase() + tipo.slice(1)) : 'Sin clasificar';
-          html += '<div style="padding:8px 16px 4px;font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--verde);text-transform:uppercase;">' +
-            label + ' <span style="opacity:0.55;font-weight:400;">(' + items.length + ')</span></div>';
-          html += items.map(renderSesionCard).join('');
-        });
-        contSes.innerHTML = html;
+        // ── LISTA FILTRADA ──
+        hub.style.display   = 'none';
+        listaCont.style.display = 'block';
+        volverBtn.textContent   = '‹ Tipos';
+
+        var clases = todasClases.filter(function(c){ return c.tematica === filtroClasesTema; });
+        var label  = filtroClasesTema.charAt(0).toUpperCase() + filtroClasesTema.slice(1);
+        subClases.textContent = label + ' · ' + clases.length + ' sesión' + (clases.length !== 1 ? 'es' : '');
+
+        if (!clases.length) {
+          listaCont.innerHTML = '<div class="vacio" style="padding:1rem;"><p style="font-size:13px;">Sin sesiones de <strong>' + label + '</strong>.</p></div>';
+          return;
+        }
+
+        listaCont.innerHTML = clases.map(function(c) {
+          var titulo   = c.nombre || c.objetivo || 'Sesión sin nombre';
+          var num      = (c.ejercicioIds||[]).length;
+          var fechaStr = c.fecha ? '<span>' + formatearFecha(c.fecha) + '</span>' : '';
+          var numStr   = '<span>' + num + ' ej' + (num !== 1 ? 's' : '') + '</span>';
+          return '<div class="sesion-item' + (c.trabajada ? ' trabajada' : '') + '" data-sesid="' + c.id + '">' +
+            '<div class="sesion-handle" ontouchstart="sesDragStart(event,' + c.id + ')">≡</div>' +
+            '<div class="sesion-body" onclick="verSesion(' + c.id + ')">' +
+              '<div class="sesion-titulo">' + titulo + '</div>' +
+              '<div class="sesion-meta">' + fechaStr + (fechaStr && numStr ? ' · ' : '') + numStr + '</div>' +
+            '</div>' +
+            '<button class="sesion-check-btn' + (c.trabajada ? ' trabajada' : '') + '" onclick="toggleSesionTrabajada(' + c.id + ');event.stopPropagation()">✓</button>' +
+          '</div>';
+        }).join('');
       }
     }
 
