@@ -1183,6 +1183,7 @@
 
     var _sb     = null;   // cliente Supabase
     var _sbUser = null;   // usuario actual { id, email }
+    var _sbGrupo = null;  // { id: uuid, rol: 'nivel2'|'nivel3' } | null
 
     function _sbConfigurado() {
       return SUPABASE_URL && !SUPABASE_URL.includes('TU-PROYECTO');
@@ -1201,10 +1202,12 @@
           _sbUser = session ? { id: session.user.id, email: session.user.email } : null;
           if (event === 'SIGNED_IN') {
             _authActualizarBadge();
-            _syncDownload().then(function() {
-              if (document.getElementById('pantalla-login').classList.contains('activa')) {
-                irA('pantalla-inicio');
-              }
+            _fetchGrupo(_sbUser.id).then(function() {
+              _syncDownload().then(function() {
+                if (document.getElementById('pantalla-login').classList.contains('activa')) {
+                  irA('pantalla-inicio');
+                }
+              });
             });
           } else if (event === 'SIGNED_OUT') {
             _authActualizarBadge();
@@ -1216,7 +1219,7 @@
           if (res.data && res.data.session) {
             _sbUser = { id: res.data.session.user.id, email: res.data.session.user.email };
             _authActualizarBadge();
-            _syncDownload(); // carga datos del servidor
+            _fetchGrupo(_sbUser.id).then(function() { _syncDownload(); });
           } else if (!marcadorEst.activo) {
             irA('pantalla-login'); // no hay sesión → login (salvo partido en curso)
           }
@@ -1289,38 +1292,66 @@
       if (!badge) return;
       if (_sbUser) {
         badge.style.display = 'flex';
-        emailEl.textContent = _sbUser.email;
+        var rolTxt = _sbGrupo ? ' · ' + (_sbGrupo.rol === 'nivel3' ? '★ N3' : 'N2') : '';
+        emailEl.textContent = _sbUser.email + rolTxt;
       } else {
         badge.style.display = 'none';
       }
     }
 
+    // Carga la membresía de grupo del entrenador tras el login
+    function _fetchGrupo(uid) {
+      if (!_sb) return Promise.resolve();
+      return _sb.from('grupo_miembros').select('grupo_id, rol')
+        .eq('user_id', uid).maybeSingle()
+        .then(function(r) {
+          _sbGrupo = r.data ? { id: r.data.grupo_id, rol: r.data.rol } : null;
+          _authActualizarBadge();
+        }).catch(function() { _sbGrupo = null; });
+    }
+
     // ── Sync: Supabase → localStorage ─────────────────────────
+
+    // Tablas cuyo contenido se comparte entre entrenadores del mismo grupo
+    function _isSharedTabla(t) {
+      return t === 'categorias' || t === 'ejercicios' || t === 'clases' || t === 'partidos';
+    }
 
     function _syncDownload() {
       if (!_sb || !_sbUser) return Promise.resolve();
       var uid = _sbUser.id;
+      var gid = _sbGrupo ? _sbGrupo.id : null;
+      // Tablas compartidas: filtra por grupo si el entrenador pertenece a uno
+      var qCat = gid ? _sb.from('categorias').select('*').eq('grupo_id', gid)
+                     : _sb.from('categorias').select('*').eq('user_id', uid);
+      var qEj  = gid ? _sb.from('ejercicios').select('*').eq('grupo_id', gid)
+                     : _sb.from('ejercicios').select('*').eq('user_id', uid);
+      var qCls = gid ? _sb.from('clases').select('*').eq('grupo_id', gid).order('fecha', { ascending: true })
+                     : _sb.from('clases').select('*').eq('user_id', uid).order('fecha', { ascending: true });
+      var qPrt = gid ? _sb.from('partidos').select('*').eq('grupo_id', gid).order('fecha', { ascending: false })
+                     : _sb.from('partidos').select('*').eq('user_id', uid).order('fecha', { ascending: false });
       return Promise.all([
-        _sb.from('categorias').select('*').eq('user_id', uid),
-        _sb.from('ejercicios').select('*').eq('user_id', uid),
-        _sb.from('clases').select('*').eq('user_id', uid).order('fecha', { ascending: true }),
-        _sb.from('partidos').select('*').eq('user_id', uid).order('fecha', { ascending: false }),
-        _sb.from('asistencia_clases').select('*').eq('user_id', uid),
-        _sb.from('asistencia_registros').select('*').eq('user_id', uid)
+        qCat, qEj, qCls, qPrt,
+        _sb.from('asistencia_clases').select('*').eq('user_id', uid),    // siempre privada
+        _sb.from('asistencia_registros').select('*').eq('user_id', uid)  // siempre privada
       ]).then(function(results) {
         // ── Mapear filas del servidor al formato local ──
-        var catsServ = (results[0].data || []).map(function(c){ return { id:c.id, nombre:c.nombre }; });
+        // _ownerUid preserva el user_id original del creador para no
+        // cambiar autoría al re-subir datos descargados de otro entrenador.
+        var catsServ = (results[0].data || []).map(function(c){
+          return { id:c.id, nombre:c.nombre, _ownerUid:c.user_id };
+        });
 
         var ejsServ = (results[1].data || []).map(function(e){ return {
           id:e.id, nombre:e.nombre, descripcion:e.descripcion||'',
           contenido:e.contenido||'', categoriaId:e.categoria_id,
           imagen:e.imagen||null, video:e.video||null,
-          valoracion:e.valoracion||0, mejoras:e.mejoras||[]
+          valoracion:e.valoracion||0, mejoras:e.mejoras||[], _ownerUid:e.user_id
         }; });
 
         var clasesServ = (results[2].data || []).map(function(c){ return {
           id:c.id, fecha:c.fecha, trabajada:!!c.trabajada,
-          ejercicioIds:c.ejercicio_ids||[]
+          ejercicioIds:c.ejercicio_ids||[], _ownerUid:c.user_id
         }; });
 
         var partsServ = (results[3].data || []).map(function(p){
@@ -1335,7 +1366,7 @@
             registroJuegos: jugOk ? (p.registro_juegos || []) : undefined,
             sets:p.sets||[], ganador:p.ganador,
             notas:p.notas||'', estadisticas:p.estadisticas||[],
-            jugadoresAnalizados:p.jugadores_analizados||[]
+            jugadoresAnalizados:p.jugadores_analizados||[], _ownerUid:p.user_id
           };
         });
 
@@ -1387,6 +1418,7 @@
     function _syncUpload() {
       if (!_sb || !_sbUser) return Promise.resolve();
       var uid = _sbUser.id;
+      var gid = _sbGrupo ? _sbGrupo.id : null;
       // Primero los borrados pendientes, luego los upserts
       // (así un id borrado y reutilizado acaba con los datos nuevos)
       return _delFlush().then(function() {
@@ -1401,45 +1433,61 @@
         var ops = [];
         Object.keys(datos).forEach(function(tabla) {
           if (!datos[tabla].length) return;
+          // Tablas compartidas en modo grupo → conflicto por grupo_id+id
+          var conflict = (_isSharedTabla(tabla) && gid) ? 'grupo_id,id' : 'user_id,id';
           ops.push(_sb.from(tabla).upsert(
-            datos[tabla].map(function(x){ return _upMap[tabla](x, uid); }),
-            { onConflict:'user_id,id' }));
+            datos[tabla].map(function(x){ return _upMap[tabla](x, uid, gid); }),
+            { onConflict: conflict }));
         });
         return Promise.all(ops);
       }).catch(function(e){ console.error('syncUpload error:', e); });
     }
 
     // ── Mapeo formato local → columnas Supabase (única fuente) ──
+    // gid: grupo_id del entrenador (null si trabaja en solitario)
+    // _ownerUid: user_id del creador original (preserva autoría al re-subir)
     var _upMap = {
-      categorias: function(c, uid) { return { id:c.id, user_id:uid, nombre:c.nombre }; },
-      ejercicios: function(e, uid) { return {
-        id:e.id, user_id:uid, nombre:e.nombre,
-        descripcion:e.descripcion||'', contenido:e.contenido||'',
-        categoria_id:e.categoriaId||null,
-        imagen:e.imagen||null, video:e.video||null,
-        valoracion:e.valoracion||0, mejoras:e.mejoras||[]
-      }; },
-      clases: function(c, uid) { return {
-        id:c.id, user_id:uid, fecha:c.fecha,
-        trabajada:!!c.trabajada, ejercicio_ids:c.ejercicioIds||[]
-      }; },
-      partidos: function(p, uid) { return {
-        id:p.id, user_id:uid, fecha:p.fecha, hora:p.hora||'',
-        evento:p.evento||'', fase:p.fase||'',
-        equipos:p.equipos||[], jugadores:p.jugadores||[],
-        parejas:p.parejas||null, registro_juegos:p.registroJuegos||[],
-        sets:p.sets||[], ganador:p.ganador,
-        notas:p.notas||'', estadisticas:p.estadisticas||[],
-        // compat v0.9: jugadorAnalizado único → array
-        jugadores_analizados: p.jugadoresAnalizados ||
-          (p.jugadorAnalizado !== undefined && p.jugadorAnalizado !== null ? [p.jugadorAnalizado] : [])
-      }; },
-      asistencia_clases: function(c, uid) { return {
+      categorias: function(c, uid, gid) {
+        var r = { id:c.id, user_id:c._ownerUid||uid, nombre:c.nombre };
+        if (gid) r.grupo_id = gid; return r;
+      },
+      ejercicios: function(e, uid, gid) {
+        var r = {
+          id:e.id, user_id:e._ownerUid||uid, nombre:e.nombre,
+          descripcion:e.descripcion||'', contenido:e.contenido||'',
+          categoria_id:e.categoriaId||null,
+          imagen:e.imagen||null, video:e.video||null,
+          valoracion:e.valoracion||0, mejoras:e.mejoras||[]
+        };
+        if (gid) r.grupo_id = gid; return r;
+      },
+      clases: function(c, uid, gid) {
+        var r = {
+          id:c.id, user_id:c._ownerUid||uid, fecha:c.fecha,
+          trabajada:!!c.trabajada, ejercicio_ids:c.ejercicioIds||[]
+        };
+        if (gid) r.grupo_id = gid; return r;
+      },
+      partidos: function(p, uid, gid) {
+        var r = {
+          id:p.id, user_id:p._ownerUid||uid, fecha:p.fecha, hora:p.hora||'',
+          evento:p.evento||'', fase:p.fase||'',
+          equipos:p.equipos||[], jugadores:p.jugadores||[],
+          parejas:p.parejas||null, registro_juegos:p.registroJuegos||[],
+          sets:p.sets||[], ganador:p.ganador,
+          notas:p.notas||'', estadisticas:p.estadisticas||[],
+          // compat v0.9: jugadorAnalizado único → array
+          jugadores_analizados: p.jugadoresAnalizados ||
+            (p.jugadorAnalizado !== undefined && p.jugadorAnalizado !== null ? [p.jugadorAnalizado] : [])
+        };
+        if (gid) r.grupo_id = gid; return r;
+      },
+      asistencia_clases: function(c, uid) { return {   // siempre privada
         id:c.id, user_id:uid, nombre:c.nombre,
         dia_semana:c.diaSemana||'', franja:c.franja||'',
         alumnos:c.alumnos||[]
       }; },
-      asistencia_registros: function(r, uid) { return {
+      asistencia_registros: function(r, uid) { return {  // siempre privada
         id:r.id, user_id:uid, clase_id:r.claseId, fecha:r.fecha,
         presentes:r.presentes||[], ausentes:r.ausentes||[],
         sin_clase:!!r.sinClase
@@ -1450,10 +1498,12 @@
     function _bgUpsert(tabla, filas) {
       if (!_sb || !_sbUser || !filas.length) return;
       var uid = _sbUser.id;
+      var gid = _sbGrupo ? _sbGrupo.id : null;
+      var conflict = (_isSharedTabla(tabla) && gid) ? 'grupo_id,id' : 'user_id,id';
       setTimeout(function() {
         _sb.from(tabla).upsert(
-          filas.map(function(x){ return _upMap[tabla](x, uid); }),
-          { onConflict:'user_id,id' }
+          filas.map(function(x){ return _upMap[tabla](x, uid, gid); }),
+          { onConflict: conflict }
         ).then(function(r){ if (r.error) console.warn('bg sync', tabla, r.error); });
       }, 0);
     }
@@ -1479,8 +1529,13 @@
       var cola = _delLeerCola();
       if (!cola.length) return Promise.resolve();
       var uid = _sbUser.id;
+      var gid = _sbGrupo ? _sbGrupo.id : null;
       return Promise.all(cola.map(function(p) {
-        return _sb.from(p.t).delete().match({ user_id:uid, id:p.id });
+        // Borrado en tablas compartidas: usar grupo_id; en privadas: user_id
+        var match = (_isSharedTabla(p.t) && gid)
+          ? { grupo_id: gid, id: p.id }
+          : { user_id: uid, id: p.id };
+        return _sb.from(p.t).delete().match(match);
       })).then(function(rs) {
         // conservar en cola solo los que fallaron
         var resto = [];
@@ -1862,7 +1917,7 @@
       var nombre = input.value.trim();
       if (!nombre) { input.classList.add('form-error'); input.focus(); return; }
       var cats = leerCategorias();
-      var id = cats.length > 0 ? Math.max.apply(null, cats.map(function(c){return c.id;})) + 1 : 1;
+      var id = Date.now(); // timestamp → sin colisiones entre entrenadores
       cats.push({ id: id, nombre: nombre });
       escribirCategorias(cats);
       irA('pantalla-categorias');
@@ -2141,7 +2196,7 @@
         }
       } else {
         // ── Modo creación: nuevo ejercicio ──
-        var id = ejs.length > 0 ? Math.max.apply(null, ejs.map(function(e){return e.id;})) + 1 : 1;
+        var id = Date.now(); // timestamp → sin colisiones entre entrenadores
         ejs.push({ id:id, nombre:nombre, descripcion:desc, categoriaId:catId,
                    imagen:imagen, video:video, valoracion:0, mejoras:[] });
         try {
@@ -2591,7 +2646,7 @@
       });
       if (!seleccionados.length) { alert('Marca al menos un ejercicio para guardar la sesión.'); return; }
       var clases = leerClases();
-      var id = clases.length > 0 ? Math.max.apply(null, clases.map(function(c){return c.id;})) + 1 : 1;
+      var id = Date.now(); // timestamp → sin colisiones entre entrenadores
       var nuevaSesion = { id:id, fecha:hoyISO(), ejercicioIds:seleccionados };
       if (sesionTemaSeleccionada) nuevaSesion.tematica = sesionTemaSeleccionada;
       clases.push(nuevaSesion);
@@ -3147,7 +3202,7 @@
       var n0=document.getElementById('acta-nombre-0').value.trim()||marcadorEst.equipos[0];
       var n1=document.getElementById('acta-nombre-1').value.trim()||marcadorEst.equipos[1];
       var partidos=leerPartidos();
-      var id=partidos.length>0?Math.max.apply(null,partidos.map(function(p){return p.id;}))+1:1;
+      var id=Date.now(); // timestamp → sin colisiones entre entrenadores
       var acta={id:id,fecha:hoyISO(),equipos:[n0,n1],sets:marcadorEst.sets.map(function(s){return s.slice();}),ganador:marcadorEst.ganador};
       var evEl=document.getElementById('acta-evento'); if(evEl) acta.evento=evEl.value;
       var faEl=document.getElementById('acta-fase');   if(faEl) acta.fase=faEl.value;
@@ -4386,13 +4441,62 @@
       h += '<h1>📋 Resumen de Asistencia</h1>';
       h += '<div class="sub">' + mesLabel + ' &nbsp;·&nbsp; Club de Pádel &nbsp;·&nbsp; Generado el ' + new Date().toLocaleDateString('es-ES') + '</div>';
 
-      h += '<div class="global-box">';
-      h += '<div class="global-num">' + pctG + '%</div>';
-      h += '<div><strong style="font-size:15px;">Asistencia global del mes</strong><br>';
-      h += '<span style="font-size:13px;color:#6b7280;">' + totPres + ' de ' + totPos + ' posibles presencias · ' + regs.length + ' lista' + (regs.length!==1?'s':'') + ' registradas</span></div>';
-      h += '</div>';
+      // ── 1. Detalle por clase agrupado por día de la semana ──────
+      if (clases.length > 0) {
+        h += '<h2>Detalle por clase</h2>';
+        var diasOrden = [1,2,3,4,5,6,0]; // Lunes → Sábado → Domingo
+        var clasesXDia = {};
+        clases.forEach(function(c) {
+          var d = c.diaSemana;
+          if (!clasesXDia[d]) clasesXDia[d] = [];
+          clasesXDia[d].push(c);
+        });
+        diasOrden.forEach(function(dia) {
+          if (!clasesXDia[dia]) return;
+          h += '<h2 style="font-size:14px;margin-top:18px;color:#374151;border-bottom-color:#d1d5db;">' + DIAS_NOMBRES_A[dia] + '</h2>';
+          clasesXDia[dia].forEach(function(clase) {
+            var vecesEnMes = occ[clase.diaSemana] || 0;
+            var regsClase  = regs.filter(function(r){ return r.claseId===clase.id; });
+            var clasNom    = clase.nombre || (DIAS_NOMBRES_A[clase.diaSemana] + ' · ' + (clase.franja||''));
 
-      // Tabla resumen por alumno
+            h += '<h3>' + clasNom + (clase.franja?' · '+clase.franja:'') + ' · ' + vecesEnMes + ' clase' + (vecesEnMes!==1?'s':'') + ' en el mes</h3>';
+
+            if (!(clase.alumnos||[]).length) { h += '<p style="color:#6b7280;font-size:12px;">Sin alumnos</p>'; return; }
+
+            var fechas = regsClase.map(function(r){ return r.fecha; }).sort();
+            var sinClaseDet = regsClase.filter(function(r){ return r.sinClase; }).length;
+            var efectivas   = vecesEnMes - sinClaseDet;
+            h += '<table><thead><tr><th>Alumno</th>';
+            fechas.forEach(function(f){
+              var rr = regsClase.filter(function(x){ return x.fecha===f; })[0];
+              h += '<th style="text-align:center">' + (rr&&rr.sinClase ? '<span style="color:#9ca3af">🚫</span>' : formatFechaCorta(f)) + '</th>';
+            });
+            h += '<th style="text-align:center">Total</th><th style="text-align:center">%</th></tr></thead><tbody>';
+
+            (clase.alumnos||[]).forEach(function(alumno) {
+              h += '<tr><td>' + alumno + '</td>';
+              var pres = 0;
+              fechas.forEach(function(f) {
+                var reg = regsClase.filter(function(r){ return r.fecha===f; })[0];
+                if (reg && reg.sinClase) {
+                  h += '<td style="text-align:center;color:#9ca3af">—</td>';
+                } else {
+                  var ok = reg && reg.presentes.indexOf(alumno)!==-1;
+                  h += '<td style="text-align:center;font-weight:700;color:' + (reg?(ok?'#166534':'#991b1b'):'#9ca3af') + '">' + (reg?(ok?'✓':'✗'):'—') + '</td>';
+                  if (ok) pres++;
+                }
+              });
+              var pct2 = efectivas>0 ? Math.round(pres/efectivas*100) : 0;
+              var cls2 = pct2>=80?'verde':pct2>=60?'ambar':'rojo';
+              h += '<td style="text-align:center;font-weight:700">' + pres + '/' + efectivas + '</td>';
+              h += '<td style="text-align:center"><span class="' + cls2 + '">' + pct2 + '%</span></td></tr>';
+            });
+            h += '</tbody></table>';
+          });
+        });
+      }
+
+      // ── 2. Resumen por alumno ────────────────────────────────────
       if (alumnos.length > 0) {
         h += '<h2>Resumen por alumno</h2>';
         h += '<table><thead><tr><th>Alumno</th><th>Asistencias</th><th>Total posible</th><th>%</th><th>Estado</th></tr></thead><tbody>';
@@ -4408,49 +4512,13 @@
         h += '</tbody></table>';
       }
 
-      // Detalle por clase
-      if (clases.length > 0) {
-        h += '<h2>Detalle por clase</h2>';
-        clases.forEach(function(clase) {
-          var vecesEnMes = occ[clase.diaSemana] || 0;
-          var regsClase  = regs.filter(function(r){ return r.claseId===clase.id; });
-          var clasNom    = clase.nombre || (DIAS_NOMBRES_A[clase.diaSemana] + ' · ' + (clase.franja||''));
-
-          h += '<h3>' + clasNom + ' — ' + DIAS_NOMBRES_A[clase.diaSemana] + (clase.franja?' · '+clase.franja:'') + ' · ' + vecesEnMes + ' clase' + (vecesEnMes!==1?'s':'') + ' en el mes</h3>';
-
-          if (!(clase.alumnos||[]).length) { h += '<p style="color:#6b7280;font-size:12px;">Sin alumnos</p>'; return; }
-
-          var fechas = regsClase.map(function(r){ return r.fecha; }).sort();
-          var sinClaseDet = regsClase.filter(function(r){ return r.sinClase; }).length;
-          var efectivas   = vecesEnMes - sinClaseDet;
-          h += '<table><thead><tr><th>Alumno</th>';
-          fechas.forEach(function(f){
-            var rr = regsClase.filter(function(x){ return x.fecha===f; })[0];
-            h += '<th style="text-align:center">' + (rr&&rr.sinClase ? '<span style="color:#9ca3af">🚫</span>' : formatFechaCorta(f)) + '</th>';
-          });
-          h += '<th style="text-align:center">Total</th><th style="text-align:center">%</th></tr></thead><tbody>';
-
-          (clase.alumnos||[]).forEach(function(alumno) {
-            h += '<tr><td>' + alumno + '</td>';
-            var pres = 0;
-            fechas.forEach(function(f) {
-              var reg = regsClase.filter(function(r){ return r.fecha===f; })[0];
-              if (reg && reg.sinClase) {
-                h += '<td style="text-align:center;color:#9ca3af">—</td>';
-              } else {
-                var ok = reg && reg.presentes.indexOf(alumno)!==-1;
-                h += '<td style="text-align:center;font-weight:700;color:' + (reg?(ok?'#166534':'#991b1b'):'#9ca3af') + '">' + (reg?(ok?'✓':'✗'):'—') + '</td>';
-                if (ok) pres++;
-              }
-            });
-            var pct2 = efectivas>0 ? Math.round(pres/efectivas*100) : 0;
-            var cls2 = pct2>=80?'verde':pct2>=60?'ambar':'rojo';
-            h += '<td style="text-align:center;font-weight:700">' + pres + '/' + efectivas + '</td>';
-            h += '<td style="text-align:center"><span class="' + cls2 + '">' + pct2 + '%</span></td></tr>';
-          });
-          h += '</tbody></table>';
-        });
-      }
+      // ── 3. Análisis global ───────────────────────────────────────
+      h += '<h2>Análisis global</h2>';
+      h += '<div class="global-box">';
+      h += '<div class="global-num">' + pctG + '%</div>';
+      h += '<div><strong style="font-size:15px;">Asistencia global del mes</strong><br>';
+      h += '<span style="font-size:13px;color:#6b7280;">' + totPres + ' de ' + totPos + ' posibles presencias · ' + regs.length + ' lista' + (regs.length!==1?'s':'') + ' registradas</span></div>';
+      h += '</div>';
 
       h += '<div style="margin-top:36px;font-size:10px;color:#9ca3af;text-align:center;border-top:1px solid #e5e7eb;padding-top:12px;">Mi App de Pádel &nbsp;·&nbsp; Exportado el ' + new Date().toLocaleDateString('es-ES') + '</div>';
       h += '</body></html>';
