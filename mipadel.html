@@ -1574,7 +1574,7 @@
     var filtroSesionCat = null;
     var filtroClasesTema = null;   // null = todas las temáticas
     var sesionTemaSeleccionada = null;
-    var TEMATICAS = ['Técnica-golpe','Táctica-golpe','Físico/Movilidad','Juego en red','Defensa/Fondos','Ataque/red'];
+    var TEMATICAS = ['técnica','táctica','mixta','competición','juego'];
 
     // Posiciones D/R del marcador (persisten entre renders del setup)
     var marcPosiciones = ['D','R','D','R'];
@@ -2399,23 +2399,44 @@
         return;
       }
 
-      contSes.innerHTML = clases.map(function(c) {
-        var nombres = (c.ejercicioIds||[]).map(function(id) {
-          return ejMap[id] ? ejMap[id].nombre : null;
-        }).filter(Boolean);
-        var titulo = nombres.length > 0 ? nombres.join(', ') : 'Sin ejercicios';
-        var num    = (c.ejercicioIds||[]).length;
-        var temaBadge = c.tematica ? '<div><span class="sesion-tema">' + c.tematica + '</span></div>' : '';
+      function renderSesionCard(c) {
+        var titulo  = c.nombre || c.objetivo || 'Sesión sin nombre';
+        var num     = (c.ejercicioIds||[]).length;
+        var fechaStr = c.fecha ? '<span>' + formatearFecha(c.fecha) + '</span>' : '';
+        var numStr  = '<span>' + num + ' ej' + (num !== 1 ? 's' : '') + '</span>';
         return '<div class="sesion-item' + (c.trabajada ? ' trabajada' : '') + '" data-sesid="' + c.id + '">' +
           '<div class="sesion-handle" ontouchstart="sesDragStart(event,' + c.id + ')">≡</div>' +
           '<div class="sesion-body" onclick="verSesion(' + c.id + ')">' +
             '<div class="sesion-titulo">' + titulo + '</div>' +
-            '<div class="sesion-meta">' + num + ' ejercicio' + (num !== 1 ? 's' : '') + '</div>' +
-            temaBadge +
+            '<div class="sesion-meta">' + fechaStr + (fechaStr && numStr ? ' · ' : '') + numStr + '</div>' +
           '</div>' +
           '<button class="sesion-check-btn' + (c.trabajada ? ' trabajada' : '') + '" onclick="toggleSesionTrabajada(' + c.id + ');event.stopPropagation()">✓</button>' +
         '</div>';
-      }).join('');
+      }
+
+      if (filtroClasesTema !== null) {
+        // Vista filtrada: lista plana sin cabecera de grupo
+        contSes.innerHTML = clases.map(renderSesionCard).join('');
+      } else {
+        // Vista completa: agrupada por tipo en el orden de Obsidian
+        var TIPOS_ORDEN = ['técnica','táctica','mixta','competición','juego',''];
+        var grupos = {};
+        TIPOS_ORDEN.forEach(function(t){ grupos[t] = []; });
+        clases.forEach(function(c){
+          var t = c.tematica && TIPOS_ORDEN.indexOf(c.tematica) !== -1 ? c.tematica : '';
+          grupos[t].push(c);
+        });
+        var html = '';
+        TIPOS_ORDEN.forEach(function(tipo) {
+          var items = grupos[tipo];
+          if (!items.length) return;
+          var label = tipo ? (tipo.charAt(0).toUpperCase() + tipo.slice(1)) : 'Sin clasificar';
+          html += '<div style="padding:8px 16px 4px;font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--verde);text-transform:uppercase;">' +
+            label + ' <span style="opacity:0.55;font-weight:400;">(' + items.length + ')</span></div>';
+          html += items.map(renderSesionCard).join('');
+        });
+        contSes.innerHTML = html;
+      }
     }
 
     function toggleSesionTrabajada(id) {
@@ -2663,8 +2684,8 @@
       var ejs    = leerEjercicios();
       if (!sesion) return;
 
-      document.getElementById('detalle-sesion-titulo').textContent = 'Sesión ' + sesion.id;
-      document.getElementById('detalle-sesion-fecha').textContent  = formatearFecha(sesion.fecha);
+      document.getElementById('detalle-sesion-titulo').textContent = sesion.nombre || ('Sesión ' + sesion.id);
+      document.getElementById('detalle-sesion-fecha').textContent  = formatearFecha(sesion.fecha) + (sesion.tematica ? '  ·  ' + sesion.tematica : '');
 
       var ejsEnSesion = (sesion.ejercicioIds||[]).map(function(eid){
         return ejs.filter(function(e){ return e.id === eid; })[0];
@@ -3629,10 +3650,13 @@
       var ejsActuales  = leerEjercicios().map(function(e){ return e.nombre.toLowerCase(); });
       var sesActuales  = leerClases().map(function(c){ return c.fecha; });
 
-      var catsNuevas = (data.categorias||[]).filter(function(n){ return catsActuales.indexOf(n.toLowerCase()) === -1; }).length;
-      var ejsNuevos  = (data.ejercicios||[]).filter(function(e){ return ejsActuales.indexOf(e.nombre.toLowerCase()) === -1; }).length;
-      var ejsUpdate  = (data.ejercicios||[]).filter(function(e){ return ejsActuales.indexOf(e.nombre.toLowerCase()) !== -1; }).length;
-      var sesNuevas  = (data.sesiones||[]).filter(function(s){ return sesActuales.indexOf(s.fecha) === -1; }).length;
+      var partsActuales = leerPartidos().map(function(p){ return p.fecha; });
+
+      var catsNuevas  = (data.categorias||[]).filter(function(n){ return catsActuales.indexOf(n.toLowerCase()) === -1; }).length;
+      var ejsNuevos   = (data.ejercicios||[]).filter(function(e){ return ejsActuales.indexOf(e.nombre.toLowerCase()) === -1; }).length;
+      var ejsUpdate   = (data.ejercicios||[]).filter(function(e){ return ejsActuales.indexOf(e.nombre.toLowerCase()) !== -1; }).length;
+      var sesNuevas   = (data.sesiones||[]).filter(function(s){ return sesActuales.indexOf(s.fecha) === -1; }).length;
+      var partsNuevos = (data.partidos||[]).filter(function(p){ return partsActuales.indexOf(p.fecha) === -1; }).length;
 
       var html = '';
       html += fila('📅 Generado', data.generado || '—');
@@ -3640,6 +3664,7 @@
       html += fila('🏃 Ejercicios nuevos', ejsNuevos, ejsNuevos === 0);
       html += fila('🔄 Ejercicios a actualizar', ejsUpdate, ejsUpdate === 0);
       html += fila('📋 Sesiones nuevas', sesNuevas, sesNuevas === 0);
+      html += fila('🏆 Partidos nuevos', partsNuevos, partsNuevos === 0);
 
       document.getElementById('import-resumen').innerHTML = html;
       document.getElementById('import-drop').style.display        = 'none';
@@ -3664,7 +3689,7 @@
         document.getElementById('import-resultado').style.display = 'flex';
         document.getElementById('import-result-titulo').textContent = '¡Importado!';
         document.getElementById('import-result-sub').textContent =
-          res.cats + ' categorías · ' + res.ejs + ' ejercicios · ' + res.sesiones + ' sesiones añadidos';
+          res.cats + ' categorías · ' + res.ejs + ' ejercicios · ' + res.sesiones + ' sesiones · ' + res.partidos + ' partidos añadidos';
         actualizarInicio();
         importDatos = null;
       } catch(err) {
@@ -3673,7 +3698,7 @@
     }
 
     function ejecutarImport(data) {
-      var resultado = { cats: 0, ejs: 0, sesiones: 0 };
+      var resultado = { cats: 0, ejs: 0, sesiones: 0, partidos: 0 };
 
       // ── 1. Categorías ──
       var cats = leerCategorias();
@@ -3751,11 +3776,39 @@
         var clave = claveSesion(sesData.fecha, ejIds);
         if (clavesExistentes.indexOf(clave) !== -1) return;
 
-        clases.push({ id: maxIdClase() + 1, fecha: sesData.fecha, ejercicioIds: ejIds });
+        clases.push({ id: maxIdClase() + 1, fecha: sesData.fecha, ejercicioIds: ejIds,
+          nombre: sesData.nombre || '', tematica: sesData.tipo || '', objetivo: sesData.objetivo || '' });
         clavesExistentes.push(clave);
         resultado.sesiones++;
       });
       escribirClases(clases);
+
+      // ── 4. Partidos ──
+      var parts = leerPartidos();
+      var fechasExistentes = parts.map(function(p){ return p.fecha; });
+      (data.partidos || []).forEach(function(pData) {
+        // Deduplicar por fecha (un partido por día)
+        if (fechasExistentes.indexOf(pData.fecha) !== -1) return;
+        parts.push({
+          id:                  Date.now() + Math.floor(Math.random() * 1000),
+          fecha:               pData.fecha               || '',
+          hora:                pData.hora                || '',
+          evento:              pData.evento              || '',
+          fase:                pData.fase                || '',
+          equipos:             pData.equipos             || ['Nosotros', 'Ellos'],
+          jugadores:           pData.jugadores           || ['', '', '', ''],
+          parejas:             pData.parejas             || [[0,1],[2,3]],
+          sets:                pData.sets                || [],
+          ganador:             pData.ganador !== undefined ? pData.ganador : null,
+          notas:               pData.notas               || '',
+          estadisticas:        pData.estadisticas        || [],
+          jugadores_analizados: pData.jugadores_analizados || [],
+          registro_juegos:     pData.registro_juegos     || [],
+        });
+        fechasExistentes.push(pData.fecha);
+        resultado.partidos++;
+      });
+      escribirPartidos(parts);
 
       return resultado;
     }
