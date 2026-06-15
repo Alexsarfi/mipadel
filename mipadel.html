@@ -3768,19 +3768,33 @@
       }
       var clavesExistentes = clases.map(function(c){ return claveSesion(c.fecha, c.ejercicioIds); });
 
+      // Mapa fecha → índices en clases (para actualizar metadata de sesiones existentes)
+      var fechaIdxMap = {};
+      clases.forEach(function(c, i) {
+        if (!fechaIdxMap[c.fecha]) fechaIdxMap[c.fecha] = [];
+        fechaIdxMap[c.fecha].push(i);
+      });
+
       (data.sesiones || []).forEach(function(sesData) {
         var ejIds = (sesData.ejercicios_trabajados || [])
           .map(findEjId)
           .filter(function(id){ return id !== null; });
 
-        var clave = claveSesion(sesData.fecha, ejIds);
-        var idx   = clavesExistentes.indexOf(clave);
-        if (idx !== -1) {
-          // Sesión ya existe — actualizar campos de metadata si faltan
-          var c = clases[idx];
-          if (!c.nombre)   c.nombre   = sesData.nombre   || '';
-          if (!c.tematica) c.tematica = sesData.tipo      || '';
-          if (!c.objetivo) c.objetivo = sesData.objetivo  || '';
+        // Buscar sesión existente: primero por fecha+ejIds, luego solo por fecha
+        var clave   = claveSesion(sesData.fecha, ejIds);
+        var exactIdx = clavesExistentes.indexOf(clave);
+        var matchIdx = exactIdx;
+
+        if (matchIdx === -1 && fechaIdxMap[sesData.fecha]) {
+          // Fallback: primera sesión con la misma fecha
+          matchIdx = fechaIdxMap[sesData.fecha][0];
+        }
+
+        if (matchIdx !== -1) {
+          // Actualizar siempre nombre/tematica/objetivo (pueden estar vacíos del schema antiguo)
+          clases[matchIdx].nombre   = sesData.nombre  || clases[matchIdx].nombre  || '';
+          clases[matchIdx].tematica = sesData.tipo     || clases[matchIdx].tematica || '';
+          clases[matchIdx].objetivo = sesData.objetivo || clases[matchIdx].objetivo || '';
           return;
         }
 
