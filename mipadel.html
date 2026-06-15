@@ -3774,7 +3774,15 @@
           .filter(function(id){ return id !== null; });
 
         var clave = claveSesion(sesData.fecha, ejIds);
-        if (clavesExistentes.indexOf(clave) !== -1) return;
+        var idx   = clavesExistentes.indexOf(clave);
+        if (idx !== -1) {
+          // Sesión ya existe — actualizar campos de metadata si faltan
+          var c = clases[idx];
+          if (!c.nombre)   c.nombre   = sesData.nombre   || '';
+          if (!c.tematica) c.tematica = sesData.tipo      || '';
+          if (!c.objetivo) c.objetivo = sesData.objetivo  || '';
+          return;
+        }
 
         clases.push({ id: maxIdClase() + 1, fecha: sesData.fecha, ejercicioIds: ejIds,
           nombre: sesData.nombre || '', tematica: sesData.tipo || '', objetivo: sesData.objetivo || '' });
