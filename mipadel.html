@@ -3804,10 +3804,11 @@
         }
 
         if (matchIdx !== -1) {
-          // Actualizar siempre nombre/tematica/objetivo (pueden estar vacíos del schema antiguo)
-          clases[matchIdx].nombre   = sesData.nombre  || clases[matchIdx].nombre  || '';
-          clases[matchIdx].tematica = sesData.tipo     || clases[matchIdx].tematica || '';
-          clases[matchIdx].objetivo = sesData.objetivo || clases[matchIdx].objetivo || '';
+          // Actualizar siempre nombre/tematica/objetivo/ejercicioIds (Obsidian es la fuente de verdad)
+          clases[matchIdx].nombre       = sesData.nombre  || clases[matchIdx].nombre  || '';
+          clases[matchIdx].tematica     = sesData.tipo     || clases[matchIdx].tematica || '';
+          clases[matchIdx].objetivo     = sesData.objetivo || clases[matchIdx].objetivo || '';
+          if (ejIds.length > 0) clases[matchIdx].ejercicioIds = ejIds;
           return;
         }
 
