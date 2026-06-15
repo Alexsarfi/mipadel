@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.13.1
+  TU APP DE PÁDEL — v0.13.3
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,15 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.13.3 — Sección Competición en inicio (2026-06)
+    · Nueva sección "Competición" en pantalla de inicio.
+    · Botón FAP → fap.es/campeonatos-torneos/ (externo ↗).
+    · Preparado para añadir más botones de enlaces externos.
+  v0.13.2 — Calentamiento (2026-06)
+    · Tipo de sesión "juego" renombrado a "calentamiento".
+    · En el hub de Mis Clases, Calentamiento aparece como
+      tarjeta superior full-width con estilo propio (fondo
+      ámbar, layout horizontal) destacada sobre los demás.
   v0.13.1 — Bugfix sync sesiones (2026-06)
     · _mergeListas ahora hace merge campo a campo para
       sesiones (tabla 'clases'): cuando el servidor gana
@@ -311,6 +320,9 @@
     .tarjeta-col.partido:hover { border-color:#93c5fd; box-shadow:0 6px 20px rgba(30,58,138,0.08); }
     .tarjeta-col .menu-icono { width:40px; height:40px; border-radius:11px; font-size:20px; }
     .tarjeta-col .menu-icono.partido { background:#dbeafe; }
+    .tarjeta-col .menu-icono.calentamiento { background:#fef3c7; }
+    .tarjeta-col.calentamiento-card { flex-direction:row; align-items:center; background:linear-gradient(135deg,#fffbeb,#fef9ee); border-color:#fde68a; }
+    .tarjeta-col.calentamiento-card:hover { border-color:#f59e0b; box-shadow:0 6px 20px rgba(245,158,11,0.15); }
     .tarjeta-col .menu-nombre { font-size:14px; font-weight:600; }
     .tarjeta-col .menu-desc { font-size:11px; color:var(--gris); margin-top:2px; }
 
@@ -507,6 +519,9 @@
        ASISTENCIA DE CLASES
     ══════════════════════════════════════════ */
     .home-sec-bar.a { background:var(--lila); }
+    .home-sec-bar.c { background:#ea580c; }
+    .tarjeta-col .menu-icono.externo { background:#ffedd5; }
+    .tarjeta-col.externo-link:hover { border-color:#ea580c; box-shadow:0 6px 20px rgba(234,88,12,0.12); }
 
     /* Semana nav */
     .asist-semana-nav { display:flex; align-items:center; justify-content:space-between; background:var(--blanco); border-radius:14px; padding:0.75rem 1rem; border:1px solid var(--borde); gap:8px; }
@@ -752,6 +767,24 @@
             <div class="menu-desc" id="home-desc-asist">—</div>
           </div>
           <div class="menu-flecha">›</div>
+        </div>
+      </div>
+
+      <!-- ── COMPETICIÓN ── -->
+      <div class="home-sec">
+        <div class="home-sec-hdr">
+          <div class="home-sec-bar c"></div>
+          <span class="home-sec-label">Competición</span>
+        </div>
+        <div class="tarjeta-grid">
+          <div class="tarjeta-col externo-link" style="grid-column:1/-1"
+               onclick="window.open('https://fap.es/campeonatos-torneos/','_blank')">
+            <div class="menu-icono externo">🏅</div>
+            <div>
+              <div class="menu-nombre">FAP</div>
+              <div class="menu-desc">Torneos y campeonatos ↗</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1597,7 +1630,7 @@
     var filtroSesionCat = null;
     var filtroClasesTema = null;   // null = todas las temáticas
     var sesionTemaSeleccionada = null;
-    var TEMATICAS = ['técnica','táctica','mixta','competición','juego'];
+    var TEMATICAS = ['calentamiento','técnica','táctica','mixta','competición'];
 
     // Posiciones D/R del marcador (persisten entre renders del setup)
     var marcPosiciones = ['D','R','D','R'];
@@ -2390,11 +2423,11 @@
     }
 
     var TIPOS_CLASES = [
-      { tipo: 'técnica',     icono: '🎯', label: 'Técnica'     },
-      { tipo: 'táctica',     icono: '🧠', label: 'Táctica'     },
-      { tipo: 'mixta',       icono: '⚡', label: 'Mixta'       },
-      { tipo: 'competición', icono: '🏆', label: 'Competición' },
-      { tipo: 'juego',       icono: '🎮', label: 'Juego libre' },
+      { tipo: 'calentamiento', icono: '🔥', label: 'Calentamiento' },
+      { tipo: 'técnica',       icono: '🎯', label: 'Técnica'       },
+      { tipo: 'táctica',       icono: '🧠', label: 'Táctica'       },
+      { tipo: 'mixta',         icono: '⚡', label: 'Mixta'         },
+      { tipo: 'competición',   icono: '🏆', label: 'Competición'   },
     ];
 
     function clasesVolver() {
@@ -2432,10 +2465,14 @@
         var html = '<div class="tarjeta-grid">';
         TIPOS_CLASES.forEach(function(cfg, i) {
           var n = counts[cfg.tipo] || 0;
-          var spanAll = (i === TIPOS_CLASES.length - 1 && TIPOS_CLASES.length % 2 !== 0)
-            ? ' style="grid-column:1/-1"' : '';
-          html += '<div class="tarjeta-col"' + spanAll + ' onclick="aplicarFiltroTemaClases(\'' + cfg.tipo + '\')">' +
-            '<div class="menu-icono">' + cfg.icono + '</div>' +
+          // Calentamiento: primera fila completa con estilo propio
+          var isCalent = (i === 0);
+          var spanStyle = isCalent ? ' style="grid-column:1/-1"' : '';
+          var extraClass = isCalent ? ' calentamiento-card' : '';
+          var iconClass  = isCalent ? ' calentamiento' : '';
+          html += '<div class="tarjeta-col' + extraClass + '"' + spanStyle +
+            ' onclick="aplicarFiltroTemaClases(\'' + cfg.tipo + '\')">' +
+            '<div class="menu-icono' + iconClass + '">' + cfg.icono + '</div>' +
             '<div>' +
               '<div class="menu-nombre">' + cfg.label + '</div>' +
               '<div class="menu-desc">' + n + ' sesión' + (n !== 1 ? 'es' : '') + '</div>' +
