@@ -4457,9 +4457,9 @@
           clasesXDia[dia].forEach(function(clase) {
             var vecesEnMes = occ[clase.diaSemana] || 0;
             var regsClase  = regs.filter(function(r){ return r.claseId===clase.id; });
-            var clasNom    = clase.nombre || (DIAS_NOMBRES_A[clase.diaSemana] + ' · ' + (clase.franja||''));
+            var clasNom    = clase.franja || clase.nombre || '';
 
-            h += '<h3>' + clasNom + (clase.franja?' · '+clase.franja:'') + ' · ' + vecesEnMes + ' clase' + (vecesEnMes!==1?'s':'') + ' en el mes</h3>';
+            h += '<h3>' + clasNom + ' · ' + vecesEnMes + ' clase' + (vecesEnMes!==1?'s':'') + ' en el mes</h3>';
 
             if (!(clase.alumnos||[]).length) { h += '<p style="color:#6b7280;font-size:12px;">Sin alumnos</p>'; return; }
 
