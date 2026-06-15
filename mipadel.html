@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.13.0
+  TU APP DE PÁDEL — v0.13.1
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,13 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.13.1 — Bugfix sync sesiones (2026-06)
+    · _mergeListas ahora hace merge campo a campo para
+      sesiones (tabla 'clases'): cuando el servidor gana
+      en empate de id, preserva nombre/tematica/objetivo
+      del registro local porque Supabase no almacena esos
+      campos. Soluciona que "Mis Clases" apareciera vacío
+      tras cada login por sincronización.
   v0.12.0 — Fiabilidad de datos (2026-06)
     · Borrados sincronizados: delete real en Supabase con
       cola offline persistente (padel-del-pendientes).
@@ -1404,8 +1411,27 @@
       local.forEach(function(x){ if (!(x.id in map)) orden.push(x.id); map[x.id] = x; });
       servidor.forEach(function(x) {
         if (pend[x.id]) return;
-        if (!(x.id in map)) orden.push(x.id);
-        map[x.id] = x;
+        if (!(x.id in map)) {
+          orden.push(x.id);
+          map[x.id] = x;
+        } else if (tabla === 'clases') {
+          // Para sesiones: merge en lugar de reemplazo.
+          // Supabase no almacena nombre/tematica/objetivo → preservarlos del local.
+          var prev = map[x.id];
+          map[x.id] = {
+            id:          x.id,
+            fecha:       x.fecha       || prev.fecha,
+            trabajada:   x.trabajada   !== undefined ? x.trabajada : prev.trabajada,
+            ejercicioIds: (x.ejercicioIds && x.ejercicioIds.length)
+                            ? x.ejercicioIds : (prev.ejercicioIds || []),
+            nombre:      prev.nombre   || '',
+            tematica:    prev.tematica || '',
+            objetivo:    prev.objetivo || '',
+            _ownerUid:   x._ownerUid  || prev._ownerUid,
+          };
+        } else {
+          map[x.id] = x;
+        }
       });
       return orden.map(function(id){ return map[id]; });
     }
@@ -3793,29 +3819,41 @@
           .map(findEjId)
           .filter(function(id){ return id !== null; });
 
-        // Buscar sesión existente: primero por fecha+ejIds, luego solo por fecha
-        var clave   = claveSesion(sesData.fecha, ejIds);
-        var exactIdx = clavesExistentes.indexOf(clave);
-        var matchIdx = exactIdx;
-
-        if (matchIdx === -1 && fechaIdxMap[sesData.fecha]) {
-          // Fallback: primera sesión con la misma fecha
-          matchIdx = fechaIdxMap[sesData.fecha][0];
+        // Dividir en bloques de máx 3 ejercicios; el 2º bloque en adelante lleva sufijo · 2, · 3…
+        var chunks = [];
+        if (ejIds.length === 0) {
+          chunks = [[]];
+        } else {
+          for (var ci = 0; ci < ejIds.length; ci += 3) {
+            chunks.push(ejIds.slice(ci, ci + 3));
+          }
         }
 
-        if (matchIdx !== -1) {
-          // Actualizar siempre nombre/tematica/objetivo/ejercicioIds (Obsidian es la fuente de verdad)
-          clases[matchIdx].nombre       = sesData.nombre  || clases[matchIdx].nombre  || '';
-          clases[matchIdx].tematica     = sesData.tipo     || clases[matchIdx].tematica || '';
-          clases[matchIdx].objetivo     = sesData.objetivo || clases[matchIdx].objetivo || '';
-          if (ejIds.length > 0) clases[matchIdx].ejercicioIds = ejIds;
-          return;
-        }
+        chunks.forEach(function(chunk, chunkIdx) {
+          var sufijo  = chunkIdx === 0 ? '' : ' · ' + (chunkIdx + 1);
+          var nombre  = (sesData.nombre || '') + sufijo;
+          var clave   = claveSesion(sesData.fecha, chunk);
+          var exactIdx = clavesExistentes.indexOf(clave);
+          var matchIdx = exactIdx;
 
-        clases.push({ id: maxIdClase() + 1, fecha: sesData.fecha, ejercicioIds: ejIds,
-          nombre: sesData.nombre || '', tematica: sesData.tipo || '', objetivo: sesData.objetivo || '' });
-        clavesExistentes.push(clave);
-        resultado.sesiones++;
+          // Solo el bloque principal (chunkIdx=0) puede hacer fallback por fecha
+          if (matchIdx === -1 && chunkIdx === 0 && fechaIdxMap[sesData.fecha]) {
+            matchIdx = fechaIdxMap[sesData.fecha][0];
+          }
+
+          if (matchIdx !== -1) {
+            clases[matchIdx].nombre       = nombre || clases[matchIdx].nombre || '';
+            clases[matchIdx].tematica     = sesData.tipo     || clases[matchIdx].tematica || '';
+            clases[matchIdx].objetivo     = sesData.objetivo || clases[matchIdx].objetivo || '';
+            if (chunk.length > 0) clases[matchIdx].ejercicioIds = chunk;
+            return;
+          }
+
+          clases.push({ id: maxIdClase() + 1, fecha: sesData.fecha, ejercicioIds: chunk,
+            nombre: nombre, tematica: sesData.tipo || '', objetivo: sesData.objetivo || '' });
+          clavesExistentes.push(clave);
+          resultado.sesiones++;
+        });
       });
       escribirClases(clases);
 
