@@ -969,7 +969,7 @@
   <!-- ══ DETALLE SESIÓN ══════════════════════════ -->
   <div id="pantalla-detalle-sesion" class="pantalla">
     <div class="cabecera">
-      <button class="btn-volver" onclick="irA('pantalla-clases')">‹ Clases</button>
+      <button class="btn-volver" onclick="volverDeSesion()">‹ Clases</button>
       <div class="cab-titulo" id="detalle-sesion-titulo">—</div>
       <div class="cab-sub"   id="detalle-sesion-fecha">—</div>
     </div>
@@ -1629,6 +1629,7 @@
     // Filtro de categoría en nueva sesión
     var filtroSesionCat = null;
     var filtroClasesTema = null;   // null = todas las temáticas
+    var origenSesionFiltro = null; // guarda el filtro activo al entrar en una sesión
     var sesionTemaSeleccionada = null;
     var TEMATICAS = ['calentamiento','técnica','táctica','mixta','competición'];
 
@@ -1941,7 +1942,7 @@
       escribirEjercicios(ejs);
       actualizarInicio();
       // Re-renderizar el detalle con la nueva valoración
-      verEjercicio(ejId, origenDetalleEj === 'pantalla-explorar-cat' ? 'explorar' : 'ejercicios');
+      verEjercicio(ejId, origenDetalleEj === 'pantalla-explorar-cat' ? 'explorar' : origenDetalleEj === 'pantalla-detalle-sesion' ? 'sesion' : 'ejercicios');
     }
 
     // ══════════════════════════════════════════
@@ -2286,7 +2287,7 @@
 
     function verEjercicio(id, origen) {
       ejActivoId      = id;
-      origenDetalleEj = origen === 'explorar' ? 'pantalla-explorar-cat' : 'pantalla-ejercicios';
+      origenDetalleEj = origen === 'explorar' ? 'pantalla-explorar-cat' : origen === 'sesion' ? 'pantalla-detalle-sesion' : 'pantalla-ejercicios';
 
       var ej   = leerEjercicios().filter(function(e){ return e.id === id; })[0];
       var cats = leerCategorias();
@@ -2394,7 +2395,7 @@
     }
 
     function volverAlDetalle() {
-      if (ejActivoId) verEjercicio(ejActivoId, origenDetalleEj === 'pantalla-explorar-cat' ? 'explorar' : 'ejercicios');
+      if (ejActivoId) verEjercicio(ejActivoId, origenDetalleEj === 'pantalla-explorar-cat' ? 'explorar' : origenDetalleEj === 'pantalla-detalle-sesion' ? 'sesion' : 'ejercicios');
     }
 
     function guardarMejora() {
@@ -2755,7 +2756,20 @@
     // DETALLE SESIÓN
     // ══════════════════════════════════════════
 
+    function volverDeSesion() {
+      if (origenSesionFiltro !== null) {
+        document.querySelectorAll('.pantalla').forEach(function(p){ p.classList.remove('activa'); });
+        document.getElementById('pantalla-clases').classList.add('activa');
+        window.scrollTo(0, 0);
+        filtroClasesTema = origenSesionFiltro;
+        mostrarClases();
+      } else {
+        irA('pantalla-clases');
+      }
+    }
+
     function verSesion(id) {
+      origenSesionFiltro = filtroClasesTema;
       var sesion = leerClases().filter(function(c){ return c.id === id; })[0];
       var ejs    = leerEjercicios();
       if (!sesion) return;
@@ -2773,7 +2787,7 @@
       } else {
         ejsEnSesion.forEach(function(ej, i) {
           var val = ej.valoracion || 0;
-          html += '<div class="sesion-ej" onclick="verEjercicio(' + ej.id + ',\'ejercicios\')">' +
+          html += '<div class="sesion-ej" onclick="verEjercicio(' + ej.id + ',\'sesion\')">' +
             '<div class="sesion-ej-num">' + (i+1) + '</div>' +
             '<div class="item-info">' +
               '<div class="item-titulo">' + ej.nombre + '</div>' +
@@ -2797,7 +2811,7 @@
       if (!confirm('¿Borrar esta sesión?')) return;
       escribirClases(leerClases().filter(function(c){ return c.id !== id; }));
       _sbDelete('clases', id);
-      irA('pantalla-clases');
+      volverDeSesion();
     }
 
     // ══════════════════════════════════════════
