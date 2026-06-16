@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.13.3
+  TU APP DE PÁDEL — v0.14.0
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,16 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.14.0 — Facetas de ejercicios (2026-06)
+    · Ejercicios con facetas (zona, formato, nivel,
+      condicionantes) y código derivado (p.ej.
+      R-1+A-VOL-3) importados desde Obsidian.
+    · Nuevo filtro por Zona en la lista de ejercicios.
+    · Badge de código en lista y bloque "Ficha" en el
+      detalle (código copiable + chips de facetas).
+    · Sync Supabase: columnas facetas (jsonb) + codigo.
+      ⚠ Requiere migración v3.0 (supabase_schema.sql).
+
   v0.13.3 — Sección Competición en inicio (2026-06)
     · Nueva sección "Competición" en pantalla de inicio.
     · Botón FAP → fap.es/campeonatos-torneos/ (externo ↗).
@@ -835,6 +845,7 @@
     <!-- Filtros fuera del scroll del contenido -->
     <div class="filtros-zona">
       <div class="filtros" id="filtros-cat-ej"></div>
+      <div class="filtros" id="filtros-pzona-ej"></div>
       <div class="filtros" id="filtros-val-ej"></div>
     </div>
     <div class="contenido">
@@ -1383,7 +1394,8 @@
           id:e.id, nombre:e.nombre, descripcion:e.descripcion||'',
           contenido:e.contenido||'', categoriaId:e.categoria_id,
           imagen:e.imagen||null, video:e.video||null,
-          valoracion:e.valoracion||0, mejoras:e.mejoras||[], _ownerUid:e.user_id
+          valoracion:e.valoracion||0, mejoras:e.mejoras||[],
+          facetas:e.facetas||null, codigo:e.codigo||'', _ownerUid:e.user_id
         }; });
 
         var clasesServ = (results[2].data || []).map(function(c){ return {
@@ -1513,7 +1525,8 @@
           descripcion:e.descripcion||'', contenido:e.contenido||'',
           categoria_id:e.categoriaId||null,
           imagen:e.imagen||null, video:e.video||null,
-          valoracion:e.valoracion||0, mejoras:e.mejoras||[]
+          valoracion:e.valoracion||0, mejoras:e.mejoras||[],
+          facetas:e.facetas||{}, codigo:e.codigo||''
         };
         if (gid) r.grupo_id = gid; return r;
       },
@@ -1623,8 +1636,9 @@
     var origenStats       = 'pantalla-marcador';
 
     // Filtros de la pantalla de ejercicios (persisten al navegar dentro)
-    var filtroEjCat = null;   // null = todas las categorías (id de categoría)
-    var filtroEjVal = 0;      // 0 = todos, 3 = ★★★+, 4 = ★★★★+, 5 = ★★★★★
+    var filtroEjCat  = null;  // null = todas las categorías (id de categoría)
+    var filtroEjVal  = 0;     // 0 = todos, 3 = ★★★+, 4 = ★★★★+, 5 = ★★★★★
+    var filtroEjZona = null;  // null = todas las zonas (faceta zona)
 
     // Filtro de categoría en nueva sesión
     var filtroSesionCat = null;
@@ -2017,6 +2031,84 @@
       }).join('');
     }
 
+    // ── Facetas ──────────────────────────────────────────────
+    // Acceso seguro a una faceta del ejercicio (facetas puede ser null).
+    function ejFaceta(ej, k) {
+      return (ej && ej.facetas && ej.facetas[k]) ? ej.facetas[k] : '';
+    }
+    function ejCodigo(ej) {
+      return (ej && ej.codigo) || ejFaceta(ej, 'codigo') || '';
+    }
+    var ZONA_LABEL = {
+      'fondo': 'Fondo', 'lateral': 'Lateral', 'red': 'Red',
+      'campo-medio': 'C. medio', 'todo-campo': 'Todo el campo'
+    };
+    var NIVEL_LABEL = { 1: 'Iniciación', 2: 'Intermedio', 3: 'Avanzado', 4: 'Élite' };
+
+    // Copia el código al portapapeles (con fallback para webviews sin clipboard API).
+    function copiarCodigo(cod, el) {
+      function feedback() {
+        if (!el) return;
+        var prev = el.textContent;
+        el.textContent = '✓ Copiado';
+        setTimeout(function(){ el.textContent = prev; }, 1200);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(cod).then(feedback).catch(function(){});
+      } else {
+        var ta = document.createElement('textarea');
+        ta.value = cod; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); feedback(); } catch (e) {}
+        document.body.removeChild(ta);
+      }
+    }
+
+    // Construye el bloque "Ficha" (código + facetas) para el detalle del ejercicio.
+    function fichaFacetasHTML(ej) {
+      var cod = ejCodigo(ej);
+      var zona = ejFaceta(ej, 'zona'), formato = ejFaceta(ej, 'formato');
+      var nivel = ejFaceta(ej, 'nivel'), conds = ejFaceta(ej, 'condicionantes') || [];
+      if (!cod && !zona && !formato && !nivel && (!conds || !conds.length)) return '';
+
+      var chips = [];
+      function chip(txt) {
+        return '<span style="font-size:12px;background:var(--arena);color:var(--tinta);padding:3px 10px;border-radius:20px;">' + txt + '</span>';
+      }
+      if (zona)    chips.push(chip('📍 ' + (ZONA_LABEL[zona] || zona)));
+      if (formato) chips.push(chip('👥 ' + formato));
+      if (nivel)   chips.push(chip('📶 ' + (NIVEL_LABEL[nivel] || ('Nivel ' + nivel))));
+      (conds || []).forEach(function(c){ chips.push(chip('⚙️ ' + c)); });
+
+      var html = '<div><div class="detalle-seccion-titulo">Ficha</div>';
+      if (cod) {
+        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">' +
+          '<span style="font-family:ui-monospace,Menlo,monospace;font-weight:700;color:var(--verde);background:var(--verde-suave);padding:4px 10px;border-radius:7px;font-size:14px;">' + cod + '</span>' +
+          '<button class="btn btn-sec btn-sm" style="width:auto;padding:4px 10px;font-size:12px;" onclick="copiarCodigo(\'' + cod + '\', this)">⧉ Copiar</button>' +
+          '</div>';
+      }
+      if (chips.length) html += '<div style="display:flex;flex-wrap:wrap;gap:6px;">' + chips.join('') + '</div>';
+      html += '</div>';
+      return html;
+    }
+
+    function renderFiltrosZonaEj() {
+      var cont = document.getElementById('filtros-pzona-ej');
+      if (!cont) return;
+      // Zonas presentes en los ejercicios, en orden fijo
+      var orden = ['fondo', 'lateral', 'red', 'campo-medio', 'todo-campo'];
+      var presentes = {};
+      leerEjercicios().forEach(function(e){ var z = ejFaceta(e, 'zona'); if (z) presentes[z] = true; });
+      var zonas = orden.filter(function(z){ return presentes[z]; });
+      if (!zonas.length) { cont.innerHTML = ''; return; }  // nada que filtrar
+      var html = '<div class="fpill' + (filtroEjZona === null ? ' activo' : '') +
+                 '" onclick="aplicarFiltroZona(null)">Toda la pista</div>';
+      zonas.forEach(function(z) {
+        html += '<div class="fpill' + (filtroEjZona === z ? ' activo' : '') +
+                '" onclick="aplicarFiltroZona(\'' + z + '\')">' + (ZONA_LABEL[z] || z) + '</div>';
+      });
+      cont.innerHTML = html;
+    }
+
     function aplicarFiltroCat(catId) {
       filtroEjCat = catId;
       renderFiltrosCatEj();
@@ -2029,8 +2121,15 @@
       renderListaEjercicios();
     }
 
+    function aplicarFiltroZona(zona) {
+      filtroEjZona = zona;
+      renderFiltrosZonaEj();
+      renderListaEjercicios();
+    }
+
     function mostrarEjercicios() {
       renderFiltrosCatEj();
+      renderFiltrosZonaEj();
       renderFiltrosValEj();
       renderListaEjercicios();
     }
@@ -2042,9 +2141,10 @@
 
       // Aplicar filtros
       var ejs = todosEjs.filter(function(e) {
-        var pasaCat = filtroEjCat === null || e.categoriaId === filtroEjCat;
-        var pasaVal = filtroEjVal === 0 || (e.valoracion || 0) >= filtroEjVal;
-        return pasaCat && pasaVal;
+        var pasaCat  = filtroEjCat === null || e.categoriaId === filtroEjCat;
+        var pasaVal  = filtroEjVal === 0 || (e.valoracion || 0) >= filtroEjVal;
+        var pasaZona = filtroEjZona === null || ejFaceta(e, 'zona') === filtroEjZona;
+        return pasaCat && pasaVal && pasaZona;
       });
 
       // Subtítulo dinámico
@@ -2092,6 +2192,8 @@
       // Mini estrella: solo mostrar si hay valoración
       var valStr  = val > 0 ? '<span style="color:var(--dorado);font-size:12px;">★' + val + '</span>' : '';
       var metaParts = [];
+      var cod = ejCodigo(ej);
+      if (cod) metaParts.push('<span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;font-weight:700;color:var(--verde);background:var(--verde-suave);padding:1px 6px;border-radius:5px;">' + cod + '</span>');
       if (ej.video)  metaParts.push('▶');
       if (ej.imagen) metaParts.push('🖼');
       if (mejoras)   metaParts.push('✦ ' + mejoras + ' mejora' + (mejoras !== 1 ? 's' : ''));
@@ -2220,10 +2322,13 @@
             id:          e.id,
             nombre:      nombre,
             descripcion: desc,
+            contenido:   e.contenido || '',   // preservar cuerpo de Obsidian
             categoriaId: catId,
             imagen:      imagen,
             video:       video,
             valoracion:  e.valoracion || 0,
+            facetas:     e.facetas || {},      // preservar facetas
+            codigo:      e.codigo  || '',      // preservar código
             mejoras:     e.mejoras    || []
           };
         });
@@ -2325,6 +2430,9 @@
             '<a href="' + ej.video + '" target="_blank" class="detalle-enlace">▶ Abrir vídeo</a></div>';
         }
       }
+
+      // Ficha (código + facetas)
+      html += fichaFacetasHTML(ej);
 
       // Valoración (interactiva)
       html += '<div><div class="detalle-seccion-titulo">Valoración</div>' +
@@ -3823,6 +3931,9 @@
           // Imagen y vídeo: solo si la app no tiene nada propio
           if (!existe.imagen && ejData.imagen) existe.imagen = ejData.imagen;
           if (!existe.video  && ejData.video)  existe.video  = ejData.video;
+          // Facetas y código: Obsidian es la fuente de verdad
+          if (ejData.facetas) existe.facetas = ejData.facetas;
+          if (ejData.codigo)  existe.codigo  = ejData.codigo;
         } else {
           ejs.push({
             id:          maxIdEj() + 1,
@@ -3833,6 +3944,8 @@
             imagen:      ejData.imagen || null,
             video:       ejData.video  || null,
             valoracion:  ejData.valoracion || 0,
+            facetas:     ejData.facetas || {},
+            codigo:      ejData.codigo  || '',
             mejoras:     []
           });
           resultado.ejs++;
@@ -4713,7 +4826,7 @@
     actualizarInicio();
     _initSupabase(); // arranca Supabase (redirige a login si hay credenciales)
     if (marcadorEst.activo) irA('pantalla-marcador'); // volver al partido en curso
-    console.log('🎾 App de pádel v0.12 — Multi-entrenador + Supabase');
+    console.log('🎾 App de pádel v0.14.0 — Facetas + Multi-entrenador + Supabase');
 
   </script>
 </body>
