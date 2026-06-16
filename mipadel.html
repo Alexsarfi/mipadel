@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.14.0
+  TU APP DE PÁDEL — v0.15.0
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,17 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.15.0 — Rediseño de Ejercicios (2026-06)
+    · Pantalla de Ejercicios en consonancia con el vault:
+      lista agrupada por TIPO (Técnica simple/combinada,
+      Táctica, Físico) → categoría, con secciones
+      colapsables (estado recordado).
+    · Buscador por nombre y por código (PF-3J-…).
+    · Filtros: chips de Tipo (sustituyen a categorías
+      planas) + Zona + Valoración.
+    · Requiere re-importar padel-sync.json (lleva el
+      campo `tipo` en facetas).
+
   v0.14.0 — Facetas de ejercicios (2026-06)
     · Ejercicios con facetas (zona, formato, nivel,
       condicionantes) y código derivado (p.ej.
@@ -844,7 +855,10 @@
     </div>
     <!-- Filtros fuera del scroll del contenido -->
     <div class="filtros-zona">
-      <div class="filtros" id="filtros-cat-ej"></div>
+      <input id="busqueda-ej" type="search" inputmode="search" autocomplete="off"
+             placeholder="🔍 Buscar por nombre o código…" oninput="buscarEjercicios(this.value)"
+             style="width:100%;box-sizing:border-box;border:1px solid var(--borde,#d8d8d2);border-radius:10px;padding:9px 12px;font-size:14px;font-family:inherit;background:#fff;color:var(--tinta);outline:none;margin-bottom:2px;">
+      <div class="filtros" id="filtros-tipo-ej"></div>
       <div class="filtros" id="filtros-pzona-ej"></div>
       <div class="filtros" id="filtros-val-ej"></div>
     </div>
@@ -1636,9 +1650,11 @@
     var origenStats       = 'pantalla-marcador';
 
     // Filtros de la pantalla de ejercicios (persisten al navegar dentro)
-    var filtroEjCat  = null;  // null = todas las categorías (id de categoría)
-    var filtroEjVal  = 0;     // 0 = todos, 3 = ★★★+, 4 = ★★★★+, 5 = ★★★★★
-    var filtroEjZona = null;  // null = todas las zonas (faceta zona)
+    var filtroEjTipo  = null; // null = todos los tipos (Técnica simple/combinada/Táctica/Físico)
+    var filtroEjVal   = 0;    // 0 = todos, 3 = ★★★+, 4 = ★★★★+, 5 = ★★★★★
+    var filtroEjZona  = null; // null = todas las zonas (faceta zona)
+    var filtroEjTexto = '';   // búsqueda por nombre o código
+    var ejAcordeon    = null; // {tipo: abierto?} — estado de las secciones colapsables (lazy load)
 
     // Filtro de categoría en nueva sesión
     var filtroSesionCat = null;
@@ -2005,13 +2021,24 @@
     // EJERCICIOS — filtros y lista
     // ══════════════════════════════════════════
 
-    function renderFiltrosCatEj() {
-      var cats = leerCategorias();
-      var cont = document.getElementById('filtros-cat-ej');
+    // Orden fijo de los tipos (nivel 1 del vault)
+    var TIPO_ORDEN = ['Técnica simple', 'Técnica combinada', 'Táctica', 'Físico'];
+    function ejTipo(ej) { return ejFaceta(ej, 'tipo') || 'Otros'; }
+
+    function renderFiltrosTipoEj() {
+      var cont = document.getElementById('filtros-tipo-ej');
       if (!cont) return;
-      var html = '<div class="fpill' + (filtroEjCat === null ? ' activo' : '') + '" onclick="aplicarFiltroCat(null)">Todas</div>';
-      cats.forEach(function(cat) {
-        html += '<div class="fpill' + (filtroEjCat === cat.id ? ' activo' : '') + '" onclick="aplicarFiltroCat(' + cat.id + ')">' + cat.nombre + '</div>';
+      // Tipos presentes en los ejercicios, en orden fijo (+ Otros al final si aplica)
+      var presentes = {};
+      leerEjercicios().forEach(function(e){ presentes[ejTipo(e)] = true; });
+      var tipos = TIPO_ORDEN.filter(function(t){ return presentes[t]; });
+      if (presentes['Otros']) tipos.push('Otros');
+      if (!tipos.length) { cont.innerHTML = ''; return; }
+      var html = '<div class="fpill' + (filtroEjTipo === null ? ' activo' : '') +
+                 '" onclick="aplicarFiltroTipo(null)">Todos</div>';
+      tipos.forEach(function(t) {
+        html += '<div class="fpill' + (filtroEjTipo === t ? ' activo' : '') +
+                '" onclick="aplicarFiltroTipo(\'' + t + '\')">' + t + '</div>';
       });
       cont.innerHTML = html;
     }
@@ -2109,9 +2136,9 @@
       cont.innerHTML = html;
     }
 
-    function aplicarFiltroCat(catId) {
-      filtroEjCat = catId;
-      renderFiltrosCatEj();
+    function aplicarFiltroTipo(tipo) {
+      filtroEjTipo = tipo;
+      renderFiltrosTipoEj();
       renderListaEjercicios();
     }
 
@@ -2127,8 +2154,33 @@
       renderListaEjercicios();
     }
 
+    function buscarEjercicios(txt) {
+      filtroEjTexto = (txt || '').trim().toLowerCase();
+      renderListaEjercicios();
+    }
+
+    // Estado del acordeón (qué tipos están abiertos), persistido en localStorage.
+    function _cargarAcordeon() {
+      if (ejAcordeon) return;
+      try { ejAcordeon = JSON.parse(localStorage.getItem('padel-ej-acordeon')) || {}; }
+      catch (e) { ejAcordeon = {}; }
+    }
+    function acordeonAbierto(tipo) {
+      _cargarAcordeon();
+      return ejAcordeon[tipo] !== false; // por defecto abierto
+    }
+    function toggleAcordeon(tipo) {
+      _cargarAcordeon();
+      ejAcordeon[tipo] = !acordeonAbierto(tipo);
+      try { localStorage.setItem('padel-ej-acordeon', JSON.stringify(ejAcordeon)); } catch (e) {}
+      renderListaEjercicios();
+    }
+
     function mostrarEjercicios() {
-      renderFiltrosCatEj();
+      _cargarAcordeon();
+      var inp = document.getElementById('busqueda-ej');
+      if (inp) inp.value = filtroEjTexto;
+      renderFiltrosTipoEj();
       renderFiltrosZonaEj();
       renderFiltrosValEj();
       renderListaEjercicios();
@@ -2139,12 +2191,15 @@
       var cats     = leerCategorias();
       var cont     = document.getElementById('lista-ejercicios');
 
-      // Aplicar filtros
+      // Aplicar filtros (tipo + zona + valoración + búsqueda por nombre/código)
       var ejs = todosEjs.filter(function(e) {
-        var pasaCat  = filtroEjCat === null || e.categoriaId === filtroEjCat;
+        var pasaTipo = filtroEjTipo === null || ejTipo(e) === filtroEjTipo;
         var pasaVal  = filtroEjVal === 0 || (e.valoracion || 0) >= filtroEjVal;
         var pasaZona = filtroEjZona === null || ejFaceta(e, 'zona') === filtroEjZona;
-        return pasaCat && pasaVal && pasaZona;
+        var pasaTxt  = !filtroEjTexto ||
+                       (e.nombre || '').toLowerCase().indexOf(filtroEjTexto) !== -1 ||
+                       ejCodigo(e).toLowerCase().indexOf(filtroEjTexto) !== -1;
+        return pasaTipo && pasaVal && pasaZona && pasaTxt;
       });
 
       // Subtítulo dinámico
@@ -2160,26 +2215,49 @@
         return;
       }
 
-      // Agrupar por categoría
+      // Tipos presentes en el resultado, en orden fijo (+ Otros)
+      var tiposPresentes = {};
+      ejs.forEach(function(e){ tiposPresentes[ejTipo(e)] = true; });
+      var tipos = TIPO_ORDEN.filter(function(t){ return tiposPresentes[t]; });
+      if (tiposPresentes['Otros']) tipos.push('Otros');
+
+      // Con búsqueda o filtro de tipo activos, expandir para ver resultados
+      var forzarAbierto = !!filtroEjTexto || filtroEjTipo !== null;
+
+      var subTitStyle = 'font-size:11px;font-weight:700;color:var(--gris);text-transform:uppercase;letter-spacing:.5px;padding:8px 2px 2px;';
       var html = '';
-      if (filtroEjCat !== null) {
-        // Una sola categoría filtrada — sin cabecera de grupo
-        ejs.forEach(function(ej) { html += itemEjercicioHTML(ej, 'ejercicios'); });
-      } else {
-        cats.forEach(function(cat) {
-          var grupo = ejs.filter(function(e){ return e.categoriaId === cat.id; });
-          if (!grupo.length) return;
-          html += '<div class="grupo"><div class="grupo-titulo">' + cat.nombre + '</div>';
-          grupo.forEach(function(ej) { html += itemEjercicioHTML(ej, 'ejercicios'); });
-          html += '</div>';
-        });
-        var sinCat = ejs.filter(function(e){ return !e.categoriaId; });
-        if (sinCat.length) {
-          html += '<div class="grupo"><div class="grupo-titulo">Sin categoría</div>';
-          sinCat.forEach(function(ej){ html += itemEjercicioHTML(ej, 'ejercicios'); });
-          html += '</div>';
+
+      tipos.forEach(function(tipo) {
+        var grupoTipo = ejs.filter(function(e){ return ejTipo(e) === tipo; });
+        if (!grupoTipo.length) return;
+
+        var abierto = forzarAbierto || acordeonAbierto(tipo);
+        html += '<div class="grupo">';
+        html += '<div class="grupo-titulo" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onclick="toggleAcordeon(\'' + tipo + '\')">' +
+                  '<span>' + (abierto ? '▾' : '▸') + ' ' + tipo + '</span>' +
+                  '<span style="font-size:12px;color:var(--gris);font-weight:600;">' + grupoTipo.length + '</span>' +
+                '</div>';
+
+        if (abierto) {
+          // ¿Mostrar subcabeceras por categoría? Solo si hay más de una categoría en el tipo.
+          var catsEnTipo = {};
+          grupoTipo.forEach(function(e){ catsEnTipo[e.categoriaId || '_'] = true; });
+          var mostrarSub = Object.keys(catsEnTipo).length > 1;
+
+          cats.forEach(function(cat) {
+            var sub = grupoTipo.filter(function(e){ return e.categoriaId === cat.id; });
+            if (!sub.length) return;
+            if (mostrarSub) html += '<div style="' + subTitStyle + '">' + cat.nombre + '</div>';
+            sub.forEach(function(ej){ html += itemEjercicioHTML(ej, 'ejercicios'); });
+          });
+          var sinCat = grupoTipo.filter(function(e){ return !e.categoriaId; });
+          if (sinCat.length) {
+            if (mostrarSub) html += '<div style="' + subTitStyle + '">Sin categoría</div>';
+            sinCat.forEach(function(ej){ html += itemEjercicioHTML(ej, 'ejercicios'); });
+          }
         }
-      }
+        html += '</div>';
+      });
       cont.innerHTML = html;
     }
 
@@ -4826,7 +4904,7 @@
     actualizarInicio();
     _initSupabase(); // arranca Supabase (redirige a login si hay credenciales)
     if (marcadorEst.activo) irA('pantalla-marcador'); // volver al partido en curso
-    console.log('🎾 App de pádel v0.14.0 — Facetas + Multi-entrenador + Supabase');
+    console.log('🎾 App de pádel v0.15.0 — Ejercicios por tipo + Facetas + Supabase');
 
   </script>
 </body>
