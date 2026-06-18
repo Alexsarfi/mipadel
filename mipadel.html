@@ -39,6 +39,41 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.17.0 — Faceta golpe en la app (2026-06)
+    · La faceta `golpe` (ya presente en padel-sync.json)
+      se expone en la app con vocabulario canónico de 9
+      valores: Volea, Bandeja, Víbora, Remate, Globo,
+      Pared, Fondo, Saque/Resto, Combinada (mixto).
+    · golpeCanonico() normaliza el texto libre del vault
+      (p.ej. "volea derecha/revés" → volea, "globo
+      ofensivo" → globo, "remate/bandeja/víbora" → mixto).
+    · Chip de golpe en la ficha del detalle y en las
+      tarjetas de sesión. Nuevo filtro por golpe en la
+      lista de ejercicios.
+    · Mis Clases ahora agrupa por GOLPE (antes por zona):
+      es el eje principal del vault. Cada sesión hereda el
+      golpe dominante de sus ejercicios.
+    · Nota: la dirección (cruzado/paralelo) y matices como
+      "defensivo/ofensivo" deberían ir en `direccion` /
+      `condicionantes`, no en `golpe` (ver AUDITORIA).
+
+  v0.16.0 — Rediseño de Mis Clases (2026-06)
+    · Barra superior por nivel: Iniciación / Avanzado /
+      Competición. El nivel de cada sesión se DERIVA del
+      nivel dominante de sus ejercicios (faceta `nivel`):
+      1-2 → Iniciación, 3 → Avanzado, 4 → Competición.
+      Las sesiones con temática 'competición' van siempre
+      a Competición. Sin campos nuevos ni migración.
+    · Dentro de cada nivel, las sesiones se agrupan por
+      golpe/zona (faceta `zona` dominante): Fondo y globo,
+      Pared y lateral, Red y volea, Campo medio, Toda la
+      pista, Sin zona. Secciones colapsables (estado
+      recordado en localStorage).
+    · Detalle de sesión rediseñado: cada ejercicio se ve
+      como tarjeta con miniatura (imagen o vídeo de
+      YouTube), nombre, chips (nivel/zona/★) y descripción
+      breve. Pensado para ojear rápido en el móvil.
+
   v0.15.0 — Rediseño de Ejercicios (2026-06)
     · Pantalla de Ejercicios en consonancia con el vault:
       lista agrupada por TIPO (Técnica simple/combinada,
@@ -467,6 +502,41 @@
     .marc-saque-partner { cursor:pointer; }
     .marc-saque-partner:active { opacity:0.65; }
 
+    /* ── Mis Clases — barra de niveles ── */
+    .nivelbar { display:flex; gap:6px; padding:0.7rem 1.25rem; background:var(--arena); position:sticky; top:0; z-index:20; flex-shrink:0; box-shadow:0 2px 10px rgba(0,0,0,0.04); }
+    .nivel-btn { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; background:var(--blanco); border:1.5px solid var(--borde); border-radius:14px; padding:0.55rem 0.3rem; cursor:pointer; font-family:'Outfit',sans-serif; transition:all 0.15s; -webkit-tap-highlight-color:transparent; }
+    .nivel-btn:active { transform:scale(0.97); }
+    .nivel-btn-ico { font-size:18px; line-height:1; }
+    .nivel-btn-lbl { font-size:12px; font-weight:700; color:var(--texto); }
+    .nivel-btn-cnt { font-size:10px; font-weight:700; color:var(--gris); background:var(--arena); border-radius:20px; padding:1px 9px; }
+    .nivel-btn.activo { background:var(--verde); border-color:var(--verde); box-shadow:0 4px 14px rgba(45,106,79,0.25); }
+    .nivel-btn.activo .nivel-btn-lbl { color:#fff; }
+    .nivel-btn.activo .nivel-btn-cnt { color:var(--verde); background:#fff; }
+
+    /* ── Mis Clases — grupos por golpe/zona ── */
+    .zona-grupo { margin-bottom:14px; }
+    .zona-grupo-hdr { display:flex; align-items:center; gap:8px; padding:0.4rem 0.25rem 0.55rem; cursor:pointer; user-select:none; -webkit-user-select:none; -webkit-tap-highlight-color:transparent; }
+    .zona-grupo-ico { font-size:16px; }
+    .zona-grupo-lbl { font-size:12px; font-weight:800; color:var(--texto); text-transform:uppercase; letter-spacing:0.04em; }
+    .zona-grupo-cnt { font-size:11px; font-weight:700; color:var(--gris); background:var(--blanco); border:1px solid var(--borde); border-radius:20px; padding:1px 8px; }
+    .zona-grupo-chev { margin-left:auto; color:var(--gris); font-size:12px; }
+
+    /* ── Tarjetas de ejercicio (detalle de sesión) ── */
+    .ej-card { display:flex; background:var(--blanco); border:1.5px solid var(--borde); border-radius:14px; overflow:hidden; margin-bottom:10px; cursor:pointer; transition:border-color 0.15s, transform 0.1s; -webkit-tap-highlight-color:transparent; }
+    .ej-card:hover { border-color:var(--verde-claro); }
+    .ej-card:active { transform:scale(0.99); }
+    .ej-card-media { position:relative; width:108px; min-height:100px; flex-shrink:0; background:#0f172a; display:flex; align-items:center; justify-content:center; }
+    .ej-card-media img { width:100%; height:100%; object-fit:cover; display:block; }
+    .ej-card-media-ph { background:linear-gradient(135deg,#e2e8f0,#cbd5e1); }
+    .ej-card-ph-ico { font-size:30px; opacity:0.55; }
+    .ej-card-play { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:38px; height:38px; background:rgba(220,38,38,0.9); color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:15px; padding-left:3px; }
+    .ej-card-body { flex:1; min-width:0; padding:0.7rem 0.85rem; display:flex; flex-direction:column; gap:5px; justify-content:center; }
+    .ej-card-nombre { font-size:14px; font-weight:700; color:var(--texto); line-height:1.25; }
+    .ej-card-chips { display:flex; flex-wrap:wrap; gap:5px; }
+    .ej-card-chip { font-size:10px; font-weight:600; background:var(--arena); color:var(--gris); padding:2px 7px; border-radius:20px; }
+    .ej-card-chip.dorado { background:#fef3c7; color:var(--ambar-texto); }
+    .ej-card-desc { font-size:12px; color:var(--gris); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+
     /* ── Sesiones — pantalla Mis Clases ── */
     .sesion-item { display:flex; align-items:center; gap:10px; background:var(--blanco); border-radius:13px; padding:0.75rem 0.875rem; border:1.5px solid var(--borde); margin-bottom:8px; transition:border-color 0.15s, background 0.15s; }
     .sesion-item.trabajada { border-color:#bbf7d0; background:#f0fdf4; }
@@ -716,6 +786,23 @@
         <button class="auth-logout-btn" onclick="authLogout()">Salir</button>
       </div>
 
+      <!-- ── ASISTENCIA ── -->
+      <div class="home-sec">
+        <div class="home-sec-hdr">
+          <div class="home-sec-bar a"></div>
+          <span class="home-sec-label">Asistencia</span>
+          <span class="home-sec-stats" id="home-stats-a">—</span>
+        </div>
+        <div class="tarjeta-menu" onclick="irA('pantalla-asistencia')">
+          <div class="menu-icono" style="background:var(--lila-suave);">🗓️</div>
+          <div class="menu-texto">
+            <div class="menu-nombre">Control de asistencia</div>
+            <div class="menu-desc" id="home-desc-asist">—</div>
+          </div>
+          <div class="menu-flecha">›</div>
+        </div>
+      </div>
+
       <!-- ── ENTRENAMIENTO ── -->
       <div class="home-sec">
         <div class="home-sec-hdr">
@@ -774,23 +861,6 @@
         </div>
       </div>
 
-      <!-- ── ASISTENCIA ── -->
-      <div class="home-sec">
-        <div class="home-sec-hdr">
-          <div class="home-sec-bar a"></div>
-          <span class="home-sec-label">Asistencia</span>
-          <span class="home-sec-stats" id="home-stats-a">—</span>
-        </div>
-        <div class="tarjeta-menu" onclick="irA('pantalla-asistencia')">
-          <div class="menu-icono" style="background:var(--lila-suave);">🗓️</div>
-          <div class="menu-texto">
-            <div class="menu-nombre">Control de asistencia</div>
-            <div class="menu-desc" id="home-desc-asist">—</div>
-          </div>
-          <div class="menu-flecha">›</div>
-        </div>
-      </div>
-
       <!-- ── COMPETICIÓN ── -->
       <div class="home-sec">
         <div class="home-sec-hdr">
@@ -798,12 +868,20 @@
           <span class="home-sec-label">Competición</span>
         </div>
         <div class="tarjeta-grid">
-          <div class="tarjeta-col externo-link" style="grid-column:1/-1"
+          <div class="tarjeta-col externo-link"
                onclick="window.open('https://fap.es/campeonatos-torneos/','_blank')">
             <div class="menu-icono externo">🏅</div>
             <div>
               <div class="menu-nombre">FAP</div>
               <div class="menu-desc">Torneos y campeonatos ↗</div>
+            </div>
+          </div>
+          <div class="tarjeta-col externo-link"
+               onclick="window.open('https://www.padelfederacion.es/Campeonatos','_blank')">
+            <div class="menu-icono externo">🏆</div>
+            <div>
+              <div class="menu-nombre">FEP</div>
+              <div class="menu-desc">Campeonatos ↗</div>
             </div>
           </div>
         </div>
@@ -812,7 +890,7 @@
     </div>
     <div class="pie" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
       <button class="btn btn-sec btn-sm" onclick="irA('pantalla-importar')" style="width:auto;gap:5px;">📥 Importar desde Obsidian</button>
-      <span>Versión 0.8 · Solo para mí</span>
+      <span>Versión 0.17.0 · Solo para mí</span>
     </div>
   </div>
 
@@ -859,6 +937,7 @@
              placeholder="🔍 Buscar por nombre o código…" oninput="buscarEjercicios(this.value)"
              style="width:100%;box-sizing:border-box;border:1px solid var(--borde,#d8d8d2);border-radius:10px;padding:9px 12px;font-size:14px;font-family:inherit;background:#fff;color:var(--tinta);outline:none;margin-bottom:2px;">
       <div class="filtros" id="filtros-tipo-ej"></div>
+      <div class="filtros" id="filtros-golpe-ej"></div>
       <div class="filtros" id="filtros-pzona-ej"></div>
       <div class="filtros" id="filtros-val-ej"></div>
     </div>
@@ -953,6 +1032,7 @@
       <div class="cab-titulo">Mis clases</div>
       <div class="cab-sub" id="sub-clases">0 sesiones</div>
     </div>
+    <div id="clases-nivelbar" class="nivelbar"></div>
     <div class="contenido">
       <div id="clases-hub"></div>
       <div id="lista-sesiones" style="display:none"></div>
@@ -1653,13 +1733,16 @@
     var filtroEjTipo  = null; // null = todos los tipos (Técnica simple/combinada/Táctica/Físico)
     var filtroEjVal   = 0;    // 0 = todos, 3 = ★★★+, 4 = ★★★★+, 5 = ★★★★★
     var filtroEjZona  = null; // null = todas las zonas (faceta zona)
+    var filtroEjGolpe = null; // null = todos los golpes (faceta golpe canónica)
     var filtroEjTexto = '';   // búsqueda por nombre o código
     var ejAcordeon    = null; // {tipo: abierto?} — estado de las secciones colapsables (lazy load)
 
     // Filtro de categoría en nueva sesión
     var filtroSesionCat = null;
-    var filtroClasesTema = null;   // null = todas las temáticas
-    var origenSesionFiltro = null; // guarda el filtro activo al entrar en una sesión
+    var filtroClasesTema = null;   // (legacy) null = todas las temáticas
+    var origenSesionFiltro = null; // (legacy)
+    var nivelClasesSel  = 'iniciacion'; // nivel activo en la barra superior
+    var origenSesionNivel = null;       // nivel recordado al entrar en una sesión
     var sesionTemaSeleccionada = null;
     var TEMATICAS = ['calentamiento','técnica','táctica','mixta','competición'];
 
@@ -1803,7 +1886,7 @@
       if (id === 'pantalla-categorias')      mostrarCategorias();
       if (id === 'pantalla-ejercicios')      mostrarEjercicios();
       if (id === 'pantalla-nuevo-ejercicio') prepararFormEjercicio(ejEditandoId);
-      if (id === 'pantalla-clases')          { filtroClasesTema = null; mostrarClases(); }
+      if (id === 'pantalla-clases')          mostrarClases(true);
       if (id === 'pantalla-nueva-sesion')    prepararNuevaSesion();
       if (id === 'pantalla-marcador')        renderizarMarcador();
       if (id === 'pantalla-stats-jugador')   renderStatsJugador();
@@ -2072,6 +2155,44 @@
     };
     var NIVEL_LABEL = { 1: 'Iniciación', 2: 'Intermedio', 3: 'Avanzado', 4: 'Élite' };
 
+    // ── Golpe: vocabulario canónico (ver PROPUESTA_FACETAS_EJERCICIOS.md) ──
+    var GOLPE_CANON = [
+      { key: 'volea',   icono: '🎯', label: 'Volea'       },
+      { key: 'bandeja', icono: '🪃', label: 'Bandeja'     },
+      { key: 'vibora',  icono: '🐍', label: 'Víbora'      },
+      { key: 'remate',  icono: '💥', label: 'Remate'      },
+      { key: 'globo',   icono: '🎈', label: 'Globo'       },
+      { key: 'pared',   icono: '🧱', label: 'Pared'       },
+      { key: 'fondo',   icono: '🎾', label: 'Fondo'       },
+      { key: 'saque',   icono: '🚀', label: 'Saque/Resto' },
+      { key: 'mixto',   icono: '🔀', label: 'Combinada'   },
+    ];
+    var GOLPE_LABEL = {}, GOLPE_ICONO = {};
+    GOLPE_CANON.forEach(function(g){ GOLPE_LABEL[g.key] = g.label; GOLPE_ICONO[g.key] = g.icono; });
+
+    // Normaliza cualquier texto de golpe (incluido texto libre del vault) a una
+    // clave canónica. Si aparecen 2+ golpes distintos → 'mixto'.
+    function golpeCanonico(raw) {
+      var g = (raw || '').toString().toLowerCase().trim();
+      if (!g) return '';
+      if (g.indexOf('mixto') >= 0 || g.indexOf('general') >= 0 ||
+          g.indexOf('construc') >= 0 || g.indexOf('cadena') >= 0) return 'mixto';
+      function has() { for (var i = 0; i < arguments.length; i++) if (g.indexOf(arguments[i]) >= 0) return true; return false; }
+      var fams = [];
+      if (has('víbora', 'vibora')) fams.push('vibora');
+      if (has('bandeja'))          fams.push('bandeja');
+      if (has('remate'))           fams.push('remate');
+      if (has('globo'))            fams.push('globo');
+      if (has('volea'))            fams.push('volea');
+      if (has('pared'))            fams.push('pared');
+      if (has('saque', 'resto', 'resta')) fams.push('saque');
+      if (fams.length >= 2) return 'mixto';
+      if (fams.length === 1) return fams[0];
+      if (has('derecha', 'revés', 'reves', 'fondo', 'drive')) return 'fondo';
+      return 'mixto';
+    }
+    function ejGolpe(ej) { return golpeCanonico(ejFaceta(ej, 'golpe')); }
+
     // Copia el código al portapapeles (con fallback para webviews sin clipboard API).
     function copiarCodigo(cod, el) {
       function feedback() {
@@ -2095,12 +2216,14 @@
       var cod = ejCodigo(ej);
       var zona = ejFaceta(ej, 'zona'), formato = ejFaceta(ej, 'formato');
       var nivel = ejFaceta(ej, 'nivel'), conds = ejFaceta(ej, 'condicionantes') || [];
-      if (!cod && !zona && !formato && !nivel && (!conds || !conds.length)) return '';
+      var golpe = ejGolpe(ej), golpeRaw = ejFaceta(ej, 'golpe');
+      if (!cod && !zona && !formato && !nivel && !golpe && (!conds || !conds.length)) return '';
 
       var chips = [];
       function chip(txt) {
         return '<span style="font-size:12px;background:var(--arena);color:var(--tinta);padding:3px 10px;border-radius:20px;">' + txt + '</span>';
       }
+      if (golpe)   chips.push(chip((GOLPE_ICONO[golpe] || '🏓') + ' ' + (GOLPE_LABEL[golpe] || golpeRaw)));
       if (zona)    chips.push(chip('📍 ' + (ZONA_LABEL[zona] || zona)));
       if (formato) chips.push(chip('👥 ' + formato));
       if (nivel)   chips.push(chip('📶 ' + (NIVEL_LABEL[nivel] || ('Nivel ' + nivel))));
@@ -2154,6 +2277,28 @@
       renderListaEjercicios();
     }
 
+    function renderFiltrosGolpeEj() {
+      var cont = document.getElementById('filtros-golpe-ej');
+      if (!cont) return;
+      var presentes = {};
+      leerEjercicios().forEach(function(e){ var g = ejGolpe(e); if (g) presentes[g] = true; });
+      var golpes = GOLPE_CANON.filter(function(g){ return presentes[g.key]; });
+      if (!golpes.length) { cont.innerHTML = ''; return; }
+      var html = '<div class="fpill' + (filtroEjGolpe === null ? ' activo' : '') +
+                 '" onclick="aplicarFiltroGolpe(null)">Todos los golpes</div>';
+      golpes.forEach(function(g) {
+        html += '<div class="fpill' + (filtroEjGolpe === g.key ? ' activo' : '') +
+                '" onclick="aplicarFiltroGolpe(\'' + g.key + '\')">' + g.icono + ' ' + g.label + '</div>';
+      });
+      cont.innerHTML = html;
+    }
+
+    function aplicarFiltroGolpe(golpe) {
+      filtroEjGolpe = golpe;
+      renderFiltrosGolpeEj();
+      renderListaEjercicios();
+    }
+
     function buscarEjercicios(txt) {
       filtroEjTexto = (txt || '').trim().toLowerCase();
       renderListaEjercicios();
@@ -2181,6 +2326,7 @@
       var inp = document.getElementById('busqueda-ej');
       if (inp) inp.value = filtroEjTexto;
       renderFiltrosTipoEj();
+      renderFiltrosGolpeEj();
       renderFiltrosZonaEj();
       renderFiltrosValEj();
       renderListaEjercicios();
@@ -2196,10 +2342,11 @@
         var pasaTipo = filtroEjTipo === null || ejTipo(e) === filtroEjTipo;
         var pasaVal  = filtroEjVal === 0 || (e.valoracion || 0) >= filtroEjVal;
         var pasaZona = filtroEjZona === null || ejFaceta(e, 'zona') === filtroEjZona;
+        var pasaGolpe = filtroEjGolpe === null || ejGolpe(e) === filtroEjGolpe;
         var pasaTxt  = !filtroEjTexto ||
                        (e.nombre || '').toLowerCase().indexOf(filtroEjTexto) !== -1 ||
                        ejCodigo(e).toLowerCase().indexOf(filtroEjTexto) !== -1;
-        return pasaTipo && pasaVal && pasaZona && pasaTxt;
+        return pasaTipo && pasaVal && pasaZona && pasaGolpe && pasaTxt;
       });
 
       // Subtítulo dinámico
@@ -2609,97 +2756,162 @@
       // (renderFiltrosTemaClases ya no se usa — sustituido por hub de tarjetas)
     }
 
-    var TIPOS_CLASES = [
-      { tipo: 'calentamiento', icono: '🔥', label: 'Calentamiento' },
-      { tipo: 'técnica',       icono: '🎯', label: 'Técnica'       },
-      { tipo: 'táctica',       icono: '🧠', label: 'Táctica'       },
-      { tipo: 'mixta',         icono: '⚡', label: 'Mixta'         },
-      { tipo: 'competición',   icono: '🏆', label: 'Competición'   },
+    // Niveles de la barra superior
+    var NIVELES_CLASES = [
+      { key: 'iniciacion',  icono: '🌱', label: 'Iniciación'  },
+      { key: 'avanzado',    icono: '🔥', label: 'Avanzado'    },
+      { key: 'competicion', icono: '🏆', label: 'Competición' },
     ];
 
-    function clasesVolver() {
-      if (filtroClasesTema !== null) {
-        aplicarFiltroTemaClases(null);
-      } else {
-        irA('pantalla-inicio');
-      }
+    // Grupos por golpe (derivados de la faceta `golpe`, normalizada a canónica)
+    var GOLPE_GRUPOS = GOLPE_CANON.concat([{ key: '_sin', icono: '📋', label: 'Sin golpe' }]);
+
+    function _ejsById() {
+      var m = {};
+      leerEjercicios().forEach(function(e){ m[e.id] = e; });
+      return m;
     }
 
-    function aplicarFiltroTemaClases(tema) {
-      filtroClasesTema = tema;
+    // Nivel de una sesión, derivado del nivel dominante de sus ejercicios.
+    function nivelDeSesion(ses, mapEj) {
+      if (ses.tematica === 'competición') return 'competicion';
+      var counts = {1:0, 2:0, 3:0, 4:0};
+      (ses.ejercicioIds || []).forEach(function(id){
+        var ej = mapEj[id]; if (!ej) return;
+        var n = parseInt(ejFaceta(ej, 'nivel'), 10);
+        if (counts[n] !== undefined) counts[n]++;
+      });
+      var total = counts[1] + counts[2] + counts[3] + counts[4];
+      if (!total) return 'iniciacion';
+      var dom = 1, max = -1;
+      [1,2,3,4].forEach(function(n){ if (counts[n] > max) { max = counts[n]; dom = n; } });
+      if (dom <= 2) return 'iniciacion';
+      if (dom === 3) return 'avanzado';
+      return 'competicion';
+    }
+
+    // Golpe dominante de una sesión (canónico).
+    function golpeDeSesion(ses, mapEj) {
+      var counts = {};
+      (ses.ejercicioIds || []).forEach(function(id){
+        var ej = mapEj[id]; if (!ej) return;
+        var g = ejGolpe(ej);
+        if (g) counts[g] = (counts[g] || 0) + 1;
+      });
+      var dom = '', max = 0;
+      Object.keys(counts).forEach(function(g){ if (counts[g] > max) { max = counts[g]; dom = g; } });
+      return dom || '_sin';
+    }
+
+    function clasesVolver() {
+      irA('pantalla-inicio');
+    }
+
+    function seleccionarNivelClase(nv) {
+      nivelClasesSel = nv;
       mostrarClases();
     }
 
-    function mostrarClases() {
+    function toggleZonaGrupo(key, el) {
+      var body = el.nextElementSibling;
+      var oculto = body.style.display === 'none';
+      body.style.display = oculto ? 'block' : 'none';
+      el.querySelector('.zona-grupo-chev').textContent = oculto ? '▾' : '▸';
+      if (oculto) localStorage.removeItem(key); else localStorage.setItem(key, '1');
+    }
+
+    function sesionRowHTML(c) {
+      var titulo = c.nombre || c.objetivo || 'Sesión sin nombre';
+      var num    = (c.ejercicioIds || []).length;
+      var meta   = [];
+      if (c.fecha) meta.push(formatearFecha(c.fecha));
+      meta.push(num + ' ej' + (num !== 1 ? 's' : ''));
+      if (c.tematica) meta.push(c.tematica);
+      return '<div class="sesion-item' + (c.trabajada ? ' trabajada' : '') + '">' +
+        '<div class="sesion-body" onclick="verSesion(' + c.id + ')">' +
+          '<div class="sesion-titulo">' + titulo + '</div>' +
+          '<div class="sesion-meta">' + meta.join(' · ') + '</div>' +
+        '</div>' +
+        '<button class="sesion-check-btn' + (c.trabajada ? ' trabajada' : '') + '" onclick="toggleSesionTrabajada(' + c.id + ');event.stopPropagation()">✓</button>' +
+      '</div>';
+    }
+
+    function mostrarClases(autoSelect) {
       var todasClases = leerClases();
+      var mapEj       = _ejsById();
       var hub         = document.getElementById('clases-hub');
       var listaCont   = document.getElementById('lista-sesiones');
+      var nivelbar    = document.getElementById('clases-nivelbar');
       var volverBtn   = document.getElementById('clases-volver-btn');
       var subClases   = document.getElementById('sub-clases');
 
-      if (filtroClasesTema === null) {
-        // ── HUB: tarjetas por tipo ──
-        listaCont.style.display = 'none';
-        volverBtn.textContent   = '‹ Inicio';
-        subClases.textContent   = todasClases.length + ' sesión' + (todasClases.length !== 1 ? 'es' : '');
+      if (listaCont) listaCont.style.display = 'none';
+      volverBtn.textContent = '‹ Inicio';
 
-        var counts = {};
-        TIPOS_CLASES.forEach(function(t){ counts[t.tipo] = 0; });
-        todasClases.forEach(function(c){
-          if (counts[c.tematica] !== undefined) counts[c.tematica]++;
-        });
+      // Clasificar todas las sesiones por nivel
+      var porNivel = { iniciacion: [], avanzado: [], competicion: [] };
+      todasClases.forEach(function(c){
+        var nv = nivelDeSesion(c, mapEj);
+        (porNivel[nv] || porNivel.iniciacion).push(c);
+      });
 
-        var html = '<div class="tarjeta-grid">';
-        TIPOS_CLASES.forEach(function(cfg, i) {
-          var n = counts[cfg.tipo] || 0;
-          // Calentamiento: primera fila completa con estilo propio
-          var isCalent = (i === 0);
-          var spanStyle = isCalent ? ' style="grid-column:1/-1"' : '';
-          var extraClass = isCalent ? ' calentamiento-card' : '';
-          var iconClass  = isCalent ? ' calentamiento' : '';
-          html += '<div class="tarjeta-col' + extraClass + '"' + spanStyle +
-            ' onclick="aplicarFiltroTemaClases(\'' + cfg.tipo + '\')">' +
-            '<div class="menu-icono' + iconClass + '">' + cfg.icono + '</div>' +
-            '<div>' +
-              '<div class="menu-nombre">' + cfg.label + '</div>' +
-              '<div class="menu-desc">' + n + ' sesión' + (n !== 1 ? 'es' : '') + '</div>' +
-            '</div>' +
-          '</div>';
-        });
-        html += '</div>';
-        hub.innerHTML    = html;
-        hub.style.display = 'block';
-
-      } else {
-        // ── LISTA FILTRADA ──
-        hub.style.display   = 'none';
-        listaCont.style.display = 'block';
-        volverBtn.textContent   = '‹ Tipos';
-
-        var clases = todasClases.filter(function(c){ return c.tematica === filtroClasesTema; });
-        var label  = filtroClasesTema.charAt(0).toUpperCase() + filtroClasesTema.slice(1);
-        subClases.textContent = label + ' · ' + clases.length + ' sesión' + (clases.length !== 1 ? 'es' : '');
-
-        if (!clases.length) {
-          listaCont.innerHTML = '<div class="vacio" style="padding:1rem;"><p style="font-size:13px;">Sin sesiones de <strong>' + label + '</strong>.</p></div>';
-          return;
+      // Al entrar: si el nivel activo está vacío, saltar al primero con sesiones
+      if (autoSelect && !porNivel[nivelClasesSel].length) {
+        for (var i = 0; i < NIVELES_CLASES.length; i++) {
+          if (porNivel[NIVELES_CLASES[i].key].length) { nivelClasesSel = NIVELES_CLASES[i].key; break; }
         }
-
-        listaCont.innerHTML = clases.map(function(c) {
-          var titulo   = c.nombre || c.objetivo || 'Sesión sin nombre';
-          var num      = (c.ejercicioIds||[]).length;
-          var fechaStr = c.fecha ? '<span>' + formatearFecha(c.fecha) + '</span>' : '';
-          var numStr   = '<span>' + num + ' ej' + (num !== 1 ? 's' : '') + '</span>';
-          return '<div class="sesion-item' + (c.trabajada ? ' trabajada' : '') + '" data-sesid="' + c.id + '">' +
-            '<div class="sesion-handle" ontouchstart="sesDragStart(event,' + c.id + ')">≡</div>' +
-            '<div class="sesion-body" onclick="verSesion(' + c.id + ')">' +
-              '<div class="sesion-titulo">' + titulo + '</div>' +
-              '<div class="sesion-meta">' + fechaStr + (fechaStr && numStr ? ' · ' : '') + numStr + '</div>' +
-            '</div>' +
-            '<button class="sesion-check-btn' + (c.trabajada ? ' trabajada' : '') + '" onclick="toggleSesionTrabajada(' + c.id + ');event.stopPropagation()">✓</button>' +
-          '</div>';
-        }).join('');
       }
+
+      // Barra superior de niveles
+      nivelbar.innerHTML = NIVELES_CLASES.map(function(n){
+        var cnt = porNivel[n.key].length;
+        var act = (n.key === nivelClasesSel) ? ' activo' : '';
+        return '<button class="nivel-btn' + act + '" onclick="seleccionarNivelClase(\'' + n.key + '\')">' +
+          '<span class="nivel-btn-ico">' + n.icono + '</span>' +
+          '<span class="nivel-btn-lbl">' + n.label + '</span>' +
+          '<span class="nivel-btn-cnt">' + cnt + '</span>' +
+        '</button>';
+      }).join('');
+
+      var sesiones = porNivel[nivelClasesSel] || [];
+      var nivLabel = (NIVELES_CLASES.filter(function(n){ return n.key === nivelClasesSel; })[0] || {}).label || '';
+      subClases.textContent = nivLabel + ' · ' + sesiones.length + ' sesión' + (sesiones.length !== 1 ? 'es' : '');
+
+      if (!sesiones.length) {
+        hub.innerHTML = '<div class="vacio" style="padding:2rem 1rem;text-align:center;">' +
+          '<div class="vacio-icono">🎾</div>' +
+          '<p>No hay sesiones de <strong>' + nivLabel + '</strong> todavía.</p></div>';
+        hub.style.display = 'block';
+        return;
+      }
+
+      // Agrupar por golpe
+      var porZona = {};
+      sesiones.forEach(function(c){
+        var z = golpeDeSesion(c, mapEj);
+        (porZona[z] = porZona[z] || []).push(c);
+      });
+
+      var html = '';
+      GOLPE_GRUPOS.forEach(function(zg){
+        var lista = porZona[zg.key];
+        if (!lista || !lista.length) return;
+        var collKey   = 'clz-' + nivelClasesSel + '-' + zg.key;
+        var colapsado = localStorage.getItem(collKey) === '1';
+        html += '<div class="zona-grupo">' +
+          '<div class="zona-grupo-hdr" onclick="toggleZonaGrupo(\'' + collKey + '\',this)">' +
+            '<span class="zona-grupo-ico">' + zg.icono + '</span>' +
+            '<span class="zona-grupo-lbl">' + zg.label + '</span>' +
+            '<span class="zona-grupo-cnt">' + lista.length + '</span>' +
+            '<span class="zona-grupo-chev">' + (colapsado ? '▸' : '▾') + '</span>' +
+          '</div>' +
+          '<div class="zona-grupo-body"' + (colapsado ? ' style="display:none"' : '') + '>' +
+            lista.map(function(c){ return sesionRowHTML(c); }).join('') +
+          '</div>' +
+        '</div>';
+      });
+      hub.innerHTML = html;
+      hub.style.display = 'block';
     }
 
     function toggleSesionTrabajada(id) {
@@ -2943,19 +3155,61 @@
     // ══════════════════════════════════════════
 
     function volverDeSesion() {
-      if (origenSesionFiltro !== null) {
-        document.querySelectorAll('.pantalla').forEach(function(p){ p.classList.remove('activa'); });
-        document.getElementById('pantalla-clases').classList.add('activa');
-        window.scrollTo(0, 0);
-        filtroClasesTema = origenSesionFiltro;
-        mostrarClases();
-      } else {
-        irA('pantalla-clases');
+      if (origenSesionNivel) nivelClasesSel = origenSesionNivel;
+      document.querySelectorAll('.pantalla').forEach(function(p){ p.classList.remove('activa'); });
+      document.getElementById('pantalla-clases').classList.add('activa');
+      window.scrollTo(0, 0);
+      mostrarClases();
+    }
+
+    // Descripción breve para la tarjeta (limpia markdown y recorta).
+    function ejBreve(ej) {
+      var t = ej.descripcion || '';
+      if (!t && ej.contenido) t = ej.contenido;
+      t = String(t).replace(/[#*_>`~\[\]]/g, '').replace(/\s+/g, ' ').trim();
+      if (t.length > 110) t = t.slice(0, 110).trim() + '…';
+      return t;
+    }
+
+    // Miniatura: imagen, o thumbnail de YouTube, o placeholder.
+    function ejCardMedia(ej) {
+      var onerr = "this.parentNode.classList.add('ej-card-media-ph');this.remove()";
+      if (ej.imagen) {
+        return '<div class="ej-card-media"><img src="' + ej.imagen + '" loading="lazy" alt="" onerror="' + onerr + '"></div>';
       }
+      if (ej.video) {
+        var yt = extraerIdYoutube(ej.video);
+        if (yt) {
+          return '<div class="ej-card-media">' +
+            '<img src="https://img.youtube.com/vi/' + yt + '/mqdefault.jpg" loading="lazy" alt="" onerror="' + onerr + '">' +
+            '<span class="ej-card-play">▶</span></div>';
+        }
+        return '<div class="ej-card-media ej-card-media-ph"><span class="ej-card-play">▶</span></div>';
+      }
+      return '<div class="ej-card-media ej-card-media-ph"><span class="ej-card-ph-ico">🎾</span></div>';
+    }
+
+    function ejCardHTML(ej) {
+      var val   = ej.valoracion || 0;
+      var nivel = ejFaceta(ej, 'nivel'), zona = ejFaceta(ej, 'zona'), golpe = ejGolpe(ej);
+      var chips = '';
+      if (golpe) chips += '<span class="ej-card-chip">' + (GOLPE_ICONO[golpe] || '🏓') + ' ' + (GOLPE_LABEL[golpe] || golpe) + '</span>';
+      if (nivel) chips += '<span class="ej-card-chip">📶 ' + (NIVEL_LABEL[nivel] || ('N' + nivel)) + '</span>';
+      if (zona)  chips += '<span class="ej-card-chip">📍 ' + (ZONA_LABEL[zona] || zona) + '</span>';
+      if (val > 0) chips += '<span class="ej-card-chip dorado">★' + val + '</span>';
+      var breve = ejBreve(ej);
+      return '<div class="ej-card" onclick="verEjercicio(' + ej.id + ',\'sesion\')">' +
+        ejCardMedia(ej) +
+        '<div class="ej-card-body">' +
+          '<div class="ej-card-nombre">' + ej.nombre + '</div>' +
+          (chips ? '<div class="ej-card-chips">' + chips + '</div>' : '') +
+          (breve ? '<div class="ej-card-desc">' + breve + '</div>' : '') +
+        '</div>' +
+      '</div>';
     }
 
     function verSesion(id) {
-      origenSesionFiltro = filtroClasesTema;
+      origenSesionNivel = nivelClasesSel;
       var sesion = leerClases().filter(function(c){ return c.id === id; })[0];
       var ejs    = leerEjercicios();
       if (!sesion) return;
@@ -2971,19 +3225,7 @@
       if (!ejsEnSesion.length) {
         html = '<div class="vacio"><p>No hay ejercicios en esta sesión.</p></div>';
       } else {
-        ejsEnSesion.forEach(function(ej, i) {
-          var val = ej.valoracion || 0;
-          html += '<div class="sesion-ej" onclick="verEjercicio(' + ej.id + ',\'sesion\')">' +
-            '<div class="sesion-ej-num">' + (i+1) + '</div>' +
-            '<div class="item-info">' +
-              '<div class="item-titulo">' + ej.nombre + '</div>' +
-              '<div class="item-meta">' +
-                (val > 0 ? '<span style="color:var(--dorado);">★' + val + '</span> · ' : '') +
-                (ej.mejoras&&ej.mejoras.length ? '✦ ' + ej.mejoras.length + ' mejora' + (ej.mejoras.length!==1?'s':'') : 'Sin mejoras') +
-              '</div>' +
-            '</div>' +
-            '<div class="item-flecha">›</div></div>';
-        });
+        ejsEnSesion.forEach(function(ej) { html += ejCardHTML(ej); });
       }
       html += '<button class="btn btn-rojo" onclick="borrarSesion(' + sesion.id + ')">Borrar sesión</button>';
       document.getElementById('detalle-sesion-contenido').innerHTML = html;
