@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.17.0
+  TU APP DE PÁDEL — v0.19.0
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,37 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.19.0 — Asistencia: altas/bajas y recuperaciones (2026-06)
+    · Inicio: la sección Entrenamiento muestra solo "Mis
+      clases" (Ejercicios y Categorías ocultos).
+    · Alumnos con fecha de alta (desde) y baja (hasta):
+      modelo {nombre, alta, baja} (compatible con los
+      nombres-string antiguos). En pasar lista solo
+      aparecen los alumnos activos en esa fecha.
+    · Recuperaciones: botón "+ Recuperación" para añadir
+      puntualmente a un alumno de otra clase (eligiéndolo
+      o escribiéndolo). Cuenta como presente ese día,
+      marcado RECUP; no entra en el cupo fijo.
+    · Resumen e historial respetan el periodo activo (no
+      cuentan ausencias fuera de alta/baja) y muestran las
+      recuperaciones aparte. PDF mensual actualizado.
+    · Sin migración de BD: alumnos/presentes ya eran jsonb.
+
+  v0.18.0 — Faceta intención táctica (2026-06)
+    · Nueva faceta `intencion` (matriz Anular / Dominar /
+      Definir): el eje táctico que cruza con `zona`.
+    · intencionCanonica() normaliza el texto del vault.
+    · La intención SOLO se valora en Mis Clases → sección
+      Competición: esa pestaña agrupa las sesiones por
+      intención (Anular/Dominar/Definir) en vez de por
+      golpe, y las tarjetas muestran el chip de intención.
+      Iniciación/Avanzado siguen agrupando por golpe.
+    · Fuera de Competición la intención no aparece (ni en
+      la ficha de ejercicios ni como filtro global).
+    · Campo `intencion` añadido al YAML de las fichas y al
+      sync (sync_padel.py lo emite dentro de `facetas`).
+    · P1 del ANALISIS_MATRIZ_TACTICA.
+
   v0.17.0 — Faceta golpe en la app (2026-06)
     · La faceta `golpe` (ya presente en padel-sync.json)
       se expone en la app con vocabulario canónico de 9
@@ -672,6 +703,20 @@
     .asist-chip-quitar:hover { color:#dc2626; }
     .asist-form-add-alumno { display:flex; gap:8px; }
     .asist-form-add-alumno input { flex:1; }
+    /* Alumno con fechas desde/hasta */
+    .asist-al-fila { background:var(--arena); border:1px solid var(--borde); border-radius:12px; padding:8px 10px; margin-bottom:6px; }
+    .asist-al-fila-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .asist-al-fila-nombre { font-size:13px; font-weight:700; color:var(--texto); }
+    .asist-al-fila-fechas { display:flex; gap:8px; margin-top:6px; }
+    .asist-al-fila-fechas label { flex:1; display:flex; flex-direction:column; gap:2px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--gris); }
+    .asist-al-fila-fechas input { font-family:'Outfit',sans-serif; font-size:13px; padding:5px 8px; border:1.5px solid var(--borde); border-radius:8px; background:var(--blanco); color:var(--texto); }
+    /* Recuperación en pasar lista */
+    .asist-al-toggle.recup { border-style:dashed; }
+    .asist-recup-badge { font-size:9px; font-weight:800; background:#fef3c7; color:#92400e; border-radius:10px; padding:2px 6px; margin-left:6px; letter-spacing:.03em; }
+    .asist-recup-panel { background:var(--blanco); border:1.5px solid var(--lila-claro); border-radius:12px; padding:10px; margin-bottom:8px; }
+    .asist-recup-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+    .asist-recup-chip { background:var(--lila-suave); border:1px solid var(--lila-claro); border-radius:20px; padding:5px 11px; font-size:12px; font-weight:600; color:#5b21b6; cursor:pointer; }
+    .asist-recup-chip:active { transform:scale(0.96); }
 
     /* Resumen mensual */
     .asist-mes-nav { display:flex; align-items:center; justify-content:space-between; background:var(--blanco); border-radius:14px; padding:0.75rem 1.25rem; border:1px solid var(--borde); gap:8px; }
@@ -818,22 +863,6 @@
           </div>
           <div class="menu-flecha">›</div>
         </div>
-        <div class="tarjeta-grid">
-          <div class="tarjeta-col" onclick="irA('pantalla-ejercicios')">
-            <div class="menu-icono">🏃</div>
-            <div>
-              <div class="menu-nombre">Ejercicios</div>
-              <div class="menu-desc" id="home-desc-ej">—</div>
-            </div>
-          </div>
-          <div class="tarjeta-col" onclick="irA('pantalla-categorias')">
-            <div class="menu-icono">🏷️</div>
-            <div>
-              <div class="menu-nombre">Categorías</div>
-              <div class="menu-desc" id="home-desc-cat">—</div>
-            </div>
-          </div>
-        </div>
       </div>
 
       <!-- ── PARTIDO ── -->
@@ -890,7 +919,7 @@
     </div>
     <div class="pie" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
       <button class="btn btn-sec btn-sm" onclick="irA('pantalla-importar')" style="width:auto;gap:5px;">📥 Importar desde Obsidian</button>
-      <span>Versión 0.17.0 · Solo para mí</span>
+      <span>Versión 0.19.0 · Solo para mí</span>
     </div>
   </div>
 
@@ -1210,10 +1239,11 @@
       <div class="form-card" style="gap:0.75rem;">
         <div class="form-grupo">
           <label class="form-label">Fecha de la clase</label>
-          <input id="asist-lista-fecha" class="form-input" type="date">
+          <input id="asist-lista-fecha" class="form-input" type="date" onchange="asistCambiarFechaLista(this.value)">
         </div>
       </div>
       <div id="asist-lista-alumnos"></div>
+      <div id="asist-recup-zona"></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-sec btn-sm" onclick="asistMarcarTodos(true)">✓ Todos presentes</button>
         <button class="btn btn-sec btn-sm" onclick="asistMarcarTodos(false)">✗ Todos ausentes</button>
@@ -1937,12 +1967,8 @@
       // Stats sección Entrenamiento
       document.getElementById('home-stats-e').textContent =
         ejs.length + ' ej · ' + clases.length + ' ses';
-      document.getElementById('home-desc-ej').textContent =
-        ejs.length + ' ejercicios' + (dest > 0 ? ' · ★' + dest : '');
       document.getElementById('home-desc-cl').textContent =
         clases.length + ' sesione' + (clases.length !== 1 ? 's' : '');
-      document.getElementById('home-desc-cat').textContent =
-        cats.length + ' categoría' + (cats.length !== 1 ? 's' : '') + ' activas';
 
       // Stats sección Partido
       document.getElementById('home-stats-p').textContent =
@@ -1954,7 +1980,7 @@
       var cfgAsist  = leerAsistConfig();
       var clasesA   = cfgAsist.clases || [];
       var alumnosA  = {};
-      clasesA.forEach(function(c){ (c.alumnos||[]).forEach(function(a){ alumnosA[a]=true; }); });
+      clasesA.forEach(function(c){ (c.alumnos||[]).forEach(function(a){ alumnosA[alNom(a)]=true; }); });
       var numAl = Object.keys(alumnosA).length;
       document.getElementById('home-stats-a').textContent = clasesA.length + ' clase' + (clasesA.length !== 1 ? 's' : '');
       document.getElementById('home-desc-asist').textContent =
@@ -2192,6 +2218,25 @@
       return 'mixto';
     }
     function ejGolpe(ej) { return golpeCanonico(ejFaceta(ej, 'golpe')); }
+
+    // ── Intención táctica (matriz Anular / Dominar / Definir) ──
+    var INTENCION_CANON = [
+      { key: 'anular',  icono: '🛡️', label: 'Anular'  },
+      { key: 'dominar', icono: '♟️', label: 'Dominar' },
+      { key: 'definir', icono: '🏁', label: 'Definir' },
+    ];
+    var INTENCION_LABEL = {}, INTENCION_ICONO = {};
+    INTENCION_CANON.forEach(function(i){ INTENCION_LABEL[i.key] = i.label; INTENCION_ICONO[i.key] = i.icono; });
+
+    function intencionCanonica(raw) {
+      var s = (raw || '').toString().toLowerCase().trim();
+      if (!s) return '';
+      if (s.indexOf('anul') >= 0 || s.indexOf('neutr') >= 0) return 'anular';
+      if (s.indexOf('domin') >= 0 || s.indexOf('constru') >= 0) return 'dominar';
+      if (s.indexOf('defin') >= 0 || s.indexOf('remat') >= 0 || s.indexOf('finaliz') >= 0) return 'definir';
+      return '';
+    }
+    function ejIntencion(ej) { return intencionCanonica(ejFaceta(ej, 'intencion')); }
 
     // Copia el código al portapapeles (con fallback para webviews sin clipboard API).
     function copiarCodigo(cod, el) {
@@ -2765,6 +2810,8 @@
 
     // Grupos por golpe (derivados de la faceta `golpe`, normalizada a canónica)
     var GOLPE_GRUPOS = GOLPE_CANON.concat([{ key: '_sin', icono: '📋', label: 'Sin golpe' }]);
+    // Grupos por intención táctica (solo en la sección Competición)
+    var INTENCION_GRUPOS = INTENCION_CANON.concat([{ key: '_sin', icono: '📋', label: 'Sin intención' }]);
 
     function _ejsById() {
       var m = {};
@@ -2800,6 +2847,19 @@
       });
       var dom = '', max = 0;
       Object.keys(counts).forEach(function(g){ if (counts[g] > max) { max = counts[g]; dom = g; } });
+      return dom || '_sin';
+    }
+
+    // Intención dominante de una sesión (canónica). Para la sección Competición.
+    function intencionDeSesion(ses, mapEj) {
+      var counts = {};
+      (ses.ejercicioIds || []).forEach(function(id){
+        var ej = mapEj[id]; if (!ej) return;
+        var i = ejIntencion(ej);
+        if (i) counts[i] = (counts[i] || 0) + 1;
+      });
+      var dom = '', max = 0;
+      Object.keys(counts).forEach(function(i){ if (counts[i] > max) { max = counts[i]; dom = i; } });
       return dom || '_sin';
     }
 
@@ -2885,15 +2945,19 @@
         return;
       }
 
-      // Agrupar por golpe
+      // Competición → agrupar por INTENCIÓN táctica; resto de niveles → por GOLPE.
+      var esComp     = (nivelClasesSel === 'competicion');
+      var grupos     = esComp ? INTENCION_GRUPOS : GOLPE_GRUPOS;
+      var clasificar = esComp ? intencionDeSesion : golpeDeSesion;
+
       var porZona = {};
       sesiones.forEach(function(c){
-        var z = golpeDeSesion(c, mapEj);
+        var z = clasificar(c, mapEj);
         (porZona[z] = porZona[z] || []).push(c);
       });
 
       var html = '';
-      GOLPE_GRUPOS.forEach(function(zg){
+      grupos.forEach(function(zg){
         var lista = porZona[zg.key];
         if (!lista || !lista.length) return;
         var collKey   = 'clz-' + nivelClasesSel + '-' + zg.key;
@@ -3189,10 +3253,12 @@
       return '<div class="ej-card-media ej-card-media-ph"><span class="ej-card-ph-ico">🎾</span></div>';
     }
 
-    function ejCardHTML(ej) {
+    function ejCardHTML(ej, mostrarIntencion) {
       var val   = ej.valoracion || 0;
       var nivel = ejFaceta(ej, 'nivel'), zona = ejFaceta(ej, 'zona'), golpe = ejGolpe(ej);
+      var intencion = mostrarIntencion ? ejIntencion(ej) : '';
       var chips = '';
+      if (intencion) chips += '<span class="ej-card-chip">' + (INTENCION_ICONO[intencion] || '🎯') + ' ' + (INTENCION_LABEL[intencion] || intencion) + '</span>';
       if (golpe) chips += '<span class="ej-card-chip">' + (GOLPE_ICONO[golpe] || '🏓') + ' ' + (GOLPE_LABEL[golpe] || golpe) + '</span>';
       if (nivel) chips += '<span class="ej-card-chip">📶 ' + (NIVEL_LABEL[nivel] || ('N' + nivel)) + '</span>';
       if (zona)  chips += '<span class="ej-card-chip">📍 ' + (ZONA_LABEL[zona] || zona) + '</span>';
@@ -3221,11 +3287,14 @@
         return ejs.filter(function(e){ return e.id === eid; })[0];
       }).filter(Boolean);
 
+      // La intención solo se valora en sesiones de Competición.
+      var esCompeticion = nivelDeSesion(sesion, _ejsById()) === 'competicion';
+
       var html = '';
       if (!ejsEnSesion.length) {
         html = '<div class="vacio"><p>No hay ejercicios en esta sesión.</p></div>';
       } else {
-        ejsEnSesion.forEach(function(ej) { html += ejCardHTML(ej); });
+        ejsEnSesion.forEach(function(ej) { html += ejCardHTML(ej, esCompeticion); });
       }
       html += '<button class="btn btn-rojo" onclick="borrarSesion(' + sesion.id + ')">Borrar sesión</button>';
       document.getElementById('detalle-sesion-contenido').innerHTML = html;
@@ -4380,6 +4449,8 @@
     var asistFechaActiva   = null; // fecha activa en pasar lista
     var asistAlumnosForm   = [];   // alumnos en el formulario
     var asistEstadoLista   = {};   // { nombre: true/false } durante pase
+    var asistRecups        = [];   // nombres de recuperaciones (invitados) ese día
+    var asistRecupPanelOn  = false;
     var asistMesOffset     = 0;    // meses desde el actual
     var asistAlumnoActivo  = null; // nombre del alumno viendo historial
 
@@ -4462,6 +4533,36 @@
       return occ;
     }
 
+    // ── Alumno: compat string | {nombre, alta, baja} ──────────
+    function alNom(a)  { return (a && typeof a === 'object') ? (a.nombre || '') : (a || ''); }
+    function alAlta(a) { return (a && typeof a === 'object') ? (a.alta || '') : ''; }
+    function alBaja(a) { return (a && typeof a === 'object') ? (a.baja || '') : ''; }
+    function alActivo(a, fecha) {           // activo en esa fecha (alta<=fecha<=baja)
+      if (!fecha) return true;
+      var alta = alAlta(a), baja = alBaja(a);
+      if (alta && fecha < alta) return false;
+      if (baja && fecha > baja) return false;
+      return true;
+    }
+    function alumnosNombres(clase) { return (clase.alumnos || []).map(alNom); }
+    function alumnosActivos(clase, fecha) {
+      return (clase.alumnos || []).filter(function(a){ return alActivo(a, fecha); }).map(alNom);
+    }
+    function alumnoEnClase(clase, nombre) {  // devuelve la entrada (obj/str) o null
+      var r = (clase.alumnos || []).filter(function(a){ return alNom(a) === nombre; });
+      return r.length ? r[0] : null;
+    }
+    // Fechas ISO en las que cae el día de la clase dentro de un mes
+    function fechasClaseEnMes(clase, mesISO) {
+      var p = mesISO.split('-'), y = parseInt(p[0]), m = parseInt(p[1]) - 1;
+      var dim = new Date(y, m + 1, 0).getDate(), out = [];
+      for (var i = 1; i <= dim; i++) {
+        var d = new Date(y, m, i);
+        if (d.getDay() === clase.diaSemana) out.push(dateToISOLocal(d));
+      }
+      return out;
+    }
+
     // ══════════════════════════════════════════
     // ASISTENCIA — Hub (pantalla principal)
     // ══════════════════════════════════════════
@@ -4476,7 +4577,7 @@
 
       // Stats
       var todosAl = {};
-      clases.forEach(function(c){ (c.alumnos||[]).forEach(function(a){ todosAl[a]=true; }); });
+      clases.forEach(function(c){ (c.alumnos||[]).forEach(function(a){ todosAl[alNom(a)]=true; }); });
       var mesActual = getMesISO_A(0);
       var regsMes   = regs.filter(function(r){ return r.fecha && r.fecha.startsWith(mesActual); });
       var presencias = 0;
@@ -4525,7 +4626,7 @@
           var clasesDelDia = diasMap[dia].slice().sort(function(a,b){ return (a.franja||'').localeCompare(b.franja||''); });
           clasesDelDia.forEach(function(clase) {
             var reg       = regs.filter(function(r){ return r.claseId===clase.id && r.fecha===fecha; })[0];
-            var numAl     = (clase.alumnos||[]).length;
+            var numAl     = alumnosActivos(clase, fecha).length;
             var badge     = '';
             if (reg) {
               if (reg.sinClase) {
@@ -4585,13 +4686,29 @@
       document.getElementById('asist-lista-sub').textContent    = formatFechaCompleta(asistFechaActiva);
       document.getElementById('asist-lista-fecha').value        = asistFechaActiva || hoyLocal();
 
-      // Estado inicial
+      // Solo alumnos ACTIVOS en esa fecha
+      var activos = alumnosActivos(clase, asistFechaActiva);
       asistEstadoLista = {};
-      (clase.alumnos||[]).forEach(function(a) {
-        asistEstadoLista[a] = regExiste ? (regExiste.presentes||[]).indexOf(a) !== -1 : true;
+      activos.forEach(function(n) {
+        asistEstadoLista[n] = regExiste ? (regExiste.presentes||[]).indexOf(n) !== -1 : true;
       });
 
+      // Recuperaciones = presentes guardados que NO son del cupo activo
+      asistRecups = [];
+      if (regExiste) {
+        (regExiste.presentes||[]).forEach(function(n) {
+          if (activos.indexOf(n) === -1) { asistRecups.push(n); asistEstadoLista[n] = true; }
+        });
+      }
+      asistRecupPanelOn = false;
       renderToggleAlumnos(clase);
+    }
+
+    // Cambiar la fecha desde la propia pantalla de pasar lista
+    function asistCambiarFechaLista(val) {
+      if (!val) return;
+      asistFechaActiva = val;
+      renderizarPasarLista();
     }
 
     function renderToggleAlumnos(clase) {
@@ -4599,25 +4716,91 @@
         var cfg = leerAsistConfig();
         clase = (cfg.clases||[]).filter(function(c){ return c.id===asistClaseActivaId; })[0];
       }
-      var alumnos = clase ? (clase.alumnos||[]) : [];
+      var activos = clase ? alumnosActivos(clase, asistFechaActiva) : [];
 
-      if (alumnos.length === 0) {
-        document.getElementById('asist-lista-alumnos').innerHTML =
-          '<div class="vacio"><div class="vacio-icono">👥</div><p>Esta clase no tiene alumnos.<br>Añade alumnos en "Gestionar clases".</p></div>';
-        return;
+      function fila(nombre, esRecup) {
+        var presente = asistEstadoLista[nombre] !== false;
+        var safe = nombre.replace(/'/g,"\\'");
+        var h = '<div class="asist-al-toggle ' + (presente?'presente':'ausente') + (esRecup?' recup':'') +
+                '" onclick="asistToggleAlumno(\'' + safe + '\')">';
+        h += '<div class="asist-al-icono">' + (presente ? '✓' : '✗') + '</div>';
+        h += '<span class="asist-al-nombre">' + nombre + (esRecup?'<span class="asist-recup-badge">RECUP</span>':'') + '</span>';
+        if (esRecup) {
+          h += '<button class="asist-chip-quitar" style="margin-left:auto;" onclick="event.stopPropagation();asistQuitarRecup(\'' + safe + '\')">✕</button>';
+        } else {
+          h += '<span class="asist-al-estado">' + (presente?'Presente':'Ausente') + '</span>';
+        }
+        h += '</div>';
+        return h;
       }
 
       var html = '';
-      alumnos.forEach(function(nombre) {
-        var presente = asistEstadoLista[nombre] !== false;
-        html += '<div class="asist-al-toggle ' + (presente?'presente':'ausente') + '" onclick="asistToggleAlumno(\'' + nombre.replace(/'/g,"\\'") + '\')">';
-        html += '<div class="asist-al-icono">' + (presente ? '✓' : '✗') + '</div>';
-        html += '<span class="asist-al-nombre">' + nombre + '</span>';
-        html += '<span class="asist-al-estado">' + (presente?'Presente':'Ausente') + '</span>';
-        html += '</div>';
-      });
-
+      if (activos.length === 0 && asistRecups.length === 0) {
+        html = '<div class="vacio"><div class="vacio-icono">👥</div><p>No hay alumnos activos en esta fecha.<br>Revisa las altas/bajas en "Gestionar clases" o añade una recuperación.</p></div>';
+      } else {
+        activos.forEach(function(n){ html += fila(n, false); });
+        asistRecups.forEach(function(n){ html += fila(n, true); });
+      }
       document.getElementById('asist-lista-alumnos').innerHTML = html;
+      renderRecupZona(clase);
+    }
+
+    // Botón + panel de recuperación
+    function renderRecupZona(clase) {
+      var zona = document.getElementById('asist-recup-zona');
+      if (!zona) return;
+      if (!asistRecupPanelOn) {
+        zona.innerHTML = '<button class="btn btn-sec btn-sm" style="border-color:var(--lila-claro);color:var(--lila);" onclick="asistToggleRecupPanel()">＋ Recuperación</button>';
+        return;
+      }
+      // candidatos: alumnos de otras clases (o de esta inactivos hoy) que no estén ya en la lista
+      var yaEnLista = {};
+      Object.keys(asistEstadoLista).forEach(function(k){ yaEnLista[k]=true; });
+      var activos = clase ? alumnosActivos(clase, asistFechaActiva) : [];
+      activos.forEach(function(n){ yaEnLista[n]=true; });
+      var todos = {};
+      (leerAsistConfig().clases||[]).forEach(function(c){
+        alumnosNombres(c).forEach(function(n){ todos[n]=true; });
+      });
+      var candidatos = Object.keys(todos).filter(function(n){ return !yaEnLista[n]; }).sort();
+      var chips = candidatos.map(function(n){
+        return '<span class="asist-recup-chip" onclick="asistAnadirRecup(\'' + n.replace(/'/g,"\\'") + '\')">' + n + '</span>';
+      }).join('') || '<span style="font-size:12px;color:var(--gris);">No hay otros alumnos; escribe un nombre.</span>';
+      zona.innerHTML =
+        '<div class="asist-recup-panel">' +
+          '<div style="font-size:12px;font-weight:700;color:var(--texto);margin-bottom:4px;">Añadir recuperación</div>' +
+          '<div class="asist-form-add-alumno">' +
+            '<input id="asist-recup-input" class="form-input" type="text" placeholder="Escribir nombre…" ' +
+              'onkeydown="if(event.key===\'Enter\'){event.preventDefault();asistAnadirRecupInput();}">' +
+            '<button class="btn btn-verde btn-sm" style="flex-shrink:0;" onclick="asistAnadirRecupInput()">＋</button>' +
+          '</div>' +
+          '<div class="asist-recup-chips">' + chips + '</div>' +
+        '</div>';
+    }
+
+    function asistToggleRecupPanel() {
+      asistRecupPanelOn = !asistRecupPanelOn;
+      renderToggleAlumnos(null);
+    }
+    function asistAnadirRecup(nombre) {
+      if (!nombre) return;
+      if (asistRecups.indexOf(nombre) === -1 && asistEstadoLista[nombre] === undefined) {
+        asistRecups.push(nombre);
+        asistEstadoLista[nombre] = true;
+      }
+      asistRecupPanelOn = false;
+      renderToggleAlumnos(null);
+    }
+    function asistAnadirRecupInput() {
+      var inp = document.getElementById('asist-recup-input');
+      if (!inp) return;
+      var n = inp.value.trim();
+      if (n) asistAnadirRecup(n);
+    }
+    function asistQuitarRecup(nombre) {
+      asistRecups = asistRecups.filter(function(n){ return n !== nombre; });
+      delete asistEstadoLista[nombre];
+      renderToggleAlumnos(null);
     }
 
     function asistToggleAlumno(nombre) {
@@ -4703,15 +4886,19 @@
       ordenDias.filter(function(d){ return !!diasMap[d]; }).forEach(function(dia) {
         html += '<div class="grupo-titulo">' + DIAS_NOMBRES_A[dia] + '</div>';
         diasMap[dia].forEach(function(clase) {
-          var numAl = (clase.alumnos||[]).length;
+          var nombresAl = alumnosNombres(clase);
+          var hoyISO = hoyLocal();
+          var activosHoy = alumnosActivos(clase, hoyISO).length;
+          var numAl = nombresAl.length;
           html += '<div class="asist-cfg-clase">';
           html += '<div class="asist-cfg-clase-hdr">';
           html += '<span class="asist-cfg-dia-pill">' + DIAS_NOMBRES_A[clase.diaSemana] + '</span>';
           html += '<span class="asist-cfg-franja">🕐 ' + (clase.franja||'Sin horario') + '</span>';
           html += '</div>';
           if (clase.nombre) html += '<div class="asist-cfg-clase-nombre">' + clase.nombre + '</div>';
-          html += '<div class="asist-cfg-alumnos-tag">👥 ' + numAl + ' alumno' + (numAl!==1?'s':'');
-          if (numAl > 0) html += ': ' + clase.alumnos.join(', ');
+          html += '<div class="asist-cfg-alumnos-tag">👥 ' + activosHoy + ' activo' + (activosHoy!==1?'s':'') +
+                  (numAl !== activosHoy ? ' · ' + numAl + ' en total' : '');
+          if (numAl > 0) html += ': ' + nombresAl.join(', ');
           html += '</div>';
           html += '<div class="asist-cfg-btns">';
           html += '<button class="btn btn-sec btn-sm" onclick="asistEditarClase(' + clase.id + ')">✏ Editar</button>';
@@ -4745,7 +4932,9 @@
         document.getElementById('asist-form-dia').value    = clase.diaSemana;
         document.getElementById('asist-form-franja').value = clase.franja || '';
         document.getElementById('asist-form-nombre').value = clase.nombre || '';
-        asistAlumnosForm = (clase.alumnos||[]).slice();
+        asistAlumnosForm = (clase.alumnos||[]).map(function(a){
+          return { nombre: alNom(a), alta: alAlta(a), baja: alBaja(a) };
+        });
       } else {
         document.getElementById('asist-form-dia').value    = '1';
         document.getElementById('asist-form-franja').value = '';
@@ -4765,17 +4954,29 @@
         return;
       }
       cont.innerHTML = asistAlumnosForm.map(function(a, i) {
-        return '<span class="asist-chip-alumno">' + a +
-               '<button class="asist-chip-quitar" onclick="asistQuitarAlumnoForm(' + i + ')">✕</button></span>';
+        return '<div class="asist-al-fila">' +
+          '<div class="asist-al-fila-top">' +
+            '<span class="asist-al-fila-nombre">' + alNom(a) + '</span>' +
+            '<button class="asist-chip-quitar" onclick="asistQuitarAlumnoForm(' + i + ')">✕</button>' +
+          '</div>' +
+          '<div class="asist-al-fila-fechas">' +
+            '<label>Desde<input type="date" value="' + (a.alta||'') + '" onchange="asistSetAlumnoFecha(' + i + ',\'alta\',this.value)"></label>' +
+            '<label>Hasta<input type="date" value="' + (a.baja||'') + '" onchange="asistSetAlumnoFecha(' + i + ',\'baja\',this.value)"></label>' +
+          '</div>' +
+        '</div>';
       }).join('');
+    }
+
+    function asistSetAlumnoFecha(idx, campo, val) {
+      if (asistAlumnosForm[idx]) asistAlumnosForm[idx][campo] = val || '';
     }
 
     function asistAnadirAlumno() {
       var input  = document.getElementById('asist-form-nuevo-alumno');
       var nombre = input.value.trim();
       if (!nombre) return;
-      if (asistAlumnosForm.indexOf(nombre) !== -1) { input.value=''; return; }
-      asistAlumnosForm.push(nombre);
+      if (asistAlumnosForm.some(function(a){ return alNom(a) === nombre; })) { input.value=''; return; }
+      asistAlumnosForm.push({ nombre: nombre, alta: '', baja: '' });
       input.value = '';
       renderAlumnosForm();
       input.focus();
@@ -4848,16 +5049,33 @@
       var regs   = leerAsistRegistros().filter(function(r){ return r.fecha && r.fecha.startsWith(mesISO); });
       var occ    = ocurrenciasDiaEnMes(mesISO);
 
-      // Calcular stats por alumno
+      // Calcular stats por alumno (respetando alta/baja y recuperaciones)
       var alumnosMap = {};
+      function ensure(n){ if(!alumnosMap[n]) alumnosMap[n]={totalClases:0,presencias:0,recups:0}; return alumnosMap[n]; }
       clases.forEach(function(clase) {
-        var vecesEnMes  = occ[clase.diaSemana] || 0;
-        var regsClase   = regs.filter(function(r){ return r.claseId===clase.id; });
-        (clase.alumnos||[]).forEach(function(alumno) {
-          if (!alumnosMap[alumno]) alumnosMap[alumno] = { totalClases:0, presencias:0 };
-          alumnosMap[alumno].totalClases += vecesEnMes;
-          var pres = regsClase.filter(function(r){ return r.presentes.indexOf(alumno)!==-1; }).length;
-          alumnosMap[alumno].presencias += pres;
+        var fechas    = fechasClaseEnMes(clase, mesISO);
+        var regsClase = regs.filter(function(r){ return r.claseId===clase.id; });
+        var regPorFecha = {};
+        regsClase.forEach(function(r){ regPorFecha[r.fecha]=r; });
+        // Alumnos del cupo: posibles solo en fechas activas y con clase
+        (clase.alumnos||[]).forEach(function(a) {
+          var nombre = alNom(a);
+          var dat = ensure(nombre);
+          fechas.forEach(function(f){
+            if (!alActivo(a, f)) return;
+            var reg = regPorFecha[f];
+            if (reg && reg.sinClase) return;
+            dat.totalClases += 1;
+            if (reg && (reg.presentes||[]).indexOf(nombre)!==-1) dat.presencias += 1;
+          });
+        });
+        // Recuperaciones: presentes que NO son del cupo activo esa fecha
+        regsClase.forEach(function(r){
+          if (r.sinClase) return;
+          var activos = alumnosActivos(clase, r.fecha);
+          (r.presentes||[]).forEach(function(n){
+            if (activos.indexOf(n)===-1) ensure(n).recups += 1;
+          });
         });
       });
 
@@ -4898,7 +5116,8 @@
         html += '<div class="asist-res-nombre">' + alumno + '<span class="asist-res-pct">' + pct + '%</span></div>';
         html += '<div class="asist-progreso"><div class="asist-progreso-fill" style="width:' + pct + '%"></div></div>';
         html += '<div class="asist-res-nums">';
-        html += '<span>' + dat.presencias + ' asistencias / ' + dat.totalClases + ' posibles</span>';
+        html += '<span>' + dat.presencias + ' asistencias / ' + dat.totalClases + ' posibles' +
+                (dat.recups ? ' · +' + dat.recups + ' recup' : '') + '</span>';
         html += '<span style="color:' + colNivel + ';font-weight:700">' + nivel + '</span>';
         html += '</div></div>';
       });
@@ -4935,18 +5154,22 @@
         if (!clase) return;
         var enPresentes = (r.presentes||[]).indexOf(alumno)!==-1;
         var enAusentes  = (r.ausentes||[]).indexOf(alumno)!==-1;
-        if (enPresentes || enAusentes) {
-          historial.push({ fecha:r.fecha, clase:clase, presente:enPresentes });
-        }
+        if (!enPresentes && !enAusentes) return;
+        var entry   = alumnoEnClase(clase, alumno);
+        var esRecup = enPresentes && (!entry || !alActivo(entry, r.fecha));
+        historial.push({ fecha:r.fecha, clase:clase, presente:enPresentes, recup:esRecup });
       });
 
       historial.sort(function(a,b){ return b.fecha.localeCompare(a.fecha); });
 
-      var pres = historial.filter(function(h){ return h.presente; }).length;
-      var pct  = historial.length>0 ? Math.round(pres/historial.length*100) : 0;
+      // % sobre sus clases propias; las recuperaciones van aparte
+      var propias = historial.filter(function(h){ return !h.recup; });
+      var pres    = propias.filter(function(h){ return h.presente; }).length;
+      var pct     = propias.length>0 ? Math.round(pres/propias.length*100) : 0;
+      var nRecup  = historial.filter(function(h){ return h.recup; }).length;
 
       document.getElementById('asist-alumno-sub').textContent =
-        pres + '/' + historial.length + ' asistencias (' + pct + '%)';
+        pres + '/' + propias.length + ' asistencias (' + pct + '%)' + (nRecup ? ' · +' + nRecup + ' recup' : '');
 
       if (historial.length === 0) {
         document.getElementById('asist-alumno-contenido').innerHTML =
@@ -4968,7 +5191,7 @@
       html += '<div class="asist-global-num">' + pct + '%</div>';
       html += '<div class="asist-global-info">';
       html += '<div class="asist-global-titulo">Asistencia total</div>';
-      html += '<div class="asist-global-sub">' + pres + ' presencias de ' + historial.length + ' clases registradas</div>';
+      html += '<div class="asist-global-sub">' + pres + ' presencias de ' + propias.length + ' clases propias' + (nRecup ? ' · ' + nRecup + ' recuperación' + (nRecup!==1?'es':'') : '') + '</div>';
       html += '<div class="asist-progreso" style="margin-top:8px;"><div class="asist-progreso-fill" style="width:' + pct + '%"></div></div>';
       html += '</div></div>';
 
@@ -4988,9 +5211,11 @@
           html += '<div class="asist-hist-clase-nombre">' + clasNom + '</div>';
           html += '<div class="asist-hist-clase-franja">' + (h.clase.franja||'') + '</div>';
           html += '</div>';
-          html += h.presente
-            ? '<span class="asist-hist-presente">✓ Presente</span>'
-            : '<span class="asist-hist-ausente">✗ Ausente</span>';
+          html += h.recup
+            ? '<span class="asist-hist-presente">✓ Recup.</span>'
+            : (h.presente
+                ? '<span class="asist-hist-presente">✓ Presente</span>'
+                : '<span class="asist-hist-ausente">✗ Ausente</span>');
           html += '</div>';
         });
       });
@@ -5011,14 +5236,20 @@
       var occ    = ocurrenciasDiaEnMes(mesISO);
 
       var alumnosMap = {};
+      function ensureP(n){ if(!alumnosMap[n]) alumnosMap[n]={totalClases:0,presencias:0}; return alumnosMap[n]; }
       clases.forEach(function(clase) {
-        var vecesEnMes = occ[clase.diaSemana] || 0;
-        var regsClase  = regs.filter(function(r){ return r.claseId===clase.id; });
-        var sinClaseCount = regsClase.filter(function(r){ return r.sinClase; }).length;
-        (clase.alumnos||[]).forEach(function(alumno) {
-          if (!alumnosMap[alumno]) alumnosMap[alumno] = { totalClases:0, presencias:0 };
-          alumnosMap[alumno].totalClases += (vecesEnMes - sinClaseCount);
-          alumnosMap[alumno].presencias  += regsClase.filter(function(r){ return !r.sinClase && r.presentes.indexOf(alumno)!==-1; }).length;
+        var fechasMes = fechasClaseEnMes(clase, mesISO);
+        var regsClase = regs.filter(function(r){ return r.claseId===clase.id; });
+        var regPorFecha = {}; regsClase.forEach(function(r){ regPorFecha[r.fecha]=r; });
+        (clase.alumnos||[]).forEach(function(a) {
+          var nombre = alNom(a), dat = ensureP(nombre);
+          fechasMes.forEach(function(f){
+            if (!alActivo(a, f)) return;
+            var reg = regPorFecha[f];
+            if (reg && reg.sinClase) return;
+            dat.totalClases += 1;
+            if (reg && (reg.presentes||[]).indexOf(nombre)!==-1) dat.presencias += 1;
+          });
         });
       });
 
@@ -5072,11 +5303,10 @@
 
             h += '<h3>' + clasNom + ' · ' + vecesEnMes + ' clase' + (vecesEnMes!==1?'s':'') + ' en el mes</h3>';
 
-            if (!(clase.alumnos||[]).length) { h += '<p style="color:#6b7280;font-size:12px;">Sin alumnos</p>'; return; }
+            var nombresClase = alumnosNombres(clase);
+            if (!nombresClase.length) { h += '<p style="color:#6b7280;font-size:12px;">Sin alumnos</p>'; return; }
 
             var fechas = regsClase.map(function(r){ return r.fecha; }).sort();
-            var sinClaseDet = regsClase.filter(function(r){ return r.sinClase; }).length;
-            var efectivas   = vecesEnMes - sinClaseDet;
             h += '<table><thead><tr><th>Alumno</th>';
             fechas.forEach(function(f){
               var rr = regsClase.filter(function(x){ return x.fecha===f; })[0];
@@ -5084,22 +5314,26 @@
             });
             h += '<th style="text-align:center">Total</th><th style="text-align:center">%</th></tr></thead><tbody>';
 
-            (clase.alumnos||[]).forEach(function(alumno) {
-              h += '<tr><td>' + alumno + '</td>';
-              var pres = 0;
+            nombresClase.forEach(function(nombre) {
+              var entry = alumnoEnClase(clase, nombre);
+              h += '<tr><td>' + nombre + '</td>';
+              var pres = 0, posibles = 0;
               fechas.forEach(function(f) {
                 var reg = regsClase.filter(function(r){ return r.fecha===f; })[0];
-                if (reg && reg.sinClase) {
+                if (!alActivo(entry, f)) {            // fuera de su alta/baja
+                  h += '<td style="text-align:center;color:#d1d5db">·</td>';
+                } else if (reg && reg.sinClase) {
                   h += '<td style="text-align:center;color:#9ca3af">—</td>';
                 } else {
-                  var ok = reg && reg.presentes.indexOf(alumno)!==-1;
+                  posibles++;
+                  var ok = reg && reg.presentes.indexOf(nombre)!==-1;
                   h += '<td style="text-align:center;font-weight:700;color:' + (reg?(ok?'#166534':'#991b1b'):'#9ca3af') + '">' + (reg?(ok?'✓':'✗'):'—') + '</td>';
                   if (ok) pres++;
                 }
               });
-              var pct2 = efectivas>0 ? Math.round(pres/efectivas*100) : 0;
+              var pct2 = posibles>0 ? Math.round(pres/posibles*100) : 0;
               var cls2 = pct2>=80?'verde':pct2>=60?'ambar':'rojo';
-              h += '<td style="text-align:center;font-weight:700">' + pres + '/' + efectivas + '</td>';
+              h += '<td style="text-align:center;font-weight:700">' + pres + '/' + posibles + '</td>';
               h += '<td style="text-align:center"><span class="' + cls2 + '">' + pct2 + '%</span></td></tr>';
             });
             h += '</tbody></table>';
