@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.20.0
+  TU APP DE PÁDEL — v0.20.1
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,11 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.20.1 — Botón FIP en Competición (2026-06)
+    · Inicio: añadido el enlace a la FIP (Federación
+      Internacional, padelfip.com) junto a FAP y FEP.
+      La sección Competición pasa a 3 botones en fila.
+
   v0.20.0 — Globo (lightbox) para foto y vídeo (2026-06)
     · En el detalle del ejercicio, al tocar la imagen se
       abre a pantalla completa (globo). Al tocar el vídeo
@@ -924,13 +929,13 @@
           <div class="home-sec-bar c"></div>
           <span class="home-sec-label">Competición</span>
         </div>
-        <div class="tarjeta-grid">
+        <div class="tarjeta-grid" style="grid-template-columns:repeat(3,1fr);">
           <div class="tarjeta-col externo-link"
                onclick="window.open('https://fap.es/campeonatos-torneos/','_blank')">
             <div class="menu-icono externo">🏅</div>
             <div>
               <div class="menu-nombre">FAP</div>
-              <div class="menu-desc">Torneos y campeonatos ↗</div>
+              <div class="menu-desc">Torneos ↗</div>
             </div>
           </div>
           <div class="tarjeta-col externo-link"
@@ -941,13 +946,21 @@
               <div class="menu-desc">Campeonatos ↗</div>
             </div>
           </div>
+          <div class="tarjeta-col externo-link"
+               onclick="window.open('https://www.padelfip.com/es/','_blank')">
+            <div class="menu-icono externo">🌍</div>
+            <div>
+              <div class="menu-nombre">FIP</div>
+              <div class="menu-desc">Internacional ↗</div>
+            </div>
+          </div>
         </div>
       </div>
 
     </div>
     <div class="pie" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
       <button class="btn btn-sec btn-sm" onclick="irA('pantalla-importar')" style="width:auto;gap:5px;">📥 Importar desde Obsidian</button>
-      <span>Versión 0.20.0 · Solo para mí</span>
+      <span>Versión 0.20.1 · Solo para mí</span>
     </div>
   </div>
 
