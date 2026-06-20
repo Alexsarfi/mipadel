@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.19.0
+  TU APP DE PÁDEL — v0.20.0
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,25 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.20.0 — Globo (lightbox) para foto y vídeo (2026-06)
+    · En el detalle del ejercicio, al tocar la imagen se
+      abre a pantalla completa (globo). Al tocar el vídeo
+      se reproduce embebido en el globo (YouTube), con
+      enlace de respaldo "Abrir en YouTube".
+    · Cierre tocando fuera, con la ✕ o con Escape.
+
+  v0.19.2 — PDF asistencia: recuperaciones (2026-06)
+    · Los alumnos que vienen a recuperar aparecen en el
+      PDF como fila "↩ recup" (violeta) en la clase a la
+      que asistieron, marcando el día, y se cuentan en el
+      resumen por alumno (↩ +N). Leyenda actualizada.
+
+  v0.19.1 — PDF asistencia: altas/bajas del mes (2026-06)
+    · En el PDF mensual, los alumnos con ALTA dentro del
+      mes salen subrayados en verde con la fecha (🆕), y
+      los de BAJA en rojo, con una leyenda. Pensado para
+      el cálculo/cobro de fin de mes.
+
   v0.19.0 — Asistencia: altas/bajas y recuperaciones (2026-06)
     · Inicio: la sección Entrenamiento muestra solo "Mis
       clases" (Ejercicios y Categorías ocultos).
@@ -345,14 +364,23 @@
     .tab.activo { background:var(--blanco); color:var(--texto); box-shadow:0 1px 4px rgba(0,0,0,0.08); }
 
     /* ── DETALLE EJERCICIO ── */
-    .detalle-imagen { width:100%; max-height:220px; object-fit:cover; border-radius:14px; border:1px solid var(--borde); }
+    .detalle-imagen { width:100%; max-height:220px; object-fit:cover; border-radius:14px; border:1px solid var(--borde); cursor:zoom-in; -webkit-tap-highlight-color:transparent; }
     .detalle-video-wrap { position:relative; padding-bottom:56.25%; height:0; border-radius:14px; overflow:hidden; border:1px solid var(--borde); }
     .detalle-video-wrap iframe { position:absolute; top:0; left:0; width:100%; height:100%; border:none; }
     .detalle-seccion-titulo { font-size:11px; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px; }
     .detalle-descripcion { font-size:15px; line-height:1.7; color:var(--texto); background:var(--blanco); border-radius:12px; padding:1rem 1.1rem; border:1px solid var(--borde); }
     .detalle-enlace { display:flex; align-items:center; gap:8px; background:var(--blanco); border:1px solid var(--borde); border-radius:12px; padding:0.875rem 1rem; color:var(--verde); font-size:14px; font-weight:600; text-decoration:none; }
     .detalle-enlace:hover { border-color:var(--verde-claro); }
-    .video-thumb-wrap { display:block; position:relative; border-radius:14px; overflow:hidden; border:1px solid var(--borde); text-decoration:none; }
+    .video-thumb-wrap { display:block; position:relative; border-radius:14px; overflow:hidden; border:1px solid var(--borde); text-decoration:none; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    /* Globo / lightbox para foto y vídeo */
+    .lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:1000; align-items:center; justify-content:center; padding:18px; }
+    .lightbox.activa { display:flex; }
+    .lightbox-inner { width:100%; max-width:960px; display:flex; align-items:center; justify-content:center; }
+    .lightbox-inner img { max-width:100%; max-height:88vh; border-radius:12px; object-fit:contain; }
+    .lb-video { position:relative; width:100%; aspect-ratio:16/9; }
+    .lb-video iframe { width:100%; height:100%; border:0; border-radius:12px; }
+    .lightbox-close { position:fixed; top:14px; right:14px; width:46px; height:46px; border-radius:50%; background:rgba(255,255,255,0.16); color:#fff; border:none; font-size:20px; cursor:pointer; z-index:1001; -webkit-tap-highlight-color:transparent; }
+    .lightbox-close:active { background:rgba(255,255,255,0.3); }
     .video-thumb-img { width:100%; display:block; aspect-ratio:16/9; object-fit:cover; }
     .video-thumb-fallback { width:100%; aspect-ratio:16/9; background:#111; color:#fff; font-size:15px; font-weight:600; align-items:center; justify-content:center; }
     .video-play-btn { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:56px; height:56px; background:rgba(255,0,0,0.85); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:22px; padding-left:4px; pointer-events:none; }
@@ -919,7 +947,7 @@
     </div>
     <div class="pie" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
       <button class="btn btn-sec btn-sm" onclick="irA('pantalla-importar')" style="width:auto;gap:5px;">📥 Importar desde Obsidian</button>
-      <span>Versión 0.19.0 · Solo para mí</span>
+      <span>Versión 0.20.0 · Solo para mí</span>
     </div>
   </div>
 
@@ -1339,6 +1367,12 @@
       <div class="cab-sub" id="asist-alumno-sub">Historial de asistencia</div>
     </div>
     <div class="contenido" id="asist-alumno-contenido"></div>
+  </div>
+
+  <!-- ══ GLOBO / LIGHTBOX (foto y vídeo) ══════════ -->
+  <div id="lightbox" class="lightbox" onclick="if(event.target===this)cerrarLightbox()">
+    <button class="lightbox-close" onclick="cerrarLightbox()">✕</button>
+    <div class="lightbox-inner" id="lightbox-inner"></div>
   </div>
 
 
@@ -2657,6 +2691,34 @@
     }
 
     // ══════════════════════════════════════════
+    // GLOBO / LIGHTBOX (foto y vídeo)
+    // ══════════════════════════════════════════
+    function abrirLightboxImg(src) {
+      if (!src) return;
+      document.getElementById('lightbox-inner').innerHTML =
+        '<img src="' + src + '" alt="">';
+      document.getElementById('lightbox').classList.add('activa');
+    }
+    function abrirLightboxVideo(ytId, url) {
+      var inner = document.getElementById('lightbox-inner');
+      if (ytId) {
+        inner.innerHTML = '<div class="lb-video"><iframe src="https://www.youtube-nocookie.com/embed/' +
+          ytId + '?autoplay=1&rel=0&playsinline=1" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>';
+      } else if (url) {
+        inner.innerHTML = '<div class="lb-video"><iframe src="' + url + '" allow="autoplay; fullscreen" allowfullscreen></iframe></div>';
+      } else { return; }
+      document.getElementById('lightbox').classList.add('activa');
+    }
+    function cerrarLightbox() {
+      document.getElementById('lightbox').classList.remove('activa');
+      document.getElementById('lightbox-inner').innerHTML = ''; // detiene el vídeo
+    }
+    // Cerrar el globo con la tecla Escape
+    document.addEventListener('keydown', function(e){
+      if (e.key === 'Escape') cerrarLightbox();
+    });
+
+    // ══════════════════════════════════════════
     // DETALLE EJERCICIO
     // ══════════════════════════════════════════
 
@@ -2677,23 +2739,25 @@
 
       var html = '';
 
-      // Imagen
-      if (ej.imagen) html += '<img src="' + ej.imagen + '" class="detalle-imagen" alt="' + ej.nombre + '">';
+      // Imagen (toca para ampliar en globo)
+      if (ej.imagen) html += '<img src="' + ej.imagen + '" class="detalle-imagen" alt="' + ej.nombre + '" onclick="abrirLightboxImg(this.src)">';
+      // (funciones del globo definidas más abajo: abrirLightboxImg / abrirLightboxVideo / cerrarLightbox)
 
       // Vídeo
       if (ej.video) {
         var ytId = extraerIdYoutube(ej.video);
+        var vidUrl = ej.video.replace(/'/g, "\\'");
         if (ytId) {
-          // Miniatura clicable que abre YouTube directamente (evita error 153)
+          // Miniatura clicable: abre el vídeo en un globo (lightbox)
           html += '<div><div class="detalle-seccion-titulo">Vídeo</div>' +
-            '<a href="' + ej.video + '" target="_blank" class="video-thumb-wrap">' +
+            '<div class="video-thumb-wrap" onclick="abrirLightboxVideo(\'' + ytId + '\',\'' + vidUrl + '\')">' +
               '<img src="https://img.youtube.com/vi/' + ytId + '/hqdefault.jpg" ' +
                    'class="video-thumb-img" alt="Miniatura del vídeo" ' +
                    'onerror="this.style.display=\'none\';this.nextSibling.style.display=\'flex\'">' +
-              '<div class="video-thumb-fallback" style="display:none">▶ Ver en YouTube</div>' +
+              '<div class="video-thumb-fallback" style="display:none">▶ Ver vídeo</div>' +
               '<div class="video-play-btn">▶</div>' +
-            '</a>' +
-            '<a href="' + ej.video + '" target="_blank" class="detalle-enlace" style="margin-top:6px;">▶ Abrir en YouTube</a>' +
+            '</div>' +
+            '<a href="' + ej.video + '" target="_blank" class="detalle-enlace" style="margin-top:6px;">↗ Abrir en YouTube</a>' +
           '</div>';
         } else {
           html += '<div><div class="detalle-seccion-titulo">Vídeo</div>' +
@@ -5236,7 +5300,7 @@
       var occ    = ocurrenciasDiaEnMes(mesISO);
 
       var alumnosMap = {};
-      function ensureP(n){ if(!alumnosMap[n]) alumnosMap[n]={totalClases:0,presencias:0}; return alumnosMap[n]; }
+      function ensureP(n){ if(!alumnosMap[n]) alumnosMap[n]={totalClases:0,presencias:0,recups:0}; return alumnosMap[n]; }
       clases.forEach(function(clase) {
         var fechasMes = fechasClaseEnMes(clase, mesISO);
         var regsClase = regs.filter(function(r){ return r.claseId===clase.id; });
@@ -5251,12 +5315,36 @@
             if (reg && (reg.presentes||[]).indexOf(nombre)!==-1) dat.presencias += 1;
           });
         });
+        // Recuperaciones: presentes que no son del cupo activo
+        regsClase.forEach(function(r){
+          if (r.sinClase) return;
+          var act = alumnosActivos(clase, r.fecha);
+          (r.presentes||[]).forEach(function(n){ if (act.indexOf(n)===-1) ensureP(n).recups += 1; });
+        });
       });
 
       var alumnos = Object.keys(alumnosMap).sort();
       var totPres=0, totPos=0;
       alumnos.forEach(function(a){ totPres+=alumnosMap[a].presencias; totPos+=alumnosMap[a].totalClases; });
       var pctG = totPos>0 ? Math.round(totPres/totPos*100) : 0;
+
+      // Altas y bajas DENTRO del mes exportado (para el cálculo de fin de mes)
+      var altaMes = {}, bajaMes = {};
+      clases.forEach(function(clase){
+        (clase.alumnos||[]).forEach(function(a){
+          var n = alNom(a);
+          if (alAlta(a) && alAlta(a).indexOf(mesISO) === 0) altaMes[n] = alAlta(a);
+          if (alBaja(a) && alBaja(a).indexOf(mesISO) === 0) bajaMes[n] = alBaja(a);
+        });
+      });
+      var hayAltas = Object.keys(altaMes).length, hayBajas = Object.keys(bajaMes).length;
+      var hayRecups = alumnos.filter(function(n){ return alumnosMap[n].recups; }).length;
+      // Nombre con marca de alta/baja del mes
+      function nombrePDF(n){
+        if (altaMes[n]) return '<span class="nuevo">' + n + '</span> <span class="tag-nuevo">🆕 alta ' + formatFechaCorta(altaMes[n]) + '</span>';
+        if (bajaMes[n]) return '<span class="baja">' + n + '</span> <span class="tag-baja">baja ' + formatFechaCorta(bajaMes[n]) + '</span>';
+        return n;
+      }
 
       var h = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">';
       h += '<title>Asistencia · ' + mesLabel + '</title><style>';
@@ -5270,6 +5358,14 @@
       h += 'td{padding:7px 10px;border-bottom:1px solid #e5e7eb;}';
       h += 'tr:nth-child(even) td{background:#faf5ff;}';
       h += '.verde{color:#166534;font-weight:700;} .ambar{color:#92400e;font-weight:700;} .rojo{color:#991b1b;font-weight:700;}';
+      h += '.nuevo{color:#166534;font-weight:800;text-decoration:underline;text-decoration-color:#16a34a;text-decoration-thickness:2px;}';
+      h += '.tag-nuevo{font-size:10px;font-weight:800;color:#166534;background:#dcfce7;border-radius:8px;padding:1px 6px;margin-left:4px;white-space:nowrap;}';
+      h += '.baja{color:#991b1b;font-weight:800;text-decoration:underline;text-decoration-color:#dc2626;text-decoration-thickness:2px;}';
+      h += '.tag-baja{font-size:10px;font-weight:800;color:#991b1b;background:#fee2e2;border-radius:8px;padding:1px 6px;margin-left:4px;white-space:nowrap;}';
+      h += '.recup-pdf{color:#7c3aed;font-weight:800;}';
+      h += '.tag-recup{font-size:10px;font-weight:800;color:#5b21b6;background:#ede9fe;border-radius:8px;padding:1px 6px;margin-left:4px;white-space:nowrap;}';
+      h += '.leyenda{font-size:11px;color:#6b7280;margin-bottom:16px;}';
+      h += '.leyenda .nuevo,.leyenda .baja{margin-right:4px;}';
       h += '.global-box{background:#f9f5ff;border:2px solid #a78bfa;border-radius:10px;padding:14px 20px;margin-bottom:22px;display:flex;gap:20px;align-items:center;}';
       h += '.global-num{font-size:40px;font-weight:800;color:#7c3aed;line-height:1;}';
       h += '.barra-wrap{background:#e5e7eb;border-radius:4px;height:8px;width:80px;display:inline-block;vertical-align:middle;margin-left:6px;overflow:hidden;}';
@@ -5282,6 +5378,13 @@
       h += '<button class="btn-volver" onclick="window.close()">← Volver</button>';
       h += '<h1>📋 Resumen de Asistencia</h1>';
       h += '<div class="sub">' + mesLabel + ' &nbsp;·&nbsp; Club de Pádel &nbsp;·&nbsp; Generado el ' + new Date().toLocaleDateString('es-ES') + '</div>';
+      if (hayAltas || hayBajas || hayRecups) {
+        h += '<div class="leyenda">';
+        if (hayAltas)  h += '<span class="nuevo">Subrayado verde</span> = alta este mes (' + hayAltas + ')&nbsp;&nbsp;';
+        if (hayBajas)  h += '<span class="baja">Subrayado rojo</span> = baja este mes (' + hayBajas + ')&nbsp;&nbsp;';
+        if (hayRecups) h += '<span class="recup-pdf">↩ recup</span> = recuperación de otra clase';
+        h += '</div>';
+      }
 
       // ── 1. Detalle por clase agrupado por día de la semana ──────
       if (clases.length > 0) {
@@ -5316,7 +5419,7 @@
 
             nombresClase.forEach(function(nombre) {
               var entry = alumnoEnClase(clase, nombre);
-              h += '<tr><td>' + nombre + '</td>';
+              h += '<tr><td>' + nombrePDF(nombre) + '</td>';
               var pres = 0, posibles = 0;
               fechas.forEach(function(f) {
                 var reg = regsClase.filter(function(r){ return r.fecha===f; })[0];
@@ -5336,6 +5439,25 @@
               h += '<td style="text-align:center;font-weight:700">' + pres + '/' + posibles + '</td>';
               h += '<td style="text-align:center"><span class="' + cls2 + '">' + pct2 + '%</span></td></tr>';
             });
+
+            // Filas de recuperación: presentes que no son del cupo de esta clase
+            var guests = {};
+            regsClase.forEach(function(r){
+              if (r.sinClase) return;
+              (r.presentes||[]).forEach(function(n){
+                if (nombresClase.indexOf(n) === -1) { (guests[n] = guests[n] || []).push(r.fecha); }
+              });
+            });
+            Object.keys(guests).sort().forEach(function(g){
+              h += '<tr><td><span class="recup-pdf">' + g + '</span> <span class="tag-recup">↩ recup</span></td>';
+              var cnt = 0;
+              fechas.forEach(function(f){
+                if (guests[g].indexOf(f) !== -1) { h += '<td style="text-align:center;font-weight:700;color:#7c3aed">↩</td>'; cnt++; }
+                else h += '<td style="text-align:center;color:#d1d5db">·</td>';
+              });
+              h += '<td style="text-align:center;font-weight:700;color:#7c3aed">' + cnt + '</td>';
+              h += '<td style="text-align:center;color:#7c3aed">recup</td></tr>';
+            });
             h += '</tbody></table>';
           });
         });
@@ -5350,7 +5472,7 @@
           var pct = dat.totalClases>0 ? Math.round(dat.presencias/dat.totalClases*100) : 0;
           var cls = pct>=80 ? 'verde' : pct>=60 ? 'ambar' : 'rojo';
           var niv = pct>=80 ? '● Buena' : pct>=60 ? '● Regular' : '● Baja';
-          h += '<tr><td>' + a + '</td><td style="text-align:center">' + dat.presencias + '</td><td style="text-align:center">' + dat.totalClases + '</td>';
+          h += '<tr><td>' + nombrePDF(a) + (dat.recups ? ' <span class="tag-recup">↩ +' + dat.recups + '</span>' : '') + '</td><td style="text-align:center">' + dat.presencias + '</td><td style="text-align:center">' + dat.totalClases + '</td>';
           h += '<td><span class="' + cls + '">' + pct + '%</span><span class="barra-wrap"><span class="barra-fill" style="width:' + pct + '%"></span></span></td>';
           h += '<td class="' + cls + '">' + niv + '</td></tr>';
         });
