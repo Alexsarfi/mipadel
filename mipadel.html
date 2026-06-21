@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.21.4
+  TU APP DE PÁDEL — v0.21.5
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,12 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.21.5 — Miniatura abre el globo en el detalle de sesión
+    · En las tarjetas de ejercicio de una sesión, tocar la
+      MINIATURA (izquierda) abre el vídeo/imagen en el globo
+      sin entrar al ejercicio. Tocar el resto de la tarjeta
+      entra al detalle completo del ejercicio (como antes).
+
   v0.21.4 — Equipo como franja fina (2026-06)
     · El botón Equipo es una franja a todo el ancho pero
       con ~la mitad de alto que los botones de arriba
@@ -1010,7 +1016,7 @@
     </div>
     <div class="pie" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
       <button class="btn btn-sec btn-sm" onclick="irA('pantalla-importar')" style="width:auto;gap:5px;">📥 Importar desde Obsidian</button>
-      <span>Versión 0.21.4 · Solo para mí</span>
+      <span>Versión 0.21.5 · Solo para mí</span>
     </div>
   </div>
 
@@ -3393,20 +3399,22 @@
     }
 
     // Miniatura: imagen, o thumbnail de YouTube, o placeholder.
-    function ejCardMedia(ej) {
+    function ejCardMedia(ej, oc) {
       var onerr = "this.parentNode.classList.add('ej-card-media-ph');this.remove()";
+      var at = oc ? (' onclick="' + oc + '"') : '';      // click propio (abrir globo)
       if (ej.imagen) {
-        return '<div class="ej-card-media"><img src="' + ej.imagen + '" loading="lazy" alt="" onerror="' + onerr + '"></div>';
+        return '<div class="ej-card-media"' + at + '><img src="' + ej.imagen + '" loading="lazy" alt="" onerror="' + onerr + '"></div>';
       }
       if (ej.video) {
         var yt = extraerIdYoutube(ej.video);
         if (yt) {
-          return '<div class="ej-card-media">' +
+          return '<div class="ej-card-media"' + at + '>' +
             '<img src="https://img.youtube.com/vi/' + yt + '/mqdefault.jpg" loading="lazy" alt="" onerror="' + onerr + '">' +
             '<span class="ej-card-play">▶</span></div>';
         }
-        return '<div class="ej-card-media ej-card-media-ph"><span class="ej-card-play">▶</span></div>';
+        return '<div class="ej-card-media ej-card-media-ph"' + at + '><span class="ej-card-play">▶</span></div>';
       }
+      // Sin imagen ni vídeo: sin click propio → el toque entra al detalle.
       return '<div class="ej-card-media ej-card-media-ph"><span class="ej-card-ph-ico">🎾</span></div>';
     }
 
@@ -3421,8 +3429,16 @@
       if (zona)  chips += '<span class="ej-card-chip">📍 ' + (ZONA_LABEL[zona] || zona) + '</span>';
       if (val > 0) chips += '<span class="ej-card-chip dorado">★' + val + '</span>';
       var breve = ejBreve(ej);
+      // Click de la miniatura → abre el globo (vídeo o imagen) sin entrar al detalle.
+      var mediaOC = '';
+      if (ej.video) {
+        var yt = extraerIdYoutube(ej.video);
+        mediaOC = 'event.stopPropagation();abrirLightboxVideo(\'' + (yt || '') + '\',\'' + ej.video.replace(/'/g, "\\'") + '\')';
+      } else if (ej.imagen) {
+        mediaOC = 'event.stopPropagation();abrirLightboxImg(\'' + ej.imagen.replace(/'/g, "\\'") + '\')';
+      }
       return '<div class="ej-card" onclick="verEjercicio(' + ej.id + ',\'sesion\')">' +
-        ejCardMedia(ej) +
+        ejCardMedia(ej, mediaOC) +
         '<div class="ej-card-body">' +
           '<div class="ej-card-nombre">' + ej.nombre + '</div>' +
           (chips ? '<div class="ej-card-chips">' + chips + '</div>' : '') +
