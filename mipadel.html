@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.20.1
+  TU APP DE PÁDEL — v0.21.4
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,45 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.21.4 — Equipo como franja fina (2026-06)
+    · El botón Equipo es una franja a todo el ancho pero
+      con ~la mitad de alto que los botones de arriba
+      (más baja, ocupa menos). Limpieza de reglas CSS
+      duplicadas del botón Equipo.
+
+  v0.21.2 — Botón Equipo en franja propia (2026-06)
+    · El botón Equipo va en su propia franja, garantizado
+      DEBAJO de Iniciación/Avanzado/Competición (ya no
+      depende del salto de línea del flex). Las dos franjas
+      quedan dentro de un contenedor fijo (sticky) común.
+
+  v0.21.1 — Sección de la sesión = su carpeta (2026-06)
+    · Criterio unificado vault↔app: la sección de una
+      sesión (Iniciación/Avanzado/Competición/Equipo) la
+      determina su CARPETA en 02 SESIONES, no el nivel de
+      los ejercicios. nivelDeSesion lee la temática
+      (tolerante a mayúsculas/acentos) y solo deriva del
+      nivel como respaldo si la sesión no tiene carpeta.
+    · Vault reorganizado: 02 SESIONES/ en 4 carpetas
+      Iniciación · Avanzado · Competición · Equipo.
+
+  v0.21.0 — Apartado Equipo en Mis Clases (2026-06)
+    · Nuevo botón "Equipo" (alargado, media altura) bajo
+      la barra Iniciación/Avanzado/Competición. Reúne las
+      sesiones de concentraciones/selección: minitorneos,
+      mini partidos, simulación de campeonatos por equipos,
+      juegos cooperativos y de socialización.
+    · Una sesión entra en Equipo si su temática es 'equipo'
+      (carpeta 02 SESIONES/equipo/ en el vault). Estas
+      sesiones se listan aparte, no por nivel ni golpe.
+    · sync_padel.py: 'equipo' añadido a las temáticas
+      válidas de sesión.
+
+  v0.20.2 — Sesiones sin trocear (2026-06)
+    · Al importar, una sesión conserva TODOS sus ejercicios
+      en una sola entrada. Se elimina el troceo en bloques
+      de 3 que generaba sesiones fantasma "· 2", "· 3".
+
   v0.20.1 — Botón FIP en Competición (2026-06)
     · Inicio: añadido el enlace a la FIP (Federación
       Internacional, padelfip.com) junto a FAP y FEP.
@@ -567,7 +606,18 @@
     .marc-saque-partner:active { opacity:0.65; }
 
     /* ── Mis Clases — barra de niveles ── */
-    .nivelbar { display:flex; gap:6px; padding:0.7rem 1.25rem; background:var(--arena); position:sticky; top:0; z-index:20; flex-shrink:0; box-shadow:0 2px 10px rgba(0,0,0,0.04); }
+    /* Contenedor sticky con las dos franjas (niveles + Equipo debajo) */
+    .clases-topbar { position:sticky; top:0; z-index:20; background:var(--arena); flex-shrink:0; box-shadow:0 2px 10px rgba(0,0,0,0.04); }
+    .nivelbar { display:flex; gap:6px; padding:0.7rem 1.25rem 0.45rem; background:var(--arena); }
+    /* Franja propia de Equipo, justo debajo de los tres botones */
+    .equipobar { padding:0 1.25rem 0.7rem; background:var(--arena); }
+    /* Botón Equipo: franja fina a todo el ancho, ~mitad de alto que los de arriba */
+    .nivel-equipo { width:100%; flex-direction:row; align-items:center; justify-content:center; gap:6px; padding:0.16rem 0.6rem; border-radius:10px; }
+    .nivel-equipo .nivel-btn-ico { font-size:13px; }
+    .nivel-equipo .nivel-btn-lbl { font-size:11px; }
+    .nivel-equipo .nivel-btn-cnt { font-size:10px; padding:0 7px; }
+    .nivel-equipo.activo { background:var(--lila); border-color:var(--lila); box-shadow:0 4px 14px rgba(124,58,237,0.25); }
+    .nivel-equipo.activo .nivel-btn-cnt { color:var(--lila); background:#fff; }
     .nivel-btn { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; background:var(--blanco); border:1.5px solid var(--borde); border-radius:14px; padding:0.55rem 0.3rem; cursor:pointer; font-family:'Outfit',sans-serif; transition:all 0.15s; -webkit-tap-highlight-color:transparent; }
     .nivel-btn:active { transform:scale(0.97); }
     .nivel-btn-ico { font-size:18px; line-height:1; }
@@ -960,7 +1010,7 @@
     </div>
     <div class="pie" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
       <button class="btn btn-sec btn-sm" onclick="irA('pantalla-importar')" style="width:auto;gap:5px;">📥 Importar desde Obsidian</button>
-      <span>Versión 0.20.1 · Solo para mí</span>
+      <span>Versión 0.21.4 · Solo para mí</span>
     </div>
   </div>
 
@@ -1102,7 +1152,10 @@
       <div class="cab-titulo">Mis clases</div>
       <div class="cab-sub" id="sub-clases">0 sesiones</div>
     </div>
-    <div id="clases-nivelbar" class="nivelbar"></div>
+    <div class="clases-topbar">
+      <div id="clases-nivelbar" class="nivelbar"></div>
+      <div id="clases-equipobar" class="equipobar"></div>
+    </div>
     <div class="contenido">
       <div id="clases-hub"></div>
       <div id="lista-sesiones" style="display:none"></div>
@@ -2898,7 +2951,14 @@
 
     // Nivel de una sesión, derivado del nivel dominante de sus ejercicios.
     function nivelDeSesion(ses, mapEj) {
-      if (ses.tematica === 'competición') return 'competicion';
+      // La SECCIÓN la manda la carpeta de la sesión (temática), criterio unificado
+      // con el vault. Tolerante a mayúsculas/acentos.
+      var t = (ses.tematica || '').toString().toLowerCase();
+      if (t.indexOf('equipo')   >= 0) return 'equipo';
+      if (t.indexOf('competic') >= 0) return 'competicion';
+      if (t.indexOf('avanz')    >= 0) return 'avanzado';
+      if (t.indexOf('inicia')   >= 0) return 'iniciacion';
+      // Sesiones sin carpeta de sección (legado): derivar del nivel de los ejercicios.
       var counts = {1:0, 2:0, 3:0, 4:0};
       (ses.ejercicioIds || []).forEach(function(id){
         var ej = mapEj[id]; if (!ej) return;
@@ -2985,8 +3045,8 @@
       if (listaCont) listaCont.style.display = 'none';
       volverBtn.textContent = '‹ Inicio';
 
-      // Clasificar todas las sesiones por nivel
-      var porNivel = { iniciacion: [], avanzado: [], competicion: [] };
+      // Clasificar todas las sesiones por nivel (+ equipo, eje aparte)
+      var porNivel = { iniciacion: [], avanzado: [], competicion: [], equipo: [] };
       todasClases.forEach(function(c){
         var nv = nivelDeSesion(c, mapEj);
         (porNivel[nv] || porNivel.iniciacion).push(c);
@@ -2999,7 +3059,7 @@
         }
       }
 
-      // Barra superior de niveles
+      // Barra superior de niveles + botón Equipo (eje aparte, fila propia)
       nivelbar.innerHTML = NIVELES_CLASES.map(function(n){
         var cnt = porNivel[n.key].length;
         var act = (n.key === nivelClasesSel) ? ' activo' : '';
@@ -3010,14 +3070,34 @@
         '</button>';
       }).join('');
 
+      // Botón Equipo: SIEMPRE en su franja propia, debajo de los tres.
+      var equipobar = document.getElementById('clases-equipobar');
+      if (equipobar) {
+        equipobar.innerHTML =
+          '<button class="nivel-btn nivel-equipo' + (nivelClasesSel === 'equipo' ? ' activo' : '') +
+          '" onclick="seleccionarNivelClase(\'equipo\')">' +
+            '<span class="nivel-btn-ico">🤝</span>' +
+            '<span class="nivel-btn-lbl">Equipo</span>' +
+            '<span class="nivel-btn-cnt">' + porNivel.equipo.length + '</span>' +
+          '</button>';
+      }
+
       var sesiones = porNivel[nivelClasesSel] || [];
-      var nivLabel = (NIVELES_CLASES.filter(function(n){ return n.key === nivelClasesSel; })[0] || {}).label || '';
+      var nivLabel = nivelClasesSel === 'equipo' ? 'Equipo'
+        : ((NIVELES_CLASES.filter(function(n){ return n.key === nivelClasesSel; })[0] || {}).label || '');
       subClases.textContent = nivLabel + ' · ' + sesiones.length + ' sesión' + (sesiones.length !== 1 ? 'es' : '');
 
       if (!sesiones.length) {
         hub.innerHTML = '<div class="vacio" style="padding:2rem 1rem;text-align:center;">' +
-          '<div class="vacio-icono">🎾</div>' +
+          '<div class="vacio-icono">' + (nivelClasesSel === 'equipo' ? '🤝' : '🎾') + '</div>' +
           '<p>No hay sesiones de <strong>' + nivLabel + '</strong> todavía.</p></div>';
+        hub.style.display = 'block';
+        return;
+      }
+
+      // Equipo: lista plana (no se agrupa por golpe/intención)
+      if (nivelClasesSel === 'equipo') {
+        hub.innerHTML = sesiones.map(function(c){ return sesionRowHTML(c); }).join('');
         hub.style.display = 'block';
         return;
       }
@@ -4449,15 +4529,8 @@
           .map(findEjId)
           .filter(function(id){ return id !== null; });
 
-        // Dividir en bloques de máx 3 ejercicios; el 2º bloque en adelante lleva sufijo · 2, · 3…
-        var chunks = [];
-        if (ejIds.length === 0) {
-          chunks = [[]];
-        } else {
-          for (var ci = 0; ci < ejIds.length; ci += 3) {
-            chunks.push(ejIds.slice(ci, ci + 3));
-          }
-        }
+        // Una sesión = todos sus ejercicios (sin trocear en bloques de 3).
+        var chunks = [ejIds];
 
         chunks.forEach(function(chunk, chunkIdx) {
           var sufijo  = chunkIdx === 0 ? '' : ' · ' + (chunkIdx + 1);
