@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.21.5
+  TU APP DE PÁDEL — v0.24.0
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,49 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.24.0 — Planificación editable (2026-06)
+    · Modo edición: añadir, editar, reordenar (▲▼) y borrar
+      apartados en cada mes y nivel.
+    · Biblioteca de bloques predefinidos para añadir rápido.
+    · El plan parte de la propuesta actual como base editable
+      y se guarda en localStorage (p.contenido). Cada apartado
+      tiene id estable (los ✓ se mantienen al reordenar).
+
+  v0.23.2 — Planificación encima de Mis clases (2026-06)
+    · En Inicio, la tarjeta de Planificación va ahora antes
+      que Mis clases dentro de Entrenamiento.
+
+  v0.23.1 — Fix: cambiar de nivel en Planificación (2026-06)
+    · Las pestañas Avanzado/Competición no repintaban si
+      fallaba el guardado del estado. Ahora se pinta SIEMPRE
+      antes de guardar y leerPlan/escribirPlan toleran
+      errores de almacenamiento sin romper la vista.
+
+  v0.23.0 — Planificación por nivel y por mes (2026-06)
+    · Rediseño del módulo: 3 planes independientes
+      (Iniciación / Avanzado / Competición), cada uno con su
+      propio recorrido por meses (Sep→Jun). Se quita la
+      numeración de semanas.
+    · El mes en curso (auto, por fecha) se muestra arriba
+      destacado; el resto se camufla en "Otros meses".
+    · Cada apartado enlaza con las sesiones relacionadas de
+      ese nivel: por golpe en Inic/Avz, por intención en
+      Competición. Toast si aún no hay sesiones de ese grupo.
+    · Inicio: la tarjeta muestra "Plan por nivel · <mes>".
+
+  v0.22.0 — Planificación anual (2026-06)
+    · Nuevo módulo "Planificación anual": mapa de ruta de
+      la temporada Sep→Jun en 12 bloques temáticos / 36
+      semanas, una intención por semana. Arco metodológico
+      Anular → Dominar → Definir agrupado por trimestres.
+    · Bloques colapsables; cada semana lleva foco, chips de
+      intención/zona/golpe, nota editable y check de hecha.
+    · Semana actual marcable (toca el nº S#); barra de
+      progreso. Datos en localStorage (clave padel-plan),
+      solo local (no sincroniza con Supabase).
+    · Inicio: tarjeta "Planificación anual" en Entrenamiento
+      con la semana actual o el total de semanas.
+
   v0.21.5 — Miniatura abre el globo en el detalle de sesión
     · En las tarjetas de ejercicio de una sesión, tocar la
       MINIATURA (izquierda) abre el vídeo/imagen en el globo
@@ -854,6 +897,85 @@
     .auth-usuario-email { flex:1; color:var(--verde); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .auth-sync-btn { font-size:11px; font-weight:700; color:var(--verde); cursor:pointer; white-space:nowrap; text-decoration:none; background:none; border:none; padding:0; }
     .auth-logout-btn { font-size:11px; font-weight:700; color:#ef4444; cursor:pointer; white-space:nowrap; text-decoration:none; background:none; border:none; padding:0; }
+
+    /* ── PLANIFICACIÓN ANUAL ── */
+    .home-sec-bar.pl { background:#0891b2; }
+    .plan-nivelbar { display:flex; gap:8px; margin-bottom:14px; }
+    .plan-intro { font-size:12px; color:var(--gris); line-height:1.55; background:var(--arena); border:1px solid var(--borde); border-radius:12px; padding:10px 13px; margin-bottom:14px; }
+    /* Mes actual — bloque destacado arriba */
+    .plan-mes-actual { border:1.5px solid #0891b2; border-radius:16px; background:#ecfeff; padding:13px 13px 5px; margin-bottom:16px; box-shadow:0 4px 16px rgba(8,145,178,.12); }
+    .plan-mes-actual-hdr { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+    .plan-mes-actual-tag { font-size:9.5px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; color:#fff; background:#0891b2; border-radius:20px; padding:3px 9px; }
+    .plan-mes-actual-nom { font-size:18px; font-weight:800; color:#0e7490; line-height:1; }
+    /* Desplegable de otros meses */
+    .plan-otros { border:1px solid var(--borde); border-radius:14px; overflow:hidden; background:var(--blanco); }
+    .plan-otros-hdr { display:flex; align-items:center; gap:8px; padding:12px 14px; cursor:pointer; user-select:none; font-size:13px; font-weight:700; color:var(--texto); }
+    .plan-otros-hdr .chev { margin-left:auto; font-size:13px; color:var(--gris); transition:transform .18s; }
+    .plan-otros.abierto .plan-otros-hdr .chev { transform:rotate(90deg); }
+    .plan-otros-body { display:none; padding:0 10px 8px; flex-direction:column; gap:8px; }
+    .plan-otros.abierto .plan-otros-body { display:flex; }
+    /* Mes (colapsable) dentro de otros */
+    .plan-mes { border:1px solid var(--borde); border-radius:12px; overflow:hidden; background:var(--arena); }
+    .plan-mes-cab { display:flex; align-items:center; gap:8px; padding:10px 12px; cursor:pointer; user-select:none; }
+    .plan-mes-nom { font-size:14px; font-weight:700; color:var(--texto); }
+    .plan-mes-sub { font-size:11px; color:var(--gris); }
+    .plan-mes-chev { margin-left:auto; font-size:12px; color:var(--gris); transition:transform .18s; }
+    .plan-mes.abierto .plan-mes-chev { transform:rotate(90deg); }
+    .plan-mes-items { display:none; padding:0 10px 9px; flex-direction:column; gap:7px; }
+    .plan-mes.abierto .plan-mes-items { display:flex; }
+    /* Apartado (item) — tappable → sesiones */
+    .plan-item { display:flex; align-items:stretch; gap:0; border:1px solid var(--borde); border-radius:11px; overflow:hidden; background:var(--blanco); }
+    .plan-item-body { flex:1; min-width:0; padding:10px 12px; cursor:pointer; }
+    .plan-item.hecho .plan-item-body { opacity:.6; }
+    .plan-item-top { display:flex; align-items:center; gap:7px; }
+    .plan-item-titulo { flex:1; font-size:13.5px; font-weight:700; color:var(--texto); line-height:1.25; }
+    .plan-item-flecha { font-size:15px; color:#0891b2; font-weight:700; flex-shrink:0; }
+    .plan-item-foco { font-size:11.5px; color:var(--gris); line-height:1.5; margin-top:5px; }
+    .plan-item-chips { display:flex; flex-wrap:wrap; gap:5px; margin-top:7px; }
+    .plan-chip { font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; line-height:1.4; }
+    .plan-chip.int { color:var(--blanco); }
+    .plan-chip.zona { background:#e0e7ff; color:#3730a3; }
+    .plan-chip.golpe { background:#f1f5f9; color:#475569; }
+    .plan-item-check { width:42px; flex-shrink:0; border:none; border-left:1px solid var(--borde); background:var(--blanco); cursor:pointer; font-size:15px; color:#cbd5e1; display:flex; align-items:center; justify-content:center; }
+    .plan-item-check.on { background:var(--verde-suave); color:var(--verde); }
+    .plan-link-hint { font-size:11px; color:var(--gris); text-align:center; margin:10px 2px 0; }
+    /* Toast */
+    .plan-toast { position:fixed; left:50%; bottom:80px; transform:translateX(-50%); background:var(--texto); color:#fff; font-size:12.5px; font-weight:600; padding:10px 16px; border-radius:22px; box-shadow:0 6px 20px rgba(0,0,0,.25); z-index:9999; opacity:0; transition:opacity .2s; max-width:80%; text-align:center; }
+    .plan-toast.show { opacity:1; }
+    /* Botón editar */
+    .plan-edit-toggle { width:100%; border:1.5px solid var(--borde); background:var(--blanco); color:var(--texto); font-family:inherit; font-size:13px; font-weight:700; padding:9px; border-radius:11px; cursor:pointer; margin-bottom:12px; -webkit-tap-highlight-color:transparent; }
+    .plan-edit-toggle.on { background:#0891b2; border-color:#0891b2; color:#fff; }
+    /* Apartado en modo edición */
+    .plan-item.editable .plan-item-body { cursor:pointer; }
+    .plan-item-edit-ic { font-size:13px; flex-shrink:0; }
+    .plan-item-ctrls { display:flex; flex-direction:column; border-left:1px solid var(--borde); }
+    .plan-item-ctrls button { flex:1; min-width:40px; border:none; background:var(--blanco); cursor:pointer; font-size:12px; color:var(--gris); border-bottom:1px solid var(--borde); -webkit-tap-highlight-color:transparent; }
+    .plan-item-ctrls button:last-child { border-bottom:none; }
+    .plan-item-ctrls button.del { color:#dc2626; }
+    .plan-item-ctrls button:active { background:var(--arena); }
+    /* Fila de añadir */
+    .plan-add-row { display:flex; gap:7px; margin-top:8px; }
+    .plan-add-btn { flex:1; border:1.5px dashed var(--borde); background:var(--blanco); color:var(--gris); font-family:inherit; font-size:12px; font-weight:700; padding:9px; border-radius:10px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .plan-add-btn.lib { border-style:solid; border-color:#a5b4fc; color:#4338ca; background:#eef2ff; }
+    .plan-add-btn:active { transform:scale(.98); }
+    /* Modales del plan */
+    .plan-modal-ov { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:10000; display:flex; align-items:flex-end; justify-content:center; padding:0; }
+    .plan-modal { background:var(--blanco); width:100%; max-width:480px; max-height:88vh; overflow-y:auto; border-radius:18px 18px 0 0; padding:18px 16px calc(18px + env(safe-area-inset-bottom)); box-shadow:0 -8px 30px rgba(0,0,0,.25); }
+    .plan-modal-tit { font-size:16px; font-weight:800; color:var(--texto); margin-bottom:2px; }
+    .plan-modal-sub { font-size:12px; color:var(--gris); margin-bottom:12px; }
+    .plan-modal-lbl { display:block; font-size:11px; font-weight:700; color:var(--gris); margin:11px 2px 4px; }
+    .plan-modal-inp { width:100%; box-sizing:border-box; font-family:inherit; font-size:14px; color:var(--texto); border:1.5px solid var(--borde); border-radius:10px; padding:9px 11px; background:var(--arena); }
+    .plan-modal-inp:focus { outline:none; border-color:#0891b2; background:var(--blanco); }
+    .plan-modal-acts { display:flex; gap:8px; margin-top:16px; }
+    .plan-modal-acts .btn { flex:1; }
+    .plan-lib-list { display:flex; flex-direction:column; gap:6px; }
+    .plan-lib-cat { font-size:10.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--gris); margin:10px 2px 2px; }
+    .plan-lib-item { display:flex; align-items:center; gap:10px; border:1px solid var(--borde); border-radius:10px; padding:9px 11px; cursor:pointer; }
+    .plan-lib-item:active { background:var(--arena); }
+    .plan-lib-info { flex:1; min-width:0; }
+    .plan-lib-t { font-size:13px; font-weight:700; color:var(--texto); }
+    .plan-lib-chips { display:flex; gap:5px; margin-top:5px; }
+    .plan-lib-add { font-size:20px; font-weight:700; color:#0891b2; flex-shrink:0; }
   </style>
 </head>
 <body>
@@ -944,6 +1066,14 @@
           <span class="home-sec-label">Entrenamiento</span>
           <span class="home-sec-stats" id="home-stats-e">—</span>
         </div>
+        <div class="tarjeta-menu" onclick="irA('pantalla-planificacion')">
+          <div class="menu-icono" style="background:#cffafe;">🗺️</div>
+          <div class="menu-texto">
+            <div class="menu-nombre">Planificación anual</div>
+            <div class="menu-desc" id="home-desc-plan">—</div>
+          </div>
+          <div class="menu-flecha">›</div>
+        </div>
         <div class="tarjeta-menu" onclick="irA('pantalla-clases')">
           <div class="menu-icono">📋</div>
           <div class="menu-texto">
@@ -1016,7 +1146,7 @@
     </div>
     <div class="pie" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
       <button class="btn btn-sec btn-sm" onclick="irA('pantalla-importar')" style="width:auto;gap:5px;">📥 Importar desde Obsidian</button>
-      <span>Versión 0.21.5 · Solo para mí</span>
+      <span>Versión 0.24.0 · Solo para mí</span>
     </div>
   </div>
 
@@ -1240,6 +1370,69 @@
     <div class="contenido">
       <button class="btn btn-verde" onclick="irA('pantalla-marcador')">🏆 Nuevo partido</button>
       <div id="lista-partidos"></div>
+    </div>
+  </div>
+
+  <!-- ══ PLANIFICACIÓN ANUAL ══════════════════════ -->
+  <div id="pantalla-planificacion" class="pantalla">
+    <div class="cabecera">
+      <button class="btn-volver" onclick="irA('pantalla-inicio')">‹ Inicio</button>
+      <div class="cab-titulo">Planificación anual</div>
+      <div class="cab-sub" id="plan-sub">Septiembre → Junio</div>
+    </div>
+    <div class="contenido" id="plan-contenido"></div>
+
+    <!-- Modal: editor de apartado -->
+    <div id="plan-editor-ov" class="plan-modal-ov" style="display:none">
+      <div class="plan-modal">
+        <div class="plan-modal-tit" id="plan-editor-tit">Nuevo apartado</div>
+        <label class="plan-modal-lbl">Título</label>
+        <input id="pe-t" class="plan-modal-inp" type="text" placeholder="Ej. La pared — salida de fondo">
+        <label class="plan-modal-lbl">Foco (qué se trabaja)</label>
+        <textarea id="pe-f" class="plan-modal-inp" rows="2" placeholder="Una línea de guía"></textarea>
+        <label class="plan-modal-lbl">Intención</label>
+        <select id="pe-int" class="plan-modal-inp">
+          <option value="base">Base</option>
+          <option value="anular">Anular</option>
+          <option value="dominar">Dominar</option>
+          <option value="definir">Definir</option>
+        </select>
+        <label class="plan-modal-lbl">Zona</label>
+        <select id="pe-z" class="plan-modal-inp">
+          <option value="fondo">fondo</option>
+          <option value="campo-medio">campo-medio</option>
+          <option value="red">red</option>
+          <option value="todo-campo">todo-campo</option>
+        </select>
+        <label class="plan-modal-lbl">Golpe (define a qué sesiones enlaza)</label>
+        <select id="pe-g" class="plan-modal-inp">
+          <option value="fondo">Fondo</option>
+          <option value="pared">Pared</option>
+          <option value="globo">Globo</option>
+          <option value="volea">Volea</option>
+          <option value="bandeja">Bandeja</option>
+          <option value="vibora">Víbora</option>
+          <option value="remate">Remate</option>
+          <option value="saque">Saque/Resto</option>
+          <option value="mixto">Combinada</option>
+        </select>
+        <div class="plan-modal-acts">
+          <button class="btn btn-sec btn-sm" onclick="planCerrarEditor()">Cancelar</button>
+          <button class="btn btn-verde btn-sm" onclick="planGuardarEditor()">Guardar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: biblioteca de bloques -->
+    <div id="plan-lib-ov" class="plan-modal-ov" style="display:none">
+      <div class="plan-modal">
+        <div class="plan-modal-tit">📚 Biblioteca de bloques</div>
+        <div class="plan-modal-sub" id="plan-lib-target">—</div>
+        <div id="plan-lib-list" class="plan-lib-list"></div>
+        <div class="plan-modal-acts">
+          <button class="btn btn-sec btn-sm" onclick="planCerrarBiblioteca()">Cerrar</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -2011,6 +2204,493 @@
     }
 
     // ══════════════════════════════════════════
+    // PLANIFICACIÓN ANUAL — 3 planes por nivel
+    // ══════════════════════════════════════════
+    // Tres recorridos (Iniciación / Avanzado / Competición),
+    // organizados por MES (Sep→Jun, sin semanas). El mes actual se
+    // muestra arriba; el resto se camufla en "Otros meses". Cada
+    // apartado enlaza con las sesiones relacionadas de ese nivel
+    // (por golpe en Inic/Avz, por intención en Competición).
+    // Datos locales (clave padel-plan), no sincroniza con Supabase.
+    var PLAN_MESES = ['Septiembre','Octubre','Noviembre','Diciembre','Enero','Febrero','Marzo','Abril','Mayo','Junio'];
+    var PLAN_MES_CAL = { 8:'Septiembre',9:'Octubre',10:'Noviembre',11:'Diciembre',0:'Enero',1:'Febrero',2:'Marzo',3:'Abril',4:'Mayo',5:'Junio' };
+    var PLAN_INT = {
+      base:    { l:'Base',    c:'#16a34a' },
+      anular:  { l:'Anular',  c:'#1e40af' },
+      dominar: { l:'Dominar', c:'#d97706' },
+      definir: { l:'Definir', c:'#ea580c' }
+    };
+    var PLAN_GOLPE_LBL = { volea:'Volea', bandeja:'Bandeja', vibora:'Víbora', remate:'Remate', globo:'Globo', pared:'Pared', fondo:'Fondo', saque:'Saque/Resto', mixto:'Combinada' };
+    var PLAN_NIVELES_META = [
+      { key:'iniciacion',  icono:'🌱', label:'Iniciación'  },
+      { key:'avanzado',    icono:'🔥', label:'Avanzado'    },
+      { key:'competicion', icono:'🏆', label:'Competición' }
+    ];
+    // Cada apartado: { t:título, f:foco, int:intención, z:zona, g:golpe canónico }
+    var PLAN_NIVELES = {
+      iniciacion: {
+        'Septiembre':[
+          { t:'Empuñadura y posición base', f:'Empuñadura continental, posición de espera y primeros pasos. Dinámica de la clase.', int:'base', z:'todo-campo', g:'fondo' },
+          { t:'Derecha de fondo', f:'Golpeo limpio de derecha desde el fondo, con control y profundidad.', int:'base', z:'fondo', g:'fondo' },
+          { t:'Revés de fondo', f:'Revés equilibrado desde el fondo. Alternar derecha y revés.', int:'base', z:'fondo', g:'fondo' }
+        ],
+        'Octubre':[
+          { t:'Profundidad y dirección', f:'Jugar largo y dirigir cruzado o paralelo con seguridad.', int:'anular', z:'fondo', g:'fondo' },
+          { t:'Constancia: pelotear', f:'Mantener intercambios largos sin fallar. Paciencia.', int:'anular', z:'fondo', g:'fondo' }
+        ],
+        'Noviembre':[
+          { t:'Salida de pared de fondo', f:'Leer el bote, esperar la bola y salir hacia el fondo.', int:'anular', z:'fondo', g:'pared' },
+          { t:'Salida de pared lateral', f:'Colocación con pared lateral y devolución segura.', int:'anular', z:'fondo', g:'pared' }
+        ],
+        'Diciembre':[
+          { t:'El globo de defensa', f:'Globo profundo para defenderse y recuperar la red.', int:'anular', z:'campo-medio', g:'globo' },
+          { t:'Repaso del trimestre', f:'Integrar fondo, pared y globo en situación de juego.', int:'anular', z:'fondo', g:'mixto' }
+        ],
+        'Enero':[
+          { t:'Volea de derecha', f:'Primera volea: impacto delante del cuerpo, sin armar.', int:'dominar', z:'red', g:'volea' },
+          { t:'Volea de revés', f:'Volea de revés estable, muñeca firme.', int:'dominar', z:'red', g:'volea' }
+        ],
+        'Febrero':[
+          { t:'Voleas con dirección', f:'Dirigir la volea para mover al rival.', int:'dominar', z:'red', g:'volea' },
+          { t:'Bandeja: primer contacto', f:'Introducción a la bandeja para mantener la red.', int:'dominar', z:'red', g:'bandeja' }
+        ],
+        'Marzo':[
+          { t:'Subir a la red', f:'Reconocer la bola buena y subir a volear.', int:'dominar', z:'campo-medio', g:'volea' },
+          { t:'Globo y subir', f:'Defender con globo y aprovechar para ganar la red.', int:'dominar', z:'campo-medio', g:'globo' }
+        ],
+        'Abril':[
+          { t:'Remate básico', f:'Mecánica del remate: timing y control antes que potencia.', int:'definir', z:'red', g:'remate' },
+          { t:'Víbora: primer contacto', f:'Introducción a la víbora como golpe de presión.', int:'definir', z:'red', g:'vibora' }
+        ],
+        'Mayo':[
+          { t:'Saque y resto', f:'Saque colocado y resto con criterio.', int:'definir', z:'todo-campo', g:'saque' },
+          { t:'Jugar puntos cortos', f:'Mini-juego y primeros puntos aplicando lo aprendido.', int:'definir', z:'todo-campo', g:'mixto' }
+        ],
+        'Junio':[
+          { t:'Repaso general', f:'Repasar los golpes del año y unir fondo con red.', int:'dominar', z:'todo-campo', g:'mixto' },
+          { t:'Partidos y evaluación', f:'Jugar partidos y revisar el progreso del curso.', int:'definir', z:'todo-campo', g:'mixto' }
+        ]
+      },
+      avanzado: {
+        'Septiembre':[
+          { t:'Dirección cruzado y paralelo', f:'Dominar la diagonal y cambiar a paralelo con criterio.', int:'anular', z:'fondo', g:'fondo' },
+          { t:'Profundidad y ritmo', f:'Bola neutra: jugar largo y alto para que no ataquen.', int:'anular', z:'fondo', g:'fondo' }
+        ],
+        'Octubre':[
+          { t:'Salida de pared con dirección', f:'Salir de la pared de fondo controlando la dirección.', int:'anular', z:'fondo', g:'pared' },
+          { t:'Salida de pared lateral', f:'Abrir el cuerpo y resolver la pared lateral.', int:'anular', z:'fondo', g:'pared' },
+          { t:'Doble pared y bote pronto', f:'Dobles paredes y bote pronto cuando no hay pared.', int:'anular', z:'fondo', g:'pared' }
+        ],
+        'Noviembre':[
+          { t:'Globo defensivo', f:'Globo profundo para neutralizar y quitar la red.', int:'anular', z:'campo-medio', g:'globo' },
+          { t:'Contención y bola neutra', f:'Defender con paciencia y esperar el error.', int:'anular', z:'fondo', g:'mixto' }
+        ],
+        'Diciembre':[
+          { t:'Voleas a distintas alturas', f:'Voleas altas y bajas con control y dirección.', int:'dominar', z:'red', g:'volea' },
+          { t:'Voleas de presión a los pies', f:'Volear a los pies para que levanten la bola.', int:'dominar', z:'red', g:'volea' }
+        ],
+        'Enero':[
+          { t:'Bandeja con dirección', f:'Dirigir la bandeja para fijar al rival en el fondo.', int:'dominar', z:'red', g:'bandeja' },
+          { t:'Bandeja con desplazamiento', f:'Bandeja en movimiento, giro de cadera y recuperación.', int:'dominar', z:'red', g:'bandeja' }
+        ],
+        'Febrero':[
+          { t:'Subida tras golpe profundo', f:'Reconocer la bola para subir y ganar la red.', int:'dominar', z:'campo-medio', g:'fondo' },
+          { t:'Globo + bandeja', f:'Defender con globo y resolver con bandeja al subir.', int:'dominar', z:'campo-medio', g:'bandeja' },
+          { t:'Bajar a bolear', f:'Aproximación y primera volea baja en transición.', int:'dominar', z:'campo-medio', g:'volea' }
+        ],
+        'Marzo':[
+          { t:'Hundir y cerrar espacios', f:'Trabajo de pareja: tapar el centro y hundir la bola.', int:'dominar', z:'red', g:'volea' },
+          { t:'Mover desde la red', f:'Construir desde la red sin precipitar la definición.', int:'dominar', z:'red', g:'mixto' }
+        ],
+        'Abril':[
+          { t:'Remate por 3 y salida de pista', f:'Remate liftado y por 3 para sacar la bola de la pista.', int:'definir', z:'red', g:'remate' },
+          { t:'Víbora con dirección', f:'Víbora dirigida como golpe de presión.', int:'definir', z:'red', g:'vibora' }
+        ],
+        'Mayo':[
+          { t:'Voleas de ángulo', f:'Cerrar el punto con volea angulada en bola fácil.', int:'definir', z:'red', g:'volea' },
+          { t:'Dejada y amago', f:'Dejada con sensibilidad y amago para descolocar.', int:'definir', z:'red', g:'volea' },
+          { t:'Passing y globo ofensivo', f:'Definir desde el fondo: passing y globo que pasa.', int:'definir', z:'fondo', g:'globo' }
+        ],
+        'Junio':[
+          { t:'Patrón anular-dominar-definir', f:'Enlazar las tres fases en un mismo punto.', int:'definir', z:'todo-campo', g:'mixto' },
+          { t:'Partido evaluado', f:'Jugar partidos y revisar el progreso del curso.', int:'definir', z:'todo-campo', g:'mixto' }
+        ]
+      },
+      competicion: {
+        'Septiembre':[
+          { t:'Defensa paciente bajo presión', f:'Solidez: neutralizar sin ceder y esperar el fallo.', int:'anular', z:'fondo', g:'mixto' },
+          { t:'Pared y globo para neutralizar', f:'Combinar pared y globo para quitar la red al rival.', int:'anular', z:'fondo', g:'pared' }
+        ],
+        'Octubre':[
+          { t:'Construir desde el fondo', f:'Generar ventaja desde el fondo con dirección y peso.', int:'dominar', z:'fondo', g:'fondo' },
+          { t:'Globo ofensivo y transición', f:'Globo ofensivo para girar el punto y subir.', int:'dominar', z:'campo-medio', g:'globo' }
+        ],
+        'Noviembre':[
+          { t:'Presión en la red en pareja', f:'Dominar la red como bloque y cerrar espacios.', int:'dominar', z:'red', g:'volea' },
+          { t:'Bandeja táctica', f:'Bandeja para fijar al rival y mantener la red.', int:'dominar', z:'red', g:'bandeja' }
+        ],
+        'Diciembre':[
+          { t:'Remate por 3 y por 4', f:'Definir con remate sacando la bola de la pista.', int:'definir', z:'red', g:'remate' },
+          { t:'Voleas y víboras de definición', f:'Cerrar el punto con volea angulada o víbora.', int:'definir', z:'red', g:'vibora' }
+        ],
+        'Enero':[
+          { t:'Saque y subida', f:'Saque colocado y subida para tomar la red.', int:'dominar', z:'todo-campo', g:'saque' },
+          { t:'Resto con criterio', f:'Resto para neutralizar la subida del rival.', int:'anular', z:'todo-campo', g:'saque' }
+        ],
+        'Febrero':[
+          { t:'Achicar, ayudar, cubrir centro', f:'Moverse como bloque y comunicar en pista.', int:'dominar', z:'todo-campo', g:'mixto' },
+          { t:'Cambios y señas', f:'Sistema de señas y cambios de posición en el saque.', int:'dominar', z:'todo-campo', g:'mixto' }
+        ],
+        'Marzo':[
+          { t:'Anular, dominar, definir en el punto', f:'Leer cuándo neutralizar, construir y rematar.', int:'definir', z:'todo-campo', g:'mixto' },
+          { t:'Riesgo y beneficio', f:'Decidir cuándo arriesgar y cuándo asegurar.', int:'definir', z:'red', g:'mixto' }
+        ],
+        'Abril':[
+          { t:'Puntos importantes', f:'Gestionar bolas de break y puntos de oro.', int:'definir', z:'todo-campo', g:'mixto' },
+          { t:'Tolerancia al error y resetear', f:'Recuperar la calma y volver a la solidez.', int:'anular', z:'todo-campo', g:'mixto' }
+        ],
+        'Mayo':[
+          { t:'Formatos competitivos', f:'Jugar al uno y puntos con condicionantes.', int:'definir', z:'todo-campo', g:'mixto' },
+          { t:'Simulacro de torneo', f:'Partidos con formato y presión de competición.', int:'definir', z:'todo-campo', g:'mixto' }
+        ],
+        'Junio':[
+          { t:'Puesta a punto pre-torneo', f:'Afinar golpes y patrones antes de competir.', int:'dominar', z:'todo-campo', g:'mixto' },
+          { t:'Evaluación y partidos', f:'Competir y revisar el rendimiento del curso.', int:'definir', z:'todo-campo', g:'mixto' }
+        ]
+      }
+    };
+
+    function leerPlan() {
+      var p = {};
+      try { var d = _lzGet('padel-plan'); if (d) p = JSON.parse(d) || {}; } catch (e) { p = {}; }
+      if (!p.hechos)        p.hechos = {};
+      if (!p.mesesAbiertos) p.mesesAbiertos = {};
+      if (!('otrosAbierto' in p)) p.otrosAbierto = false;
+      if (!p.nivel || !PLAN_NIVELES[p.nivel]) p.nivel = 'iniciacion';
+      if (!('mesActual' in p)) p.mesActual = null;
+      return p;
+    }
+    function escribirPlan(p) { _lzSet('padel-plan', JSON.stringify(p)); }
+
+    function planMesActualNombre() {
+      var p = leerPlan();
+      if (p.mesActual && PLAN_MESES.indexOf(p.mesActual) >= 0) return p.mesActual;
+      return PLAN_MES_CAL[new Date().getMonth()] || 'Septiembre';
+    }
+    function planNivelLabel(key) {
+      var m = PLAN_NIVELES_META.filter(function(n){ return n.key===key; })[0];
+      return m ? m.label : key;
+    }
+    var ZONAS_PLAN = ['fondo','campo-medio','red','todo-campo'];
+    // Biblioteca de bloques predefinidos (para añadir rápido a cualquier mes)
+    var PLAN_BIBLIOTECA = [
+      { cat:'Fundamentos', t:'Empuñadura y posición base', f:'Empuñadura continental, posición de espera y primeros pasos.', int:'base', z:'todo-campo', g:'fondo' },
+      { cat:'Fundamentos', t:'Derecha de fondo', f:'Golpeo limpio de derecha con control y profundidad.', int:'base', z:'fondo', g:'fondo' },
+      { cat:'Fundamentos', t:'Revés de fondo', f:'Revés equilibrado desde el fondo. Alternar derecha y revés.', int:'base', z:'fondo', g:'fondo' },
+      { cat:'Fondo', t:'Profundidad y dirección', f:'Jugar largo y dirigir cruzado o paralelo con seguridad.', int:'anular', z:'fondo', g:'fondo' },
+      { cat:'Fondo', t:'Constancia: pelotear', f:'Intercambios largos sin fallar. Paciencia.', int:'anular', z:'fondo', g:'fondo' },
+      { cat:'Fondo', t:'Cambio de ritmo', f:'Variar peso y velocidad para descolocar al rival.', int:'dominar', z:'fondo', g:'fondo' },
+      { cat:'Pared', t:'Salida de pared de fondo', f:'Leer el bote, esperar la bola y salir hacia el fondo.', int:'anular', z:'fondo', g:'pared' },
+      { cat:'Pared', t:'Salida de pared lateral', f:'Abrir el cuerpo y resolver la pared lateral.', int:'anular', z:'fondo', g:'pared' },
+      { cat:'Pared', t:'Doble pared y bote pronto', f:'Dobles paredes y bote pronto cuando no hay pared.', int:'anular', z:'fondo', g:'pared' },
+      { cat:'Globo', t:'Globo defensivo', f:'Globo profundo para neutralizar y recuperar la red.', int:'anular', z:'campo-medio', g:'globo' },
+      { cat:'Globo', t:'Globo ofensivo', f:'Globo que pasa por encima para girar el punto.', int:'dominar', z:'campo-medio', g:'globo' },
+      { cat:'Volea', t:'Volea de derecha', f:'Impacto delante del cuerpo, firme y sin armar.', int:'dominar', z:'red', g:'volea' },
+      { cat:'Volea', t:'Volea de revés', f:'Volea de revés estable, muñeca firme.', int:'dominar', z:'red', g:'volea' },
+      { cat:'Volea', t:'Voleas a distintas alturas', f:'Voleas altas y bajas con control y dirección.', int:'dominar', z:'red', g:'volea' },
+      { cat:'Volea', t:'Voleas de presión a los pies', f:'Volear a los pies para que levanten la bola.', int:'dominar', z:'red', g:'volea' },
+      { cat:'Volea', t:'Voleas de ángulo (definición)', f:'Cerrar el punto con volea angulada en bola fácil.', int:'definir', z:'red', g:'volea' },
+      { cat:'Bandeja', t:'Bandeja técnica base', f:'Punto de impacto, perfil y control para mantener la red.', int:'dominar', z:'red', g:'bandeja' },
+      { cat:'Bandeja', t:'Bandeja con dirección', f:'Dirigir cruzado o paralelo para fijar al rival.', int:'dominar', z:'red', g:'bandeja' },
+      { cat:'Bandeja', t:'Bandeja con desplazamiento', f:'Bandeja en movimiento, giro de cadera y recuperación.', int:'dominar', z:'red', g:'bandeja' },
+      { cat:'Transición', t:'Subir a la red', f:'Reconocer la bola buena y subir a volear.', int:'dominar', z:'campo-medio', g:'fondo' },
+      { cat:'Transición', t:'Globo + bandeja', f:'Defender con globo y resolver con bandeja al subir.', int:'dominar', z:'campo-medio', g:'bandeja' },
+      { cat:'Transición', t:'Bajar a bolear', f:'Aproximación y primera volea baja en transición.', int:'dominar', z:'campo-medio', g:'volea' },
+      { cat:'Remate y víbora', t:'Remate técnica base', f:'Mecánica del remate: timing y control antes que potencia.', int:'definir', z:'red', g:'remate' },
+      { cat:'Remate y víbora', t:'Remate por 3 / salida de pista', f:'Remate liftado y por 3 para sacar la bola de la pista.', int:'definir', z:'red', g:'remate' },
+      { cat:'Remate y víbora', t:'Víbora', f:'Víbora dirigida como golpe de presión.', int:'definir', z:'red', g:'vibora' },
+      { cat:'Definición', t:'Dejada y amago', f:'Dejada con sensibilidad y amago para descolocar.', int:'definir', z:'red', g:'volea' },
+      { cat:'Definición', t:'Passing y globo ofensivo', f:'Definir desde el fondo: passing y globo que pasa.', int:'definir', z:'fondo', g:'globo' },
+      { cat:'Táctica', t:'Saque y resto', f:'Saque colocado, subida y resto con criterio.', int:'dominar', z:'todo-campo', g:'saque' },
+      { cat:'Táctica', t:'Posicionamiento de pareja', f:'Moverse como bloque, achicar, ayudar y cubrir el centro.', int:'dominar', z:'todo-campo', g:'mixto' },
+      { cat:'Táctica', t:'Patrón anular-dominar-definir', f:'Enlazar las tres fases en un mismo punto.', int:'definir', z:'todo-campo', g:'mixto' },
+      { cat:'Competición', t:'Formatos competitivos / puntos', f:'Jugar al uno y puntos con condicionantes.', int:'definir', z:'todo-campo', g:'mixto' },
+      { cat:'Competición', t:'Gestión del marcador', f:'Decidir bajo marcador y en puntos importantes.', int:'definir', z:'todo-campo', g:'mixto' }
+    ];
+
+    var planEditMode = false;
+    var planEditTarget = null;   // { nivel, mes, id }
+    var planLibTarget  = null;   // { nivel, mes }
+
+    function _planNuevoId() { return 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+    function _planSeed() {
+      var seed = {};
+      Object.keys(PLAN_NIVELES).forEach(function(nv){
+        seed[nv] = {};
+        PLAN_MESES.forEach(function(m){
+          seed[nv][m] = (PLAN_NIVELES[nv][m] || []).map(function(it){
+            return { id:_planNuevoId(), t:it.t, f:it.f, int:it.int, z:it.z, g:it.g };
+          });
+        });
+      });
+      return seed;
+    }
+    // Devuelve el contenido EDITABLE del usuario (lo siembra de la propuesta la 1ª vez)
+    function planContenido(p) {
+      if (!p.contenido) { p.contenido = _planSeed(); _planGuardar(p); }
+      return p.contenido;
+    }
+
+    function _planGuardar(p) { try { escribirPlan(p); } catch (e) { console.warn('plan no se pudo guardar:', e); } }
+    function planSetNivel(nv) {
+      var p = leerPlan(); p.nivel = nv;
+      mostrarPlanificacion(); window.scrollTo(0,0);
+      _planGuardar(p);
+    }
+    function planToggleOtros() { var p = leerPlan(); p.otrosAbierto = !p.otrosAbierto; _planGuardar(p); }
+    function planToggleMes(mes) { var p = leerPlan(); p.mesesAbiertos[mes] = !p.mesesAbiertos[mes]; _planGuardar(p); }
+    function planToggleHecho(id) {
+      var p = leerPlan();
+      if (p.hechos[id]) delete p.hechos[id]; else p.hechos[id] = true;
+      mostrarPlanificacion(); _planGuardar(p);
+    }
+    function planToggleEdit() { planEditMode = !planEditMode; mostrarPlanificacion(); }
+
+    // ── Edición de apartados ──
+    function planMoverItem(nivel, mes, id, dir) {
+      var p = leerPlan(); var arr = planContenido(p)[nivel][mes] || [];
+      var i = arr.findIndex(function(x){ return x.id === id; });
+      var j = i + dir;
+      if (i < 0 || j < 0 || j >= arr.length) return;
+      var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+      _planGuardar(p); mostrarPlanificacion();
+    }
+    function planBorrarItem(nivel, mes, id) {
+      if (!confirm('¿Borrar este apartado del plan?')) return;
+      var p = leerPlan(); var c = planContenido(p);
+      c[nivel][mes] = (c[nivel][mes] || []).filter(function(x){ return x.id !== id; });
+      if (p.hechos[id]) delete p.hechos[id];
+      _planGuardar(p); mostrarPlanificacion();
+    }
+    function planAbrirEditor(nivel, mes, id) {
+      planEditTarget = { nivel:nivel, mes:mes, id:id };
+      var it = null;
+      if (id) {
+        var p = leerPlan(); var arr = planContenido(p)[nivel][mes] || [];
+        it = arr.filter(function(x){ return x.id === id; })[0];
+      }
+      document.getElementById('plan-editor-tit').textContent = (id ? 'Editar apartado' : 'Nuevo apartado') + ' · ' + mes;
+      document.getElementById('pe-t').value   = it ? it.t : '';
+      document.getElementById('pe-f').value   = it ? it.f : '';
+      document.getElementById('pe-int').value = it ? it.int : 'dominar';
+      document.getElementById('pe-z').value   = it ? it.z : 'fondo';
+      document.getElementById('pe-g').value   = it ? it.g : 'fondo';
+      document.getElementById('plan-editor-ov').style.display = 'flex';
+    }
+    function planCerrarEditor() { document.getElementById('plan-editor-ov').style.display = 'none'; planEditTarget = null; }
+    function planGuardarEditor() {
+      if (!planEditTarget) return;
+      var t = document.getElementById('pe-t').value.trim();
+      if (!t) { planToast('Ponle un título al apartado'); return; }
+      var datos = {
+        t: t,
+        f: document.getElementById('pe-f').value.trim(),
+        int: document.getElementById('pe-int').value,
+        z: document.getElementById('pe-z').value,
+        g: document.getElementById('pe-g').value
+      };
+      var p = leerPlan(); var c = planContenido(p);
+      var arr = c[planEditTarget.nivel][planEditTarget.mes] || (c[planEditTarget.nivel][planEditTarget.mes] = []);
+      if (planEditTarget.id) {
+        var it = arr.filter(function(x){ return x.id === planEditTarget.id; })[0];
+        if (it) { it.t = datos.t; it.f = datos.f; it.int = datos.int; it.z = datos.z; it.g = datos.g; }
+      } else {
+        arr.push({ id:_planNuevoId(), t:datos.t, f:datos.f, int:datos.int, z:datos.z, g:datos.g });
+      }
+      _planGuardar(p); planCerrarEditor(); mostrarPlanificacion();
+    }
+
+    // ── Biblioteca ──
+    function planAbrirBiblioteca(nivel, mes) {
+      planLibTarget = { nivel:nivel, mes:mes };
+      document.getElementById('plan-lib-target').textContent = 'Añadir a ' + mes + ' · ' + planNivelLabel(nivel);
+      var cats = []; PLAN_BIBLIOTECA.forEach(function(b){ if (cats.indexOf(b.cat) < 0) cats.push(b.cat); });
+      var h = '';
+      cats.forEach(function(cat){
+        h += '<div class="plan-lib-cat">' + cat + '</div>';
+        PLAN_BIBLIOTECA.forEach(function(b, i){
+          if (b.cat !== cat) return;
+          var ic = PLAN_INT[b.int];
+          h += '<div class="plan-lib-item" onclick="planAddDeBiblioteca(' + i + ')">' +
+                 '<div class="plan-lib-info"><div class="plan-lib-t">' + b.t + '</div>' +
+                 '<div class="plan-lib-chips"><span class="plan-chip int" style="background:' + ic.c + '">' + ic.l + '</span>' +
+                 '<span class="plan-chip golpe">' + (PLAN_GOLPE_LBL[b.g] || b.g) + '</span></div></div>' +
+                 '<span class="plan-lib-add">＋</span></div>';
+        });
+      });
+      document.getElementById('plan-lib-list').innerHTML = h;
+      document.getElementById('plan-lib-ov').style.display = 'flex';
+    }
+    function planCerrarBiblioteca() { document.getElementById('plan-lib-ov').style.display = 'none'; planLibTarget = null; }
+    function planAddDeBiblioteca(i) {
+      if (!planLibTarget) return;
+      var b = PLAN_BIBLIOTECA[i]; if (!b) return;
+      var p = leerPlan(); var c = planContenido(p);
+      var arr = c[planLibTarget.nivel][planLibTarget.mes] || (c[planLibTarget.nivel][planLibTarget.mes] = []);
+      arr.push({ id:_planNuevoId(), t:b.t, f:b.f, int:b.int, z:b.z, g:b.g });
+      _planGuardar(p); mostrarPlanificacion();
+      planToast('Añadido: ' + b.t);
+    }
+
+    var _planToastT;
+    function planToast(msg) {
+      var t = document.getElementById('plan-toast');
+      if (!t) { t = document.createElement('div'); t.id = 'plan-toast'; t.className = 'plan-toast'; document.body.appendChild(t); }
+      t.textContent = msg; t.classList.add('show');
+      clearTimeout(_planToastT);
+      _planToastT = setTimeout(function(){ t.classList.remove('show'); }, 2600);
+    }
+
+    // Pincha un apartado → ir a las sesiones relacionadas de ese nivel.
+    // Inic/Avz enlazan por golpe; Competición por intención.
+    function planIrASesiones(nivel, tipo, valor, etiqueta) {
+      var mapEj = _ejsById();
+      var sesNivel = leerClases().filter(function(c){ return nivelDeSesion(c, mapEj) === nivel; });
+      var match = sesNivel.filter(function(c){
+        return tipo === 'int' ? intencionDeSesion(c, mapEj) === valor : golpeDeSesion(c, mapEj) === valor;
+      });
+      nivelClasesSel = nivel;
+      var collKey = 'clz-' + nivel + '-' + valor;
+      try { localStorage.removeItem(collKey); } catch(e){}
+      document.querySelectorAll('.pantalla').forEach(function(p){ p.classList.remove('activa'); });
+      document.getElementById('pantalla-clases').classList.add('activa');
+      mostrarClases(false);
+      window.scrollTo(0,0);
+      if (!match.length) {
+        planToast('Aún no hay sesiones de «' + etiqueta + '» en ' + planNivelLabel(nivel));
+        return;
+      }
+      setTimeout(function(){
+        var hdrs = document.querySelectorAll('#clases-hub .zona-grupo-hdr');
+        for (var i=0;i<hdrs.length;i++){
+          var oc = hdrs[i].getAttribute('onclick') || '';
+          if (oc.indexOf("'" + collKey + "'") >= 0) { hdrs[i].scrollIntoView({behavior:'smooth', block:'center'}); break; }
+        }
+      }, 90);
+    }
+
+    function _planItemHTML(nivel, mes, it, hechos, editMode) {
+      var hecho = !!hechos[it.id];
+      var ic = PLAN_INT[it.int] || PLAN_INT.dominar;
+      var chips = '<div class="plan-item-chips">' +
+        '<span class="plan-chip int" style="background:' + ic.c + '">' + ic.l + '</span>' +
+        '<span class="plan-chip zona">' + it.z + '</span>' +
+        '<span class="plan-chip golpe">' + (PLAN_GOLPE_LBL[it.g] || it.g) + '</span></div>';
+
+      if (editMode) {
+        var h = '<div class="plan-item editable">';
+        h += '<div class="plan-item-body" onclick="planAbrirEditor(\'' + nivel + '\',\'' + mes + '\',\'' + it.id + '\')">';
+        h += '<div class="plan-item-top"><span class="plan-item-titulo">' + it.t + '</span><span class="plan-item-edit-ic">✏️</span></div>';
+        if (it.f) h += '<div class="plan-item-foco">' + it.f + '</div>';
+        h += chips + '</div>';
+        h += '<div class="plan-item-ctrls">' +
+               '<button onclick="planMoverItem(\'' + nivel + '\',\'' + mes + '\',\'' + it.id + '\',-1)">▲</button>' +
+               '<button onclick="planMoverItem(\'' + nivel + '\',\'' + mes + '\',\'' + it.id + '\',1)">▼</button>' +
+               '<button class="del" onclick="planBorrarItem(\'' + nivel + '\',\'' + mes + '\',\'' + it.id + '\')">🗑️</button>' +
+             '</div></div>';
+        return h;
+      }
+
+      var esComp = (nivel === 'competicion');
+      var tipo  = esComp ? 'int' : 'g';
+      var valor = esComp ? it.int : it.g;
+      var etiqueta = (esComp ? (PLAN_INT[it.int] ? PLAN_INT[it.int].l : it.int) : (PLAN_GOLPE_LBL[it.g] || it.g));
+      var h2 = '<div class="plan-item' + (hecho ? ' hecho' : '') + '">';
+      h2 += '<div class="plan-item-body" onclick="planIrASesiones(\'' + nivel + '\',\'' + tipo + '\',\'' + valor + '\',\'' + etiqueta.replace(/'/g,"") + '\')">';
+      h2 += '<div class="plan-item-top"><span class="plan-item-titulo">' + it.t + '</span><span class="plan-item-flecha">›</span></div>';
+      if (it.f) h2 += '<div class="plan-item-foco">' + it.f + '</div>';
+      h2 += chips + '</div>';
+      h2 += '<button class="plan-item-check' + (hecho ? ' on' : '') + '" onclick="planToggleHecho(\'' + it.id + '\');event.stopPropagation()" title="Marcar como trabajado">✓</button>';
+      h2 += '</div>';
+      return h2;
+    }
+
+    function _planAddRow(nivel, mes) {
+      return '<div class="plan-add-row">' +
+        '<button class="plan-add-btn" onclick="planAbrirEditor(\'' + nivel + '\',\'' + mes + '\',null)">＋ Nuevo</button>' +
+        '<button class="plan-add-btn lib" onclick="planAbrirBiblioteca(\'' + nivel + '\',\'' + mes + '\')">📚 Biblioteca</button>' +
+      '</div>';
+    }
+
+    function mostrarPlanificacion() {
+      var p = leerPlan();
+      var nivel = p.nivel;
+      var cont0 = planContenido(p);
+      var meses = cont0[nivel] || {};
+      var mesAct = planMesActualNombre();
+      var edit = planEditMode;
+      var cont = document.getElementById('plan-contenido');
+      var subEl = document.getElementById('plan-sub');
+      if (subEl) subEl.textContent = planNivelLabel(nivel) + ' · ' + mesAct + (edit ? ' · editando' : '');
+      var h = '';
+
+      // Tabs de nivel
+      h += '<div class="plan-nivelbar nivelbar">';
+      PLAN_NIVELES_META.forEach(function(n){
+        var act = n.key === nivel ? ' activo' : '';
+        h += '<button class="nivel-btn' + act + '" onclick="planSetNivel(\'' + n.key + '\')">' +
+             '<span class="nivel-btn-ico">' + n.icono + '</span>' +
+             '<span class="nivel-btn-lbl">' + n.label + '</span></button>';
+      });
+      h += '</div>';
+
+      // Botón editar
+      h += '<button class="plan-edit-toggle' + (edit ? ' on' : '') + '" onclick="planToggleEdit()">' +
+           (edit ? '✓ Terminar de editar' : '✏️ Editar plan') + '</button>';
+
+      h += '<div class="plan-intro">' + (edit
+        ? '✏️ <strong>Modo edición.</strong> Toca un apartado para editarlo, usa ▲▼ para ordenar y 🗑️ para borrar. Con «＋ Nuevo» creas uno propio y con «📚 Biblioteca» añades bloques predefinidos.'
+        : '🗺️ Plan de <strong>' + planNivelLabel(nivel) + '</strong>. El mes en curso está arriba; los demás, en «Otros meses». Toca un apartado para ir a sus <strong>sesiones</strong>.') + '</div>';
+
+      // ── Mes actual (destacado) ──
+      var itemsAct = meses[mesAct] || [];
+      h += '<div class="plan-mes-actual">';
+      h += '<div class="plan-mes-actual-hdr"><span class="plan-mes-actual-tag">Mes en curso</span><span class="plan-mes-actual-nom">' + mesAct + '</span></div>';
+      if (itemsAct.length) itemsAct.forEach(function(it){ h += _planItemHTML(nivel, mesAct, it, p.hechos, edit); });
+      else if (!edit) h += '<div class="plan-item-foco" style="padding:2px 2px 10px;">Sin contenidos planificados para este mes.</div>';
+      if (edit) h += _planAddRow(nivel, mesAct);
+      h += '</div>';
+
+      // ── Otros meses ──
+      var otrosOpen = edit || p.otrosAbierto;
+      h += '<div class="plan-otros' + (otrosOpen ? ' abierto' : '') + '">';
+      h += '<div class="plan-otros-hdr" onclick="planToggleOtros();this.parentNode.classList.toggle(\'abierto\')">📅 Otros meses<span class="chev">›</span></div>';
+      h += '<div class="plan-otros-body">';
+      PLAN_MESES.forEach(function(mes){
+        if (mes === mesAct) return;
+        var items = meses[mes] || [];
+        var mesOpen = edit || p.mesesAbiertos[mes];
+        var hechosMes = items.filter(function(it){ return p.hechos[it.id]; }).length;
+        h += '<div class="plan-mes' + (mesOpen ? ' abierto' : '') + '">';
+        h += '<div class="plan-mes-cab" onclick="planToggleMes(\'' + mes + '\');this.parentNode.classList.toggle(\'abierto\')">';
+        h += '<span class="plan-mes-nom">' + mes + '</span>';
+        h += '<span class="plan-mes-sub">' + items.length + ' apartado' + (items.length!==1?'s':'') + (hechosMes ? ' · ' + hechosMes + ' ✓' : '') + '</span>';
+        h += '<span class="plan-mes-chev">›</span></div>';
+        h += '<div class="plan-mes-items">';
+        items.forEach(function(it){ h += _planItemHTML(nivel, mes, it, p.hechos, edit); });
+        if (edit) h += _planAddRow(nivel, mes);
+        h += '</div></div>';
+      });
+      h += '</div></div>';
+
+      h += '<div class="plan-link-hint">' + (edit
+        ? 'Los cambios se guardan automáticamente en este dispositivo.'
+        : 'El nivel decide a qué sesiones te lleva cada apartado.') + '</div>';
+
+      cont.innerHTML = h;
+    }
+
+    // ══════════════════════════════════════════
     // NAVEGACIÓN
     // ══════════════════════════════════════════
 
@@ -2023,6 +2703,7 @@
       if (id === 'pantalla-ejercicios')      mostrarEjercicios();
       if (id === 'pantalla-nuevo-ejercicio') prepararFormEjercicio(ejEditandoId);
       if (id === 'pantalla-clases')          mostrarClases(true);
+      if (id === 'pantalla-planificacion')   mostrarPlanificacion();
       if (id === 'pantalla-nueva-sesion')    prepararNuevaSesion();
       if (id === 'pantalla-marcador')        renderizarMarcador();
       if (id === 'pantalla-stats-jugador')   renderStatsJugador();
@@ -2075,6 +2756,8 @@
         ejs.length + ' ej · ' + clases.length + ' ses';
       document.getElementById('home-desc-cl').textContent =
         clases.length + ' sesione' + (clases.length !== 1 ? 's' : '');
+      var _planEl = document.getElementById('home-desc-plan');
+      if (_planEl) _planEl.textContent = 'Plan por nivel · ' + planMesActualNombre();
 
       // Stats sección Partido
       document.getElementById('home-stats-p').textContent =
