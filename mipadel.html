@@ -370,8 +370,10 @@
     .cab-etiqueta { font-size:11px; font-weight:600; letter-spacing:0.15em; text-transform:uppercase; color:var(--verde-claro); margin-bottom:6px; position:relative; }
     .cab-titulo   { font-size:26px; font-weight:800; line-height:1.1; position:relative; }
     .cab-sub      { font-size:13px; color:rgba(255,255,255,0.6); margin-top:5px; position:relative; }
-    .btn-volver   { background:none; border:none; color:rgba(255,255,255,0.75); font-size:13px; font-family:'Outfit',sans-serif; cursor:pointer; padding:0; margin-bottom:8px; display:flex; align-items:center; gap:4px; position:relative; }
-    .btn-volver:hover { color:var(--blanco); }
+    .btn-volver   { background:rgba(255,255,255,0.12); border:none; color:rgba(255,255,255,0.92); font-size:15px; font-weight:600; font-family:'Outfit',sans-serif; cursor:pointer; padding:9px 15px 9px 11px; margin:-4px -6px 8px -6px; min-height:42px; display:inline-flex; align-items:center; gap:6px; position:relative; border-radius:12px; -webkit-tap-highlight-color:transparent; }
+    .btn-volver::first-letter { font-size:20px; line-height:1; }
+    .btn-volver:hover { color:var(--blanco); background:rgba(255,255,255,0.2); }
+    .btn-volver:active { background:rgba(255,255,255,0.28); transform:scale(0.97); }
 
     /* ── FILTROS PILLS ── */
     .filtros-zona { padding:0.75rem 1.25rem 0; background:var(--arena); flex-shrink:0; display:flex; flex-direction:column; gap:6px; }
@@ -400,6 +402,17 @@
     .stat-label { font-size:11px; color:var(--gris); margin-top:2px; }
     .stat-sub { font-size:10px; color:var(--dorado); font-weight:600; margin-top:2px; }
 
+    /* ── Modo monitor / Ajustes ── */
+    .monitor-banner { display:flex; align-items:center; gap:12px; background:#fef3c7; border:1.5px solid #fbbf24; border-radius:14px; padding:0.9rem 1.1rem; margin-bottom:1.1rem; }
+    .monitor-banner-ic { font-size:22px; flex-shrink:0; }
+    .monitor-banner-txt { flex:1; display:flex; flex-direction:column; gap:1px; }
+    .monitor-banner-txt strong { font-size:14px; color:#92400e; }
+    .monitor-banner-txt span { font-size:12px; color:#b45309; }
+    .monitor-banner-btn { flex-shrink:0; background:#92400e; color:#fff; border:none; border-radius:10px; padding:8px 16px; font-size:13px; font-weight:700; font-family:'Outfit',sans-serif; cursor:pointer; min-height:38px; }
+    .monitor-banner-btn:active { transform:scale(0.97); }
+    .ajustes-desc { font-size:12.5px; color:var(--gris); line-height:1.55; margin:0; }
+    .monitor-estado-on { display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:700; color:#166534; }
+    .monitor-estado-dot { width:9px; height:9px; border-radius:50%; background:#16a34a; }
     /* ── TARJETAS MENÚ ── */
     .tarjeta-menu { background:var(--blanco); border-radius:16px; padding:1.1rem 1.25rem; display:flex; align-items:center; gap:1rem; border:1.5px solid transparent; cursor:pointer; transition:all 0.18s ease; }
     .tarjeta-menu:hover { border-color:var(--verde-claro); transform:translateY(-2px); box-shadow:0 8px 24px rgba(45,106,79,0.10); }
@@ -1082,8 +1095,18 @@
         <button class="auth-logout-btn" onclick="authLogout()">Salir</button>
       </div>
 
+      <!-- ── BANNER MODO MONITOR ── -->
+      <div id="monitor-banner" class="monitor-banner" style="display:none;">
+        <span class="monitor-banner-ic">🔒</span>
+        <div class="monitor-banner-txt">
+          <strong>Modo monitor activo</strong>
+          <span>Solo tienes acceso al control de asistencia.</span>
+        </div>
+        <button class="monitor-banner-btn" onclick="monitorSalir()">Salir</button>
+      </div>
+
       <!-- ── ASISTENCIA ── -->
-      <div class="home-sec">
+      <div class="home-sec" id="home-sec-asist">
         <div class="home-sec-hdr">
           <div class="home-sec-bar a"></div>
           <span class="home-sec-label">Asistencia</span>
@@ -1100,7 +1123,7 @@
       </div>
 
       <!-- ── ENTRENAMIENTO ── -->
-      <div class="home-sec">
+      <div class="home-sec" id="home-sec-entreno">
         <div class="home-sec-hdr">
           <div class="home-sec-bar e"></div>
           <span class="home-sec-label">Entrenamiento</span>
@@ -1125,7 +1148,7 @@
       </div>
 
       <!-- ── PARTIDO ── -->
-      <div class="home-sec">
+      <div class="home-sec" id="home-sec-partido">
         <div class="home-sec-hdr">
           <div class="home-sec-bar p"></div>
           <span class="home-sec-label">Partido</span>
@@ -1150,7 +1173,7 @@
       </div>
 
       <!-- ── COMPETICIÓN ── -->
-      <div class="home-sec">
+      <div class="home-sec" id="home-sec-comp">
         <div class="home-sec-hdr">
           <div class="home-sec-bar c"></div>
           <span class="home-sec-label">Competición</span>
@@ -1183,10 +1206,60 @@
         </div>
       </div>
 
+      <!-- ── AJUSTES ── -->
+      <div class="home-sec" id="home-sec-ajustes">
+        <div class="home-sec-hdr">
+          <div class="home-sec-bar" style="background:var(--gris);"></div>
+          <span class="home-sec-label">Ajustes</span>
+        </div>
+        <div class="tarjeta-menu" onclick="irA('pantalla-ajustes')">
+          <div class="menu-icono" style="background:#e5e7eb;">⚙️</div>
+          <div class="menu-texto">
+            <div class="menu-nombre">Perfil y modo monitor</div>
+            <div class="menu-desc" id="home-desc-ajustes">Tus datos y acceso de monitor</div>
+          </div>
+          <div class="menu-flecha">›</div>
+        </div>
+      </div>
+
     </div>
-    <div class="pie" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
+    <div class="pie" id="inicio-pie" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
       <button class="btn btn-sec btn-sm" onclick="irA('pantalla-importar')" style="width:auto;gap:5px;">📥 Importar desde Obsidian</button>
-      <span>Versión 0.24.0 · Solo para mí</span>
+      <span>Versión 0.25.0 · Solo para mí</span>
+    </div>
+  </div>
+
+  <!-- ══ AJUSTES — PERFIL Y MODO MONITOR ═════════ -->
+  <div id="pantalla-ajustes" class="pantalla">
+    <div class="cabecera">
+      <button class="btn-volver" onclick="irA('pantalla-inicio')">‹ Inicio</button>
+      <div class="cab-titulo">Ajustes</div>
+      <div class="cab-sub">Perfil y modo monitor</div>
+    </div>
+    <div class="contenido">
+      <div class="grupo-titulo">Datos personales</div>
+      <div class="form-card" style="gap:1rem;">
+        <div class="form-grupo">
+          <label class="form-label">Nombre</label>
+          <input id="perf-nombre" class="form-input" type="text" placeholder="Tu nombre">
+        </div>
+        <div class="form-grupo">
+          <label class="form-label">Apellidos</label>
+          <input id="perf-apellidos" class="form-input" type="text" placeholder="Tus apellidos">
+        </div>
+        <div class="form-grupo">
+          <label class="form-label">Club / Escuela</label>
+          <input id="perf-club" class="form-input" type="text" placeholder="Club o escuela">
+        </div>
+        <button class="btn btn-verde" onclick="guardarPerfil()" style="width:100%;">Guardar datos</button>
+        <p class="ajustes-desc">Estos datos se usan en la exportación del PDF de asistencia.</p>
+      </div>
+
+      <div class="grupo-titulo" style="margin-top:1.4rem;">Modo monitor</div>
+      <div class="form-card" style="gap:0.9rem;">
+        <p class="ajustes-desc">Deja la app mostrando <strong>solo el control de asistencia</strong>. Para volver al modo completo hará falta el PIN que definas.</p>
+        <div id="monitor-estado"></div>
+      </div>
     </div>
   </div>
 
@@ -2310,6 +2383,66 @@
     }
 
     // ══════════════════════════════════════════
+    // PERFIL (datos personales) + MODO MONITOR
+    // ══════════════════════════════════════════
+    function leerPerfil() {
+      try { var d = _lzGet('padel-perfil'); return d ? JSON.parse(d) : {}; } catch(e) { return {}; }
+    }
+    function escribirPerfil(p) { _lzSet('padel-perfil', JSON.stringify(p)); }
+    function perfilNombreCompleto() {
+      var p = leerPerfil();
+      return ((p.nombre||'') + ' ' + (p.apellidos||'')).trim();
+    }
+    function guardarPerfil() {
+      var p = leerPerfil();
+      p.nombre    = document.getElementById('perf-nombre').value.trim();
+      p.apellidos = document.getElementById('perf-apellidos').value.trim();
+      p.club      = document.getElementById('perf-club').value.trim();
+      escribirPerfil(p);
+      planToast('✓ Datos guardados');
+    }
+
+    function monitorEstado() {
+      try { var d = _lzGet('padel-monitor'); return d ? JSON.parse(d) : {activo:false, pin:''}; }
+      catch(e) { return {activo:false, pin:''}; }
+    }
+    function monitorActivo() { return !!monitorEstado().activo; }
+    function _monitorGuardar(m) { _lzSet('padel-monitor', JSON.stringify(m)); }
+
+    function monitorActivar() {
+      var pin = prompt('Crea un PIN de 4 dígitos para poder salir luego del modo monitor:');
+      if (pin === null) return;
+      pin = pin.trim();
+      if (!/^\d{4}$/.test(pin)) { alert('El PIN debe tener exactamente 4 dígitos.'); return; }
+      var pin2 = prompt('Repite el PIN para confirmar:');
+      if (pin2 === null) return;
+      if (pin2.trim() !== pin) { alert('Los PIN no coinciden. Inténtalo de nuevo.'); return; }
+      _monitorGuardar({ activo:true, pin:pin });
+      irA('pantalla-inicio');
+    }
+    function monitorSalir() {
+      var m = monitorEstado();
+      if (!m.activo) return;
+      var pin = prompt('Introduce el PIN para salir del modo monitor:');
+      if (pin === null) return;
+      if (pin.trim() !== m.pin) { alert('PIN incorrecto.'); return; }
+      m.activo = false;
+      _monitorGuardar(m);
+      irA('pantalla-inicio');
+    }
+
+    function mostrarAjustes() {
+      var p = leerPerfil();
+      document.getElementById('perf-nombre').value    = p.nombre || '';
+      document.getElementById('perf-apellidos').value = p.apellidos || '';
+      document.getElementById('perf-club').value      = p.club || '';
+      var est = document.getElementById('monitor-estado');
+      // En modo normal siempre está inactivo (la salida se hace desde el banner de Inicio)
+      est.innerHTML =
+        '<button class="btn btn-sec" onclick="monitorActivar()" style="width:100%;border-color:#fbbf24;color:#92400e;">🔒 Activar modo monitor</button>';
+    }
+
+    // ══════════════════════════════════════════
     // PLANIFICACIÓN ANUAL — 3 planes por nivel
     // ══════════════════════════════════════════
     // Tres recorridos (Iniciación / Avanzado / Competición),
@@ -2963,11 +3096,20 @@
     // NAVEGACIÓN
     // ══════════════════════════════════════════
 
+    // Pantallas permitidas cuando el modo monitor está activo
+    var MONITOR_PANTALLAS_OK = ['pantalla-inicio','pantalla-asistencia','pantalla-asistencia-config',
+      'pantalla-asistencia-nueva-clase','pantalla-asistencia-lista','pantalla-asistencia-resumen',
+      'pantalla-asistencia-alumno'];
+
     function irA(id) {
+      // En modo monitor solo se permite el módulo de asistencia
+      if (monitorActivo() && MONITOR_PANTALLAS_OK.indexOf(id) < 0) { id = 'pantalla-inicio'; }
+
       document.querySelectorAll('.pantalla').forEach(function(p) { p.classList.remove('activa'); });
       document.getElementById(id).classList.add('activa');
 
       if (id === 'pantalla-inicio')          actualizarInicio();
+      if (id === 'pantalla-ajustes')         mostrarAjustes();
       if (id === 'pantalla-categorias')      mostrarCategorias();
       if (id === 'pantalla-ejercicios')      mostrarEjercicios();
       if (id === 'pantalla-nuevo-ejercicio') prepararFormEjercicio(ejEditandoId);
@@ -2998,6 +3140,17 @@
     // ══════════════════════════════════════════
 
     function actualizarInicio() {
+      // ── Modo monitor: ocultar todo salvo Asistencia + mostrar banner ──
+      var mon = monitorActivo();
+      ['home-sec-entreno','home-sec-partido','home-sec-comp','home-sec-ajustes'].forEach(function(id){
+        var el = document.getElementById(id);
+        if (el) el.style.display = mon ? 'none' : '';
+      });
+      var pie = document.getElementById('inicio-pie');
+      if (pie) pie.style.display = mon ? 'none' : 'flex';
+      var ban = document.getElementById('monitor-banner');
+      if (ban) ban.style.display = mon ? 'flex' : 'none';
+
       // Aviso si la migración eliminó fotos en base64
       var avisoImgs = localStorage.getItem('padel-aviso-imgs');
       if (avisoImgs) {
@@ -6456,8 +6609,14 @@
       h += '</style></head><body>';
 
       h += '<button class="btn-volver" onclick="window.close()">← Volver</button>';
+      var _perf = leerPerfil();
+      var _entrenador = ((_perf.nombre||'') + ' ' + (_perf.apellidos||'')).trim();
+      var _club = (_perf.club||'').trim() || 'Club de Pádel';
       h += '<h1>📋 Resumen de Asistencia</h1>';
-      h += '<div class="sub">' + mesLabel + ' &nbsp;·&nbsp; Club de Pádel &nbsp;·&nbsp; Generado el ' + new Date().toLocaleDateString('es-ES') + '</div>';
+      h += '<div class="sub">' + mesLabel + ' &nbsp;·&nbsp; ' + _club + ' &nbsp;·&nbsp; Generado el ' + new Date().toLocaleDateString('es-ES') + '</div>';
+      if (_entrenador) {
+        h += '<div style="font-size:13px;color:#374151;margin:-12px 0 22px;"><strong>Entrenador/a:</strong> ' + _entrenador + '</div>';
+      }
       if (hayAltas || hayBajas || hayRecups) {
         h += '<div class="leyenda">';
         if (hayAltas)  h += '<span class="nuevo">Subrayado verde</span> = alta este mes (' + hayAltas + ')&nbsp;&nbsp;';
@@ -6567,7 +6726,14 @@
       h += '<span style="font-size:13px;color:#6b7280;">' + totPres + ' de ' + totPos + ' posibles presencias · ' + regs.length + ' lista' + (regs.length!==1?'s':'') + ' registradas</span></div>';
       h += '</div>';
 
-      h += '<div style="margin-top:36px;font-size:10px;color:#9ca3af;text-align:center;border-top:1px solid #e5e7eb;padding-top:12px;">Mi App de Pádel &nbsp;·&nbsp; Exportado el ' + new Date().toLocaleDateString('es-ES') + '</div>';
+      h += '<div style="margin-top:42px;display:flex;justify-content:flex-end;page-break-inside:avoid;">' +
+             '<div style="min-width:240px;text-align:center;">' +
+               '<div style="border-top:1.5px solid #9ca3af;padding-top:6px;font-size:12px;color:#374151;">' +
+                 'Firma del entrenador/a' + (_entrenador ? '<br><strong>' + _entrenador + '</strong>' : '') +
+               '</div>' +
+             '</div>' +
+           '</div>';
+      h += '<div style="margin-top:28px;font-size:10px;color:#9ca3af;text-align:center;border-top:1px solid #e5e7eb;padding-top:12px;">Mi App de Pádel &nbsp;·&nbsp; Exportado el ' + new Date().toLocaleDateString('es-ES') + '</div>';
       h += '</body></html>';
 
       var w = window.open('','_blank');
