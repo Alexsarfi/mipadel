@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.24.0
+  TU APP DE PÁDEL — v0.27.3
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -1335,7 +1335,7 @@
     </div>
     <div class="pie" id="inicio-pie" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
       <button class="btn btn-sec btn-sm" onclick="irA('pantalla-importar')" style="width:auto;gap:5px;">📥 Importar desde Obsidian</button>
-      <span>Versión 0.27.3 · Solo para mí</span>
+      <span id="inicio-version">Versión 0.27.3 · Solo para mí</span>
     </div>
   </div>
 
@@ -1953,6 +1953,9 @@
 
 
   <script>
+
+    // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
+    var APP_VERSION = '0.27.3';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -2747,6 +2750,7 @@
         '</div>';
       if (!uids.length) {
         h += '<p class="ajustes-desc" style="text-align:center;padding:1rem 0;">Aún no hay datos de asistencia de ningún entrenador.</p>';
+        h += '<p class="ajustes-desc" style="text-align:center;">Versión ' + APP_VERSION + '</p>';
         cont.innerHTML = h; return;
       }
       // Ordena por nombre
@@ -2767,6 +2771,7 @@
           '<div class="gestor-card-arr">›</div>' +
         '</div>';
       });
+      h += '<p class="ajustes-desc" style="text-align:center;margin-top:1.1rem;">Versión ' + APP_VERSION + '</p>';
       cont.innerHTML = h;
       var sub = document.getElementById('gestor-sub');
       if (sub) sub.textContent = uids.length + ' entrenador' + (uids.length !== 1 ? 'es' : '') + ' con datos';
@@ -7297,12 +7302,14 @@
     // ══════════════════════════════════════════
     // ARRANQUE
     // ══════════════════════════════════════════
+    var _iv = document.getElementById('inicio-version');
+    if (_iv) _iv.textContent = 'Versión ' + APP_VERSION + ' · Solo para mí';
     _migrarStorage(); // comprime datos viejos en localStorage (una sola vez)
     _marcRestaurar(); // recupera un partido en curso tras recarga/cierre
     actualizarInicio();
     _initSupabase(); // arranca Supabase (redirige a login si hay credenciales)
     if (marcadorEst.activo) irA('pantalla-marcador'); // volver al partido en curso
-    console.log('🎾 App de pádel v0.15.0 — Ejercicios por tipo + Facetas + Supabase');
+    console.log('🎾 App de pádel v' + APP_VERSION);
 
   </script>
 </body>
