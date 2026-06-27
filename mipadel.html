@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.25.0
+  TU APP DE PÁDEL — v0.24.0
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,15 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.25.1 — Aislamiento de datos por cuenta (2026-06)
+    · Al cambiar de cuenta en el mismo dispositivo se limpian
+      los datos locales de la anterior (categorías, ejercicios,
+      clases, partidos y asistencia) antes de descargar los de
+      la cuenta que entra. Cada entrenador/monitor ve solo lo
+      suyo y ya no aparece la asistencia de otra cuenta.
+    · Una cuenta de monitor siempre parte limpia y carga su
+      propia asistencia desde Supabase.
+
   v0.25.0 — Cuentas de monitor (rol) (2026-06)
     · Nuevo rol 'monitor' en grupo_miembros (Supabase).
       Una cuenta con este rol entra y la app la bloquea
@@ -1239,7 +1248,7 @@
     </div>
     <div class="pie" id="inicio-pie" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
       <button class="btn btn-sec btn-sm" onclick="irA('pantalla-importar')" style="width:auto;gap:5px;">📥 Importar desde Obsidian</button>
-      <span>Versión 0.25.0 · Solo para mí</span>
+      <span>Versión 0.25.1 · Solo para mí</span>
     </div>
   </div>
 
@@ -1999,9 +2008,30 @@
       return t === 'categorias' || t === 'ejercicios' || t === 'clases' || t === 'partidos';
     }
 
+    // Datos locales que pertenecen a UNA cuenta concreta (se sincronizan
+    // con Supabase). Si en el mismo dispositivo entra otra cuenta, hay que
+    // limpiarlos para que cada entrenador/monitor vea solo lo suyo.
+    function _limpiarCachesCuenta() {
+      ['padel-categorias','padel-ejercicios','padel-clases','padel-partidos',
+       'padel-asistencia-cfg','padel-asistencia-reg'].forEach(function(k){
+        try { localStorage.removeItem(k); } catch(e){}
+      });
+    }
+
     function _syncDownload() {
       if (!_sb || !_sbUser) return Promise.resolve();
       var uid = _sbUser.id;
+      // ── Cambio de cuenta en el mismo dispositivo ──
+      // Si la última cuenta usada en este móvil es distinta, se borran los
+      // datos de la anterior antes de descargar los de la cuenta actual.
+      // (La primera vez tras actualizar solo se registra el uid, sin borrar,
+      // para no tocar los datos ya existentes del entrenador.)
+      var lastUid = null;
+      try { lastUid = localStorage.getItem('padel-uid'); } catch(e){}
+      // Un monitor nunca debe heredar datos del dispositivo: siempre parte
+      // limpio y carga solo lo suyo desde Supabase.
+      if (_esMonitor || (lastUid && lastUid !== uid)) { _limpiarCachesCuenta(); }
+      try { localStorage.setItem('padel-uid', uid); } catch(e){}
       var gid = _sbGrupo ? _sbGrupo.id : null;
       // Tablas compartidas: filtra por grupo si el entrenador pertenece a uno
       var qCat = gid ? _sb.from('categorias').select('*').eq('grupo_id', gid)
