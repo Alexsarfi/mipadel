@@ -858,6 +858,17 @@
     .asist-global-info { flex:1; }
     .asist-global-titulo { font-size:14px; font-weight:700; color:var(--texto); }
     .asist-global-sub { font-size:12px; color:var(--lila); margin-top:2px; }
+    .asist-matriz-leyenda { font-size:11px; color:#6b7280; margin:0 0 .6rem; line-height:1.7; }
+    .asist-matriz-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1.5px solid var(--lila-claro); border-radius:14px; margin-bottom:1rem; }
+    .asist-matriz { border-collapse:collapse; font-size:13px; width:100%; }
+    .asist-matriz th, .asist-matriz td { padding:.5rem .55rem; text-align:center; white-space:nowrap; border-bottom:1px solid #eee; }
+    .asist-matriz thead th { background:var(--lila-suave); color:var(--lila); font-weight:700; position:sticky; top:0; }
+    .asist-matriz tbody tr { cursor:pointer; }
+    .asist-matriz tbody tr:active { background:var(--lila-suave); }
+    .asist-matriz .am-nom { text-align:left; font-weight:600; color:var(--texto); position:sticky; left:0; background:var(--blanco); z-index:1; }
+    .asist-matriz thead .am-nom { z-index:2; background:var(--lila-suave); }
+    .asist-matriz .am-tot { font-weight:800; color:var(--lila); }
+    .asist-matriz .am-recup { font-size:10px; font-weight:800; color:var(--lila); background:var(--lila-suave); border-radius:7px; padding:0 5px; }
     .asist-res-alumno { background:var(--blanco); border-radius:13px; padding:0.875rem 1.1rem; border:1.5px solid var(--borde); margin-bottom:8px; cursor:pointer; transition:all 0.15s; }
     .asist-res-alumno:hover { border-color:var(--lila-claro); transform:translateY(-1px); box-shadow:0 4px 12px rgba(124,58,237,0.08); }
     .asist-res-alumno:active { transform:translateY(0); }
@@ -975,7 +986,36 @@
     .plan-lib-info { flex:1; min-width:0; }
     .plan-lib-t { font-size:13px; font-weight:700; color:var(--texto); }
     .plan-lib-chips { display:flex; gap:5px; margin-top:5px; }
-    .plan-lib-add { font-size:20px; font-weight:700; color:#0891b2; flex-shrink:0; }
+    .plan-lib-add { font-size:24px; font-weight:700; color:#0891b2; flex-shrink:0; width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:10px; }
+    .plan-lib-add:active { background:#cffafe; }
+    /* Cabecera fija del modal con aspa de cerrar */
+    .plan-modal-hdr { position:sticky; top:0; z-index:5; background:var(--blanco); margin:-18px -16px 10px; padding:16px 16px 10px; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; border-bottom:1px solid var(--borde); }
+    .plan-modal-x { flex-shrink:0; width:34px; height:34px; border-radius:50%; border:none; background:var(--arena); color:var(--texto); font-size:16px; font-weight:700; cursor:pointer; line-height:1; display:flex; align-items:center; justify-content:center; }
+    .plan-modal-x:active { background:#e5e7eb; }
+    .plan-lib-nuevo { width:100%; margin-bottom:12px; }
+    .plan-lib-empty { text-align:center; color:var(--gris); font-size:13px; line-height:1.6; padding:18px 8px; }
+    .plan-lib-editic { font-size:11px; opacity:.5; margin-left:2px; }
+    .plan-niv-chip { display:inline-flex; align-items:center; font-size:11px; background:var(--arena); border-radius:20px; padding:2px 6px; line-height:1.4; }
+    /* Checkboxes de niveles en el editor de bloque */
+    .plan-niv-checks { display:flex; flex-direction:column; gap:8px; margin-top:4px; }
+    .plan-niv-check { display:flex; align-items:center; gap:9px; font-size:14px; color:var(--texto); font-weight:600; padding:8px 11px; border:1.5px solid var(--borde); border-radius:10px; background:var(--arena); cursor:pointer; }
+    .plan-niv-check input { width:18px; height:18px; accent-color:var(--lila); }
+    .plan-libedit-del { width:100%; margin-top:8px; }
+    /* Mini ventana centrada de confirmación */
+    .plan-confirm { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:10001; pointer-events:none; opacity:0; transition:opacity .18s; }
+    .plan-confirm.show { opacity:1; }
+    .plan-confirm-card { background:var(--blanco); border-radius:18px; padding:24px 32px; box-shadow:0 14px 44px rgba(0,0,0,.28); text-align:center; transform:scale(.9); transition:transform .18s; }
+    .plan-confirm.show .plan-confirm-card { transform:scale(1); }
+    .plan-confirm-ic { width:54px; height:54px; margin:0 auto 10px; border-radius:50%; background:var(--verde); color:#fff; font-size:30px; font-weight:800; display:flex; align-items:center; justify-content:center; }
+    .plan-confirm-txt { font-size:14px; color:var(--texto); line-height:1.5; }
+    /* Tarjetas de sesiones enlazadas a un bloque */
+    .plan-ses-intro { font-size:12.5px; color:var(--gris); margin-bottom:12px; }
+    .plan-ses-card { display:flex; align-items:center; gap:10px; background:var(--blanco); border:1.5px solid var(--borde); border-radius:13px; padding:0.9rem 1.1rem; margin-bottom:9px; cursor:pointer; transition:all .15s; }
+    .plan-ses-card:active { border-color:var(--lila-claro); background:var(--lila-suave); }
+    .plan-ses-card-body { flex:1; min-width:0; }
+    .plan-ses-card-nom { font-size:14px; font-weight:700; color:var(--texto); }
+    .plan-ses-card-meta { font-size:12px; color:var(--gris); margin-top:3px; }
+    .plan-ses-card-arr { font-size:20px; color:var(--lila); flex-shrink:0; }
   </style>
 </head>
 <body>
@@ -1333,7 +1373,7 @@
   <!-- ══ DETALLE SESIÓN ══════════════════════════ -->
   <div id="pantalla-detalle-sesion" class="pantalla">
     <div class="cabecera">
-      <button class="btn-volver" onclick="volverDeSesion()">‹ Clases</button>
+      <button class="btn-volver" id="volver-detalle-sesion" onclick="volverDeSesion()">‹ Clases</button>
       <div class="cab-titulo" id="detalle-sesion-titulo">—</div>
       <div class="cab-sub"   id="detalle-sesion-fecha">—</div>
     </div>
@@ -1426,14 +1466,78 @@
     <!-- Modal: biblioteca de bloques -->
     <div id="plan-lib-ov" class="plan-modal-ov" style="display:none">
       <div class="plan-modal">
-        <div class="plan-modal-tit">📚 Biblioteca de bloques</div>
-        <div class="plan-modal-sub" id="plan-lib-target">—</div>
-        <div id="plan-lib-list" class="plan-lib-list"></div>
-        <div class="plan-modal-acts">
-          <button class="btn btn-sec btn-sm" onclick="planCerrarBiblioteca()">Cerrar</button>
+        <div class="plan-modal-hdr">
+          <div>
+            <div class="plan-modal-tit">📚 Biblioteca de bloques</div>
+            <div class="plan-modal-sub" id="plan-lib-target">—</div>
+          </div>
+          <button class="plan-modal-x" onclick="planCerrarBiblioteca()" aria-label="Cerrar">✕</button>
         </div>
+        <button class="btn btn-verde btn-sm plan-lib-nuevo" onclick="planLibNuevo()">＋ Nuevo bloque</button>
+        <div id="plan-lib-list" class="plan-lib-list"></div>
       </div>
     </div>
+
+    <!-- Modal: editor de bloque de biblioteca -->
+    <div id="plan-libedit-ov" class="plan-modal-ov" style="display:none">
+      <div class="plan-modal">
+        <div class="plan-modal-tit" id="plan-libedit-tit">Nuevo bloque</div>
+        <label class="plan-modal-lbl">Categoría</label>
+        <input id="ple-cat" class="plan-modal-inp" type="text" placeholder="Ej. Volea, Pared, Táctica…" list="ple-cat-list">
+        <datalist id="ple-cat-list"></datalist>
+        <label class="plan-modal-lbl">Título</label>
+        <input id="ple-t" class="plan-modal-inp" type="text" placeholder="Ej. Volea de derecha">
+        <label class="plan-modal-lbl">Foco (qué se trabaja)</label>
+        <textarea id="ple-f" class="plan-modal-inp" rows="2" placeholder="Una línea de guía"></textarea>
+        <label class="plan-modal-lbl">Intención</label>
+        <select id="ple-int" class="plan-modal-inp">
+          <option value="base">Base</option>
+          <option value="anular">Anular</option>
+          <option value="dominar">Dominar</option>
+          <option value="definir">Definir</option>
+        </select>
+        <label class="plan-modal-lbl">Zona</label>
+        <select id="ple-z" class="plan-modal-inp">
+          <option value="fondo">fondo</option>
+          <option value="campo-medio">campo-medio</option>
+          <option value="red">red</option>
+          <option value="todo-campo">todo-campo</option>
+        </select>
+        <label class="plan-modal-lbl">Golpe (define a qué sesiones enlaza)</label>
+        <select id="ple-g" class="plan-modal-inp">
+          <option value="fondo">Fondo</option>
+          <option value="pared">Pared</option>
+          <option value="globo">Globo</option>
+          <option value="volea">Volea</option>
+          <option value="bandeja">Bandeja</option>
+          <option value="vibora">Víbora</option>
+          <option value="remate">Remate</option>
+          <option value="saque">Saque/Resto</option>
+          <option value="mixto">Combinada</option>
+        </select>
+        <label class="plan-modal-lbl">Niveles (a quién corresponde)</label>
+        <div class="plan-niv-checks">
+          <label class="plan-niv-check"><input type="checkbox" id="ple-niv-iniciacion"> 🌱 Iniciación</label>
+          <label class="plan-niv-check"><input type="checkbox" id="ple-niv-avanzado"> 🔥 Avanzado</label>
+          <label class="plan-niv-check"><input type="checkbox" id="ple-niv-competicion"> 🏆 Competición</label>
+        </div>
+        <div class="plan-modal-acts">
+          <button class="btn btn-sec btn-sm" onclick="planLibEditCerrar()">Cancelar</button>
+          <button class="btn btn-verde btn-sm" onclick="planLibGuardar()">Guardar</button>
+        </div>
+        <button class="btn btn-rojo btn-sm plan-libedit-del" id="plan-libedit-del" style="display:none" onclick="planLibBorrar()">🗑️ Borrar bloque</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SESIONES ENLAZADAS A UN BLOQUE DEL PLAN ═══ -->
+  <div id="pantalla-plan-sesiones" class="pantalla">
+    <div class="cabecera">
+      <button class="btn-volver" onclick="irA('pantalla-planificacion')">‹ Planificación</button>
+      <div class="cab-titulo" id="plan-ses-titulo">—</div>
+      <div class="cab-sub" id="plan-ses-sub">—</div>
+    </div>
+    <div class="contenido" id="plan-ses-list"></div>
   </div>
 
   <!-- ══ IMPORTAR DESDE OBSIDIAN ══════════════════ -->
@@ -1619,8 +1723,8 @@
         <span class="asist-mes-label" id="asist-mes-label">—</span>
         <button class="btn-semana" onclick="asistCambiarMes(1)">›</button>
       </div>
+      <button class="btn btn-sec" style="border-color:var(--lila-claro);color:var(--lila);margin-bottom:.85rem;" onclick="asistExportarPDF()">📄 Exportar PDF</button>
       <div id="asist-res-contenido"></div>
-      <button class="btn btn-sec" style="border-color:var(--lila-claro);color:var(--lila);" onclick="asistExportarPDF()">📄 Exportar PDF</button>
     </div>
   </div>
 
@@ -2072,6 +2176,8 @@
     var origenSesionFiltro = null; // (legacy)
     var nivelClasesSel  = 'iniciacion'; // nivel activo en la barra superior
     var origenSesionNivel = null;       // nivel recordado al entrar en una sesión
+    var sesionOrigen = 'clases';        // 'clases' | 'plan' — de dónde se abrió la sesión
+    var planSesCtx = null;              // contexto del bloque al ver sus sesiones
     var sesionTemaSeleccionada = null;
     var TEMATICAS = ['calentamiento','técnica','táctica','mixta','competición'];
 
@@ -2440,6 +2546,19 @@
       if (!p.contenido) { p.contenido = _planSeed(); _planGuardar(p); }
       return p.contenido;
     }
+    // Biblioteca EDITABLE del usuario. Se siembra de PLAN_BIBLIOTECA la 1ª vez,
+    // marcando cada bloque predefinido como "base común" (los 3 niveles).
+    function planBiblioteca(p) {
+      if (!p.biblioteca) {
+        p.biblioteca = PLAN_BIBLIOTECA.map(function(b, i){
+          return { id:'lib' + i + '_' + Math.random().toString(36).slice(2,7),
+                   cat:b.cat, t:b.t, f:b.f, int:b.int, z:b.z, g:b.g,
+                   niveles:['iniciacion','avanzado','competicion'] };
+        });
+        _planGuardar(p);
+      }
+      return p.biblioteca;
+    }
 
     function _planGuardar(p) { try { escribirPlan(p); } catch (e) { console.warn('plan no se pudo guardar:', e); } }
     function planSetNivel(nv) {
@@ -2511,35 +2630,140 @@
     }
 
     // ── Biblioteca ──
+    var planLibEditId = null;   // id del bloque que se edita (null = nuevo)
+
     function planAbrirBiblioteca(nivel, mes) {
       planLibTarget = { nivel:nivel, mes:mes };
       document.getElementById('plan-lib-target').textContent = 'Añadir a ' + mes + ' · ' + planNivelLabel(nivel);
-      var cats = []; PLAN_BIBLIOTECA.forEach(function(b){ if (cats.indexOf(b.cat) < 0) cats.push(b.cat); });
+      var p = leerPlan(); var lib = planBiblioteca(p);
+      // Solo los bloques que correspondan al nivel activo
+      var items = lib.filter(function(b){ return (b.niveles||[]).indexOf(nivel) >= 0; });
+      var cats = []; items.forEach(function(b){ if (cats.indexOf(b.cat) < 0) cats.push(b.cat); });
       var h = '';
+      if (!items.length) {
+        h = '<div class="plan-lib-empty">No hay bloques para ' + planNivelLabel(nivel) + '.<br>Crea uno con «＋ Nuevo bloque».</div>';
+      }
       cats.forEach(function(cat){
         h += '<div class="plan-lib-cat">' + cat + '</div>';
-        PLAN_BIBLIOTECA.forEach(function(b, i){
+        items.forEach(function(b){
           if (b.cat !== cat) return;
-          var ic = PLAN_INT[b.int];
-          h += '<div class="plan-lib-item" onclick="planAddDeBiblioteca(' + i + ')">' +
-                 '<div class="plan-lib-info"><div class="plan-lib-t">' + b.t + '</div>' +
-                 '<div class="plan-lib-chips"><span class="plan-chip int" style="background:' + ic.c + '">' + ic.l + '</span>' +
-                 '<span class="plan-chip golpe">' + (PLAN_GOLPE_LBL[b.g] || b.g) + '</span></div></div>' +
-                 '<span class="plan-lib-add">＋</span></div>';
+          var ic = PLAN_INT[b.int] || PLAN_INT.dominar;
+          var nivChips = (b.niveles||[]).map(function(nv){
+            var m = PLAN_NIVELES_META.filter(function(x){ return x.key===nv; })[0];
+            return '<span class="plan-niv-chip" title="' + (m?m.label:nv) + '">' + (m?m.icono:'') + '</span>';
+          }).join('');
+          h += '<div class="plan-lib-item">' +
+                 '<div class="plan-lib-info" onclick="planLibEditar(\'' + b.id + '\')">' +
+                   '<div class="plan-lib-t">' + b.t + ' <span class="plan-lib-editic">✏️</span></div>' +
+                   '<div class="plan-lib-chips"><span class="plan-chip int" style="background:' + ic.c + '">' + ic.l + '</span>' +
+                   '<span class="plan-chip golpe">' + (PLAN_GOLPE_LBL[b.g] || b.g) + '</span>' + nivChips + '</div>' +
+                 '</div>' +
+                 '<span class="plan-lib-add" onclick="planAddDeBiblioteca(\'' + b.id + '\')">＋</span>' +
+               '</div>';
         });
       });
       document.getElementById('plan-lib-list').innerHTML = h;
       document.getElementById('plan-lib-ov').style.display = 'flex';
     }
     function planCerrarBiblioteca() { document.getElementById('plan-lib-ov').style.display = 'none'; planLibTarget = null; }
-    function planAddDeBiblioteca(i) {
+
+    function planAddDeBiblioteca(id) {
       if (!planLibTarget) return;
-      var b = PLAN_BIBLIOTECA[i]; if (!b) return;
-      var p = leerPlan(); var c = planContenido(p);
+      var p = leerPlan(); var lib = planBiblioteca(p);
+      var b = lib.filter(function(x){ return x.id === id; })[0]; if (!b) return;
+      var c = planContenido(p);
       var arr = c[planLibTarget.nivel][planLibTarget.mes] || (c[planLibTarget.nivel][planLibTarget.mes] = []);
       arr.push({ id:_planNuevoId(), t:b.t, f:b.f, int:b.int, z:b.z, g:b.g });
       _planGuardar(p); mostrarPlanificacion();
-      planToast('Añadido: ' + b.t);
+      planConfirmAdd(planLibTarget.mes);   // mini ventana de confirmación
+    }
+
+    // ── Editor de bloques de la biblioteca (crear / editar / borrar) ──
+    function _planLibFillCats() {
+      var p = leerPlan(); var lib = planBiblioteca(p);
+      var cats = []; lib.forEach(function(b){ if (b.cat && cats.indexOf(b.cat) < 0) cats.push(b.cat); });
+      document.getElementById('ple-cat-list').innerHTML =
+        cats.map(function(c){ return '<option value="' + c + '">'; }).join('');
+    }
+    function _planLibSetCampos(b) {
+      document.getElementById('ple-cat').value = b ? (b.cat||'') : '';
+      document.getElementById('ple-t').value   = b ? (b.t||'')   : '';
+      document.getElementById('ple-f').value   = b ? (b.f||'')   : '';
+      document.getElementById('ple-int').value = b ? (b.int||'dominar') : 'dominar';
+      document.getElementById('ple-z').value   = b ? (b.z||'fondo')     : 'fondo';
+      document.getElementById('ple-g').value   = b ? (b.g||'fondo')     : 'fondo';
+      ['iniciacion','avanzado','competicion'].forEach(function(nv){
+        var chk = document.getElementById('ple-niv-' + nv);
+        if (!chk) return;
+        chk.checked = b ? ((b.niveles||[]).indexOf(nv) >= 0)
+                        : (planLibTarget && planLibTarget.nivel === nv);
+      });
+    }
+    function planLibNuevo() {
+      planLibEditId = null;
+      document.getElementById('plan-libedit-tit').textContent = 'Nuevo bloque';
+      _planLibFillCats(); _planLibSetCampos(null);
+      document.getElementById('plan-libedit-del').style.display = 'none';
+      document.getElementById('plan-libedit-ov').style.display = 'flex';
+    }
+    function planLibEditar(id) {
+      var p = leerPlan(); var lib = planBiblioteca(p);
+      var b = lib.filter(function(x){ return x.id === id; })[0]; if (!b) return;
+      planLibEditId = id;
+      document.getElementById('plan-libedit-tit').textContent = 'Editar bloque';
+      _planLibFillCats(); _planLibSetCampos(b);
+      document.getElementById('plan-libedit-del').style.display = 'block';
+      document.getElementById('plan-libedit-ov').style.display = 'flex';
+    }
+    function planLibEditCerrar() { document.getElementById('plan-libedit-ov').style.display = 'none'; planLibEditId = null; }
+    function planLibGuardar() {
+      var t = document.getElementById('ple-t').value.trim();
+      if (!t) { planToast('Ponle un título al bloque'); return; }
+      var niveles = ['iniciacion','avanzado','competicion'].filter(function(nv){
+        return document.getElementById('ple-niv-' + nv).checked;
+      });
+      if (!niveles.length) { planToast('Marca al menos un nivel'); return; }
+      var datos = {
+        cat: document.getElementById('ple-cat').value.trim() || 'Otros',
+        t:   t,
+        f:   document.getElementById('ple-f').value.trim(),
+        int: document.getElementById('ple-int').value,
+        z:   document.getElementById('ple-z').value,
+        g:   document.getElementById('ple-g').value,
+        niveles: niveles
+      };
+      var p = leerPlan(); var lib = planBiblioteca(p);
+      if (planLibEditId) {
+        var b = lib.filter(function(x){ return x.id === planLibEditId; })[0];
+        if (b) { b.cat=datos.cat; b.t=datos.t; b.f=datos.f; b.int=datos.int; b.z=datos.z; b.g=datos.g; b.niveles=datos.niveles; }
+      } else {
+        lib.push({ id:_planNuevoId(), cat:datos.cat, t:datos.t, f:datos.f, int:datos.int, z:datos.z, g:datos.g, niveles:datos.niveles });
+      }
+      _planGuardar(p); planLibEditCerrar();
+      if (planLibTarget) planAbrirBiblioteca(planLibTarget.nivel, planLibTarget.mes);
+    }
+    function planLibBorrar() {
+      if (!planLibEditId) return;
+      if (!confirm('¿Borrar este bloque de la biblioteca? No afecta a lo ya añadido al plan.')) return;
+      var p = leerPlan();
+      p.biblioteca = planBiblioteca(p).filter(function(x){ return x.id !== planLibEditId; });
+      _planGuardar(p); planLibEditCerrar();
+      if (planLibTarget) planAbrirBiblioteca(planLibTarget.nivel, planLibTarget.mes);
+    }
+
+    // ── Mini ventana centrada de confirmación al añadir ──
+    var _planConfirmT;
+    function planConfirmAdd(mes) {
+      var el = document.getElementById('plan-confirm');
+      if (!el) {
+        el = document.createElement('div'); el.id = 'plan-confirm'; el.className = 'plan-confirm';
+        el.innerHTML = '<div class="plan-confirm-card"><div class="plan-confirm-ic">✓</div><div class="plan-confirm-txt"></div></div>';
+        document.body.appendChild(el);
+      }
+      el.querySelector('.plan-confirm-txt').innerHTML = 'Bloque añadido<br><strong>a ' + mes + '</strong>';
+      el.classList.add('show');
+      clearTimeout(_planConfirmT);
+      _planConfirmT = setTimeout(function(){ el.classList.remove('show'); }, 1500);
     }
 
     var _planToastT;
@@ -2579,6 +2803,51 @@
       }, 90);
     }
 
+    // ── Sesiones enlazadas a un bloque (pantalla aparte) ──
+    function planAbrirSesionesBloque(nivel, mes, id) {
+      var p = leerPlan(); var arr = planContenido(p)[nivel][mes] || [];
+      var it = arr.filter(function(x){ return x.id === id; })[0];
+      if (!it) return;
+      var esComp   = (nivel === 'competicion');
+      var tipo     = esComp ? 'int' : 'g';
+      var valor    = esComp ? it.int : it.g;
+      var etiqueta = esComp ? (PLAN_INT[it.int] ? PLAN_INT[it.int].l : it.int)
+                            : (PLAN_GOLPE_LBL[it.g] || it.g);
+      planSesCtx = { nivel:nivel, mes:mes, id:id, t:it.t, tipo:tipo, valor:valor, etiqueta:etiqueta };
+      nivelClasesSel = nivel;
+      document.querySelectorAll('.pantalla').forEach(function(pn){ pn.classList.remove('activa'); });
+      document.getElementById('pantalla-plan-sesiones').classList.add('activa');
+      renderPlanSesiones();
+      window.scrollTo(0,0);
+    }
+    function renderPlanSesiones() {
+      if (!planSesCtx) return;
+      var ctx = planSesCtx;
+      document.getElementById('plan-ses-titulo').textContent = ctx.t;
+      document.getElementById('plan-ses-sub').textContent = planNivelLabel(ctx.nivel) + ' · ' + ctx.etiqueta;
+      var mapEj    = _ejsById();
+      var sesNivel = leerClases().filter(function(c){ return nivelDeSesion(c, mapEj) === ctx.nivel; });
+      var match    = sesNivel.filter(function(c){
+        return ctx.tipo === 'int' ? intencionDeSesion(c, mapEj) === ctx.valor
+                                   : golpeDeSesion(c, mapEj) === ctx.valor;
+      });
+      var h = '';
+      if (!match.length) {
+        h = '<div class="vacio"><div class="vacio-icono">🎾</div><p>Aún no hay sesiones de «' + ctx.etiqueta + '» en ' + planNivelLabel(ctx.nivel) + '.</p></div>';
+      } else {
+        h += '<div class="plan-ses-intro">' + match.length + ' sesión' + (match.length!==1?'es':'') + ' enlazada' + (match.length!==1?'s':'') + ' · toca para ver y enlazar sus ejercicios</div>';
+        match.forEach(function(c){
+          var nEj = (c.ejercicioIds||[]).length;
+          h += '<div class="plan-ses-card" onclick="verSesion(' + c.id + ',\'plan\')">' +
+                 '<div class="plan-ses-card-body">' +
+                   '<div class="plan-ses-card-nom">' + (c.nombre || ('Sesión ' + c.id)) + '</div>' +
+                   '<div class="plan-ses-card-meta">' + (c.tematica ? c.tematica + ' · ' : '') + nEj + ' ejercicio' + (nEj!==1?'s':'') + '</div>' +
+                 '</div><span class="plan-ses-card-arr">›</span></div>';
+        });
+      }
+      document.getElementById('plan-ses-list').innerHTML = h;
+    }
+
     function _planItemHTML(nivel, mes, it, hechos, editMode) {
       var hecho = !!hechos[it.id];
       var ic = PLAN_INT[it.int] || PLAN_INT.dominar;
@@ -2606,7 +2875,7 @@
       var valor = esComp ? it.int : it.g;
       var etiqueta = (esComp ? (PLAN_INT[it.int] ? PLAN_INT[it.int].l : it.int) : (PLAN_GOLPE_LBL[it.g] || it.g));
       var h2 = '<div class="plan-item' + (hecho ? ' hecho' : '') + '">';
-      h2 += '<div class="plan-item-body" onclick="planIrASesiones(\'' + nivel + '\',\'' + tipo + '\',\'' + valor + '\',\'' + etiqueta.replace(/'/g,"") + '\')">';
+      h2 += '<div class="plan-item-body" onclick="planAbrirSesionesBloque(\'' + nivel + '\',\'' + mes + '\',\'' + it.id + '\')">';
       h2 += '<div class="plan-item-top"><span class="plan-item-titulo">' + it.t + '</span><span class="plan-item-flecha">›</span></div>';
       if (it.f) h2 += '<div class="plan-item-foco">' + it.f + '</div>';
       h2 += chips + '</div>';
@@ -2650,7 +2919,7 @@
 
       h += '<div class="plan-intro">' + (edit
         ? '✏️ <strong>Modo edición.</strong> Toca un apartado para editarlo, usa ▲▼ para ordenar y 🗑️ para borrar. Con «＋ Nuevo» creas uno propio y con «📚 Biblioteca» añades bloques predefinidos.'
-        : '🗺️ Plan de <strong>' + planNivelLabel(nivel) + '</strong>. El mes en curso está arriba; los demás, en «Otros meses». Toca un apartado para ir a sus <strong>sesiones</strong>.') + '</div>';
+        : '🗺️ Plan de <strong>' + planNivelLabel(nivel) + '</strong>. El mes en curso está arriba; los demás, en «Otros meses». Toca un apartado para ver sus <strong>sesiones enlazadas</strong>.') + '</div>';
 
       // ── Mes actual (destacado) ──
       var itemsAct = meses[mesAct] || [];
@@ -4065,6 +4334,14 @@
     // ══════════════════════════════════════════
 
     function volverDeSesion() {
+      if (sesionOrigen === 'plan' && planSesCtx) {
+        sesionOrigen = 'clases';
+        document.querySelectorAll('.pantalla').forEach(function(p){ p.classList.remove('activa'); });
+        document.getElementById('pantalla-plan-sesiones').classList.add('activa');
+        renderPlanSesiones();
+        window.scrollTo(0, 0);
+        return;
+      }
       if (origenSesionNivel) nivelClasesSel = origenSesionNivel;
       document.querySelectorAll('.pantalla').forEach(function(p){ p.classList.remove('activa'); });
       document.getElementById('pantalla-clases').classList.add('activa');
@@ -4130,11 +4407,15 @@
       '</div>';
     }
 
-    function verSesion(id) {
+    function verSesion(id, origen) {
       origenSesionNivel = nivelClasesSel;
+      sesionOrigen = origen || 'clases';
       var sesion = leerClases().filter(function(c){ return c.id === id; })[0];
       var ejs    = leerEjercicios();
       if (!sesion) return;
+
+      var vb = document.getElementById('volver-detalle-sesion');
+      if (vb) vb.textContent = (sesionOrigen === 'plan') ? '‹ Sesiones' : '‹ Clases';
 
       document.getElementById('detalle-sesion-titulo').textContent = sesion.nombre || ('Sesión ' + sesion.id);
       document.getElementById('detalle-sesion-fecha').textContent  = formatearFecha(sesion.fecha) + (sesion.tematica ? '  ·  ' + sesion.tematica : '');
@@ -5900,7 +6181,8 @@
 
       // Calcular stats por alumno (respetando alta/baja y recuperaciones)
       var alumnosMap = {};
-      function ensure(n){ if(!alumnosMap[n]) alumnosMap[n]={totalClases:0,presencias:0,recups:0}; return alumnosMap[n]; }
+      var fechasSet  = {};   // todas las fechas de clase del mes (no sinClase)
+      function ensure(n){ if(!alumnosMap[n]) alumnosMap[n]={totalClases:0,presencias:0,recups:0,cells:{}}; return alumnosMap[n]; }
       clases.forEach(function(clase) {
         var fechas    = fechasClaseEnMes(clase, mesISO);
         var regsClase = regs.filter(function(r){ return r.claseId===clase.id; });
@@ -5914,8 +6196,11 @@
             if (!alActivo(a, f)) return;
             var reg = regPorFecha[f];
             if (reg && reg.sinClase) return;
+            fechasSet[f] = true;
             dat.totalClases += 1;
-            if (reg && (reg.presentes||[]).indexOf(nombre)!==-1) dat.presencias += 1;
+            var ok = reg && (reg.presentes||[]).indexOf(nombre)!==-1;
+            if (ok) dat.presencias += 1;
+            dat.cells[f] = reg ? (ok ? 'pres' : 'falta') : 'nolist';
           });
         });
         // Recuperaciones: presentes que NO son del cupo activo esa fecha
@@ -5923,53 +6208,63 @@
           if (r.sinClase) return;
           var activos = alumnosActivos(clase, r.fecha);
           (r.presentes||[]).forEach(function(n){
-            if (activos.indexOf(n)===-1) ensure(n).recups += 1;
+            if (activos.indexOf(n)===-1) {
+              var d = ensure(n);
+              d.recups += 1;
+              fechasSet[r.fecha] = true;
+              if (!d.cells[r.fecha]) d.cells[r.fecha] = 'recup';
+            }
           });
         });
       });
 
-      var alumnos = Object.keys(alumnosMap).sort();
+      var alumnos    = Object.keys(alumnosMap).sort();
+      var fechasCols = Object.keys(fechasSet).sort();
 
       document.getElementById('asist-res-sub').textContent =
         alumnos.length + ' alumno' + (alumnos.length!==1?'s':'') + ' · ' + regs.length + ' lista' + (regs.length!==1?'s':'') + ' registradas';
 
-      if (alumnos.length === 0) {
+      if (alumnos.length === 0 || fechasCols.length === 0) {
         document.getElementById('asist-res-contenido').innerHTML =
           '<div class="vacio"><div class="vacio-icono">📊</div><p>Sin datos para ' + mesLabel + '.</p></div>';
         return;
       }
 
-      // Global
-      var totPres=0, totPos=0;
-      alumnos.forEach(function(a){ totPres+=alumnosMap[a].presencias; totPos+=alumnosMap[a].totalClases; });
-      var pctG = totPos>0 ? Math.round(totPres/totPos*100) : 0;
+      // ── Cuadrícula de asistencia por días del mes (sin porcentajes) ──
+      var CEL = {
+        pres:   { txt:'✓', col:'#166534' },
+        falta:  { txt:'✗', col:'#991b1b' },
+        recup:  { txt:'↩', col:'#7c3aed' },
+        nolist: { txt:'—', col:'#9ca3af' }
+      };
 
       var html = '';
-      html += '<div class="asist-global-card">';
-      html += '<div class="asist-global-num">' + pctG + '%</div>';
-      html += '<div class="asist-global-info">';
-      html += '<div class="asist-global-titulo">Asistencia global</div>';
-      html += '<div class="asist-global-sub">' + totPres + ' de ' + totPos + ' posibles · ' + regs.length + ' lista' + (regs.length!==1?'s':'') + ' pasadas</div>';
-      html += '<div class="asist-progreso" style="margin-top:8px;"><div class="asist-progreso-fill" style="width:' + pctG + '%"></div></div>';
-      html += '</div></div>';
+      html += '<div class="asist-matriz-leyenda">';
+      html += '<span style="color:#166534;font-weight:700">✓</span> asistió &nbsp; ';
+      html += '<span style="color:#991b1b;font-weight:700">✗</span> faltó &nbsp; ';
+      html += '<span style="color:#7c3aed;font-weight:700">↩</span> recup &nbsp; ';
+      html += '<span style="color:#9ca3af;font-weight:700">—</span> sin lista &nbsp; ';
+      html += '<span style="color:#d1d5db;font-weight:700">·</span> no aplica';
+      html += '</div>';
 
-      html += '<div class="grupo-titulo" style="margin-top:0.5rem;">Por alumno</div>';
+      html += '<div class="asist-matriz-wrap"><table class="asist-matriz">';
+      html += '<thead><tr><th class="am-nom">Alumno</th>';
+      fechasCols.forEach(function(f){ html += '<th>' + formatFechaCorta(f) + '</th>'; });
+      html += '<th class="am-tot">Tot</th></tr></thead><tbody>';
 
       alumnos.forEach(function(alumno) {
         var dat = alumnosMap[alumno];
-        var pct = dat.totalClases>0 ? Math.round(dat.presencias/dat.totalClases*100) : 0;
-        var nivel = pct>=80 ? '🟢 Buena' : pct>=60 ? '🟡 Regular' : '🔴 Baja';
-        var colNivel = pct>=80 ? '#166534' : pct>=60 ? '#92400e' : '#991b1b';
-
-        html += '<div class="asist-res-alumno" onclick="asistVerAlumno(\'' + alumno.replace(/'/g,"\\'") + '\')">';
-        html += '<div class="asist-res-nombre">' + alumno + '<span class="asist-res-pct">' + pct + '%</span></div>';
-        html += '<div class="asist-progreso"><div class="asist-progreso-fill" style="width:' + pct + '%"></div></div>';
-        html += '<div class="asist-res-nums">';
-        html += '<span>' + dat.presencias + ' asistencias / ' + dat.totalClases + ' posibles' +
-                (dat.recups ? ' · +' + dat.recups + ' recup' : '') + '</span>';
-        html += '<span style="color:' + colNivel + ';font-weight:700">' + nivel + '</span>';
-        html += '</div></div>';
+        html += '<tr onclick="asistVerAlumno(\'' + alumno.replace(/'/g,"\\'") + '\')">';
+        html += '<td class="am-nom">' + alumno + (dat.recups ? ' <span class="am-recup">↩+' + dat.recups + '</span>' : '') + '</td>';
+        fechasCols.forEach(function(f){
+          var st = dat.cells[f];
+          if (!st) { html += '<td style="color:#d1d5db">·</td>'; }
+          else { var c = CEL[st]; html += '<td style="color:' + c.col + ';font-weight:700">' + c.txt + '</td>'; }
+        });
+        html += '<td class="am-tot">' + dat.presencias + '/' + dat.totalClases + '</td>';
+        html += '</tr>';
       });
+      html += '</tbody></table></div>';
 
       document.getElementById('asist-res-contenido').innerHTML = html;
     }
