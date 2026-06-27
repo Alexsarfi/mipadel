@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.29.0
+  TU APP DE PÁDEL — v0.33.0
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,44 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.33.0 — Variantes EBL (regular dificultad) (2026-06)
+    · Cada ejercicio puede llevar variante_facil y
+      variante_dificil (metodología basada en limitaciones del
+      libro). Vienen del vault (YAML + sync_padel.py).
+    · En el detalle del ejercicio se muestran como bloque
+      "Variantes · regular la dificultad" cuando están rellenas.
+      Se rellenan a mano por ejercicio. Requiere re-importar.
+
+  v0.32.0 — Faceta "situación de juego" (2026-06)
+    · Nueva faceta situacion (saque/resto, juego de fondo,
+      mitad de pista, transición, juego de red) del libro de
+      táctica. Viene del vault (YAML + sync_padel.py).
+    · En Ejercicios: nuevo filtro por situación y chip en la
+      ficha del ejercicio. Requiere re-importar el JSON.
+
+  v0.31.1 — Biblioteca: táctico a competición (2026-06)
+    · Los bloques más de partido (fortalezas, debilidades,
+      confundir al rival, manejo de tiempos, plantear partido,
+      patrón anular-dominar-definir, formatos de puntos) pasan
+      a verse solo en Competición. Avanzado queda más ligero.
+
+  v0.31.0 — Biblioteca: menos ruido (2026-06)
+    · Cada bloque predefinido se muestra solo en el nivel o
+      niveles donde tiene sentido (acotado de niveles). En
+      iniciación se ven muchos menos bloques.
+    · Retirado "Constancia: pelotear" (duplicado de la
+      estrategia "Consistencia").
+    · Migración única (bibVersion). No toca tus bloques propios.
+
+  v0.30.0 — Planificación: 15 estrategias en biblioteca (2026-06)
+    · Nueva categoría "Estrategia" en la biblioteca de bloques
+      con las 15 estrategias del pádel (consistencia, ubicación,
+      mover al rival, ganar la red, plantear partido…), del libro
+      de táctica. Se añaden a tu biblioteca automáticamente.
+    · Cada estrategia trae intención/golpe por defecto para
+      enlazar con sesiones; se afinan con "Editar sesiones
+      enlazadas". Migración única (no reañade las borradas).
+
   v0.29.0 — Planificación: análisis (2026-06)
     · Bajo "Otros meses", apartado plegable "Análisis de
       planificación" del nivel actual: resumen (sesiones,
@@ -1188,6 +1226,13 @@
     .pa-olvido-cat { font-size:11px; font-weight:700; color:var(--lila); background:var(--lila-suave); border-radius:20px; padding:1px 8px; flex-shrink:0; }
     .pa-chips { display:flex; flex-wrap:wrap; gap:6px; }
     .pa-chip { font-size:12px; font-weight:700; color:#b45309; background:#fef3c7; border-radius:20px; padding:3px 10px; }
+    /* Variantes EBL en el detalle del ejercicio */
+    .ebl-var { font-size:13.5px; line-height:1.5; color:var(--texto); border-radius:11px; padding:0.6rem 0.8rem; margin-bottom:7px; }
+    .ebl-facil { background:#f0fdf4; border:1.5px solid #bbf7d0; }
+    .ebl-dificil { background:#fef2f2; border:1.5px solid #fecaca; }
+    .ebl-tag { display:inline-block; font-size:11px; font-weight:800; margin-right:6px; }
+    .ebl-facil .ebl-tag { color:#166534; }
+    .ebl-dificil .ebl-tag { color:#b91c1c; }
     .plan-ses-card:active { border-color:var(--lila-claro); background:var(--lila-suave); }
     .plan-ses-card-body { flex:1; min-width:0; }
     .plan-ses-card-nom { font-size:14px; font-weight:700; color:var(--texto); }
@@ -1365,7 +1410,7 @@
     </div>
     <div class="pie" id="inicio-pie" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
       <button class="btn btn-sec btn-sm" onclick="irA('pantalla-importar')" style="width:auto;gap:5px;">📥 Importar desde Obsidian</button>
-      <span id="inicio-version">Versión 0.29.0 · Solo para mí</span>
+      <span id="inicio-version">Versión 0.33.0 · Solo para mí</span>
     </div>
   </div>
 
@@ -1471,6 +1516,7 @@
              style="width:100%;box-sizing:border-box;border:1px solid var(--borde,#d8d8d2);border-radius:10px;padding:9px 12px;font-size:14px;font-family:inherit;background:#fff;color:var(--tinta);outline:none;margin-bottom:2px;">
       <div class="filtros" id="filtros-tipo-ej"></div>
       <div class="filtros" id="filtros-golpe-ej"></div>
+      <div class="filtros" id="filtros-situacion-ej"></div>
       <div class="filtros" id="filtros-pzona-ej"></div>
       <div class="filtros" id="filtros-val-ej"></div>
     </div>
@@ -1985,7 +2031,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.29.0';
+    var APP_VERSION = '0.33.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -2470,6 +2516,7 @@
     var filtroEjVal   = 0;    // 0 = todos, 3 = ★★★+, 4 = ★★★★+, 5 = ★★★★★
     var filtroEjZona  = null; // null = todas las zonas (faceta zona)
     var filtroEjGolpe = null; // null = todos los golpes (faceta golpe canónica)
+    var filtroEjSituacion = null; // null = todas las situaciones de juego
     var filtroEjTexto = '';   // búsqueda por nombre o código
     var ejAcordeon    = null; // {tipo: abierto?} — estado de las secciones colapsables (lazy load)
 
@@ -3238,6 +3285,63 @@
       { cat:'Competición', t:'Gestión del marcador', f:'Decidir bajo marcador y en puntos importantes.', int:'definir', z:'todo-campo', g:'mixto' }
     ];
 
+    // 15 estrategias del pádel (libro de táctica). Se añaden a la biblioteca como
+    // bloques de categoría "Estrategia". Llevan int/golpe por defecto para enlazar
+    // con sesiones; luego se afinan con "Editar sesiones enlazadas".
+    var PLAN_ESTRATEGIAS = [
+      { cat:'Estrategia', t:'Consistencia', f:'No fallar: meter una bola más que el rival. Es la base del pádel.', int:'anular', z:'fondo', g:'fondo' },
+      { cat:'Estrategia', t:'Ubicación', f:'Colocar la bola donde más daño hace y cubrir bien el lado propio.', int:'anular', z:'todo-campo', g:'mixto' },
+      { cat:'Estrategia', t:'Fortalezas', f:'Construir el punto alrededor de los golpes que mejor domino.', int:'dominar', z:'todo-campo', g:'mixto' },
+      { cat:'Estrategia', t:'Debilidades', f:'Atacar la debilidad del rival y proteger la propia.', int:'dominar', z:'todo-campo', g:'mixto' },
+      { cat:'Estrategia', t:'Comunicación', f:'Entenderse con el compañero: voz, decisiones y reparto de bolas.', int:'dominar', z:'todo-campo', g:'mixto' },
+      { cat:'Estrategia', t:'Mover al rival', f:'Cambiar direcciones y alturas para desplazarlo y abrir huecos.', int:'dominar', z:'red', g:'volea' },
+      { cat:'Estrategia', t:'Ganar y mantener la red', f:'Subir en bola buena y sostener la red con volea y bandeja.', int:'dominar', z:'red', g:'bandeja' },
+      { cat:'Estrategia', t:'Confundir al rival', f:'Variar golpes y ritmos (amagos, dejadas) para que no anticipe.', int:'dominar', z:'todo-campo', g:'mixto' },
+      { cat:'Estrategia', t:'Hacer que el rival golpee incómodo', f:'Jugar a los pies, al cuerpo y a zonas que le obliguen a improvisar.', int:'dominar', z:'red', g:'volea' },
+      { cat:'Estrategia', t:'Manejo de los tiempos', f:'Quitar tiempo en ataque y ganarlo en defensa (globo, ritmo).', int:'anular', z:'todo-campo', g:'mixto' },
+      { cat:'Estrategia', t:'Luchar todas las bolas', f:'Actitud y cobertura: no dar ninguna bola por perdida.', int:'anular', z:'fondo', g:'mixto' },
+      { cat:'Estrategia', t:'Ventaja / desventaja táctica', f:'Atacar en ventaja y defender con criterio en desventaja.', int:'definir', z:'todo-campo', g:'mixto' },
+      { cat:'Estrategia', t:'Potencia', f:'Pegada con criterio: remate, víbora y bajada cuando toca (nivel alto).', int:'definir', z:'red', g:'remate' },
+      { cat:'Estrategia', t:'Estilos de juego', f:'Reconocer y entrenar distintos estilos, propios y de los rivales.', int:'dominar', z:'todo-campo', g:'mixto' },
+      { cat:'Estrategia', t:'Plantear partido', f:'Plan A/B/C según fortalezas propias y debilidades del rival.', int:'definir', z:'todo-campo', g:'mixto' }
+    ];
+
+    // ── Limpieza de la biblioteca: acotar niveles + recortar redundantes ──
+    var _LI=['iniciacion'], _LIA=['iniciacion','avanzado'], _LA=['avanzado'],
+        _LAC=['avanzado','competicion'], _LC=['competicion'],
+        _LIAC=['iniciacion','avanzado','competicion'];
+    // Niveles donde tiene sentido cada bloque predefinido (por título).
+    var PLAN_BIB_NIV = {
+      'Empuñadura y posición base':_LI, 'Derecha de fondo':_LIA, 'Revés de fondo':_LIA,
+      'Profundidad y dirección':_LIA, 'Cambio de ritmo':_LAC,
+      'Salida de pared de fondo':_LIA, 'Salida de pared lateral':_LIA, 'Doble pared y bote pronto':_LAC,
+      'Globo defensivo':_LIA, 'Globo ofensivo':_LAC,
+      'Volea de derecha':_LIA, 'Volea de revés':_LIA, 'Voleas a distintas alturas':_LA,
+      'Voleas de presión a los pies':_LAC, 'Voleas de ángulo (definición)':_LAC,
+      'Bandeja técnica base':_LA, 'Bandeja con dirección':_LAC, 'Bandeja con desplazamiento':_LAC,
+      'Subir a la red':_LIA, 'Globo + bandeja':_LAC, 'Bajar a bolear':_LAC,
+      'Remate técnica base':_LA, 'Remate por 3 / salida de pista':_LAC, 'Víbora':_LAC,
+      'Dejada y amago':_LAC, 'Passing y globo ofensivo':_LAC,
+      'Saque y resto':_LIAC, 'Posicionamiento de pareja':_LAC, 'Patrón anular-dominar-definir':_LC,
+      'Formatos competitivos / puntos':_LC, 'Gestión del marcador':_LC,
+      'Consistencia':_LIAC, 'Ubicación':_LIAC, 'Fortalezas':_LC, 'Debilidades':_LC,
+      'Comunicación':_LIAC, 'Mover al rival':_LAC, 'Ganar y mantener la red':_LAC,
+      'Confundir al rival':_LC, 'Hacer que el rival golpee incómodo':_LC,
+      'Manejo de los tiempos':_LC, 'Luchar todas las bolas':_LIAC,
+      'Ventaja / desventaja táctica':_LC, 'Potencia':_LAC, 'Estilos de juego':_LC,
+      'Plantear partido':_LC
+    };
+    // Bloques predefinidos retirados por redundancia.
+    var PLAN_BIB_QUITAR = { 'Constancia: pelotear':1 };
+    // Aplica el acotado/recorte solo a bloques predefinidos (id 'lib…'); respeta los propios ('a…').
+    function _planBibAcotar(lib) {
+      return lib.filter(function(b){ return !(/^lib/.test(b.id) && PLAN_BIB_QUITAR[b.t]); })
+                .map(function(b){
+                  if (/^lib/.test(b.id) && PLAN_BIB_NIV[b.t]) b.niveles = PLAN_BIB_NIV[b.t].slice();
+                  return b;
+                });
+    }
+
     var planEditMode = false;
     var planEditTarget = null;   // { nivel, mes, id }
     var planLibTarget  = null;   // { nivel, mes }
@@ -3269,6 +3373,26 @@
                    cat:b.cat, t:b.t, f:b.f, int:b.int, z:b.z, g:b.g,
                    niveles:['iniciacion','avanzado','competicion'] };
         });
+        _planGuardar(p);
+      }
+      // Migración: añade las 15 estrategias del libro (una sola vez). No reañade
+      // las que el usuario ya tenga o haya borrado tras la migración.
+      if (!p.bibEstrategias) {
+        var tits = {};
+        p.biblioteca.forEach(function(b){ tits[b.t] = true; });
+        PLAN_ESTRATEGIAS.forEach(function(b, i){
+          if (tits[b.t]) return;
+          p.biblioteca.push({ id:'libE' + i + '_' + Math.random().toString(36).slice(2,7),
+            cat:b.cat, t:b.t, f:b.f, int:b.int, z:b.z, g:b.g,
+            niveles:['iniciacion','avanzado','competicion'] });
+        });
+        p.bibEstrategias = true;
+        _planGuardar(p);
+      }
+      // Acota niveles y retira bloques redundantes (se reaplica al subir la versión).
+      if (p.bibVersion !== 3) {
+        p.biblioteca = _planBibAcotar(p.biblioteca);
+        p.bibVersion = 3;
         _planGuardar(p);
       }
       return p.biblioteca;
@@ -4178,6 +4302,28 @@
     }
     function ejIntencion(ej) { return intencionCanonica(ejFaceta(ej, 'intencion')); }
 
+    // ── Situación de juego (libro de táctica) ──
+    var SITUACION_CANON = [
+      { key:'saque',       icono:'🚀', label:'Saque/Resto'    },
+      { key:'fondo',       icono:'🎾', label:'Juego de fondo' },
+      { key:'mitad-pista', icono:'↔️', label:'Mitad de pista' },
+      { key:'transicion',  icono:'🔄', label:'Transición'     },
+      { key:'red',         icono:'🥅', label:'Juego de red'   },
+    ];
+    var SITUACION_LABEL = {}, SITUACION_ICONO = {};
+    SITUACION_CANON.forEach(function(s){ SITUACION_LABEL[s.key] = s.label; SITUACION_ICONO[s.key] = s.icono; });
+    function situacionCanonica(raw) {
+      var s = (raw || '').toString().toLowerCase().trim();
+      if (!s) return '';
+      if (s.indexOf('saque') >= 0 || s.indexOf('resto') >= 0 || s.indexOf('resta') >= 0) return 'saque';
+      if (s.indexOf('mitad') >= 0 || s.indexOf('medio') >= 0) return 'mitad-pista';
+      if (s.indexOf('transici') >= 0) return 'transicion';
+      if (s.indexOf('red') >= 0) return 'red';
+      if (s.indexOf('fondo') >= 0) return 'fondo';
+      return s;
+    }
+    function ejSituacion(ej) { return situacionCanonica(ejFaceta(ej, 'situacion')); }
+
     // Copia el código al portapapeles (con fallback para webviews sin clipboard API).
     function copiarCodigo(cod, el) {
       function feedback() {
@@ -4202,13 +4348,15 @@
       var zona = ejFaceta(ej, 'zona'), formato = ejFaceta(ej, 'formato');
       var nivel = ejFaceta(ej, 'nivel'), conds = ejFaceta(ej, 'condicionantes') || [];
       var golpe = ejGolpe(ej), golpeRaw = ejFaceta(ej, 'golpe');
-      if (!cod && !zona && !formato && !nivel && !golpe && (!conds || !conds.length)) return '';
+      var situacion = ejSituacion(ej);
+      if (!cod && !zona && !formato && !nivel && !golpe && !situacion && (!conds || !conds.length)) return '';
 
       var chips = [];
       function chip(txt) {
         return '<span style="font-size:12px;background:var(--arena);color:var(--tinta);padding:3px 10px;border-radius:20px;">' + txt + '</span>';
       }
       if (golpe)   chips.push(chip((GOLPE_ICONO[golpe] || '🏓') + ' ' + (GOLPE_LABEL[golpe] || golpeRaw)));
+      if (situacion) chips.push(chip((SITUACION_ICONO[situacion] || '🎯') + ' ' + (SITUACION_LABEL[situacion] || situacion)));
       if (zona)    chips.push(chip('📍 ' + (ZONA_LABEL[zona] || zona)));
       if (formato) chips.push(chip('👥 ' + formato));
       if (nivel)   chips.push(chip('📶 ' + (NIVEL_LABEL[nivel] || ('Nivel ' + nivel))));
@@ -4284,6 +4432,28 @@
       renderListaEjercicios();
     }
 
+    function renderFiltrosSituacionEj() {
+      var cont = document.getElementById('filtros-situacion-ej');
+      if (!cont) return;
+      var presentes = {};
+      leerEjercicios().forEach(function(e){ var s = ejSituacion(e); if (s) presentes[s] = true; });
+      var sits = SITUACION_CANON.filter(function(s){ return presentes[s.key]; });
+      if (!sits.length) { cont.innerHTML = ''; return; }
+      var html = '<div class="fpill' + (filtroEjSituacion === null ? ' activo' : '') +
+                 '" onclick="aplicarFiltroSituacion(null)">Toda situación</div>';
+      sits.forEach(function(s) {
+        html += '<div class="fpill' + (filtroEjSituacion === s.key ? ' activo' : '') +
+                '" onclick="aplicarFiltroSituacion(\'' + s.key + '\')">' + s.icono + ' ' + s.label + '</div>';
+      });
+      cont.innerHTML = html;
+    }
+
+    function aplicarFiltroSituacion(sit) {
+      filtroEjSituacion = sit;
+      renderFiltrosSituacionEj();
+      renderListaEjercicios();
+    }
+
     function buscarEjercicios(txt) {
       filtroEjTexto = (txt || '').trim().toLowerCase();
       renderListaEjercicios();
@@ -4312,6 +4482,7 @@
       if (inp) inp.value = filtroEjTexto;
       renderFiltrosTipoEj();
       renderFiltrosGolpeEj();
+      renderFiltrosSituacionEj();
       renderFiltrosZonaEj();
       renderFiltrosValEj();
       renderListaEjercicios();
@@ -4328,10 +4499,11 @@
         var pasaVal  = filtroEjVal === 0 || (e.valoracion || 0) >= filtroEjVal;
         var pasaZona = filtroEjZona === null || ejFaceta(e, 'zona') === filtroEjZona;
         var pasaGolpe = filtroEjGolpe === null || ejGolpe(e) === filtroEjGolpe;
+        var pasaSit  = filtroEjSituacion === null || ejSituacion(e) === filtroEjSituacion;
         var pasaTxt  = !filtroEjTexto ||
                        (e.nombre || '').toLowerCase().indexOf(filtroEjTexto) !== -1 ||
                        ejCodigo(e).toLowerCase().indexOf(filtroEjTexto) !== -1;
-        return pasaTipo && pasaVal && pasaZona && pasaGolpe && pasaTxt;
+        return pasaTipo && pasaVal && pasaZona && pasaGolpe && pasaSit && pasaTxt;
       });
 
       // Subtítulo dinámico
@@ -4628,6 +4800,17 @@
     // DETALLE EJERCICIO
     // ══════════════════════════════════════════
 
+    // Bloque EBL: variantes para regular la dificultad (si el ejercicio las tiene).
+    function variantesHTML(ej) {
+      var f = ejFaceta(ej, 'variante_facil'), d = ejFaceta(ej, 'variante_dificil');
+      if (!f && !d) return '';
+      var h = '<div><div class="detalle-seccion-titulo">Variantes · regular la dificultad</div>';
+      if (f) h += '<div class="ebl-var ebl-facil"><span class="ebl-tag">▼ Más fácil</span> ' + _gEsc(f) + '</div>';
+      if (d) h += '<div class="ebl-var ebl-dificil"><span class="ebl-tag">▲ Más difícil</span> ' + _gEsc(d) + '</div>';
+      h += '</div>';
+      return h;
+    }
+
     function verEjercicio(id, origen) {
       ejActivoId      = id;
       origenDetalleEj = origen === 'explorar' ? 'pantalla-explorar-cat' : origen === 'sesion' ? 'pantalla-detalle-sesion' : 'pantalla-ejercicios';
@@ -4673,6 +4856,9 @@
 
       // Ficha (código + facetas)
       html += fichaFacetasHTML(ej);
+
+      // Variantes EBL (regular dificultad)
+      html += variantesHTML(ej);
 
       // Valoración (interactiva)
       html += '<div><div class="detalle-seccion-titulo">Valoración</div>' +
