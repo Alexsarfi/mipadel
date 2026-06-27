@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.25.1
+  TU APP DE PÁDEL — v0.24.0
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,17 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.26.0 — Perfil en el encabezado (2026-06)
+    · El acceso al perfil pasa a un botón 👤 en la esquina
+      superior derecha del encabezado de Inicio.
+    · La pantalla se llama ahora "Perfil" (nombre, apellidos
+      y club para el PDF de asistencia). Se retira el "Modo
+      monitor" local con PIN: ya no tiene sentido con las
+      cuentas de monitor por rol.
+    · El botón de perfil se oculta para las cuentas de monitor.
+    · Retirado el banner "Modo monitor activo": el monitor entra
+      directo a Asistencia y cierra sesión desde el badge de usuario.
+
   v0.25.1 — Aislamiento de datos por cuenta (2026-06)
     · Al cambiar de cuenta en el mismo dispositivo se limpian
       los datos locales de la anterior (categorías, ejercicios,
@@ -393,6 +404,10 @@
     .cab-etiqueta { font-size:11px; font-weight:600; letter-spacing:0.15em; text-transform:uppercase; color:var(--verde-claro); margin-bottom:6px; position:relative; }
     .cab-titulo   { font-size:26px; font-weight:800; line-height:1.1; position:relative; }
     .cab-sub      { font-size:13px; color:rgba(255,255,255,0.6); margin-top:5px; position:relative; }
+    /* Botón Perfil en el encabezado (arriba a la derecha) */
+    .cab-perfil-btn { position:absolute; top:1.5rem; right:1.5rem; z-index:2; width:42px; height:42px; border-radius:50%; background:rgba(255,255,255,0.14); border:none; color:#fff; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent; }
+    .cab-perfil-btn:hover { background:rgba(255,255,255,0.24); }
+    .cab-perfil-btn:active { transform:scale(0.94); }
     .btn-volver   { background:rgba(255,255,255,0.12); border:none; color:rgba(255,255,255,0.92); font-size:15px; font-weight:600; font-family:'Outfit',sans-serif; cursor:pointer; padding:9px 15px 9px 11px; margin:-4px -6px 8px -6px; min-height:42px; display:inline-flex; align-items:center; gap:6px; position:relative; border-radius:12px; -webkit-tap-highlight-color:transparent; }
     .btn-volver::first-letter { font-size:20px; line-height:1; }
     .btn-volver:hover { color:var(--blanco); background:rgba(255,255,255,0.2); }
@@ -1104,6 +1119,7 @@
   <!-- ══ INICIO ══════════════════════════════════ -->
   <div id="pantalla-inicio" class="pantalla activa">
     <div class="cabecera">
+      <button id="cab-perfil-btn" class="cab-perfil-btn" onclick="irA('pantalla-ajustes')" title="Perfil" aria-label="Perfil">👤</button>
       <div class="cab-etiqueta">🎾 Mi aplicación</div>
       <div class="cab-titulo">Club de Pádel</div>
       <div class="cab-sub" id="inicio-fecha">—</div>
@@ -1118,15 +1134,6 @@
         <button class="auth-logout-btn" onclick="authLogout()">Salir</button>
       </div>
 
-      <!-- ── BANNER MODO MONITOR ── -->
-      <div id="monitor-banner" class="monitor-banner" style="display:none;">
-        <span class="monitor-banner-ic">🔒</span>
-        <div class="monitor-banner-txt">
-          <strong>Modo monitor activo</strong>
-          <span id="monitor-banner-sub">Solo tienes acceso al control de asistencia.</span>
-        </div>
-        <button id="monitor-banner-btn" class="monitor-banner-btn" onclick="monitorSalir()">Salir</button>
-      </div>
 
       <!-- ── ASISTENCIA ── -->
       <div class="home-sec" id="home-sec-asist">
@@ -1229,35 +1236,19 @@
         </div>
       </div>
 
-      <!-- ── AJUSTES ── -->
-      <div class="home-sec" id="home-sec-ajustes">
-        <div class="home-sec-hdr">
-          <div class="home-sec-bar" style="background:var(--gris);"></div>
-          <span class="home-sec-label">Ajustes</span>
-        </div>
-        <div class="tarjeta-menu" onclick="irA('pantalla-ajustes')">
-          <div class="menu-icono" style="background:#e5e7eb;">⚙️</div>
-          <div class="menu-texto">
-            <div class="menu-nombre">Perfil y modo monitor</div>
-            <div class="menu-desc" id="home-desc-ajustes">Tus datos y acceso de monitor</div>
-          </div>
-          <div class="menu-flecha">›</div>
-        </div>
-      </div>
-
     </div>
     <div class="pie" id="inicio-pie" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
       <button class="btn btn-sec btn-sm" onclick="irA('pantalla-importar')" style="width:auto;gap:5px;">📥 Importar desde Obsidian</button>
-      <span>Versión 0.25.1 · Solo para mí</span>
+      <span>Versión 0.26.0 · Solo para mí</span>
     </div>
   </div>
 
-  <!-- ══ AJUSTES — PERFIL Y MODO MONITOR ═════════ -->
+  <!-- ══ PERFIL ═══════════════════════════════════ -->
   <div id="pantalla-ajustes" class="pantalla">
     <div class="cabecera">
       <button class="btn-volver" onclick="irA('pantalla-inicio')">‹ Inicio</button>
-      <div class="cab-titulo">Ajustes</div>
-      <div class="cab-sub">Perfil y modo monitor</div>
+      <div class="cab-titulo">Perfil</div>
+      <div class="cab-sub">Tus datos para el PDF de asistencia</div>
     </div>
     <div class="contenido">
       <div class="grupo-titulo">Datos personales</div>
@@ -1276,12 +1267,6 @@
         </div>
         <button class="btn btn-verde" onclick="guardarPerfil()" style="width:100%;">Guardar datos</button>
         <p class="ajustes-desc">Estos datos se usan en la exportación del PDF de asistencia.</p>
-      </div>
-
-      <div class="grupo-titulo" style="margin-top:1.4rem;">Modo monitor</div>
-      <div class="form-card" style="gap:0.9rem;">
-        <p class="ajustes-desc">Deja la app mostrando <strong>solo el control de asistencia</strong>. Para volver al modo completo hará falta el PIN que definas.</p>
-        <div id="monitor-estado"></div>
       </div>
     </div>
   </div>
@@ -2502,10 +2487,6 @@
       document.getElementById('perf-nombre').value    = p.nombre || '';
       document.getElementById('perf-apellidos').value = p.apellidos || '';
       document.getElementById('perf-club').value      = p.club || '';
-      var est = document.getElementById('monitor-estado');
-      // En modo normal siempre está inactivo (la salida se hace desde el banner de Inicio)
-      est.innerHTML =
-        '<button class="btn btn-sec" onclick="monitorActivar()" style="width:100%;border-color:#fbbf24;color:#92400e;">🔒 Activar modo monitor</button>';
     }
 
     // ══════════════════════════════════════════
@@ -3213,24 +3194,11 @@
         var el = document.getElementById(id);
         if (el) el.style.display = mon ? 'none' : '';
       });
+      // El botón Perfil del encabezado tampoco está disponible para monitores
+      var perfBtn = document.getElementById('cab-perfil-btn');
+      if (perfBtn) perfBtn.style.display = mon ? 'none' : 'flex';
       var pie = document.getElementById('inicio-pie');
       if (pie) pie.style.display = mon ? 'none' : 'flex';
-      var ban = document.getElementById('monitor-banner');
-      if (ban) ban.style.display = mon ? 'flex' : 'none';
-      // El monitor por cuenta no sale con PIN: solo puede cerrar sesión.
-      var banBtn = document.getElementById('monitor-banner-btn');
-      var banSub = document.getElementById('monitor-banner-sub');
-      if (banBtn) {
-        if (monCuenta) {
-          banBtn.textContent = 'Cerrar sesión';
-          banBtn.setAttribute('onclick', 'authLogout()');
-          if (banSub) banSub.textContent = 'Tu cuenta solo tiene acceso al control de asistencia.';
-        } else {
-          banBtn.textContent = 'Salir';
-          banBtn.setAttribute('onclick', 'monitorSalir()');
-          if (banSub) banSub.textContent = 'Solo tienes acceso al control de asistencia.';
-        }
-      }
 
       // Aviso si la migración eliminó fotos en base64
       var avisoImgs = localStorage.getItem('padel-aviso-imgs');
