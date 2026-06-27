@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.27.0
+  TU APP DE PÁDEL — v0.24.0
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,16 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.27.1 — Gestor: detalle por meses estilo exportación (2026-06)
+    · El detalle de cada entrenador se organiza por MES (con
+      navegación ‹ ›, empezando por el mes actual).
+    · Horario: clases agrupadas por día de la semana y hora.
+    · Cuadrícula de asistencia idéntica a la exportación mensual
+      (✓ asistió / ✗ faltó / ↩ recup / — sin lista) con total.
+    · Análisis del mes por alumno: % de asistencia con barra,
+      ordenado de menor a mayor para detectar ausencias.
+    · El nombre del entrenador aparece en cuanto rellena su perfil.
+
   v0.27.0 — Rol gestor: panel de asistencia global (2026-06)
     · Nuevo rol 'gestor'. Una cuenta gestor entra y ve un panel
       de SOLO LECTURA con la asistencia de TODOS los entrenadores:
@@ -438,6 +448,22 @@
     .gestor-reg-pres { color:#166534; font-weight:700; }
     .gestor-reg-aus { color:#b91c1c; font-weight:700; }
     .gestor-reg-sin { color:var(--gris); font-style:italic; }
+    /* Detalle del gestor: navegación de mes, horario y análisis */
+    .gestor-mes-nav { display:flex; align-items:center; justify-content:center; gap:14px; margin:0.2rem 0 1rem; }
+    .gestor-mes-btn { width:38px; height:38px; border-radius:10px; border:1.5px solid var(--borde); background:var(--blanco); color:var(--lila); font-size:18px; font-weight:800; cursor:pointer; }
+    .gestor-mes-btn:active { background:var(--lila-suave); }
+    .gestor-mes-lbl { font-size:15px; font-weight:800; color:var(--texto); min-width:150px; text-align:center; text-transform:capitalize; }
+    .gestor-dia-hdr { font-size:11px; font-weight:800; color:var(--lila); text-transform:uppercase; letter-spacing:0.05em; padding:0.6rem 0.2rem 0.35rem; }
+    .gestor-hora-row { display:flex; align-items:center; gap:10px; padding:0.5rem 0.1rem; border-bottom:1px solid var(--borde); }
+    .gestor-hora-fr { font-weight:800; color:var(--texto); font-size:13.5px; min-width:84px; }
+    .gestor-hora-nom { flex:1; font-size:13px; color:var(--gris); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .gestor-hora-al { font-size:12px; font-weight:700; color:var(--verde); flex-shrink:0; }
+    .gestor-alum-row { display:flex; align-items:center; gap:9px; padding:0.55rem 0.1rem; border-bottom:1px solid var(--borde); }
+    .gestor-alum-nom { flex:1; min-width:0; font-size:13.5px; font-weight:700; color:var(--texto); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .gestor-alum-bar { width:64px; height:7px; border-radius:5px; background:var(--borde); overflow:hidden; flex-shrink:0; }
+    .gestor-alum-fill { height:100%; border-radius:5px; }
+    .gestor-alum-pct { font-size:13px; font-weight:800; min-width:42px; text-align:right; flex-shrink:0; }
+    .gestor-alum-det { font-size:11.5px; color:var(--gris); min-width:58px; text-align:right; flex-shrink:0; }
     .btn-volver   { background:rgba(255,255,255,0.12); border:none; color:rgba(255,255,255,0.92); font-size:15px; font-weight:600; font-family:'Outfit',sans-serif; cursor:pointer; padding:9px 15px 9px 11px; margin:-4px -6px 8px -6px; min-height:42px; display:inline-flex; align-items:center; gap:6px; position:relative; border-radius:12px; -webkit-tap-highlight-color:transparent; }
     .btn-volver::first-letter { font-size:20px; line-height:1; }
     .btn-volver:hover { color:var(--blanco); background:rgba(255,255,255,0.2); }
@@ -1269,7 +1295,7 @@
     </div>
     <div class="pie" id="inicio-pie" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
       <button class="btn btn-sec btn-sm" onclick="irA('pantalla-importar')" style="width:auto;gap:5px;">📥 Importar desde Obsidian</button>
-      <span>Versión 0.27.0 · Solo para mí</span>
+      <span>Versión 0.27.1 · Solo para mí</span>
     </div>
   </div>
 
@@ -2577,7 +2603,9 @@
     // ══════════════════════════════════════════
     var _gestorData = null;   // { perfiles, clases, registros } (crudo de Supabase)
     var _gestorUid  = null;   // entrenador abierto en el detalle
-    var _GDIAS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+    var _GDIAS  = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+    var _GDIASL = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+    var _gestorMesOff = 0;   // navegación por meses en el detalle
 
     function _gEsc(s) {
       return String(s == null ? '' : s)
@@ -2688,7 +2716,23 @@
       if (sub) sub.textContent = uids.length + ' entrenador' + (uids.length !== 1 ? 'es' : '') + ' con datos';
     }
 
-    function abrirGestorDetalle(uid) { _gestorUid = uid; irA('pantalla-gestor-detalle'); }
+    function abrirGestorDetalle(uid) { _gestorUid = uid; _gestorMesOff = 0; irA('pantalla-gestor-detalle'); }
+    function gestorMesNav(delta) { _gestorMesOff += delta; renderGestorDetalle(); }
+
+    // Convierte los datos de servidor de un entrenador al formato local
+    // que entienden las funciones de asistencia ya existentes.
+    function _gestorClasesLocal(d) {
+      return (d.clases || []).map(function(c){
+        var ds = (c.dia_semana === '' || c.dia_semana == null) ? -1 : Number(c.dia_semana);
+        return { id:c.id, nombre:c.nombre || 'Clase', diaSemana:ds, franja:c.franja || '', alumnos:c.alumnos || [] };
+      });
+    }
+    function _gestorRegsLocal(d) {
+      return (d.regs || []).map(function(r){
+        return { id:r.id, claseId:r.clase_id, fecha:r.fecha,
+                 presentes:r.presentes || [], ausentes:r.ausentes || [], sinClase:!!r.sin_clase };
+      });
+    }
 
     function renderGestorDetalle() {
       var cont = document.getElementById('gestor-det-contenido');
@@ -2696,61 +2740,138 @@
       if (!_gestorData || !_gestorUid) { cont.innerHTML = '<p class="ajustes-desc">Sin datos.</p>'; return; }
       var d = _gestorAgrupar()[_gestorUid];
       if (!d) { cont.innerHTML = '<p class="ajustes-desc">Entrenador sin datos.</p>'; return; }
-      var s = _gestorStats(d), nom = _gestorNombre(d);
+      var nom = _gestorNombre(d);
       document.getElementById('gestor-det-nombre').textContent = nom;
       document.getElementById('gestor-det-sub').textContent =
         (d.perfil && d.perfil.email ? d.perfil.email : '') +
         (d.perfil && d.perfil.club ? ' · ' + d.perfil.club : '');
 
-      var h = '<div class="gestor-resumen">' +
-        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + s.nClases + '</div><div class="gestor-kpi-lbl">Clases</div></div>' +
-        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + s.nAlumnos + '</div><div class="gestor-kpi-lbl">Alumnos</div></div>' +
-        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + (s.pct == null ? '—' : s.pct + '%') + '</div><div class="gestor-kpi-lbl">Asistencia</div></div>' +
-        '</div>';
+      var clases   = _gestorClasesLocal(d);
+      var mesISO   = getMesISO_A(_gestorMesOff);
+      var mesLabel = getMesLabelA(_gestorMesOff);
+      var regsMes  = _gestorRegsLocal(d).filter(function(r){ return r.fecha && r.fecha.startsWith(mesISO); });
 
-      // Clases
-      h += '<div class="grupo-titulo" style="margin-top:0.5rem;">Clases</div>';
-      if (!d.clases.length) {
+      // ── Selector de mes ──
+      var h = '<div class="gestor-mes-nav">' +
+        '<button class="gestor-mes-btn" onclick="gestorMesNav(-1)">‹</button>' +
+        '<span class="gestor-mes-lbl">' + _gEsc(mesLabel) + '</span>' +
+        '<button class="gestor-mes-btn" onclick="gestorMesNav(1)">›</button>' +
+      '</div>';
+
+      // ── Cálculo por alumno del mes (misma lógica que el Resumen) ──
+      var alumnosMap = {}, fechasSet = {};
+      function ensure(n){ if(!alumnosMap[n]) alumnosMap[n]={totalClases:0,presencias:0,recups:0,cells:{}}; return alumnosMap[n]; }
+      clases.forEach(function(clase){
+        var fechas    = fechasClaseEnMes(clase, mesISO);
+        var regsClase = regsMes.filter(function(r){ return r.claseId===clase.id; });
+        var regPorFecha = {}; regsClase.forEach(function(r){ regPorFecha[r.fecha]=r; });
+        (clase.alumnos||[]).forEach(function(a){
+          var nombre=alNom(a), dat=ensure(nombre);
+          fechas.forEach(function(f){
+            if(!alActivo(a,f)) return;
+            var reg=regPorFecha[f]; if(reg&&reg.sinClase) return;
+            fechasSet[f]=true; dat.totalClases+=1;
+            var ok = reg && (reg.presentes||[]).indexOf(nombre)!==-1;
+            if(ok) dat.presencias+=1;
+            dat.cells[f]= reg ? (ok?'pres':'falta') : 'nolist';
+          });
+        });
+        regsClase.forEach(function(r){
+          if(r.sinClase) return;
+          var activos = alumnosActivos(clase, r.fecha);
+          (r.presentes||[]).forEach(function(n){
+            if(activos.indexOf(n)===-1){ var dd=ensure(n); dd.recups+=1; fechasSet[r.fecha]=true; if(!dd.cells[r.fecha]) dd.cells[r.fecha]='recup'; }
+          });
+        });
+      });
+      var alumnos    = Object.keys(alumnosMap).sort();
+      var fechasCols = Object.keys(fechasSet).sort();
+
+      // KPIs del mes
+      var totPres=0, totPlazas=0;
+      alumnos.forEach(function(a){ totPres+=alumnosMap[a].presencias; totPlazas+=alumnosMap[a].totalClases; });
+      var pctMes = totPlazas ? Math.round(totPres*100/totPlazas) : null;
+      h += '<div class="gestor-resumen">' +
+        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + fechasCols.length + '</div><div class="gestor-kpi-lbl">Días clase</div></div>' +
+        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + alumnos.length + '</div><div class="gestor-kpi-lbl">Alumnos</div></div>' +
+        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + (pctMes==null?'—':pctMes+'%') + '</div><div class="gestor-kpi-lbl">Asistencia</div></div>' +
+      '</div>';
+
+      // ── Horario: clases por día y hora ──
+      h += '<div class="grupo-titulo">Horario</div>';
+      if (!clases.length) {
         h += '<p class="ajustes-desc">Sin clases configuradas.</p>';
       } else {
-        d.clases.forEach(function(c){
-          var dia = (typeof c.dia_semana === 'number') ? _GDIAS[c.dia_semana] : (c.dia_semana || '');
-          var nAl = (c.alumnos || []).length;
-          h += '<div class="gestor-card" style="cursor:default;">' +
-            '<div class="gestor-card-ava" style="background:var(--lila-suave);color:var(--lila);">🗓️</div>' +
-            '<div class="gestor-card-body">' +
-              '<div class="gestor-card-nom">' + _gEsc(c.nombre || 'Clase') + '</div>' +
-              '<div class="gestor-card-meta">' + _gEsc(dia) + (c.franja ? ' · ' + _gEsc(c.franja) : '') +
-                ' · ' + nAl + ' alumno' + (nAl !== 1 ? 's' : '') + '</div>' +
-            '</div></div>';
-        });
-      }
-
-      // Registros (días pasados lista), más recientes primero
-      h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Historial de listas</div>';
-      var regs = (d.regs || []).slice().sort(function(a, b){ return (b.fecha || '').localeCompare(a.fecha || ''); });
-      if (!regs.length) {
-        h += '<p class="ajustes-desc">Todavía no se ha pasado lista.</p>';
-      } else {
-        var claseNom = {};
-        d.clases.forEach(function(c){ claseNom[c.id] = c.nombre || 'Clase'; });
+        var ordDia = function(ds){ return ds<0 ? 8 : (ds===0 ? 7 : ds); }; // Dom al final, sin día al final
+        var cls = clases.slice().sort(function(a,b){ return ordDia(a.diaSemana)-ordDia(b.diaSemana) || (a.franja||'').localeCompare(b.franja||''); });
+        var diaAct=null;
         h += '<div class="form-card" style="gap:0;">';
-        regs.slice(0, 60).forEach(function(r){
-          var cn = claseNom[r.clase_id] || 'Clase';
-          h += '<div class="gestor-reg-row">' +
-            '<span class="gestor-reg-fecha">' + _gFecha(r.fecha) + '</span>' +
-            '<span style="flex:1;color:var(--gris);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + _gEsc(cn) + '</span>';
-          if (r.sin_clase) {
-            h += '<span class="gestor-reg-sin">sin clase</span>';
-          } else {
-            h += '<span class="gestor-reg-pres">' + (r.presentes || []).length + ' ✓</span>' +
-                 '<span class="gestor-reg-aus">' + (r.ausentes || []).length + ' ✗</span>';
-          }
-          h += '</div>';
+        cls.forEach(function(c){
+          var dn = (c.diaSemana>=0) ? _GDIASL[c.diaSemana] : '(sin día)';
+          if (dn!==diaAct){ diaAct=dn; h+='<div class="gestor-dia-hdr">'+_gEsc(dn)+'</div>'; }
+          var nAl=(c.alumnos||[]).length;
+          h += '<div class="gestor-hora-row">' +
+            '<span class="gestor-hora-fr">' + (_gEsc(c.franja)||'—') + '</span>' +
+            '<span class="gestor-hora-nom">' + _gEsc(c.nombre) + '</span>' +
+            '<span class="gestor-hora-al">' + nAl + ' 👤</span>' +
+          '</div>';
         });
         h += '</div>';
-        if (regs.length > 60) h += '<p class="ajustes-desc">Mostrando los 60 más recientes de ' + regs.length + '.</p>';
       }
+
+      // ── Asistencia del mes (cuadrícula, igual que la exportación) ──
+      h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Asistencia de ' + _gEsc(mesLabel) + '</div>';
+      if (!alumnos.length || !fechasCols.length) {
+        h += '<p class="ajustes-desc">Sin listas registradas este mes.</p>';
+      } else {
+        var CEL = { pres:{txt:'✓',col:'#166534'}, falta:{txt:'✗',col:'#991b1b'}, recup:{txt:'↩',col:'#7c3aed'}, nolist:{txt:'—',col:'#9ca3af'} };
+        h += '<div class="asist-matriz-leyenda">' +
+          '<span style="color:#166534;font-weight:700">✓</span> asistió &nbsp; ' +
+          '<span style="color:#991b1b;font-weight:700">✗</span> faltó &nbsp; ' +
+          '<span style="color:#7c3aed;font-weight:700">↩</span> recup &nbsp; ' +
+          '<span style="color:#9ca3af;font-weight:700">—</span> sin lista</div>';
+        h += '<div class="asist-matriz-wrap"><table class="asist-matriz"><thead><tr><th class="am-nom">Alumno</th>';
+        fechasCols.forEach(function(f){ h += '<th>'+formatFechaCorta(f)+'</th>'; });
+        h += '<th class="am-tot">Tot</th></tr></thead><tbody>';
+        alumnos.forEach(function(al){
+          var dat=alumnosMap[al];
+          h += '<tr><td class="am-nom">'+_gEsc(al)+(dat.recups?' <span class="am-recup">↩+'+dat.recups+'</span>':'')+'</td>';
+          fechasCols.forEach(function(f){
+            var st=dat.cells[f];
+            if(!st){ h+='<td style="color:#d1d5db">·</td>'; }
+            else { var c=CEL[st]; h+='<td style="color:'+c.col+';font-weight:700">'+c.txt+'</td>'; }
+          });
+          h += '<td class="am-tot">'+dat.presencias+'/'+dat.totalClases+'</td></tr>';
+        });
+        h += '</tbody></table></div>';
+      }
+
+      // ── Análisis del mes por alumno ──
+      h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Análisis del mes por alumno</div>';
+      if (!alumnos.length) {
+        h += '<p class="ajustes-desc">Sin datos este mes.</p>';
+      } else {
+        var ord = alumnos.slice().sort(function(a,b){
+          var pa = alumnosMap[a].totalClases ? alumnosMap[a].presencias/alumnosMap[a].totalClases : 1;
+          var pb = alumnosMap[b].totalClases ? alumnosMap[b].presencias/alumnosMap[b].totalClases : 1;
+          return pa-pb; // menor asistencia primero (para detectar problemas)
+        });
+        h += '<div class="form-card" style="gap:0;">';
+        ord.forEach(function(al){
+          var dat=alumnosMap[al];
+          var pct = dat.totalClases ? Math.round(dat.presencias*100/dat.totalClases) : null;
+          var faltas = dat.totalClases - dat.presencias;
+          var col = pct==null ? '#9ca3af' : (pct>=80 ? '#166534' : (pct>=50 ? '#b45309' : '#b91c1c'));
+          h += '<div class="gestor-alum-row">' +
+            '<div class="gestor-alum-nom">'+_gEsc(al)+(dat.recups?' <span class="am-recup">↩+'+dat.recups+'</span>':'')+'</div>' +
+            '<div class="gestor-alum-bar"><div class="gestor-alum-fill" style="width:'+(pct||0)+'%;background:'+col+';"></div></div>' +
+            '<div class="gestor-alum-pct" style="color:'+col+';">'+(pct==null?'—':pct+'%')+'</div>' +
+            '<div class="gestor-alum-det">'+dat.presencias+'✓'+(faltas>0?' '+faltas+'✗':'')+'</div>' +
+          '</div>';
+        });
+        h += '</div>';
+      }
+
       cont.innerHTML = h;
     }
 
