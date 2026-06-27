@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.24.0
+  TU APP DE PÁDEL — v0.25.0
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,20 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.25.0 — Cuentas de monitor (rol) (2026-06)
+    · Nuevo rol 'monitor' en grupo_miembros (Supabase).
+      Una cuenta con este rol entra y la app la bloquea
+      automáticamente en la sección de Asistencia: el resto
+      de módulos quedan ocultos y la navegación se restringe.
+    · A diferencia del modo monitor local (PIN del propio
+      dispositivo), este bloqueo lo impone la cuenta: no hay
+      PIN de salida, solo "Cerrar sesión". El monitor trabaja
+      con su PROPIA asistencia (privada por user_id).
+    · Asignación manual desde Supabase: el monitor se registra,
+      te pasa su correo y le insertas la fila rol='monitor'
+      (ver bloque de instrucciones en supabase_schema.sql).
+    · Badge de Inicio muestra "🔒 monitor".
+
   v0.24.0 — Planificación editable (2026-06)
     · Modo edición: añadir, editar, reordenar (▲▼) y borrar
       apartados en cada mes y nivel.
@@ -1100,9 +1114,9 @@
         <span class="monitor-banner-ic">🔒</span>
         <div class="monitor-banner-txt">
           <strong>Modo monitor activo</strong>
-          <span>Solo tienes acceso al control de asistencia.</span>
+          <span id="monitor-banner-sub">Solo tienes acceso al control de asistencia.</span>
         </div>
-        <button class="monitor-banner-btn" onclick="monitorSalir()">Salir</button>
+        <button id="monitor-banner-btn" class="monitor-banner-btn" onclick="monitorSalir()">Salir</button>
       </div>
 
       <!-- ── ASISTENCIA ── -->
@@ -1832,6 +1846,7 @@
     var _sb     = null;   // cliente Supabase
     var _sbUser = null;   // usuario actual { id, email }
     var _sbGrupo = null;  // { id: uuid, rol: 'nivel2'|'nivel3' } | null
+    var _esMonitor = false; // true si la cuenta tiene rol 'monitor' (acceso solo a Asistencia)
 
     function _sbConfigurado() {
       return SUPABASE_URL && !SUPABASE_URL.includes('TU-PROYECTO');
@@ -1848,6 +1863,7 @@
         _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         _sb.auth.onAuthStateChange(function(event, session) {
           _sbUser = session ? { id: session.user.id, email: session.user.email } : null;
+          if (!_sbUser) { _sbGrupo = null; _esMonitor = false; }
           if (event === 'SIGNED_IN') {
             _authActualizarBadge();
             _fetchGrupo(_sbUser.id).then(function() {
@@ -1940,7 +1956,9 @@
       if (!badge) return;
       if (_sbUser) {
         badge.style.display = 'flex';
-        var rolTxt = _sbGrupo ? ' · ' + (_sbGrupo.rol === 'nivel3' ? '★ N3' : 'N2') : '';
+        var rolTxt = '';
+        if (_esMonitor) rolTxt = ' · 🔒 monitor';
+        else if (_sbGrupo) rolTxt = ' · ' + (_sbGrupo.rol === 'nivel3' ? '★ N3' : 'N2');
         emailEl.textContent = _sbUser.email + rolTxt;
       } else {
         badge.style.display = 'none';
@@ -1953,9 +1971,25 @@
       return _sb.from('grupo_miembros').select('grupo_id, rol')
         .eq('user_id', uid).maybeSingle()
         .then(function(r) {
-          _sbGrupo = r.data ? { id: r.data.grupo_id, rol: r.data.rol } : null;
+          if (r.data && r.data.rol === 'monitor') {
+            // Cuenta de monitor: solo Asistencia, con sus PROPIos datos.
+            // No se une al sync de grupo (trabaja como usuario en solitario).
+            _esMonitor = true;
+            _sbGrupo = null;
+          } else {
+            _esMonitor = false;
+            _sbGrupo = r.data ? { id: r.data.grupo_id, rol: r.data.rol } : null;
+          }
           _authActualizarBadge();
-        }).catch(function() { _sbGrupo = null; });
+          // Reaplica la interfaz una vez conocido el rol. Sin esto, al
+          // abrir la app con sesión ya iniciada el monitor vería todos
+          // los apartados (el rol se resuelve después de pintar Inicio).
+          if (_esMonitor) {
+            irA('pantalla-inicio');
+          } else if (document.getElementById('pantalla-inicio').classList.contains('activa')) {
+            actualizarInicio();
+          }
+        }).catch(function() { _sbGrupo = null; _esMonitor = false; });
     }
 
     // ── Sync: Supabase → localStorage ─────────────────────────
@@ -2407,6 +2441,8 @@
       catch(e) { return {activo:false, pin:''}; }
     }
     function monitorActivo() { return !!monitorEstado().activo; }
+    // Monitor por cuenta Supabase (rol 'monitor'): bloqueo permanente, sin PIN.
+    function esMonitorCuenta() { return !!_esMonitor; }
     function _monitorGuardar(m) { _lzSet('padel-monitor', JSON.stringify(m)); }
 
     function monitorActivar() {
@@ -3102,8 +3138,8 @@
       'pantalla-asistencia-alumno'];
 
     function irA(id) {
-      // En modo monitor solo se permite el módulo de asistencia
-      if (monitorActivo() && MONITOR_PANTALLAS_OK.indexOf(id) < 0) { id = 'pantalla-inicio'; }
+      // En modo monitor (local con PIN o por cuenta) solo se permite Asistencia
+      if ((monitorActivo() || esMonitorCuenta()) && MONITOR_PANTALLAS_OK.indexOf(id) < 0) { id = 'pantalla-inicio'; }
 
       document.querySelectorAll('.pantalla').forEach(function(p) { p.classList.remove('activa'); });
       document.getElementById(id).classList.add('activa');
@@ -3141,7 +3177,8 @@
 
     function actualizarInicio() {
       // ── Modo monitor: ocultar todo salvo Asistencia + mostrar banner ──
-      var mon = monitorActivo();
+      var monCuenta = esMonitorCuenta();
+      var mon = monitorActivo() || monCuenta;
       ['home-sec-entreno','home-sec-partido','home-sec-comp','home-sec-ajustes'].forEach(function(id){
         var el = document.getElementById(id);
         if (el) el.style.display = mon ? 'none' : '';
@@ -3150,6 +3187,20 @@
       if (pie) pie.style.display = mon ? 'none' : 'flex';
       var ban = document.getElementById('monitor-banner');
       if (ban) ban.style.display = mon ? 'flex' : 'none';
+      // El monitor por cuenta no sale con PIN: solo puede cerrar sesión.
+      var banBtn = document.getElementById('monitor-banner-btn');
+      var banSub = document.getElementById('monitor-banner-sub');
+      if (banBtn) {
+        if (monCuenta) {
+          banBtn.textContent = 'Cerrar sesión';
+          banBtn.setAttribute('onclick', 'authLogout()');
+          if (banSub) banSub.textContent = 'Tu cuenta solo tiene acceso al control de asistencia.';
+        } else {
+          banBtn.textContent = 'Salir';
+          banBtn.setAttribute('onclick', 'monitorSalir()');
+          if (banSub) banSub.textContent = 'Solo tienes acceso al control de asistencia.';
+        }
+      }
 
       // Aviso si la migración eliminó fotos en base64
       var avisoImgs = localStorage.getItem('padel-aviso-imgs');
