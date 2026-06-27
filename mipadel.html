@@ -39,6 +39,12 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.27.3 — Gestor: asistencia agrupada por clase (2026-06)
+    · La asistencia del detalle se agrupa por clase (día y hora),
+      cada bloque plegable (abrir/cerrar) para no hacer ruido.
+    · Cada bloque muestra la cuadrícula de sus alumnos × fechas.
+    · Retirado el análisis del mes por alumno.
+
   v0.27.2 — Gestor: parte de clases dadas del mes (2026-06)
     · El apartado Horario del detalle muestra ahora, por cada
       clase, los días del mes marcados como dada (✓), no dada (✗)
@@ -489,6 +495,15 @@
     .ghd-suma { background:var(--verde-suave); border-radius:12px; padding:0.6rem 0.9rem; margin-top:6px; }
     .ghd-suma-row { display:flex; justify-content:space-between; align-items:center; font-size:13.5px; color:var(--texto); padding:3px 0; }
     .ghd-suma-row b { font-size:17px; color:var(--verde); }
+    /* Asistencia por clase, plegable */
+    .gas-clase { border:1.5px solid var(--borde); border-radius:13px; margin-bottom:9px; overflow:hidden; background:var(--blanco); }
+    .gas-sum { list-style:none; cursor:pointer; display:flex; align-items:center; gap:10px; padding:0.8rem 0.9rem; -webkit-tap-highlight-color:transparent; }
+    .gas-sum::-webkit-details-marker { display:none; }
+    .gas-dia { font-size:13.5px; font-weight:800; color:var(--texto); flex:1; min-width:0; }
+    .gas-meta { font-size:12px; font-weight:700; color:var(--gris); flex-shrink:0; }
+    .gas-chev { font-size:13px; color:var(--lila); transition:transform .18s; flex-shrink:0; }
+    details[open] .gas-chev { transform:rotate(180deg); }
+    .gas-body { padding:0 0.7rem 0.8rem; }
     .btn-volver   { background:rgba(255,255,255,0.12); border:none; color:rgba(255,255,255,0.92); font-size:15px; font-weight:600; font-family:'Outfit',sans-serif; cursor:pointer; padding:9px 15px 9px 11px; margin:-4px -6px 8px -6px; min-height:42px; display:inline-flex; align-items:center; gap:6px; position:relative; border-radius:12px; -webkit-tap-highlight-color:transparent; }
     .btn-volver::first-letter { font-size:20px; line-height:1; }
     .btn-volver:hover { color:var(--blanco); background:rgba(255,255,255,0.2); }
@@ -1320,7 +1335,7 @@
     </div>
     <div class="pie" id="inicio-pie" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
       <button class="btn btn-sec btn-sm" onclick="irA('pantalla-importar')" style="width:auto;gap:5px;">📥 Importar desde Obsidian</button>
-      <span>Versión 0.27.2 · Solo para mí</span>
+      <span>Versión 0.27.3 · Solo para mí</span>
     </div>
   </div>
 
@@ -2775,6 +2790,34 @@
       });
     }
 
+    // Matriz de asistencia de UNA clase en el mes (alumnos × fechas)
+    function _gestorClaseMatriz(clase, mesISO, regsMes) {
+      var fechas    = fechasClaseEnMes(clase, mesISO);
+      var regsClase = regsMes.filter(function(r){ return r.claseId === clase.id; });
+      var regPorFecha = {}; regsClase.forEach(function(r){ regPorFecha[r.fecha] = r; });
+      var map = {}, fechasSet = {};
+      function ens(n){ if(!map[n]) map[n]={totalClases:0,presencias:0,recups:0,cells:{}}; return map[n]; }
+      (clase.alumnos||[]).forEach(function(a){
+        var nombre=alNom(a), dat=ens(nombre);
+        fechas.forEach(function(f){
+          if(!alActivo(a,f)) return;
+          var reg=regPorFecha[f]; if(reg&&reg.sinClase) return;
+          fechasSet[f]=true; dat.totalClases++;
+          var ok=reg&&(reg.presentes||[]).indexOf(nombre)!==-1;
+          if(ok) dat.presencias++;
+          dat.cells[f]= reg ? (ok?'pres':'falta') : 'nolist';
+        });
+      });
+      regsClase.forEach(function(r){
+        if(r.sinClase) return;
+        var activos=alumnosActivos(clase,r.fecha);
+        (r.presentes||[]).forEach(function(n){
+          if(activos.indexOf(n)===-1){ var dd=ens(n); dd.recups++; fechasSet[r.fecha]=true; if(!dd.cells[r.fecha]) dd.cells[r.fecha]='recup'; }
+        });
+      });
+      return { alumnos:Object.keys(map).sort(), fechas:Object.keys(fechasSet).sort(), map:map };
+    }
+
     function renderGestorDetalle() {
       var cont = document.getElementById('gestor-det-contenido');
       if (!cont) return;
@@ -2900,56 +2943,45 @@
       }
 
       // ── Asistencia del mes (cuadrícula, igual que la exportación) ──
-      h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Asistencia de ' + _gEsc(mesLabel) + '</div>';
-      if (!alumnos.length || !fechasCols.length) {
+      h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Asistencia por clase</div>';
+      var CEL = { pres:{txt:'✓',col:'#166534'}, falta:{txt:'✗',col:'#991b1b'}, recup:{txt:'↩',col:'#7c3aed'}, nolist:{txt:'—',col:'#9ca3af'} };
+      var ordDia2 = function(ds){ return ds<0 ? 8 : (ds===0 ? 7 : ds); };
+      var clsA = clases.slice().sort(function(a,b){ return ordDia2(a.diaSemana)-ordDia2(b.diaSemana) || (a.franja||'').localeCompare(b.franja||''); });
+      var bodyCl = '', nCl = 0;
+      clsA.forEach(function(clase){
+        var mz = _gestorClaseMatriz(clase, mesISO, regsMes);
+        if (!mz.alumnos.length) return;
+        nCl++;
+        var dn = (clase.diaSemana>=0) ? _GDIASL[clase.diaSemana] : '(sin día)';
+        var p=0, t=0; mz.alumnos.forEach(function(a){ p+=mz.map[a].presencias; t+=mz.map[a].totalClases; });
+        var pct = t ? Math.round(p*100/t) : null;
+        bodyCl += '<details class="gas-clase"><summary class="gas-sum">' +
+          '<span class="gas-dia">' + _gEsc(dn) + (clase.franja ? ' · ' + _gEsc(clase.franja) : '') + '</span>' +
+          '<span class="gas-meta">' + mz.alumnos.length + ' alum · ' + (pct==null?'—':pct+'%') + '</span>' +
+          '<span class="gas-chev">▾</span></summary><div class="gas-body">';
+        bodyCl += '<div class="asist-matriz-wrap"><table class="asist-matriz"><thead><tr><th class="am-nom">Alumno</th>';
+        mz.fechas.forEach(function(f){ bodyCl += '<th>'+formatFechaCorta(f)+'</th>'; });
+        bodyCl += '<th class="am-tot">Tot</th></tr></thead><tbody>';
+        mz.alumnos.forEach(function(al){
+          var dat=mz.map[al];
+          bodyCl += '<tr><td class="am-nom">'+_gEsc(al)+(dat.recups?' <span class="am-recup">↩+'+dat.recups+'</span>':'')+'</td>';
+          mz.fechas.forEach(function(f){
+            var st=dat.cells[f];
+            if(!st){ bodyCl+='<td style="color:#d1d5db">·</td>'; }
+            else { var c=CEL[st]; bodyCl+='<td style="color:'+c.col+';font-weight:700">'+c.txt+'</td>'; }
+          });
+          bodyCl += '<td class="am-tot">'+dat.presencias+'/'+dat.totalClases+'</td></tr>';
+        });
+        bodyCl += '</tbody></table></div></div></details>';
+      });
+      if (!nCl) {
         h += '<p class="ajustes-desc">Sin listas registradas este mes.</p>';
       } else {
-        var CEL = { pres:{txt:'✓',col:'#166534'}, falta:{txt:'✗',col:'#991b1b'}, recup:{txt:'↩',col:'#7c3aed'}, nolist:{txt:'—',col:'#9ca3af'} };
         h += '<div class="asist-matriz-leyenda">' +
           '<span style="color:#166534;font-weight:700">✓</span> asistió &nbsp; ' +
           '<span style="color:#991b1b;font-weight:700">✗</span> faltó &nbsp; ' +
           '<span style="color:#7c3aed;font-weight:700">↩</span> recup &nbsp; ' +
-          '<span style="color:#9ca3af;font-weight:700">—</span> sin lista</div>';
-        h += '<div class="asist-matriz-wrap"><table class="asist-matriz"><thead><tr><th class="am-nom">Alumno</th>';
-        fechasCols.forEach(function(f){ h += '<th>'+formatFechaCorta(f)+'</th>'; });
-        h += '<th class="am-tot">Tot</th></tr></thead><tbody>';
-        alumnos.forEach(function(al){
-          var dat=alumnosMap[al];
-          h += '<tr><td class="am-nom">'+_gEsc(al)+(dat.recups?' <span class="am-recup">↩+'+dat.recups+'</span>':'')+'</td>';
-          fechasCols.forEach(function(f){
-            var st=dat.cells[f];
-            if(!st){ h+='<td style="color:#d1d5db">·</td>'; }
-            else { var c=CEL[st]; h+='<td style="color:'+c.col+';font-weight:700">'+c.txt+'</td>'; }
-          });
-          h += '<td class="am-tot">'+dat.presencias+'/'+dat.totalClases+'</td></tr>';
-        });
-        h += '</tbody></table></div>';
-      }
-
-      // ── Análisis del mes por alumno ──
-      h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Análisis del mes por alumno</div>';
-      if (!alumnos.length) {
-        h += '<p class="ajustes-desc">Sin datos este mes.</p>';
-      } else {
-        var ord = alumnos.slice().sort(function(a,b){
-          var pa = alumnosMap[a].totalClases ? alumnosMap[a].presencias/alumnosMap[a].totalClases : 1;
-          var pb = alumnosMap[b].totalClases ? alumnosMap[b].presencias/alumnosMap[b].totalClases : 1;
-          return pa-pb; // menor asistencia primero (para detectar problemas)
-        });
-        h += '<div class="form-card" style="gap:0;">';
-        ord.forEach(function(al){
-          var dat=alumnosMap[al];
-          var pct = dat.totalClases ? Math.round(dat.presencias*100/dat.totalClases) : null;
-          var faltas = dat.totalClases - dat.presencias;
-          var col = pct==null ? '#9ca3af' : (pct>=80 ? '#166534' : (pct>=50 ? '#b45309' : '#b91c1c'));
-          h += '<div class="gestor-alum-row">' +
-            '<div class="gestor-alum-nom">'+_gEsc(al)+(dat.recups?' <span class="am-recup">↩+'+dat.recups+'</span>':'')+'</div>' +
-            '<div class="gestor-alum-bar"><div class="gestor-alum-fill" style="width:'+(pct||0)+'%;background:'+col+';"></div></div>' +
-            '<div class="gestor-alum-pct" style="color:'+col+';">'+(pct==null?'—':pct+'%')+'</div>' +
-            '<div class="gestor-alum-det">'+dat.presencias+'✓'+(faltas>0?' '+faltas+'✗':'')+'</div>' +
-          '</div>';
-        });
-        h += '</div>';
+          '<span style="color:#9ca3af;font-weight:700">—</span> sin lista</div>' + bodyCl;
       }
 
       cont.innerHTML = h;
