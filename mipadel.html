@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.26.0
+  TU APP DE PÁDEL — v0.27.0
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,18 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.27.0 — Rol gestor: panel de asistencia global (2026-06)
+    · Nuevo rol 'gestor'. Una cuenta gestor entra y ve un panel
+      de SOLO LECTURA con la asistencia de TODOS los entrenadores:
+      resumen (entrenadores, clases, alumnos) y detalle por cada
+      uno (clases e historial de listas con presentes/ausentes).
+    · Cada entrenador sube su ficha (correo/nombre) a la tabla
+      'perfiles' al entrar, para que el gestor pueda identificarlo.
+    · Seguridad por RLS: el gestor solo puede LEER, nunca editar.
+      Requiere ejecutar el bloque del gestor en supabase_schema.sql.
+    · El gestor queda bloqueado en su panel (como el monitor en
+      Asistencia) y cierra sesión desde el badge de usuario.
+
   v0.26.0 — Perfil en el encabezado (2026-06)
     · El acceso al perfil pasa a un botón 👤 en la esquina
       superior derecha del encabezado de Inicio.
@@ -408,6 +420,24 @@
     .cab-perfil-btn { position:absolute; top:1.5rem; right:1.5rem; z-index:2; width:42px; height:42px; border-radius:50%; background:rgba(255,255,255,0.14); border:none; color:#fff; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent; }
     .cab-perfil-btn:hover { background:rgba(255,255,255,0.24); }
     .cab-perfil-btn:active { transform:scale(0.94); }
+    /* ── Panel del gestor ── */
+    .gestor-resumen { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:0.4rem 0 1.2rem; }
+    .gestor-kpi { background:var(--blanco); border:1.5px solid var(--borde); border-radius:13px; padding:0.8rem 0.5rem; text-align:center; }
+    .gestor-kpi-num { font-size:22px; font-weight:800; color:var(--verde); line-height:1; }
+    .gestor-kpi-lbl { font-size:10.5px; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:0.04em; margin-top:5px; }
+    .gestor-card { display:flex; align-items:center; gap:12px; background:var(--blanco); border:1.5px solid var(--borde); border-radius:14px; padding:0.9rem 1rem; margin-bottom:9px; cursor:pointer; transition:all .15s; }
+    .gestor-card:active { border-color:var(--lila-claro); background:var(--lila-suave); }
+    .gestor-card-ava { width:40px; height:40px; flex-shrink:0; border-radius:50%; background:var(--verde-suave); color:var(--verde); display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:800; }
+    .gestor-card-body { flex:1; min-width:0; }
+    .gestor-card-nom { font-size:14.5px; font-weight:700; color:var(--texto); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .gestor-card-meta { font-size:12px; color:var(--gris); margin-top:3px; }
+    .gestor-card-pct { flex-shrink:0; font-size:15px; font-weight:800; color:var(--verde); }
+    .gestor-card-arr { font-size:20px; color:var(--lila); flex-shrink:0; }
+    .gestor-reg-row { display:flex; align-items:center; gap:10px; padding:0.55rem 0; border-bottom:1px solid var(--borde); font-size:13px; }
+    .gestor-reg-fecha { font-weight:700; color:var(--texto); min-width:92px; }
+    .gestor-reg-pres { color:#166534; font-weight:700; }
+    .gestor-reg-aus { color:#b91c1c; font-weight:700; }
+    .gestor-reg-sin { color:var(--gris); font-style:italic; }
     .btn-volver   { background:rgba(255,255,255,0.12); border:none; color:rgba(255,255,255,0.92); font-size:15px; font-weight:600; font-family:'Outfit',sans-serif; cursor:pointer; padding:9px 15px 9px 11px; margin:-4px -6px 8px -6px; min-height:42px; display:inline-flex; align-items:center; gap:6px; position:relative; border-radius:12px; -webkit-tap-highlight-color:transparent; }
     .btn-volver::first-letter { font-size:20px; line-height:1; }
     .btn-volver:hover { color:var(--blanco); background:rgba(255,255,255,0.2); }
@@ -1239,7 +1269,7 @@
     </div>
     <div class="pie" id="inicio-pie" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
       <button class="btn btn-sec btn-sm" onclick="irA('pantalla-importar')" style="width:auto;gap:5px;">📥 Importar desde Obsidian</button>
-      <span>Versión 0.26.0 · Solo para mí</span>
+      <span>Versión 0.27.0 · Solo para mí</span>
     </div>
   </div>
 
@@ -1268,6 +1298,36 @@
         <button class="btn btn-verde" onclick="guardarPerfil()" style="width:100%;">Guardar datos</button>
         <p class="ajustes-desc">Estos datos se usan en la exportación del PDF de asistencia.</p>
       </div>
+    </div>
+  </div>
+
+  <!-- ══ GESTOR — PANEL DE ASISTENCIA GLOBAL ═══════ -->
+  <div id="pantalla-gestor" class="pantalla">
+    <div class="cabecera">
+      <div class="cab-etiqueta">📊 Gestión</div>
+      <div class="cab-titulo">Panel de asistencia</div>
+      <div class="cab-sub" id="gestor-sub">Todos los entrenadores</div>
+    </div>
+    <div class="contenido">
+      <div class="auth-usuario-badge" id="gestor-badge" style="display:flex;">
+        <span>👤</span>
+        <span class="auth-usuario-email" id="gestor-email">—</span>
+        <button class="auth-sync-btn" onclick="cargarDatosGestor()">↻ Actualizar</button>
+        <button class="auth-logout-btn" onclick="authLogout()">Salir</button>
+      </div>
+      <div id="gestor-contenido"></div>
+    </div>
+  </div>
+
+  <!-- ══ GESTOR — DETALLE DE UN ENTRENADOR ════════ -->
+  <div id="pantalla-gestor-detalle" class="pantalla">
+    <div class="cabecera">
+      <button class="btn-volver" onclick="irA('pantalla-gestor')">‹ Panel</button>
+      <div class="cab-titulo" id="gestor-det-nombre">Entrenador</div>
+      <div class="cab-sub" id="gestor-det-sub">—</div>
+    </div>
+    <div class="contenido">
+      <div id="gestor-det-contenido"></div>
     </div>
   </div>
 
@@ -1841,6 +1901,7 @@
     var _sbUser = null;   // usuario actual { id, email }
     var _sbGrupo = null;  // { id: uuid, rol: 'nivel2'|'nivel3' } | null
     var _esMonitor = false; // true si la cuenta tiene rol 'monitor' (acceso solo a Asistencia)
+    var _esGestor  = false; // true si la cuenta tiene rol 'gestor' (panel de asistencia global, solo lectura)
 
     function _sbConfigurado() {
       return SUPABASE_URL && !SUPABASE_URL.includes('TU-PROYECTO');
@@ -1857,7 +1918,7 @@
         _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         _sb.auth.onAuthStateChange(function(event, session) {
           _sbUser = session ? { id: session.user.id, email: session.user.email } : null;
-          if (!_sbUser) { _sbGrupo = null; _esMonitor = false; }
+          if (!_sbUser) { _sbGrupo = null; _esMonitor = false; _esGestor = false; }
           if (event === 'SIGNED_IN') {
             _authActualizarBadge();
             _fetchGrupo(_sbUser.id).then(function() {
@@ -1952,6 +2013,7 @@
         badge.style.display = 'flex';
         var rolTxt = '';
         if (_esMonitor) rolTxt = ' · 🔒 monitor';
+        else if (_esGestor) rolTxt = ' · 📊 gestor';
         else if (_sbGrupo) rolTxt = ' · ' + (_sbGrupo.rol === 'nivel3' ? '★ N3' : 'N2');
         emailEl.textContent = _sbUser.email + rolTxt;
       } else {
@@ -1965,25 +2027,44 @@
       return _sb.from('grupo_miembros').select('grupo_id, rol')
         .eq('user_id', uid).maybeSingle()
         .then(function(r) {
-          if (r.data && r.data.rol === 'monitor') {
-            // Cuenta de monitor: solo Asistencia, con sus PROPIos datos.
-            // No se une al sync de grupo (trabaja como usuario en solitario).
-            _esMonitor = true;
-            _sbGrupo = null;
-          } else {
-            _esMonitor = false;
-            _sbGrupo = r.data ? { id: r.data.grupo_id, rol: r.data.rol } : null;
-          }
+          var rol = r.data ? r.data.rol : null;
+          _esMonitor = (rol === 'monitor');
+          _esGestor  = (rol === 'gestor');
+          // Monitor y gestor trabajan en solitario (no se unen al sync de grupo).
+          _sbGrupo = (rol && rol !== 'monitor' && rol !== 'gestor')
+                       ? { id: r.data.grupo_id, rol: rol } : null;
           _authActualizarBadge();
-          // Reaplica la interfaz una vez conocido el rol. Sin esto, al
-          // abrir la app con sesión ya iniciada el monitor vería todos
-          // los apartados (el rol se resuelve después de pintar Inicio).
-          if (_esMonitor) {
+          // El perfil (correo/nombre) se guarda en Supabase para que un gestor
+          // pueda identificar a cada entrenador. El gestor no aporta datos.
+          if (!_esGestor) { _subirPerfil(); }
+          // Reaplica la interfaz una vez conocido el rol. Sin esto, al abrir
+          // la app con sesión ya iniciada el monitor/gestor vería de más
+          // (el rol se resuelve después de pintar la pantalla inicial).
+          if (_esGestor) {
+            irA('pantalla-gestor');
+          } else if (_esMonitor) {
             irA('pantalla-inicio');
           } else if (document.getElementById('pantalla-inicio').classList.contains('activa')) {
             actualizarInicio();
           }
-        }).catch(function() { _sbGrupo = null; _esMonitor = false; });
+        }).catch(function() { _sbGrupo = null; _esMonitor = false; _esGestor = false; });
+    }
+
+    // Guarda en Supabase la ficha del usuario (correo + nombre) para que un
+    // gestor pueda identificar de quién es cada conjunto de asistencia.
+    function _subirPerfil() {
+      if (!_sb || !_sbUser) return Promise.resolve();
+      var p = leerPerfil();
+      return _sb.from('perfiles').upsert({
+        user_id:   _sbUser.id,
+        email:     _sbUser.email,
+        nombre:    p.nombre || '',
+        apellidos: p.apellidos || '',
+        club:      p.club || '',
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id' }).then(function(){}).catch(function(e){
+        console.warn('No se pudo subir el perfil:', e && e.message);
+      });
     }
 
     // ── Sync: Supabase → localStorage ─────────────────────────
@@ -2005,6 +2086,7 @@
 
     function _syncDownload() {
       if (!_sb || !_sbUser) return Promise.resolve();
+      if (_esGestor) return Promise.resolve(); // el gestor no tiene datos propios
       var uid = _sbUser.id;
       // ── Cambio de cuenta en el mismo dispositivo ──
       // Si la última cuenta usada en este móvil es distinta, se borran los
@@ -2448,6 +2530,7 @@
       p.apellidos = document.getElementById('perf-apellidos').value.trim();
       p.club      = document.getElementById('perf-club').value.trim();
       escribirPerfil(p);
+      _subirPerfil();
       planToast('✓ Datos guardados');
     }
 
@@ -2487,6 +2570,188 @@
       document.getElementById('perf-nombre').value    = p.nombre || '';
       document.getElementById('perf-apellidos').value = p.apellidos || '';
       document.getElementById('perf-club').value      = p.club || '';
+    }
+
+    // ══════════════════════════════════════════
+    // GESTOR — Panel de asistencia de TODOS (solo lectura)
+    // ══════════════════════════════════════════
+    var _gestorData = null;   // { perfiles, clases, registros } (crudo de Supabase)
+    var _gestorUid  = null;   // entrenador abierto en el detalle
+    var _GDIAS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+
+    function _gEsc(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;');
+    }
+    function _gFecha(iso) {
+      if (!iso || iso.length < 10) return iso || '';
+      var p = iso.split('-');
+      return p[2] + '/' + p[1] + '/' + p[0].slice(2);
+    }
+
+    // Descarga toda la asistencia + perfiles (RLS lo permite solo a gestores)
+    function cargarDatosGestor() {
+      var emailEl = document.getElementById('gestor-email');
+      if (emailEl && _sbUser) emailEl.textContent = _sbUser.email;
+      var cont = document.getElementById('gestor-contenido');
+      if (cont) cont.innerHTML = '<p class="ajustes-desc" style="text-align:center;padding:1.5rem 0;">Cargando datos…</p>';
+      if (!_sb) { if (cont) cont.innerHTML = '<p class="ajustes-desc">Supabase no configurado.</p>'; return; }
+      Promise.all([
+        _sb.from('perfiles').select('*'),
+        _sb.from('asistencia_clases').select('*'),
+        _sb.from('asistencia_registros').select('*')
+      ]).then(function(res) {
+        if (res[1].error || res[2].error) { throw (res[1].error || res[2].error); }
+        _gestorData = {
+          perfiles:  res[0].data || [],
+          clases:    res[1].data || [],
+          registros: res[2].data || []
+        };
+        renderGestor();
+      }).catch(function(e) {
+        if (cont) cont.innerHTML = '<p class="ajustes-desc" style="color:#b91c1c;">No se pudieron cargar los datos: ' + _gEsc(e && e.message) + '</p>';
+      });
+    }
+
+    // Agrupa clases y registros por entrenador (user_id)
+    function _gestorAgrupar() {
+      var by = {};
+      function ens(uid) { if (!by[uid]) by[uid] = { uid:uid, clases:[], regs:[], perfil:null }; return by[uid]; }
+      (_gestorData.perfiles  || []).forEach(function(p){ ens(p.user_id).perfil = p; });
+      (_gestorData.clases    || []).forEach(function(c){ ens(c.user_id).clases.push(c); });
+      (_gestorData.registros || []).forEach(function(r){ ens(r.user_id).regs.push(r); });
+      return by;
+    }
+
+    function _gestorNombre(d) {
+      var p = d.perfil;
+      if (p) {
+        var nom = ((p.nombre || '') + ' ' + (p.apellidos || '')).trim();
+        if (nom) return nom;
+        if (p.email) return p.email;
+      }
+      return 'Entrenador ' + d.uid.slice(0, 6);
+    }
+
+    function _gestorStats(d) {
+      var al = {};
+      d.clases.forEach(function(c){ (c.alumnos || []).forEach(function(a){ var n = alNom(a); if (n) al[n] = true; }); });
+      var pres = 0, tot = 0, dias = 0;
+      d.regs.forEach(function(r){
+        if (r.sin_clase) return;
+        dias++;
+        var np = (r.presentes || []).length, na = (r.ausentes || []).length;
+        pres += np; tot += np + na;
+      });
+      return { nClases:d.clases.length, nAlumnos:Object.keys(al).length, nDias:dias,
+               pct: tot ? Math.round(pres * 100 / tot) : null };
+    }
+
+    function renderGestor() {
+      var cont = document.getElementById('gestor-contenido');
+      if (!cont || !_gestorData) return;
+      var by = _gestorAgrupar();
+      var uids = Object.keys(by).filter(function(u){ return by[u].clases.length || by[u].regs.length; });
+      // Resumen global
+      var totClases = 0, totAlumnos = 0;
+      uids.forEach(function(u){ var s = _gestorStats(by[u]); totClases += s.nClases; totAlumnos += s.nAlumnos; });
+      var h = '<div class="gestor-resumen">' +
+        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + uids.length + '</div><div class="gestor-kpi-lbl">Entrenadores</div></div>' +
+        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + totClases + '</div><div class="gestor-kpi-lbl">Clases</div></div>' +
+        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + totAlumnos + '</div><div class="gestor-kpi-lbl">Alumnos</div></div>' +
+        '</div>';
+      if (!uids.length) {
+        h += '<p class="ajustes-desc" style="text-align:center;padding:1rem 0;">Aún no hay datos de asistencia de ningún entrenador.</p>';
+        cont.innerHTML = h; return;
+      }
+      // Ordena por nombre
+      uids.sort(function(a, b){ return _gestorNombre(by[a]).localeCompare(_gestorNombre(by[b])); });
+      uids.forEach(function(u){
+        var d = by[u], s = _gestorStats(d), nom = _gestorNombre(d);
+        var pct = s.pct == null ? '—' : s.pct + '%';
+        h += '<div class="gestor-card" onclick="abrirGestorDetalle(\'' + u + '\')">' +
+          '<div class="gestor-card-ava">' + _gEsc(nom.charAt(0).toUpperCase()) + '</div>' +
+          '<div class="gestor-card-body">' +
+            '<div class="gestor-card-nom">' + _gEsc(nom) + '</div>' +
+            '<div class="gestor-card-meta">' + s.nClases + ' clase' + (s.nClases !== 1 ? 's' : '') +
+              ' · ' + s.nAlumnos + ' alumno' + (s.nAlumnos !== 1 ? 's' : '') +
+              ' · ' + s.nDias + ' día' + (s.nDias !== 1 ? 's' : '') + ' pasados' +
+            '</div>' +
+          '</div>' +
+          '<div class="gestor-card-pct">' + pct + '</div>' +
+          '<div class="gestor-card-arr">›</div>' +
+        '</div>';
+      });
+      cont.innerHTML = h;
+      var sub = document.getElementById('gestor-sub');
+      if (sub) sub.textContent = uids.length + ' entrenador' + (uids.length !== 1 ? 'es' : '') + ' con datos';
+    }
+
+    function abrirGestorDetalle(uid) { _gestorUid = uid; irA('pantalla-gestor-detalle'); }
+
+    function renderGestorDetalle() {
+      var cont = document.getElementById('gestor-det-contenido');
+      if (!cont) return;
+      if (!_gestorData || !_gestorUid) { cont.innerHTML = '<p class="ajustes-desc">Sin datos.</p>'; return; }
+      var d = _gestorAgrupar()[_gestorUid];
+      if (!d) { cont.innerHTML = '<p class="ajustes-desc">Entrenador sin datos.</p>'; return; }
+      var s = _gestorStats(d), nom = _gestorNombre(d);
+      document.getElementById('gestor-det-nombre').textContent = nom;
+      document.getElementById('gestor-det-sub').textContent =
+        (d.perfil && d.perfil.email ? d.perfil.email : '') +
+        (d.perfil && d.perfil.club ? ' · ' + d.perfil.club : '');
+
+      var h = '<div class="gestor-resumen">' +
+        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + s.nClases + '</div><div class="gestor-kpi-lbl">Clases</div></div>' +
+        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + s.nAlumnos + '</div><div class="gestor-kpi-lbl">Alumnos</div></div>' +
+        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + (s.pct == null ? '—' : s.pct + '%') + '</div><div class="gestor-kpi-lbl">Asistencia</div></div>' +
+        '</div>';
+
+      // Clases
+      h += '<div class="grupo-titulo" style="margin-top:0.5rem;">Clases</div>';
+      if (!d.clases.length) {
+        h += '<p class="ajustes-desc">Sin clases configuradas.</p>';
+      } else {
+        d.clases.forEach(function(c){
+          var dia = (typeof c.dia_semana === 'number') ? _GDIAS[c.dia_semana] : (c.dia_semana || '');
+          var nAl = (c.alumnos || []).length;
+          h += '<div class="gestor-card" style="cursor:default;">' +
+            '<div class="gestor-card-ava" style="background:var(--lila-suave);color:var(--lila);">🗓️</div>' +
+            '<div class="gestor-card-body">' +
+              '<div class="gestor-card-nom">' + _gEsc(c.nombre || 'Clase') + '</div>' +
+              '<div class="gestor-card-meta">' + _gEsc(dia) + (c.franja ? ' · ' + _gEsc(c.franja) : '') +
+                ' · ' + nAl + ' alumno' + (nAl !== 1 ? 's' : '') + '</div>' +
+            '</div></div>';
+        });
+      }
+
+      // Registros (días pasados lista), más recientes primero
+      h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Historial de listas</div>';
+      var regs = (d.regs || []).slice().sort(function(a, b){ return (b.fecha || '').localeCompare(a.fecha || ''); });
+      if (!regs.length) {
+        h += '<p class="ajustes-desc">Todavía no se ha pasado lista.</p>';
+      } else {
+        var claseNom = {};
+        d.clases.forEach(function(c){ claseNom[c.id] = c.nombre || 'Clase'; });
+        h += '<div class="form-card" style="gap:0;">';
+        regs.slice(0, 60).forEach(function(r){
+          var cn = claseNom[r.clase_id] || 'Clase';
+          h += '<div class="gestor-reg-row">' +
+            '<span class="gestor-reg-fecha">' + _gFecha(r.fecha) + '</span>' +
+            '<span style="flex:1;color:var(--gris);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + _gEsc(cn) + '</span>';
+          if (r.sin_clase) {
+            h += '<span class="gestor-reg-sin">sin clase</span>';
+          } else {
+            h += '<span class="gestor-reg-pres">' + (r.presentes || []).length + ' ✓</span>' +
+                 '<span class="gestor-reg-aus">' + (r.ausentes || []).length + ' ✗</span>';
+          }
+          h += '</div>';
+        });
+        h += '</div>';
+        if (regs.length > 60) h += '<p class="ajustes-desc">Mostrando los 60 más recientes de ' + regs.length + '.</p>';
+      }
+      cont.innerHTML = h;
     }
 
     // ══════════════════════════════════════════
@@ -3149,8 +3414,12 @@
       'pantalla-asistencia-alumno'];
 
     function irA(id) {
-      // En modo monitor (local con PIN o por cuenta) solo se permite Asistencia
-      if ((monitorActivo() || esMonitorCuenta()) && MONITOR_PANTALLAS_OK.indexOf(id) < 0) { id = 'pantalla-inicio'; }
+      // El gestor solo accede a su panel; el monitor solo a Asistencia.
+      if (_esGestor) {
+        if (id !== 'pantalla-gestor' && id !== 'pantalla-gestor-detalle') { id = 'pantalla-gestor'; }
+      } else if ((monitorActivo() || esMonitorCuenta()) && MONITOR_PANTALLAS_OK.indexOf(id) < 0) {
+        id = 'pantalla-inicio';
+      }
 
       document.querySelectorAll('.pantalla').forEach(function(p) { p.classList.remove('activa'); });
       document.getElementById(id).classList.add('activa');
@@ -3167,6 +3436,9 @@
       if (id === 'pantalla-stats-jugador')   renderStatsJugador();
       if (id === 'pantalla-actas')           mostrarActas();
       if (id === 'pantalla-importar')        resetImport();
+
+      if (id === 'pantalla-gestor')                 cargarDatosGestor();
+      if (id === 'pantalla-gestor-detalle')         renderGestorDetalle();
 
       if (id === 'pantalla-asistencia')             mostrarAsistencia();
       if (id === 'pantalla-asistencia-config')      mostrarAsistenciaConfig();
