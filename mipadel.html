@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.40.0
+  TU APP DE PÁDEL — v0.40.1
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -1541,7 +1541,7 @@
     </div>
     <div class="pie" id="inicio-pie" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
       <button class="btn btn-sec btn-sm" onclick="irA('pantalla-importar')" style="width:auto;gap:5px;">📥 Importar desde Obsidian</button>
-      <span id="inicio-version">Versión 0.40.0 · Solo para mí</span>
+      <span id="inicio-version">Versión 0.40.1 · Solo para mí</span>
     </div>
   </div>
 
@@ -2167,7 +2167,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.40.0';
+    var APP_VERSION = '0.40.1';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -6841,6 +6841,7 @@
           res.cats + ' categorías · ' + res.ejs + ' ejercicios · ' + res.sesiones + ' sesiones · ' + res.partidos + ' partidos añadidos';
         actualizarInicio();
         importDatos = null;
+        if (typeof _syncUpload === 'function') _syncUpload();   // empuja los cambios (p. ej. imágenes quitadas) a Supabase
       } catch(err) {
         alert('Error durante la importación: ' + err.message);
       }
@@ -6879,9 +6880,10 @@
           if (ejData.descripcion)  existe.descripcion = ejData.descripcion;
           if ((ejData.valoracion || 0) > (existe.valoracion || 0))
             existe.valoracion = ejData.valoracion;
-          // Imagen y vídeo: solo si la app no tiene nada propio
-          if (!existe.imagen && ejData.imagen) existe.imagen = ejData.imagen;
-          if (!existe.video  && ejData.video)  existe.video  = ejData.video;
+          // Imagen y vídeo: el vault es la fuente de verdad. Si en Obsidian ya no
+          // hay imagen, se quita también en la app (evita arrastrar base64 pesados).
+          existe.imagen = ejData.imagen || null;
+          existe.video  = ejData.video  || null;
           // Facetas y código: Obsidian es la fuente de verdad
           if (ejData.facetas) existe.facetas = ejData.facetas;
           if (ejData.codigo)  existe.codigo  = ejData.codigo;
