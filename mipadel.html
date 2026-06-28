@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.39.2
+  TU APP DE PÁDEL — v0.40.0
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,13 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.40.0 — Plan: sesiones enlazadas a mano (2026-06)
+    · Los apartados del plan ya NO auto-enlazan sesiones por
+      golpe/intención. Arrancan VACÍOS y enlazas tú las que
+      quieras con el ⚙ → "Añadir / quitar sesiones".
+    · Esto, además, aligera mucho el render del plan (mejora la
+      fluidez, sobre todo en móvil).
+
   v0.39.2 — Plan: sesiones en rejilla de botones (2026-06)
     · En ordenador, el bloque se estrecha a su texto y las
       sesiones se reparten a la derecha como botones en rejilla
@@ -1534,7 +1541,7 @@
     </div>
     <div class="pie" id="inicio-pie" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
       <button class="btn btn-sec btn-sm" onclick="irA('pantalla-importar')" style="width:auto;gap:5px;">📥 Importar desde Obsidian</button>
-      <span id="inicio-version">Versión 0.39.2 · Solo para mí</span>
+      <span id="inicio-version">Versión 0.40.0 · Solo para mí</span>
     </div>
   </div>
 
@@ -2160,7 +2167,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.39.2';
+    var APP_VERSION = '0.40.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -3940,15 +3947,15 @@
       return arr.filter(function(x){ return x.id === planSesCtx.id; })[0] || null;
     }
     function planSesToggleEdit() { planSesEditMode = !planSesEditMode; renderPlanSesiones(); }
-    // Marca/desmarca una sesión como enlazada a este apartado
+    // Enlaza/desenlaza una sesión a este apartado (lista blanca: solo las que añadas).
     function planSesToggleSesion(sesId) {
       var p = leerPlan();
       var arr = (planContenido(p)[planSesCtx.nivel] || {})[planSesCtx.mes] || [];
       var it = arr.filter(function(x){ return x.id === planSesCtx.id; })[0];
       if (!it) return;
-      if (!it.sesExcl) it.sesExcl = [];
-      var i = it.sesExcl.indexOf(sesId);
-      if (i >= 0) it.sesExcl.splice(i, 1); else it.sesExcl.push(sesId);
+      if (!it.sesInc) it.sesInc = [];
+      var i = it.sesInc.indexOf(sesId);
+      if (i >= 0) it.sesInc.splice(i, 1); else it.sesInc.push(sesId);
       _planGuardar(p);
       renderPlanSesiones();
     }
@@ -3960,45 +3967,36 @@
       document.getElementById('plan-ses-sub').textContent = planNivelLabel(ctx.nivel) + ' · ' + ctx.etiqueta;
       var mapEj    = _ejsById();
       var sesNivel = leerClases().filter(function(c){ return nivelDeSesion(c, mapEj) === ctx.nivel; });
-      var match    = sesNivel.filter(function(c){
-        return ctx.tipo === 'int' ? intencionDeSesion(c, mapEj) === ctx.valor
-                                   : golpeDeSesion(c, mapEj) === ctx.valor;
-      });
       var it   = _planSesItem();
-      var excl = (it && it.sesExcl) ? it.sesExcl : [];
+      var inc  = (it && it.sesInc) ? it.sesInc : [];
       var edit = planSesEditMode;
       var h = '';
 
-      if (!match.length) {
-        document.getElementById('plan-ses-list').innerHTML =
-          '<div class="vacio"><div class="vacio-icono">🎾</div><p>Aún no hay sesiones de «' + ctx.etiqueta + '» en ' + planNivelLabel(ctx.nivel) + '.</p></div>';
-        return;
-      }
-
       h += '<button class="plan-edit-toggle' + (edit ? ' on' : '') + '" onclick="planSesToggleEdit()">' +
-           (edit ? '✓ Terminar de editar' : '✏️ Editar sesiones enlazadas') + '</button>';
+           (edit ? '✓ Terminar' : '✏️ Añadir / quitar sesiones') + '</button>';
 
       if (edit) {
-        h += '<div class="plan-intro">✏️ <strong>Marca</strong> las sesiones que quieres mantener en este apartado. Las que desmarques no aparecerán al consultar el plan (no se borran, solo se desenlazan).</div>';
-        match.forEach(function(c){
-          var incl = excl.indexOf(c.id) < 0;
-          var nEj = (c.ejercicioIds||[]).length;
-          h += '<div class="plan-ses-card plansel' + (incl ? ' on' : '') + '" onclick="planSesToggleSesion(' + c.id + ')">' +
-                 '<span class="plansel-check">' + (incl ? '✓' : '') + '</span>' +
-                 '<div class="plan-ses-card-body">' +
-                   '<div class="plan-ses-card-nom">' + nombreSesion(c) + '</div>' +
-                   '<div class="plan-ses-card-meta">' + (c.tematica ? c.tematica + ' · ' : '') + nEj + ' ejercicio' + (nEj!==1?'s':'') + '</div>' +
-                 '</div></div>';
-        });
-      } else {
-        var vis = match.filter(function(c){ return excl.indexOf(c.id) < 0; });
-        var ocultas = match.length - vis.length;
-        if (!vis.length) {
-          h += '<div class="plan-ses-intro">No hay sesiones enlazadas en este apartado. Pulsa «Editar sesiones enlazadas» para añadir alguna de las ' + match.length + ' relacionadas.</div>';
+        if (!sesNivel.length) {
+          h += '<div class="plan-ses-intro">Aún no tienes sesiones de ' + planNivelLabel(ctx.nivel) + '.</div>';
         } else {
-          h += '<div class="plan-ses-intro">' + vis.length + ' sesión' + (vis.length!==1?'es':'') + ' enlazada' + (vis.length!==1?'s':'') +
-               (ocultas ? ' · ' + ocultas + ' desenlazada' + (ocultas!==1?'s':'') : '') +
-               ' · toca para ver y enlazar sus ejercicios</div>';
+          h += '<div class="plan-intro">✏️ <strong>Marca</strong> las sesiones que quieres enlazar a este apartado.</div>';
+          sesNivel.forEach(function(c){
+            var on = inc.indexOf(c.id) >= 0;
+            var nEj = (c.ejercicioIds||[]).length;
+            h += '<div class="plan-ses-card plansel' + (on ? ' on' : '') + '" onclick="planSesToggleSesion(' + c.id + ')">' +
+                   '<span class="plansel-check">' + (on ? '✓' : '') + '</span>' +
+                   '<div class="plan-ses-card-body">' +
+                     '<div class="plan-ses-card-nom">' + nombreSesion(c) + '</div>' +
+                     '<div class="plan-ses-card-meta">' + (c.tematica ? c.tematica + ' · ' : '') + nEj + ' ejercicio' + (nEj!==1?'s':'') + '</div>' +
+                   '</div></div>';
+          });
+        }
+      } else {
+        var vis = sesNivel.filter(function(c){ return inc.indexOf(c.id) >= 0; });
+        if (!vis.length) {
+          h += '<div class="plan-ses-intro">Este apartado no tiene sesiones enlazadas. Pulsa «Añadir / quitar sesiones» para enlazar las que quieras.</div>';
+        } else {
+          h += '<div class="plan-ses-intro">' + vis.length + ' sesión' + (vis.length!==1?'es':'') + ' enlazada' + (vis.length!==1?'s':'') + ' · toca para verla.</div>';
           vis.forEach(function(c){
             var nEj = (c.ejercicioIds||[]).length;
             h += '<div class="plan-ses-card" onclick="verSesion(' + c.id + ',\'plan\')">' +
@@ -4012,17 +4010,13 @@
       document.getElementById('plan-ses-list').innerHTML = h;
     }
 
-    // Caché por render: clases + índice de ejercicios (evita releer en cada bloque).
+    // Sesiones enlazadas a un apartado (solo las que el usuario añadió a mano).
     var _planSesCache = null;
     function _planSesionesDeBloque(nivel, it) {
-      if (!_planSesCache) _planSesCache = { mapEj:_ejsById(), clases:leerClases() };
-      var mapEj = _planSesCache.mapEj, esComp = (nivel === 'competicion');
-      var match = _planSesCache.clases.filter(function(c){
-        return nivelDeSesion(c, mapEj) === nivel &&
-               (esComp ? intencionDeSesion(c, mapEj) === it.int : golpeDeSesion(c, mapEj) === it.g);
-      });
-      var excl = it.sesExcl || [];
-      return match.filter(function(c){ return excl.indexOf(c.id) < 0; });
+      var inc = it.sesInc || [];
+      if (!inc.length) return [];
+      if (!_planSesCache) _planSesCache = { clases:leerClases() };
+      return _planSesCache.clases.filter(function(c){ return inc.indexOf(c.id) >= 0; });
     }
 
     function _planItemHTML(nivel, mes, it, hechos, editMode) {
