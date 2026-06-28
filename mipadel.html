@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.39.1
+  TU APP DE PÁDEL — v0.39.2
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,11 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.39.2 — Plan: sesiones en rejilla de botones (2026-06)
+    · En ordenador, el bloque se estrecha a su texto y las
+      sesiones se reparten a la derecha como botones en rejilla
+      (más sesiones = más columnas). En móvil siguen a lo ancho.
+
   v0.39.1 — Plan: sesiones a la derecha en pantalla ancha (2026-06)
     · En ordenador, las sesiones enlazadas se muestran a la
       derecha del apartado (aprovecha el espacio). En móvil
@@ -1214,23 +1219,22 @@
     .plan-item-row { display:flex; align-items:stretch; }
     .plan-item-body { flex:1; min-width:0; padding:10px 12px; cursor:pointer; }
     /* Sesiones enlazadas inline dentro de cada apartado */
-    .plan-item-ses { display:flex; flex-direction:column; border-top:1px solid var(--borde); background:var(--arena); }
-    .plan-ses-mini { display:flex; align-items:center; gap:8px; padding:8px 12px; cursor:pointer; border-bottom:1px solid var(--borde); -webkit-tap-highlight-color:transparent; }
-    .plan-ses-mini:last-child { border-bottom:none; }
+    .plan-item-ses { display:flex; flex-wrap:wrap; gap:6px; padding:8px 10px; border-top:1px solid var(--borde); background:var(--arena); }
+    .plan-ses-mini { display:flex; align-items:center; gap:6px; flex:1 1 100%; padding:7px 10px; border:1px solid var(--borde); border-radius:9px; background:var(--blanco); cursor:pointer; -webkit-tap-highlight-color:transparent; }
     .plan-ses-mini:active { background:var(--lila-suave); }
-    .plan-ses-mini.trabajada { background:#f0fdf4; }
-    .plan-ses-mini-ic { font-size:13px; flex-shrink:0; }
-    .plan-ses-mini.trabajada .plan-ses-mini-ic { color:var(--verde); font-weight:800; }
+    .plan-ses-mini.trabajada { background:#f0fdf4; border-color:#bbf7d0; }
+    .plan-ses-mini-ic { font-size:12.5px; flex-shrink:0; }
+    .plan-ses-mini.trabajada .plan-ses-mini-ic { color:var(--verde); }
     .plan-ses-mini-nom { flex:1; min-width:0; font-size:12.5px; font-weight:600; color:var(--texto); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .plan-ses-mini.trabajada .plan-ses-mini-nom { color:var(--verde); }
-    .plan-ses-mini-arr { font-size:15px; color:var(--lila); flex-shrink:0; }
     .plan-item-ses-vacio { font-size:11px; color:var(--gris); font-style:italic; padding:7px 12px; border-top:1px dashed var(--borde); }
-    /* En pantallas anchas (ordenador): sesiones a la DERECHA del apartado */
+    /* Ordenador: bloque estrecho a la izquierda, sesiones en rejilla a la derecha */
     @media (min-width:560px) {
       .plan-item { flex-direction:row; align-items:flex-start; }
-      .plan-item-row { flex:1; min-width:0; }
-      .plan-item-ses { border-top:none; border-left:1px solid var(--borde); width:46%; max-width:380px; align-self:stretch; }
-      .plan-item-ses-vacio { border-top:none; border-left:1px dashed var(--borde); width:46%; max-width:380px; display:flex; align-items:center; }
+      .plan-item-row { flex:0 0 300px; max-width:300px; min-width:0; }
+      .plan-item-ses { flex:1; border-top:none; border-left:1px solid var(--borde); align-content:flex-start; }
+      .plan-ses-mini { flex:0 1 190px; }
+      .plan-item-ses-vacio { flex:1; border-top:none; border-left:1px dashed var(--borde); display:flex; align-items:center; }
     }
     .plan-item.hecho .plan-item-body { opacity:.6; }
     .plan-item-top { display:flex; align-items:center; gap:7px; }
@@ -1530,7 +1534,7 @@
     </div>
     <div class="pie" id="inicio-pie" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
       <button class="btn btn-sec btn-sm" onclick="irA('pantalla-importar')" style="width:auto;gap:5px;">📥 Importar desde Obsidian</button>
-      <span id="inicio-version">Versión 0.39.1 · Solo para mí</span>
+      <span id="inicio-version">Versión 0.39.2 · Solo para mí</span>
     </div>
   </div>
 
@@ -2156,7 +2160,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.39.1';
+    var APP_VERSION = '0.39.2';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -4056,10 +4060,9 @@
       if (ses.length) {
         h2 += '<div class="plan-item-ses">';
         ses.forEach(function(c){
-          h2 += '<div class="plan-ses-mini' + (c.trabajada ? ' trabajada' : '') + '" onclick="verSesion(' + c.id + ',\'planif\')">' +
+          h2 += '<div class="plan-ses-mini' + (c.trabajada ? ' trabajada' : '') + '" onclick="verSesion(' + c.id + ',\'planif\')" title="' + nombreSesion(c).replace(/"/g,'') + '">' +
             '<span class="plan-ses-mini-ic">' + (c.trabajada ? '✓' : '🎾') + '</span>' +
-            '<span class="plan-ses-mini-nom">' + nombreSesion(c) + '</span>' +
-            '<span class="plan-ses-mini-arr">›</span></div>';
+            '<span class="plan-ses-mini-nom">' + nombreSesion(c) + '</span></div>';
         });
         h2 += '</div>';
       } else {
