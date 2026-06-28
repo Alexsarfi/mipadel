@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.34.0
+  TU APP DE PÁDEL — v0.35.0
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,13 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.35.0 — Sesiones por nivel desde Inicio (2026-06)
+    · En Inicio, bajo Planificación, 4 botones directos:
+      Iniciación, Avanzado, Competición y Equipo (con conteo).
+    · Al entrar en un nivel: botones por golpe/intención; cada
+      uno abre una pantalla con sus sesiones. Equipo va directo
+      a la lista. Se retira el selector de nivel (redundante).
+
   v0.34.0 — El nombre de sesión persiste en Supabase (2026-06)
     · clases ahora sube/baja nombre, tematica y objetivo, así
       que el nombre real del vault ya no se pierde al sincronizar
@@ -1239,6 +1246,21 @@
     .pa-olvido-cat { font-size:11px; font-weight:700; color:var(--lila); background:var(--lila-suave); border-radius:20px; padding:1px 8px; flex-shrink:0; }
     .pa-chips { display:flex; flex-wrap:wrap; gap:6px; }
     .pa-chip { font-size:12px; font-weight:700; color:#b45309; background:#fef3c7; border-radius:20px; padding:3px 10px; }
+    /* Botones de nivel en Inicio (acceso directo a sesiones) */
+    .home-niveles-lbl { font-size:11.5px; font-weight:700; color:var(--gris); margin:0.5rem 0 0.5rem 2px; }
+    .home-niveles { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .home-niv-btn { display:flex; align-items:center; gap:9px; background:var(--blanco); border:1.5px solid var(--borde); border-radius:13px; padding:0.75rem 0.85rem; cursor:pointer; font-family:'Outfit',sans-serif; text-align:left; -webkit-tap-highlight-color:transparent; }
+    .home-niv-btn:active { transform:scale(0.98); border-color:var(--lila-claro); }
+    .home-niv-ico { font-size:20px; flex-shrink:0; }
+    .home-niv-lbl { flex:1; font-size:13.5px; font-weight:800; color:var(--texto); }
+    .home-niv-cnt { font-size:12px; font-weight:800; color:var(--gris); background:var(--arena); border-radius:20px; padding:1px 9px; flex-shrink:0; }
+    /* Botones de grupo (golpe/intención) dentro de un nivel */
+    .clase-grupo-btn { display:flex; align-items:center; gap:12px; background:var(--blanco); border:1.5px solid var(--borde); border-radius:14px; padding:0.95rem 1rem; margin-bottom:9px; cursor:pointer; transition:all .15s; }
+    .clase-grupo-btn:active { border-color:var(--lila-claro); background:var(--lila-suave); }
+    .clase-grupo-ico { font-size:22px; flex-shrink:0; }
+    .clase-grupo-lbl { flex:1; font-size:15px; font-weight:800; color:var(--texto); }
+    .clase-grupo-cnt { font-size:13px; font-weight:800; color:var(--verde); flex-shrink:0; }
+    .clase-grupo-arr { font-size:20px; color:var(--lila); flex-shrink:0; }
     /* Variantes EBL en el detalle del ejercicio */
     .ebl-var { font-size:13.5px; line-height:1.5; color:var(--texto); border-radius:11px; padding:0.6rem 0.8rem; margin-bottom:7px; }
     .ebl-facil { background:#f0fdf4; border:1.5px solid #bbf7d0; }
@@ -1351,14 +1373,8 @@
           </div>
           <div class="menu-flecha">›</div>
         </div>
-        <div class="tarjeta-menu" onclick="irA('pantalla-clases')">
-          <div class="menu-icono">📋</div>
-          <div class="menu-texto">
-            <div class="menu-nombre">Mis clases</div>
-            <div class="menu-desc" id="home-desc-cl">—</div>
-          </div>
-          <div class="menu-flecha">›</div>
-        </div>
+        <div class="home-niveles-lbl">Sesiones por nivel</div>
+        <div class="home-niveles" id="home-niveles"></div>
       </div>
 
       <!-- ── PARTIDO ── -->
@@ -1423,7 +1439,7 @@
     </div>
     <div class="pie" id="inicio-pie" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
       <button class="btn btn-sec btn-sm" onclick="irA('pantalla-importar')" style="width:auto;gap:5px;">📥 Importar desde Obsidian</button>
-      <span id="inicio-version">Versión 0.34.0 · Solo para mí</span>
+      <span id="inicio-version">Versión 0.35.0 · Solo para mí</span>
     </div>
   </div>
 
@@ -1620,18 +1636,23 @@
   <!-- ══ CLASES — HUB ════════════════════════════ -->
   <div id="pantalla-clases" class="pantalla">
     <div class="cabecera">
-      <button class="btn-volver" id="clases-volver-btn" onclick="clasesVolver()">‹ Inicio</button>
-      <div class="cab-titulo">Mis clases</div>
+      <button class="btn-volver" onclick="irA('pantalla-inicio')">‹ Inicio</button>
+      <div class="cab-titulo" id="clases-nivel-titulo">Sesiones</div>
       <div class="cab-sub" id="sub-clases">0 sesiones</div>
-    </div>
-    <div class="clases-topbar">
-      <div id="clases-nivelbar" class="nivelbar"></div>
-      <div id="clases-equipobar" class="equipobar"></div>
     </div>
     <div class="contenido">
       <div id="clases-hub"></div>
-      <div id="lista-sesiones" style="display:none"></div>
     </div>
+  </div>
+
+  <!-- ══ SESIONES DE UN GRUPO (golpe / intención) ═══ -->
+  <div id="pantalla-clases-grupo" class="pantalla">
+    <div class="cabecera">
+      <button class="btn-volver" id="clases-grupo-volver" onclick="irA('pantalla-clases')">‹ —</button>
+      <div class="cab-titulo" id="clases-grupo-titulo">—</div>
+      <div class="cab-sub" id="clases-grupo-sub">—</div>
+    </div>
+    <div class="contenido" id="clases-grupo-lista"></div>
   </div>
 
   <!-- ══ EXPLORAR CATEGORÍA ══════════════════════ -->
@@ -2044,7 +2065,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.34.0';
+    var APP_VERSION = '0.35.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -2541,7 +2562,8 @@
     var filtroSesionCat = null;
     var filtroClasesTema = null;   // (legacy) null = todas las temáticas
     var origenSesionFiltro = null; // (legacy)
-    var nivelClasesSel  = 'iniciacion'; // nivel activo en la barra superior
+    var nivelClasesSel  = 'iniciacion'; // nivel elegido desde Inicio
+    var grupoClasesSel  = null;         // golpe/intención elegido dentro de un nivel
     var origenSesionNivel = null;       // nivel recordado al entrar en una sesión
     var sesionOrigen = 'clases';        // 'clases' | 'plan' — de dónde se abrió la sesión
     var planSesCtx = null;              // contexto del bloque al ver sus sesiones
@@ -3978,7 +4000,8 @@
       if (id === 'pantalla-categorias')      mostrarCategorias();
       if (id === 'pantalla-ejercicios')      mostrarEjercicios();
       if (id === 'pantalla-nuevo-ejercicio') prepararFormEjercicio(ejEditandoId);
-      if (id === 'pantalla-clases')          mostrarClases(true);
+      if (id === 'pantalla-clases')          mostrarClases();
+      if (id === 'pantalla-clases-grupo')    mostrarClasesGrupo();
       if (id === 'pantalla-planificacion')   mostrarPlanificacion();
       if (id === 'pantalla-nueva-sesion')    prepararNuevaSesion();
       if (id === 'pantalla-marcador')        renderizarMarcador();
@@ -4046,10 +4069,9 @@
       // Stats sección Entrenamiento
       document.getElementById('home-stats-e').textContent =
         ejs.length + ' ej · ' + clases.length + ' ses';
-      document.getElementById('home-desc-cl').textContent =
-        clases.length + ' sesione' + (clases.length !== 1 ? 's' : '');
       var _planEl = document.getElementById('home-desc-plan');
       if (_planEl) _planEl.textContent = 'Plan por nivel · ' + planMesActualNombre();
+      renderHomeNiveles();   // botones de nivel (acceso directo a sesiones)
 
       // Stats sección Partido
       document.getElementById('home-stats-p').textContent =
@@ -5092,106 +5114,104 @@
       '</div>';
     }
 
-    function mostrarClases(autoSelect) {
-      var todasClases = leerClases();
-      var mapEj       = _ejsById();
-      var hub         = document.getElementById('clases-hub');
-      var listaCont   = document.getElementById('lista-sesiones');
-      var nivelbar    = document.getElementById('clases-nivelbar');
-      var volverBtn   = document.getElementById('clases-volver-btn');
-      var subClases   = document.getElementById('sub-clases');
+    // Lista de niveles para Inicio (los 3 + equipo)
+    var NIV_HOME = NIVELES_CLASES.concat([{ key:'equipo', icono:'🤝', label:'Equipo' }]);
 
-      if (listaCont) listaCont.style.display = 'none';
-      volverBtn.textContent = '‹ Inicio';
-
-      // Clasificar todas las sesiones por nivel (+ equipo, eje aparte)
+    function _clasesPorNivel() {
+      var mapEj = _ejsById();
       var porNivel = { iniciacion: [], avanzado: [], competicion: [], equipo: [] };
-      todasClases.forEach(function(c){
+      leerClases().forEach(function(c){
         var nv = nivelDeSesion(c, mapEj);
         (porNivel[nv] || porNivel.iniciacion).push(c);
       });
+      return porNivel;
+    }
 
-      // Al entrar: si el nivel activo está vacío, saltar al primero con sesiones
-      if (autoSelect && !porNivel[nivelClasesSel].length) {
-        for (var i = 0; i < NIVELES_CLASES.length; i++) {
-          if (porNivel[NIVELES_CLASES[i].key].length) { nivelClasesSel = NIVELES_CLASES[i].key; break; }
-        }
-      }
-
-      // Barra superior de niveles + botón Equipo (eje aparte, fila propia)
-      nivelbar.innerHTML = NIVELES_CLASES.map(function(n){
-        var cnt = porNivel[n.key].length;
-        var act = (n.key === nivelClasesSel) ? ' activo' : '';
-        return '<button class="nivel-btn' + act + '" onclick="seleccionarNivelClase(\'' + n.key + '\')">' +
-          '<span class="nivel-btn-ico">' + n.icono + '</span>' +
-          '<span class="nivel-btn-lbl">' + n.label + '</span>' +
-          '<span class="nivel-btn-cnt">' + cnt + '</span>' +
+    // Botones de nivel en Inicio (acceso directo, con conteo)
+    function renderHomeNiveles() {
+      var cont = document.getElementById('home-niveles');
+      if (!cont) return;
+      var porNivel = _clasesPorNivel();
+      cont.innerHTML = NIV_HOME.map(function(n){
+        return '<button class="home-niv-btn" onclick="irClasesNivel(\'' + n.key + '\')">' +
+          '<span class="home-niv-ico">' + n.icono + '</span>' +
+          '<span class="home-niv-lbl">' + n.label + '</span>' +
+          '<span class="home-niv-cnt">' + porNivel[n.key].length + '</span>' +
         '</button>';
       }).join('');
+    }
 
-      // Botón Equipo: SIEMPRE en su franja propia, debajo de los tres.
-      var equipobar = document.getElementById('clases-equipobar');
-      if (equipobar) {
-        equipobar.innerHTML =
-          '<button class="nivel-btn nivel-equipo' + (nivelClasesSel === 'equipo' ? ' activo' : '') +
-          '" onclick="seleccionarNivelClase(\'equipo\')">' +
-            '<span class="nivel-btn-ico">🤝</span>' +
-            '<span class="nivel-btn-lbl">Equipo</span>' +
-            '<span class="nivel-btn-cnt">' + porNivel.equipo.length + '</span>' +
-          '</button>';
-      }
+    function irClasesNivel(nivel) { nivelClasesSel = nivel; grupoClasesSel = null; irA('pantalla-clases'); }
+    function irClasesGrupo(key)   { grupoClasesSel = key;   irA('pantalla-clases-grupo'); }
 
+    // Pantalla de NIVEL: botones por golpe/intención (cada uno abre sus sesiones).
+    function mostrarClases() {
+      var mapEj     = _ejsById();
+      var hub       = document.getElementById('clases-hub');
+      var subClases = document.getElementById('sub-clases');
+      var tituloEl  = document.getElementById('clases-nivel-titulo');
+
+      var porNivel = _clasesPorNivel();
       var sesiones = porNivel[nivelClasesSel] || [];
-      var nivLabel = nivelClasesSel === 'equipo' ? 'Equipo'
-        : ((NIVELES_CLASES.filter(function(n){ return n.key === nivelClasesSel; })[0] || {}).label || '');
-      subClases.textContent = nivLabel + ' · ' + sesiones.length + ' sesión' + (sesiones.length !== 1 ? 'es' : '');
+      var nivMeta  = NIV_HOME.filter(function(n){ return n.key === nivelClasesSel; })[0] || { label:'Sesiones', icono:'🎾' };
+      if (tituloEl) tituloEl.textContent = nivMeta.icono + ' ' + nivMeta.label;
+      subClases.textContent = sesiones.length + ' sesión' + (sesiones.length !== 1 ? 'es' : '');
 
       if (!sesiones.length) {
         hub.innerHTML = '<div class="vacio" style="padding:2rem 1rem;text-align:center;">' +
-          '<div class="vacio-icono">' + (nivelClasesSel === 'equipo' ? '🤝' : '🎾') + '</div>' +
-          '<p>No hay sesiones de <strong>' + nivLabel + '</strong> todavía.</p></div>';
-        hub.style.display = 'block';
+          '<div class="vacio-icono">' + nivMeta.icono + '</div>' +
+          '<p>No hay sesiones de <strong>' + nivMeta.label + '</strong> todavía.</p></div>';
         return;
       }
 
-      // Equipo: lista plana (no se agrupa por golpe/intención)
+      // Equipo: lista plana directa (no se agrupa por golpe/intención)
       if (nivelClasesSel === 'equipo') {
         hub.innerHTML = sesiones.map(function(c){ return sesionRowHTML(c); }).join('');
-        hub.style.display = 'block';
         return;
       }
 
-      // Competición → agrupar por INTENCIÓN táctica; resto de niveles → por GOLPE.
+      // Competición → por INTENCIÓN; resto → por GOLPE. Se muestran como botones.
       var esComp     = (nivelClasesSel === 'competicion');
       var grupos     = esComp ? INTENCION_GRUPOS : GOLPE_GRUPOS;
       var clasificar = esComp ? intencionDeSesion : golpeDeSesion;
 
       var porZona = {};
-      sesiones.forEach(function(c){
-        var z = clasificar(c, mapEj);
-        (porZona[z] = porZona[z] || []).push(c);
-      });
+      sesiones.forEach(function(c){ var z = clasificar(c, mapEj); (porZona[z] = porZona[z] || []).push(c); });
 
       var html = '';
       grupos.forEach(function(zg){
         var lista = porZona[zg.key];
         if (!lista || !lista.length) return;
-        var collKey   = 'clz-' + nivelClasesSel + '-' + zg.key;
-        var colapsado = localStorage.getItem(collKey) === '1';
-        html += '<div class="zona-grupo">' +
-          '<div class="zona-grupo-hdr" onclick="toggleZonaGrupo(\'' + collKey + '\',this)">' +
-            '<span class="zona-grupo-ico">' + zg.icono + '</span>' +
-            '<span class="zona-grupo-lbl">' + zg.label + '</span>' +
-            '<span class="zona-grupo-cnt">' + lista.length + '</span>' +
-            '<span class="zona-grupo-chev">' + (colapsado ? '▸' : '▾') + '</span>' +
-          '</div>' +
-          '<div class="zona-grupo-body"' + (colapsado ? ' style="display:none"' : '') + '>' +
-            lista.map(function(c){ return sesionRowHTML(c); }).join('') +
-          '</div>' +
+        html += '<div class="clase-grupo-btn" onclick="irClasesGrupo(\'' + zg.key + '\')">' +
+          '<span class="clase-grupo-ico">' + zg.icono + '</span>' +
+          '<span class="clase-grupo-lbl">' + zg.label + '</span>' +
+          '<span class="clase-grupo-cnt">' + lista.length + ' ses' + '</span>' +
+          '<span class="clase-grupo-arr">›</span>' +
         '</div>';
       });
       hub.innerHTML = html;
-      hub.style.display = 'block';
+    }
+
+    // Pantalla de GRUPO: sesiones de un golpe/intención dentro del nivel.
+    function mostrarClasesGrupo() {
+      var mapEj  = _ejsById();
+      var lista  = document.getElementById('clases-grupo-lista');
+      var esComp = (nivelClasesSel === 'competicion');
+      var grupos = esComp ? INTENCION_GRUPOS : GOLPE_GRUPOS;
+      var clasificar = esComp ? intencionDeSesion : golpeDeSesion;
+      var zg = grupos.filter(function(g){ return g.key === grupoClasesSel; })[0] || { label:'', icono:'🎾' };
+      var nivMeta = NIV_HOME.filter(function(n){ return n.key === nivelClasesSel; })[0] || { label:'' };
+
+      var ses = (_clasesPorNivel()[nivelClasesSel] || []).filter(function(c){
+        return clasificar(c, mapEj) === grupoClasesSel;
+      });
+      document.getElementById('clases-grupo-volver').textContent = '‹ ' + nivMeta.label;
+      document.getElementById('clases-grupo-titulo').textContent = zg.icono + ' ' + zg.label;
+      document.getElementById('clases-grupo-sub').textContent =
+        nivMeta.label + ' · ' + ses.length + ' sesión' + (ses.length !== 1 ? 'es' : '');
+      lista.innerHTML = ses.length
+        ? ses.map(function(c){ return sesionRowHTML(c); }).join('')
+        : '<div class="vacio"><div class="vacio-icono">🎾</div><p>Sin sesiones en este grupo.</p></div>';
     }
 
     function toggleSesionTrabajada(id) {
@@ -5445,9 +5465,11 @@
       }
       if (origenSesionNivel) nivelClasesSel = origenSesionNivel;
       document.querySelectorAll('.pantalla').forEach(function(p){ p.classList.remove('activa'); });
-      document.getElementById('pantalla-clases').classList.add('activa');
+      // Vuelve al grupo si la sesión se abrió desde un grupo; si no, a la pantalla de nivel.
+      var destino = (grupoClasesSel && nivelClasesSel !== 'equipo') ? 'pantalla-clases-grupo' : 'pantalla-clases';
+      document.getElementById(destino).classList.add('activa');
       window.scrollTo(0, 0);
-      mostrarClases();
+      if (destino === 'pantalla-clases-grupo') mostrarClasesGrupo(); else mostrarClases();
     }
 
     // Descripción breve para la tarjeta (limpia markdown y recorta).
