@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.38.0
+  TU APP DE PÁDEL — v0.39.0
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,13 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.39.0 — Plan: sesiones enlazadas inline (2026-06)
+    · Cada apartado del plan muestra debajo sus sesiones
+      enlazadas, tocables para entrar directo (sin saltar a otra
+      pantalla). Las sesiones trabajadas salen sombreadas en verde.
+    · El icono ⚙ del apartado sigue abriendo la pantalla de
+      gestión/edición de sesiones enlazadas.
+
   v0.38.0 — Inicio: Entrenamiento rediseñado (2026-06)
     · Planificación pasa a 3 botones de nivel (Iniciación,
       Avanzado, Competición) que llevan directos al plan de ese
@@ -1198,8 +1205,21 @@
     .plan-ciclo-fase { font-size:12px; font-weight:800; color:#0e7490; }
     .plan-ciclo-arr { font-size:12px; color:#0891b2; }
     /* Apartado (item) — tappable → sesiones */
-    .plan-item { display:flex; align-items:stretch; gap:0; border:1px solid var(--borde); border-radius:11px; overflow:hidden; background:var(--blanco); }
+    .plan-item { display:flex; flex-direction:column; border:1px solid var(--borde); border-radius:11px; overflow:hidden; background:var(--blanco); }
+    .plan-item-row { display:flex; align-items:stretch; }
     .plan-item-body { flex:1; min-width:0; padding:10px 12px; cursor:pointer; }
+    /* Sesiones enlazadas inline dentro de cada apartado */
+    .plan-item-ses { display:flex; flex-direction:column; border-top:1px solid var(--borde); background:var(--arena); }
+    .plan-ses-mini { display:flex; align-items:center; gap:8px; padding:8px 12px; cursor:pointer; border-bottom:1px solid var(--borde); -webkit-tap-highlight-color:transparent; }
+    .plan-ses-mini:last-child { border-bottom:none; }
+    .plan-ses-mini:active { background:var(--lila-suave); }
+    .plan-ses-mini.trabajada { background:#f0fdf4; }
+    .plan-ses-mini-ic { font-size:13px; flex-shrink:0; }
+    .plan-ses-mini.trabajada .plan-ses-mini-ic { color:var(--verde); font-weight:800; }
+    .plan-ses-mini-nom { flex:1; min-width:0; font-size:12.5px; font-weight:600; color:var(--texto); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .plan-ses-mini.trabajada .plan-ses-mini-nom { color:var(--verde); }
+    .plan-ses-mini-arr { font-size:15px; color:var(--lila); flex-shrink:0; }
+    .plan-item-ses-vacio { font-size:11px; color:var(--gris); font-style:italic; padding:7px 12px; border-top:1px dashed var(--borde); }
     .plan-item.hecho .plan-item-body { opacity:.6; }
     .plan-item-top { display:flex; align-items:center; gap:7px; }
     .plan-item-titulo { flex:1; font-size:13.5px; font-weight:700; color:var(--texto); line-height:1.25; }
@@ -1498,7 +1518,7 @@
     </div>
     <div class="pie" id="inicio-pie" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
       <button class="btn btn-sec btn-sm" onclick="irA('pantalla-importar')" style="width:auto;gap:5px;">📥 Importar desde Obsidian</button>
-      <span id="inicio-version">Versión 0.38.0 · Solo para mí</span>
+      <span id="inicio-version">Versión 0.39.0 · Solo para mí</span>
     </div>
   </div>
 
@@ -2124,7 +2144,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.38.0';
+    var APP_VERSION = '0.39.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -3976,6 +3996,19 @@
       document.getElementById('plan-ses-list').innerHTML = h;
     }
 
+    // Caché por render: clases + índice de ejercicios (evita releer en cada bloque).
+    var _planSesCache = null;
+    function _planSesionesDeBloque(nivel, it) {
+      if (!_planSesCache) _planSesCache = { mapEj:_ejsById(), clases:leerClases() };
+      var mapEj = _planSesCache.mapEj, esComp = (nivel === 'competicion');
+      var match = _planSesCache.clases.filter(function(c){
+        return nivelDeSesion(c, mapEj) === nivel &&
+               (esComp ? intencionDeSesion(c, mapEj) === it.int : golpeDeSesion(c, mapEj) === it.g);
+      });
+      var excl = it.sesExcl || [];
+      return match.filter(function(c){ return excl.indexOf(c.id) < 0; });
+    }
+
     function _planItemHTML(nivel, mes, it, hechos, editMode) {
       var hecho = !!hechos[it.id];
       var ic = PLAN_INT[it.int] || PLAN_INT.dominar;
@@ -3985,7 +4018,7 @@
         '<span class="plan-chip golpe">' + (PLAN_GOLPE_LBL[it.g] || it.g) + '</span></div>';
 
       if (editMode) {
-        var h = '<div class="plan-item editable">';
+        var h = '<div class="plan-item editable"><div class="plan-item-row">';
         h += '<div class="plan-item-body" onclick="planAbrirEditor(\'' + nivel + '\',\'' + mes + '\',\'' + it.id + '\')">';
         h += '<div class="plan-item-top"><span class="plan-item-titulo">' + it.t + '</span><span class="plan-item-edit-ic">✏️</span></div>';
         if (it.f) h += '<div class="plan-item-foco">' + it.f + '</div>';
@@ -3994,21 +4027,33 @@
                '<button onclick="planMoverItem(\'' + nivel + '\',\'' + mes + '\',\'' + it.id + '\',-1)">▲</button>' +
                '<button onclick="planMoverItem(\'' + nivel + '\',\'' + mes + '\',\'' + it.id + '\',1)">▼</button>' +
                '<button class="del" onclick="planBorrarItem(\'' + nivel + '\',\'' + mes + '\',\'' + it.id + '\')">🗑️</button>' +
-             '</div></div>';
+             '</div></div></div>';
         return h;
       }
 
-      var esComp = (nivel === 'competicion');
-      var tipo  = esComp ? 'int' : 'g';
-      var valor = esComp ? it.int : it.g;
-      var etiqueta = (esComp ? (PLAN_INT[it.int] ? PLAN_INT[it.int].l : it.int) : (PLAN_GOLPE_LBL[it.g] || it.g));
-      var h2 = '<div class="plan-item' + (hecho ? ' hecho' : '') + '">';
+      var h2 = '<div class="plan-item' + (hecho ? ' hecho' : '') + '"><div class="plan-item-row">';
       h2 += '<div class="plan-item-body" onclick="planAbrirSesionesBloque(\'' + nivel + '\',\'' + mes + '\',\'' + it.id + '\')">';
-      h2 += '<div class="plan-item-top"><span class="plan-item-titulo">' + it.t + '</span><span class="plan-item-flecha">›</span></div>';
+      h2 += '<div class="plan-item-top"><span class="plan-item-titulo">' + it.t + '</span><span class="plan-item-flecha">⚙</span></div>';
       if (it.f) h2 += '<div class="plan-item-foco">' + it.f + '</div>';
       h2 += chips + '</div>';
       h2 += '<button class="plan-item-check' + (hecho ? ' on' : '') + '" onclick="planToggleHecho(\'' + it.id + '\');event.stopPropagation()" title="Marcar como trabajado">✓</button>';
-      h2 += '</div>';
+      h2 += '</div>'; // .plan-item-row
+
+      // ── Sesiones enlazadas (inline, tocables; sombreadas si trabajadas) ──
+      var ses = _planSesionesDeBloque(nivel, it);
+      if (ses.length) {
+        h2 += '<div class="plan-item-ses">';
+        ses.forEach(function(c){
+          h2 += '<div class="plan-ses-mini' + (c.trabajada ? ' trabajada' : '') + '" onclick="verSesion(' + c.id + ',\'planif\')">' +
+            '<span class="plan-ses-mini-ic">' + (c.trabajada ? '✓' : '🎾') + '</span>' +
+            '<span class="plan-ses-mini-nom">' + nombreSesion(c) + '</span>' +
+            '<span class="plan-ses-mini-arr">›</span></div>';
+        });
+        h2 += '</div>';
+      } else {
+        h2 += '<div class="plan-item-ses-vacio">Sin sesiones enlazadas</div>';
+      }
+      h2 += '</div>'; // .plan-item
       return h2;
     }
 
@@ -4096,6 +4141,7 @@
     }
 
     function mostrarPlanificacion() {
+      _planSesCache = null;   // refresca clases/ejercicios para las sesiones inline
       var p = leerPlan();
       var nivel = p.nivel;
       var cont0 = planContenido(p);
@@ -5696,6 +5742,12 @@
     // ══════════════════════════════════════════
 
     function volverDeSesion() {
+      if (sesionOrigen === 'planif') {   // abierta desde el plan (sesión inline)
+        document.querySelectorAll('.pantalla').forEach(function(p){ p.classList.remove('activa'); });
+        document.getElementById('pantalla-planificacion').classList.add('activa');
+        mostrarPlanificacion(); window.scrollTo(0, 0);
+        return;
+      }
       if (sesionOrigen === 'plan' && planSesCtx) {
         sesionOrigen = 'clases';
         document.querySelectorAll('.pantalla').forEach(function(p){ p.classList.remove('activa'); });
@@ -5779,7 +5831,7 @@
       if (!sesion) return;
 
       var vb = document.getElementById('volver-detalle-sesion');
-      if (vb) vb.textContent = (sesionOrigen === 'plan') ? '‹ Sesiones' : '‹ Clases';
+      if (vb) vb.textContent = (sesionOrigen === 'plan') ? '‹ Sesiones' : (sesionOrigen === 'planif') ? '‹ Plan' : '‹ Clases';
 
       document.getElementById('detalle-sesion-titulo').textContent = nombreSesion(sesion);
       document.getElementById('detalle-sesion-fecha').textContent  = formatearFecha(sesion.fecha) + (sesion.tematica ? '  ·  ' + sesion.tematica : '');
