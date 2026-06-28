@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.39.0
+  TU APP DE PÁDEL — v0.39.1
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,11 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.39.1 — Plan: sesiones a la derecha en pantalla ancha (2026-06)
+    · En ordenador, las sesiones enlazadas se muestran a la
+      derecha del apartado (aprovecha el espacio). En móvil
+      siguen debajo.
+
   v0.39.0 — Plan: sesiones enlazadas inline (2026-06)
     · Cada apartado del plan muestra debajo sus sesiones
       enlazadas, tocables para entrar directo (sin saltar a otra
@@ -1220,6 +1225,13 @@
     .plan-ses-mini.trabajada .plan-ses-mini-nom { color:var(--verde); }
     .plan-ses-mini-arr { font-size:15px; color:var(--lila); flex-shrink:0; }
     .plan-item-ses-vacio { font-size:11px; color:var(--gris); font-style:italic; padding:7px 12px; border-top:1px dashed var(--borde); }
+    /* En pantallas anchas (ordenador): sesiones a la DERECHA del apartado */
+    @media (min-width:560px) {
+      .plan-item { flex-direction:row; align-items:flex-start; }
+      .plan-item-row { flex:1; min-width:0; }
+      .plan-item-ses { border-top:none; border-left:1px solid var(--borde); width:46%; max-width:380px; align-self:stretch; }
+      .plan-item-ses-vacio { border-top:none; border-left:1px dashed var(--borde); width:46%; max-width:380px; display:flex; align-items:center; }
+    }
     .plan-item.hecho .plan-item-body { opacity:.6; }
     .plan-item-top { display:flex; align-items:center; gap:7px; }
     .plan-item-titulo { flex:1; font-size:13.5px; font-weight:700; color:var(--texto); line-height:1.25; }
@@ -1518,7 +1530,7 @@
     </div>
     <div class="pie" id="inicio-pie" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
       <button class="btn btn-sec btn-sm" onclick="irA('pantalla-importar')" style="width:auto;gap:5px;">📥 Importar desde Obsidian</button>
-      <span id="inicio-version">Versión 0.39.0 · Solo para mí</span>
+      <span id="inicio-version">Versión 0.39.1 · Solo para mí</span>
     </div>
   </div>
 
@@ -2144,7 +2156,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.39.0';
+    var APP_VERSION = '0.39.1';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
