@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.33.0
+  TU APP DE PÁDEL — v0.34.0
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,19 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.34.0 — El nombre de sesión persiste en Supabase (2026-06)
+    · clases ahora sube/baja nombre, tematica y objetivo, así
+      que el nombre real del vault ya no se pierde al sincronizar
+      entre dispositivos. Requiere añadir 3 columnas en Supabase
+      (ver supabase_schema.sql). Autorrepara: el local se sube.
+
+  v0.33.1 — Nombre de sesión coherente y práctico (2026-06)
+    · Lista y detalle usan el mismo nombre (antes una decía
+      "Sesión sin nombre" y el detalle "Sesión 33").
+    · Si la sesión no tiene nombre (el nombre del vault no se
+      guarda en Supabase), se deriva uno práctico de la
+      situación o golpe dominante de sus ejercicios.
+
   v0.33.0 — Variantes EBL (regular dificultad) (2026-06)
     · Cada ejercicio puede llevar variante_facil y
       variante_dificil (metodología basada en limitaciones del
@@ -1410,7 +1423,7 @@
     </div>
     <div class="pie" id="inicio-pie" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
       <button class="btn btn-sec btn-sm" onclick="irA('pantalla-importar')" style="width:auto;gap:5px;">📥 Importar desde Obsidian</button>
-      <span id="inicio-version">Versión 0.33.0 · Solo para mí</span>
+      <span id="inicio-version">Versión 0.34.0 · Solo para mí</span>
     </div>
   </div>
 
@@ -2031,7 +2044,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.33.0';
+    var APP_VERSION = '0.34.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -2276,7 +2289,9 @@
 
         var clasesServ = (results[2].data || []).map(function(c){ return {
           id:c.id, fecha:c.fecha, trabajada:!!c.trabajada,
-          ejercicioIds:c.ejercicio_ids||[], _ownerUid:c.user_id
+          ejercicioIds:c.ejercicio_ids||[],
+          nombre:c.nombre||'', tematica:c.tematica||'', objetivo:c.objetivo||'',
+          _ownerUid:c.user_id
         }; });
 
         var partsServ = (results[3].data || []).map(function(p){
@@ -2337,7 +2352,8 @@
           map[x.id] = x;
         } else if (tabla === 'clases') {
           // Para sesiones: merge en lugar de reemplazo.
-          // Supabase no almacena nombre/tematica/objetivo → preservarlos del local.
+          // nombre/tematica/objetivo: gana el servidor si lo trae; si no, el local
+          // (que luego se sube → se autorrepara entre dispositivos).
           var prev = map[x.id];
           map[x.id] = {
             id:          x.id,
@@ -2345,9 +2361,9 @@
             trabajada:   x.trabajada   !== undefined ? x.trabajada : prev.trabajada,
             ejercicioIds: (x.ejercicioIds && x.ejercicioIds.length)
                             ? x.ejercicioIds : (prev.ejercicioIds || []),
-            nombre:      prev.nombre   || '',
-            tematica:    prev.tematica || '',
-            objetivo:    prev.objetivo || '',
+            nombre:      x.nombre   || prev.nombre   || '',
+            tematica:    x.tematica || prev.tematica || '',
+            objetivo:    x.objetivo || prev.objetivo || '',
             _ownerUid:   x._ownerUid  || prev._ownerUid,
           };
         } else {
@@ -2409,7 +2425,8 @@
       clases: function(c, uid, gid) {
         var r = {
           id:c.id, user_id:c._ownerUid||uid, fecha:c.fecha,
-          trabajada:!!c.trabajada, ejercicio_ids:c.ejercicioIds||[]
+          trabajada:!!c.trabajada, ejercicio_ids:c.ejercicioIds||[],
+          nombre:c.nombre||'', tematica:c.tematica||'', objetivo:c.objetivo||''
         };
         if (gid) r.grupo_id = gid; return r;
       },
@@ -3714,7 +3731,7 @@
           h += '<div class="plan-ses-card plansel' + (incl ? ' on' : '') + '" onclick="planSesToggleSesion(' + c.id + ')">' +
                  '<span class="plansel-check">' + (incl ? '✓' : '') + '</span>' +
                  '<div class="plan-ses-card-body">' +
-                   '<div class="plan-ses-card-nom">' + (c.nombre || ('Sesión ' + c.id)) + '</div>' +
+                   '<div class="plan-ses-card-nom">' + nombreSesion(c) + '</div>' +
                    '<div class="plan-ses-card-meta">' + (c.tematica ? c.tematica + ' · ' : '') + nEj + ' ejercicio' + (nEj!==1?'s':'') + '</div>' +
                  '</div></div>';
         });
@@ -3731,7 +3748,7 @@
             var nEj = (c.ejercicioIds||[]).length;
             h += '<div class="plan-ses-card" onclick="verSesion(' + c.id + ',\'plan\')">' +
                    '<div class="plan-ses-card-body">' +
-                     '<div class="plan-ses-card-nom">' + (c.nombre || ('Sesión ' + c.id)) + '</div>' +
+                     '<div class="plan-ses-card-nom">' + nombreSesion(c) + '</div>' +
                      '<div class="plan-ses-card-meta">' + (c.tematica ? c.tematica + ' · ' : '') + nEj + ' ejercicio' + (nEj!==1?'s':'') + '</div>' +
                    '</div><span class="plan-ses-card-arr">›</span></div>';
           });
@@ -3842,7 +3859,7 @@
         sinTrabajar.slice(0,40).forEach(function(c){
           var k = clasificar(c, mapEj);
           h += '<div class="pa-olvido" onclick="verSesion('+c.id+',\'plan\')">' +
-            '<span class="pa-olvido-nom">'+_gEsc(c.nombre || ('Sesión '+c.id))+'</span>' +
+            '<span class="pa-olvido-nom">'+_gEsc(nombreSesion(c))+'</span>' +
             '<span class="pa-olvido-cat">'+_gEsc(LBL(k||'')||'—')+'</span></div>';
         });
         h += '</div>';
@@ -5026,6 +5043,22 @@
       return dom || '_sin';
     }
 
+    // Nombre práctico de una sesión: usa el del vault si lo tiene; si no (p. ej. al
+    // sincronizar desde Supabase, que no guarda el nombre), lo deriva de la situación
+    // o golpe dominante de sus ejercicios. Unifica lista y detalle.
+    function nombreSesion(ses, mapEj) {
+      if (ses && ses.nombre && String(ses.nombre).trim()) return String(ses.nombre).trim();
+      mapEj = mapEj || _ejsById();
+      var cs = {};
+      (ses.ejercicioIds || []).forEach(function(id){ var e = mapEj[id]; if (!e) return; var s = ejSituacion(e); if (s) cs[s] = (cs[s] || 0) + 1; });
+      var domS = '', mx = 0; Object.keys(cs).forEach(function(s){ if (cs[s] > mx) { mx = cs[s]; domS = s; } });
+      if (domS) return SITUACION_LABEL[domS] || domS;
+      var g = golpeDeSesion(ses, mapEj);
+      if (g && g !== '_sin') return GOLPE_LABEL[g] || g;
+      if (ses.objetivo && String(ses.objetivo).trim()) return String(ses.objetivo).trim();
+      return 'Sesión';
+    }
+
     function clasesVolver() {
       irA('pantalla-inicio');
     }
@@ -5044,7 +5077,7 @@
     }
 
     function sesionRowHTML(c) {
-      var titulo = c.nombre || c.objetivo || 'Sesión sin nombre';
+      var titulo = nombreSesion(c);
       var num    = (c.ejercicioIds || []).length;
       var meta   = [];
       if (c.fecha) meta.push(formatearFecha(c.fecha));
@@ -5485,7 +5518,7 @@
       var vb = document.getElementById('volver-detalle-sesion');
       if (vb) vb.textContent = (sesionOrigen === 'plan') ? '‹ Sesiones' : '‹ Clases';
 
-      document.getElementById('detalle-sesion-titulo').textContent = sesion.nombre || ('Sesión ' + sesion.id);
+      document.getElementById('detalle-sesion-titulo').textContent = nombreSesion(sesion);
       document.getElementById('detalle-sesion-fecha').textContent  = formatearFecha(sesion.fecha) + (sesion.tematica ? '  ·  ' + sesion.tematica : '');
 
       var ejsEnSesion = (sesion.ejercicioIds||[]).map(function(eid){
