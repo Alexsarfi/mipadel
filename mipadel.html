@@ -520,9 +520,9 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
-      --verde:       #2d6a4f;
-      --verde-claro: #52b788;
-      --verde-suave: #d8f3dc;
+      --verde:       #0e1b3c;
+      --verde-claro: #c19a3e;
+      --verde-suave: #e9ecf5;
       --arena:       #f8f4ee;
       --texto:       #1a1a2e;
       --gris:        #6b7280;
@@ -535,10 +535,10 @@
       --ambar-borde: #f59e0b;
       --azul-suave:  #dbeafe;
       --azul:        #1e40af;
-      --dorado:      #f59e0b;
-      --lila:        #7c3aed;
-      --lila-suave:  #ede9fe;
-      --lila-claro:  #a78bfa;
+      --dorado:      #c19a3e;
+      --lila:        #16264f;
+      --lila-suave:  #e9ecf5;
+      --lila-claro:  #c19a3e;
     }
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family:'Outfit',sans-serif; background:var(--arena); color:var(--texto); min-height:100vh; }
@@ -612,7 +612,7 @@
     .ghd-day.dada { background:#dcfce7; color:#166534; }
     .ghd-day.nodada { background:#fee2e2; color:#991b1b; }
     .ghd-day.sinlista { background:#f3f4f6; color:#9ca3af; }
-    .ghd-extra { font-size:12px; color:#7c3aed; font-weight:600; margin-top:7px; }
+    .ghd-extra { font-size:12px; color:#16264f; font-weight:600; margin-top:7px; }
     .ghd-suma { background:var(--verde-suave); border-radius:12px; padding:0.6rem 0.9rem; margin-top:6px; }
     .ghd-suma-row { display:flex; justify-content:space-between; align-items:center; font-size:13.5px; color:var(--texto); padding:3px 0; }
     .ghd-suma-row b { font-size:17px; color:var(--verde); }
@@ -777,7 +777,7 @@
     .acciones { display:flex; gap:8px; flex-wrap:wrap; }
 
     /* ══ HOME — secciones ══ */
-    --navy:       #1e3a8a;
+    --navy:       #16264f;
     --navy-suave: #dbeafe;
 
     .home-sec { display:flex; flex-direction:column; gap:8px; }
@@ -1098,7 +1098,7 @@
 
     /* Form nueva clase — chips alumnos */
     .asist-form-alumnos-lista { display:flex; flex-wrap:wrap; gap:6px; padding:6px 0; min-height:32px; }
-    .asist-chip-alumno { background:var(--lila-suave); border:1px solid var(--lila-claro); border-radius:20px; padding:5px 10px 5px 12px; font-size:12px; font-weight:600; color:#5b21b6; display:flex; align-items:center; gap:6px; }
+    .asist-chip-alumno { background:var(--lila-suave); border:1px solid var(--lila-claro); border-radius:20px; padding:5px 10px 5px 12px; font-size:12px; font-weight:600; color:#16264f; display:flex; align-items:center; gap:6px; }
     .asist-chip-quitar { background:none; border:none; cursor:pointer; color:var(--lila); font-size:14px; padding:0; line-height:1; transition:color 0.1s; font-family:'Outfit',sans-serif; }
     .asist-chip-quitar:hover { color:#dc2626; }
     .asist-form-add-alumno { display:flex; gap:8px; }
@@ -1115,7 +1115,7 @@
     .asist-recup-badge { font-size:9px; font-weight:800; background:#fef3c7; color:#92400e; border-radius:10px; padding:2px 6px; margin-left:6px; letter-spacing:.03em; }
     .asist-recup-panel { background:var(--blanco); border:1.5px solid var(--lila-claro); border-radius:12px; padding:10px; margin-bottom:8px; }
     .asist-recup-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
-    .asist-recup-chip { background:var(--lila-suave); border:1px solid var(--lila-claro); border-radius:20px; padding:5px 11px; font-size:12px; font-weight:600; color:#5b21b6; cursor:pointer; }
+    .asist-recup-chip { background:var(--lila-suave); border:1px solid var(--lila-claro); border-radius:20px; padding:5px 11px; font-size:12px; font-weight:600; color:#16264f; cursor:pointer; }
     .asist-recup-chip:active { transform:scale(0.96); }
 
     /* Resumen mensual */
@@ -1449,7 +1449,7 @@
           <span class="home-sec-stats" id="home-stats-a">—</span>
         </div>
         <div class="tarjeta-menu" onclick="irA('pantalla-asistencia')">
-          <div class="menu-icono" style="background:var(--lila-suave);">🗓️</div>
+          <div class="menu-icono" style="background:var(--navy-suave);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2.5"/><path d="M9 4.5V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v.5"/><path d="M8.5 13l2.2 2.2L15 11"/></svg></div>
           <div class="menu-texto">
             <div class="menu-nombre">Control de asistencia</div>
             <div class="menu-desc" id="home-desc-asist">—</div>
@@ -1479,30 +1479,7 @@
         </div>
       </div>
 
-      <!-- ── PARTIDO ── -->
-      <div class="home-sec" id="home-sec-partido">
-        <div class="home-sec-hdr">
-          <div class="home-sec-bar p"></div>
-          <span class="home-sec-label">Partido</span>
-          <span class="home-sec-stats" id="home-stats-p">—</span>
-        </div>
-        <div class="tarjeta-grid">
-          <div class="tarjeta-col partido" onclick="irA('pantalla-marcador')">
-            <div class="menu-icono partido">🏆</div>
-            <div>
-              <div class="menu-nombre">Marcador</div>
-              <div class="menu-desc">Tanteo en vivo</div>
-            </div>
-          </div>
-          <div class="tarjeta-col partido" onclick="irA('pantalla-actas')">
-            <div class="menu-icono partido">📄</div>
-            <div>
-              <div class="menu-nombre">Actas</div>
-              <div class="menu-desc" id="home-desc-pt">—</div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- (Partido movido a su propia pantalla, accesible desde la pelota de la barra inferior) -->
 
       <!-- ── COMPETICIÓN ── -->
       <div class="home-sec" id="home-sec-comp">
@@ -1542,6 +1519,38 @@
     <div class="pie" id="inicio-pie" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
       <button class="btn btn-sec btn-sm" onclick="irA('pantalla-importar')" style="width:auto;gap:5px;">📥 Importar desde Obsidian</button>
       <span id="inicio-version">Versión 0.40.1 · Solo para mí</span>
+    </div>
+  </div>
+
+  <!-- ══ PARTIDO (Marcador + Actas) ═══════════════ -->
+  <div id="pantalla-partido" class="pantalla">
+    <div class="cabecera">
+      <button class="btn-volver" onclick="irA('pantalla-inicio')">‹ Inicio</button>
+      <div class="cab-titulo">Partido</div>
+      <div class="cab-sub">Tanteo en vivo e historial</div>
+    </div>
+    <div class="contenido">
+      <div id="home-sec-partido">
+        <span id="home-stats-p" style="display:none;">—</span>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div class="tarjeta-menu" onclick="irA('pantalla-marcador')">
+            <div class="menu-icono partido"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M12 5.5v13M6.5 10.5v3M17.5 10.5v3"/></svg></div>
+            <div class="menu-texto">
+              <div class="menu-nombre">Marcador</div>
+              <div class="menu-desc">Tanteo en vivo</div>
+            </div>
+            <div class="menu-flecha">›</div>
+          </div>
+          <div class="tarjeta-menu" onclick="irA('pantalla-actas')">
+            <div class="menu-icono partido"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12.5h6M9 16h5"/></svg></div>
+            <div class="menu-texto">
+              <div class="menu-nombre">Actas</div>
+              <div class="menu-desc" id="home-desc-pt">—</div>
+            </div>
+            <div class="menu-flecha">›</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -2163,6 +2172,103 @@
     <div class="lightbox-inner" id="lightbox-inner"></div>
   </div>
 
+  <!-- ══ BARRA DE NAVEGACIÓN INFERIOR (rediseño) ══════════ -->
+  <style>
+    .appnav{ position:fixed; left:0; right:0; bottom:0; z-index:50; display:flex;
+             background:var(--verde); box-shadow:0 -2px 16px rgba(14,27,60,0.20);
+             padding:6px 4px; padding-bottom:calc(6px + env(safe-area-inset-bottom)); }
+    .appnav.oculto{ display:none; }
+    .appnav-btn{ flex:1; background:none; border:none; color:rgba(255,255,255,0.6);
+                 font-family:'Outfit',sans-serif; font-size:10.5px; font-weight:600;
+                 display:flex; flex-direction:column; align-items:center; gap:3px;
+                 cursor:pointer; padding:6px 2px; -webkit-tap-highlight-color:transparent; transition:color .15s; }
+    .appnav-btn .d{ font-size:21px; line-height:1; }
+    .appnav-btn.activo{ color:var(--dorado); }
+    .appnav-btn:active{ transform:scale(0.94); }
+    /* hueco para que la barra no tape el contenido */
+    .pantalla .contenido{ padding-bottom:88px; }
+    .pantalla .pie{ padding-bottom:84px; }
+  </style>
+  <!-- ══ PULIDO PRO (rediseño, pase 2) ══════════ -->
+  <style>
+    /* Borde general más sutil en toda la app */
+    :root{ --borde:#ecedf1; }
+    /* Sombras suaves en las superficies (sustituyen al borde marcado) */
+    .tarjeta-menu,.item,.stat-box,.form-card,.gestor-kpi,.gestor-card,
+    .ghd-clase,.gas-clase,.ej-check,.sesion-ej{
+      box-shadow:0 1px 2px rgba(14,27,60,0.05), 0 4px 16px rgba(14,27,60,0.07);
+    }
+    /* Quitar el borde duro (se mantiene el grosor transparente → sin reflow) */
+    .stat-box,.form-card,.gestor-kpi,.gestor-card,.ghd-clase,.gas-clase,.ej-check,.sesion-ej{
+      border-color:transparent;
+    }
+    /* Cabecera separada del contenido con sombra suave */
+    .cabecera{ box-shadow:0 6px 22px rgba(14,27,60,0.12); }
+    /* Hover de tarjetas en tono de marca (en vez del verde antiguo) */
+    .tarjeta-menu:hover,.item:hover{ box-shadow:0 8px 26px rgba(14,27,60,0.13); }
+    /* Un poco más de aire */
+    .contenido{ gap:1rem; padding-top:1.4rem; }
+    .tarjeta-menu{ padding:1.15rem 1.25rem; border-radius:16px; }
+    /* Filtros (pills) más suaves */
+    .fpill{ border-color:var(--borde); box-shadow:0 1px 2px rgba(14,27,60,0.04); }
+    .fpill.activo{ box-shadow:0 2px 9px rgba(14,27,60,0.20); }
+    /* Botón primario con sombra de marca */
+    .btn-verde{ box-shadow:0 2px 10px rgba(14,27,60,0.22); }
+  </style>
+
+  <!-- ══ SUPERPRO (rediseño, pase 3) ══════════ -->
+  <style>
+    /* Cabecera premium: degradado marino + filo dorado */
+    .cabecera{ background:linear-gradient(155deg,#16264f,#0c1733); border-bottom:2px solid var(--dorado); }
+    .cab-titulo{ letter-spacing:-0.01em; }
+    /* Barras de sección: acento dorado uniforme (fuera el arcoíris) */
+    .home-sec-bar,.home-sec-bar.e,.home-sec-bar.p,.home-sec-bar.a,.home-sec-bar.c,.home-sec-bar.pl{
+      background:var(--dorado); width:3px; height:18px; border-radius:3px;
+    }
+    /* Botones de nivel: tarjetas blancas limpias con sombra */
+    .home-plan-btn,.home-plan-btn.niv-ini,.home-plan-btn.niv-avz,.home-plan-btn.niv-comp{
+      background:#fff; border:1px solid transparent;
+      box-shadow:0 1px 2px rgba(14,27,60,0.05),0 4px 14px rgba(14,27,60,0.07);
+    }
+    .home-plan-btn .lbl{ color:var(--verde); }
+    .home-ses-btn{ border-color:transparent; box-shadow:0 1px 2px rgba(14,27,60,0.05),0 3px 12px rgba(14,27,60,0.06); }
+    /* Tarjetas de 2 columnas: sombra suave */
+    .tarjeta-col{ border-color:transparent; border-radius:16px;
+      box-shadow:0 1px 2px rgba(14,27,60,0.05),0 4px 16px rgba(14,27,60,0.07); }
+    .tarjeta-col:hover,.tarjeta-col.partido:hover{ box-shadow:0 8px 26px rgba(14,27,60,0.13); }
+    .tarjeta-col .menu-icono.partido{ background:var(--navy-suave); }
+    /* Marcador premium: degradado marino + filo dorado, equipos marino/dorado */
+    .marcador-score{ background:linear-gradient(155deg,#16264f,#0c1733);
+      border:1px solid rgba(193,154,62,0.30); box-shadow:0 10px 30px rgba(14,27,60,0.18); }
+    .marc-badge-ad{ background:var(--dorado); }
+    .marc-pts-num.ad{ color:var(--dorado); }
+    .btn-marcador{ border-width:1.5px; box-shadow:0 2px 8px rgba(14,27,60,0.06); }
+    .btn-marcador.equipo-a{ background:#eef1f8; border-color:#c3cde6; }
+    .btn-marcador.equipo-a .btn-marc-pts,.btn-marcador.equipo-a .btn-marc-nombre{ color:var(--verde); }
+    .btn-marcador.equipo-a.ganando{ background:var(--navy-suave); border-color:var(--verde); border-width:3px; }
+    .btn-marcador.equipo-b{ background:#faf3e2; border-color:#e3d3a3; }
+    .btn-marcador.equipo-b .btn-marc-pts,.btn-marcador.equipo-b .btn-marc-nombre{ color:var(--dorado); }
+    .btn-marcador.equipo-b.ganando{ background:#f4ecd6; border-color:var(--dorado); border-width:3px; }
+    /* Barra inferior: filo dorado + pastilla en el destino activo */
+    .appnav{ border-top:1px solid rgba(193,154,62,0.35); }
+    .appnav-btn.activo .d{ background:rgba(193,154,62,0.18); border-radius:12px; padding:3px 12px; }
+    /* Foco de formularios en dorado */
+    .form-input:focus,.form-select:focus,.form-textarea:focus{
+      border-color:var(--dorado); box-shadow:0 0 0 3px rgba(193,154,62,0.15); }
+    /* Iconos SVG de línea (rediseño) */
+    .appnav-btn .d{ display:flex; align-items:center; justify-content:center; }
+    .appnav-btn svg{ width:22px; height:22px; }
+    .menu-icono{ color:var(--verde); }
+    .menu-icono svg{ width:24px; height:24px; }
+  </style>
+
+  <nav id="appnav" class="appnav">
+    <button class="appnav-btn activo" data-nav="inicio"     onclick="irA('pantalla-inicio')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg></span><span>Inicio</span></button>
+    <button class="appnav-btn"        data-nav="plan"       onclick="irA('pantalla-planificacion')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 3v3M16 3v3"/></svg></span><span>Plan</span></button>
+    <button class="appnav-btn"        data-nav="ejercicios" onclick="irA('pantalla-categorias')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H20v15H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 4.5v15"/></svg></span><span>Ejercicios</span></button>
+    <button class="appnav-btn"        data-nav="partido"    onclick="irA('pantalla-partido')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M4.5 6.5c3.5 2.5 3.5 8.5 0 11M19.5 6.5c-3.5 2.5-3.5 8.5 0 11"/></svg></span><span>Partido</span></button>
+    <button class="appnav-btn"        data-nav="clases"     onclick="irA('pantalla-clases')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><path d="M16.5 5.3a2.8 2.8 0 0 1 0 5.4M18 14.4c2 .5 3.5 2.2 3.5 5.1"/></svg></span><span>Clases</span></button>
+  </nav>
 
   <script>
 
@@ -3168,7 +3274,7 @@
 
       // ── Asistencia del mes (cuadrícula, igual que la exportación) ──
       h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Asistencia por clase</div>';
-      var CEL = { pres:{txt:'✓',col:'#166534'}, falta:{txt:'✗',col:'#991b1b'}, recup:{txt:'↩',col:'#7c3aed'}, nolist:{txt:'—',col:'#9ca3af'} };
+      var CEL = { pres:{txt:'✓',col:'#166534'}, falta:{txt:'✗',col:'#991b1b'}, recup:{txt:'↩',col:'#16264f'}, nolist:{txt:'—',col:'#9ca3af'} };
       var ordDia2 = function(ds){ return ds<0 ? 8 : (ds===0 ? 7 : ds); };
       var clsA = clases.slice().sort(function(a,b){ return ordDia2(a.diaSemana)-ordDia2(b.diaSemana) || (a.franja||'').localeCompare(b.franja||''); });
       var bodyCl = '', nCl = 0;
@@ -3204,7 +3310,7 @@
         h += '<div class="asist-matriz-leyenda">' +
           '<span style="color:#166534;font-weight:700">✓</span> asistió &nbsp; ' +
           '<span style="color:#991b1b;font-weight:700">✗</span> faltó &nbsp; ' +
-          '<span style="color:#7c3aed;font-weight:700">↩</span> recup &nbsp; ' +
+          '<span style="color:#16264f;font-weight:700">↩</span> recup &nbsp; ' +
           '<span style="color:#9ca3af;font-weight:700">—</span> sin lista</div>' + bodyCl;
       }
 
@@ -4260,6 +4366,28 @@
       'pantalla-asistencia-nueva-clase','pantalla-asistencia-lista','pantalla-asistencia-resumen',
       'pantalla-asistencia-alumno'];
 
+    // ── Barra de navegación inferior (rediseño) ──
+    var NAV_GROUPS = {
+      inicio:     ['pantalla-inicio'],
+      plan:       ['pantalla-planificacion','pantalla-plan-sesiones','pantalla-nueva-sesion'],
+      ejercicios: ['pantalla-categorias','pantalla-ejercicios','pantalla-nuevo-ejercicio','pantalla-nueva-categoria'],
+      partido:    ['pantalla-partido','pantalla-marcador','pantalla-actas','pantalla-stats-jugador'],
+      clases:     ['pantalla-clases','pantalla-clases-grupo']
+    };
+    function updateBottomNav(id){
+      var nav = document.getElementById('appnav');
+      if (!nav) return;
+      var restringido = false;
+      try { restringido = _esGestor || (typeof monitorActivo==='function' && monitorActivo()) || (typeof esMonitorCuenta==='function' && esMonitorCuenta()); } catch(e){}
+      var ocultar = (id === 'pantalla-login') || restringido;
+      nav.classList.toggle('oculto', !!ocultar);
+      var grupo = null;
+      for (var k in NAV_GROUPS){ if (NAV_GROUPS[k].indexOf(id) >= 0){ grupo = k; break; } }
+      nav.querySelectorAll('.appnav-btn').forEach(function(b){
+        b.classList.toggle('activo', b.getAttribute('data-nav') === grupo);
+      });
+    }
+
     function irA(id) {
       // El gestor solo accede a su panel; el monitor solo a Asistencia.
       if (_esGestor) {
@@ -4299,6 +4427,7 @@
         var i = document.getElementById('input-cat-nombre');
         i.value = ''; i.classList.remove('form-error');
       }
+      updateBottomNav(id);
       window.scrollTo(0, 0);
     }
 
@@ -7661,7 +7790,7 @@
       var CEL = {
         pres:   { txt:'✓', col:'#166534' },
         falta:  { txt:'✗', col:'#991b1b' },
-        recup:  { txt:'↩', col:'#7c3aed' },
+        recup:  { txt:'↩', col:'#16264f' },
         nolist: { txt:'—', col:'#9ca3af' }
       };
 
@@ -7669,7 +7798,7 @@
       html += '<div class="asist-matriz-leyenda">';
       html += '<span style="color:#166534;font-weight:700">✓</span> asistió &nbsp; ';
       html += '<span style="color:#991b1b;font-weight:700">✗</span> faltó &nbsp; ';
-      html += '<span style="color:#7c3aed;font-weight:700">↩</span> recup &nbsp; ';
+      html += '<span style="color:#16264f;font-weight:700">↩</span> recup &nbsp; ';
       html += '<span style="color:#9ca3af;font-weight:700">—</span> sin lista &nbsp; ';
       html += '<span style="color:#d1d5db;font-weight:700">·</span> no aplica';
       html += '</div>';
@@ -7856,12 +7985,12 @@
       var h = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">';
       h += '<title>Asistencia · ' + mesLabel + '</title><style>';
       h += 'body{font-family:Arial,sans-serif;padding:28px 32px;color:#1a1a2e;max-width:900px;margin:0 auto;}';
-      h += 'h1{color:#7c3aed;font-size:22px;margin:0 0 2px;}';
+      h += 'h1{color:#16264f;font-size:22px;margin:0 0 2px;}';
       h += '.sub{color:#6b7280;font-size:13px;margin-bottom:22px;}';
-      h += 'h2{color:#5b21b6;font-size:15px;margin:22px 0 8px;padding-bottom:4px;border-bottom:2px solid #ede9fe;}';
-      h += 'h3{font-size:13px;color:#5b21b6;margin:14px 0 5px;}';
+      h += 'h2{color:#16264f;font-size:15px;margin:22px 0 8px;padding-bottom:4px;border-bottom:2px solid #e9ecf5;}';
+      h += 'h3{font-size:13px;color:#16264f;margin:14px 0 5px;}';
       h += 'table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px;}';
-      h += 'th{background:#ede9fe;color:#5b21b6;padding:7px 10px;text-align:left;font-weight:700;}';
+      h += 'th{background:#e9ecf5;color:#16264f;padding:7px 10px;text-align:left;font-weight:700;}';
       h += 'td{padding:7px 10px;border-bottom:1px solid #e5e7eb;}';
       h += 'tr:nth-child(even) td{background:#faf5ff;}';
       h += '.verde{color:#166534;font-weight:700;} .ambar{color:#92400e;font-weight:700;} .rojo{color:#991b1b;font-weight:700;}';
@@ -7869,14 +7998,14 @@
       h += '.tag-nuevo{font-size:10px;font-weight:800;color:#166534;background:#dcfce7;border-radius:8px;padding:1px 6px;margin-left:4px;white-space:nowrap;}';
       h += '.baja{color:#991b1b;font-weight:800;text-decoration:underline;text-decoration-color:#dc2626;text-decoration-thickness:2px;}';
       h += '.tag-baja{font-size:10px;font-weight:800;color:#991b1b;background:#fee2e2;border-radius:8px;padding:1px 6px;margin-left:4px;white-space:nowrap;}';
-      h += '.recup-pdf{color:#7c3aed;font-weight:800;}';
-      h += '.tag-recup{font-size:10px;font-weight:800;color:#5b21b6;background:#ede9fe;border-radius:8px;padding:1px 6px;margin-left:4px;white-space:nowrap;}';
+      h += '.recup-pdf{color:#16264f;font-weight:800;}';
+      h += '.tag-recup{font-size:10px;font-weight:800;color:#16264f;background:#e9ecf5;border-radius:8px;padding:1px 6px;margin-left:4px;white-space:nowrap;}';
       h += '.leyenda{font-size:11px;color:#6b7280;margin-bottom:16px;}';
       h += '.leyenda .nuevo,.leyenda .baja{margin-right:4px;}';
-      h += '.global-box{background:#f9f5ff;border:2px solid #a78bfa;border-radius:10px;padding:14px 20px;margin-bottom:22px;display:flex;gap:20px;align-items:center;}';
-      h += '.global-num{font-size:40px;font-weight:800;color:#7c3aed;line-height:1;}';
+      h += '.global-box{background:#f9f5ff;border:2px solid #c19a3e;border-radius:10px;padding:14px 20px;margin-bottom:22px;display:flex;gap:20px;align-items:center;}';
+      h += '.global-num{font-size:40px;font-weight:800;color:#16264f;line-height:1;}';
       h += '.barra-wrap{background:#e5e7eb;border-radius:4px;height:8px;width:80px;display:inline-block;vertical-align:middle;margin-left:6px;overflow:hidden;}';
-      h += '.barra-fill{height:8px;background:#7c3aed;border-radius:4px;}';
+      h += '.barra-fill{height:8px;background:#16264f;border-radius:4px;}';
       h += '@media print{body{padding:12px;} .global-box{page-break-inside:avoid;} .btn-volver{display:none;}}';
       h += '.btn-volver{display:inline-flex;align-items:center;gap:6px;background:#f3f4f6;border:none;border-radius:8px;padding:.5rem 1rem;font-size:13px;font-weight:600;cursor:pointer;font-family:Arial,sans-serif;color:#374151;margin-bottom:1.25rem;}';
       h += '.btn-volver:hover{background:#e5e7eb;}';
@@ -7965,11 +8094,11 @@
               h += '<tr><td><span class="recup-pdf">' + g + '</span> <span class="tag-recup">↩ recup</span></td>';
               var cnt = 0;
               fechas.forEach(function(f){
-                if (guests[g].indexOf(f) !== -1) { h += '<td style="text-align:center;font-weight:700;color:#7c3aed">↩</td>'; cnt++; }
+                if (guests[g].indexOf(f) !== -1) { h += '<td style="text-align:center;font-weight:700;color:#16264f">↩</td>'; cnt++; }
                 else h += '<td style="text-align:center;color:#d1d5db">·</td>';
               });
-              h += '<td style="text-align:center;font-weight:700;color:#7c3aed">' + cnt + '</td>';
-              h += '<td style="text-align:center;color:#7c3aed">recup</td></tr>';
+              h += '<td style="text-align:center;font-weight:700;color:#16264f">' + cnt + '</td>';
+              h += '<td style="text-align:center;color:#16264f">recup</td></tr>';
             });
             h += '</tbody></table>';
           });
