@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.42.0
+  TU APP DE PÁDEL — v0.42.1
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,11 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.42.1 — Planificación por nivel oculta en móvil (2026-06)
+    · La fila "Planificación · por nivel" de Inicio solo se ve en
+      pantalla ancha (ordenador). En móvil se usa "Plan" de la barra.
+      La tarjeta de Ejercicios sigue visible.
+
   v0.42.0 — Navegación práctica + categoría Individual (2026-06)
     · Barra inferior a 4 botones: Inicio · Plan · Sesiones · Partido
       (fuera "Ejercicios", que pasa a tarjeta en Inicio). La pestaña
@@ -1305,6 +1310,9 @@
        En móvil la app es de consulta; la edición se hace desde la web en el ordenador. */
     .plan-edit-toggle { display:none; }
     @media (min-width:560px){ .plan-edit-toggle { display:block; } }
+    /* Bloques que solo tienen sentido en ordenador (ocultos en móvil < 560px) */
+    .solo-ancho { display:none; }
+    @media (min-width:560px){ .solo-ancho { display:block; } }
     /* Apartado en modo edición */
     .plan-item.editable .plan-item-body { cursor:pointer; }
     .plan-item-edit-ic { font-size:13px; flex-shrink:0; }
@@ -1508,11 +1516,13 @@
           <span class="home-sec-label">Entrenamiento</span>
           <span class="home-sec-stats" id="home-stats-e">—</span>
         </div>
-        <div class="home-niveles-lbl">Planificación · por nivel</div>
-        <div class="home-plan-grid">
-          <button class="home-plan-btn niv-ini"  onclick="irPlanNivel('iniciacion')"><span class="ico">🌱</span><span class="lbl">Iniciación</span></button>
-          <button class="home-plan-btn niv-avz"  onclick="irPlanNivel('avanzado')"><span class="ico">🔥</span><span class="lbl">Avanzado</span></button>
-          <button class="home-plan-btn niv-comp" onclick="irPlanNivel('competicion')"><span class="ico">🏆</span><span class="lbl">Competición</span></button>
+        <div class="solo-ancho">
+          <div class="home-niveles-lbl">Planificación · por nivel</div>
+          <div class="home-plan-grid">
+            <button class="home-plan-btn niv-ini"  onclick="irPlanNivel('iniciacion')"><span class="ico">🌱</span><span class="lbl">Iniciación</span></button>
+            <button class="home-plan-btn niv-avz"  onclick="irPlanNivel('avanzado')"><span class="ico">🔥</span><span class="lbl">Avanzado</span></button>
+            <button class="home-plan-btn niv-comp" onclick="irPlanNivel('competicion')"><span class="ico">🏆</span><span class="lbl">Competición</span></button>
+          </div>
         </div>
         <!-- (Sesiones movido a la pestaña "Sesiones" de la barra inferior) -->
         <div class="tarjeta-menu" onclick="irA('pantalla-categorias')" style="margin-top:10px;">
@@ -1564,7 +1574,7 @@
     </div>
     <div class="pie" id="inicio-pie" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
       <button class="btn btn-sec btn-sm" onclick="irA('pantalla-importar')" style="width:auto;gap:5px;">📥 Importar desde Obsidian</button>
-      <span id="inicio-version">Versión 0.42.0 · Solo para mí</span>
+      <span id="inicio-version">Versión 0.42.1 · Solo para mí</span>
     </div>
   </div>
 
@@ -2330,7 +2340,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.42.0';
+    var APP_VERSION = '0.42.1';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
