@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.42.2
+  TU APP DE PÁDEL — v0.43.0
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,17 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.43.0 — Nuevo nivel de Sesiones: Técnica (2026-07)
+    · En "Sesiones" (hub por nivel) se añade un 6º bloque "Técnica" 🎯,
+      junto a Iniciación/Avanzado/Competición/Equipo/Individual.
+    · Pensado solo para progresiones de golpe puramente técnicas
+      (mejora de gesto), sin componente táctico. Se agrupa por golpe,
+      igual que Iniciación/Avanzado.
+    · Se detecta por la carpeta de la sesión en el vault: "Técnica" o
+      "Gesto"/"Gestos" (tolerante a mayúsculas/acentos). Creada la
+      carpeta 02 SESIONES/Técnica/ en el vault, lista para usar (el
+      script sync_padel.py ya reconocía "técnica" como tipo válido).
+
   v0.42.2 — Revertido error de v0.42.1 (2026-07)
     · Corregido: había quedado al revés. Los 3 botones de nivel
       (Iniciación · Avanzado · Competición) vuelven a verse SIEMPRE
@@ -1570,7 +1581,7 @@
     </div>
     <div class="pie" id="inicio-pie" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
       <button class="btn btn-sec btn-sm" onclick="irA('pantalla-importar')" style="width:auto;gap:5px;">📥 Importar desde Obsidian</button>
-      <span id="inicio-version">Versión 0.42.2 · Solo para mí</span>
+      <span id="inicio-version">Versión 0.43.0 · Solo para mí</span>
     </div>
   </div>
 
@@ -2336,7 +2347,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.42.2';
+    var APP_VERSION = '0.43.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -5495,6 +5506,8 @@
       var t = (ses.tematica || '').toString().toLowerCase();
       if (t.indexOf('equipo')   >= 0) return 'equipo';
       if (t.indexOf('individ')  >= 0) return 'individual';
+      if (t.indexOf('cnica')    >= 0) return 'tecnica';   // técnica / gesto técnico
+      if (t.indexOf('gesto')    >= 0) return 'tecnica';
       if (t.indexOf('competic') >= 0) return 'competicion';
       if (t.indexOf('avanz')    >= 0) return 'avanzado';
       if (t.indexOf('inicia')   >= 0) return 'iniciacion';
@@ -5589,12 +5602,16 @@
       '</div>';
     }
 
-    // Lista de niveles para Inicio (los 3 + equipo)
-    var NIV_HOME = NIVELES_CLASES.concat([{ key:'equipo', icono:'🤝', label:'Equipo' }, { key:'individual', icono:'👤', label:'Individual' }]);
+    // Lista de niveles para Inicio (los 3 + equipo + individual + técnica)
+    var NIV_HOME = NIVELES_CLASES.concat([
+      { key:'equipo',     icono:'🤝', label:'Equipo' },
+      { key:'individual', icono:'👤', label:'Individual' },
+      { key:'tecnica',    icono:'🎯', label:'Técnica' }
+    ]);
 
     function _clasesPorNivel() {
       var mapEj = _ejsById();
-      var porNivel = { iniciacion: [], avanzado: [], competicion: [], equipo: [], individual: [] };
+      var porNivel = { iniciacion: [], avanzado: [], competicion: [], equipo: [], individual: [], tecnica: [] };
       leerClases().forEach(function(c){
         var nv = nivelDeSesion(c, mapEj);
         (porNivel[nv] || porNivel.iniciacion).push(c);
