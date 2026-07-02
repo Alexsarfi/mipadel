@@ -39,6 +39,24 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.47.0 — Sync en vivo entre móviles + niveles limitados para EN2 (2026-07)
+    · Los cambios del grupo (añadir/quitar sesiones, ejercicios,
+      categorías, partidos) llegan solos al resto de móviles: la app
+      re-descarga al volver a primer plano (visibilitychange/focus) y
+      cada 5 min si está visible (mín. 60 s entre descargas), y
+      refresca la pantalla activa si es de lectura (nunca formularios).
+    · Los BORRADOS ahora se propagan: al descargar, las filas locales
+      ya sincronizadas (_ownerUid) que no están en el servidor se
+      eliminan también en local (antes se quedaban y resucitaban al
+      re-subirse). Si la consulta al servidor falla, fusión
+      conservadora como antes. No aplica a lo local nunca subido.
+    · EN2 (nivel2): del entrenamiento solo ve Iniciación y Avanzado.
+      Se ocultan el plan de Competición (Inicio y tabs de
+      Planificación) y los bloques Competición/Equipo/Individual/
+      Técnica de Sesiones; guardas en la navegación y reset del nivel
+      guardado si no está permitido. EN1 sigue solo con Asistencia;
+      EN3 y gestor ven todo.
+
   v0.46.0 — Gestión de asistencia para gestor y EN3 (2026-07)
     · El gestor deja de ser solo lectura: puede GESTIONAR la
       asistencia de todos los entrenadores de la academia (crear/
@@ -1620,7 +1638,7 @@
         <div class="home-plan-grid">
           <button class="home-plan-btn niv-ini"  onclick="irPlanNivel('iniciacion')"><span class="ico">🌱</span><span class="lbl">Iniciación</span></button>
           <button class="home-plan-btn niv-avz"  onclick="irPlanNivel('avanzado')"><span class="ico">🔥</span><span class="lbl">Avanzado</span></button>
-          <button class="home-plan-btn niv-comp" onclick="irPlanNivel('competicion')"><span class="ico">🏆</span><span class="lbl">Competición</span></button>
+          <button class="home-plan-btn niv-comp" id="home-plan-comp" onclick="irPlanNivel('competicion')"><span class="ico">🏆</span><span class="lbl">Competición</span></button>
         </div>
         <!-- (Sesiones movido a la pestaña "Sesiones" de la barra inferior) -->
       </div>
@@ -2455,7 +2473,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.46.0';
+    var APP_VERSION = '0.47.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -2737,10 +2755,12 @@
         }; });
 
         // ── Fusionar con lo local (soloLocal=true: sin eco de subida) ──
-        escribirCategorias(_mergeListas(leerCategorias(), catsServ, 'categorias'), true);
-        escribirEjercicios(_mergeListas(leerEjercicios(), ejsServ, 'ejercicios'), true);
-        escribirClases(_mergeListas(leerClases(), clasesServ, 'clases'), true);
-        escribirPartidos(_mergeListas(leerPartidos(), partsServ, 'partidos'), true);
+        // El 4º parámetro (consulta OK) activa la propagación de borrados;
+        // si una consulta falló, se mantiene la fusión conservadora.
+        escribirCategorias(_mergeListas(leerCategorias(), catsServ, 'categorias', !results[0].error), true);
+        escribirEjercicios(_mergeListas(leerEjercicios(), ejsServ, 'ejercicios', !results[1].error), true);
+        escribirClases(_mergeListas(leerClases(), clasesServ, 'clases', !results[2].error), true);
+        escribirPartidos(_mergeListas(leerPartidos(), partsServ, 'partidos', !results[3].error), true);
         escribirAsistConfig({ clases: _mergeListas(leerAsistConfig().clases||[], asistServ, 'asistencia_clases') }, true);
         escribirAsistRegistros(_mergeListas(leerAsistRegistros(), regsServ, 'asistencia_registros'), true);
 
@@ -2773,9 +2793,19 @@
     // Fusión por id: conserva el orden local y añade lo nuevo del servidor.
     // En empate de id gana el servidor (no hay updated_at todavía).
     // Ignora filas del servidor con borrado local pendiente de sincronizar.
-    function _mergeListas(local, servidor, tabla) {
+    // servidorOk=true (la consulta al servidor fue bien): las filas locales que
+    // YA estaban sincronizadas (_ownerUid) y han desaparecido del servidor se
+    // ELIMINAN también en local → los borrados de un compañero de grupo se
+    // propagan a este dispositivo (antes se quedaban y hasta resucitaban al
+    // re-subirse). Lo local nunca sincronizado (sin _ownerUid) se conserva.
+    function _mergeListas(local, servidor, tabla, servidorOk) {
       var pend = {};
       _delLeerCola().forEach(function(p){ if (p.t === tabla) pend[p.id] = true; });
+      var srvSet = {};
+      servidor.forEach(function(x){ srvSet[x.id] = true; });
+      if (servidorOk) {
+        local = local.filter(function(x){ return !x._ownerUid || srvSet[x.id]; });
+      }
       var map = {}, orden = [];
       local.forEach(function(x){ if (!(x.id in map)) orden.push(x.id); map[x.id] = x; });
       servidor.forEach(function(x) {
@@ -2805,6 +2835,50 @@
       });
       return orden.map(function(id){ return map[id]; });
     }
+
+    // ── Auto-resync: los cambios de los compañeros llegan solos ──────
+    // Antes solo se descargaba al iniciar sesión o al abrir la app; si la
+    // app quedaba abierta en el móvil no se veían los cambios del grupo.
+    // Ahora se re-descarga al VOLVER a la app (visibilitychange/focus) y
+    // cada 5 min si está visible, con un mínimo de 60 s entre descargas.
+    var _lastAutoSync = Date.now();   // el login inicial ya descarga
+    var PANTALLAS_REFRESH = {
+      'pantalla-inicio':         function(){ actualizarInicio(); },
+      'pantalla-clases-niveles': function(){ renderClasesNiveles(); },
+      'pantalla-clases':         function(){ mostrarClases(); },
+      'pantalla-planificacion':  function(){ mostrarPlanificacion(); },
+      'pantalla-categorias':     function(){ mostrarCategorias(); },
+      'pantalla-ejercicios':     function(){ mostrarEjercicios(); },
+      'pantalla-actas':          function(){ mostrarActas(); }
+    };
+    function _pantallaActivaId() {
+      var p = document.querySelector('.pantalla.activa');
+      return p ? p.id : null;
+    }
+    function _autoResync() {
+      if (!_sb || !_sbUser) return;
+      if (document.visibilityState && document.visibilityState !== 'visible') return;
+      var ahora = Date.now();
+      if (ahora - _lastAutoSync < 60000) return;
+      _lastAutoSync = ahora;
+      var act = _pantallaActivaId();
+      if (_esGestor || (typeof esGestionCuenta === 'function' && esGestionCuenta() && act === 'pantalla-gestor')) {
+        // Gestor/EN3 en el panel: recargar los datos de la academia
+        if (act === 'pantalla-gestor') cargarDatosGestor();
+        if (_esGestor) return;
+      }
+      if (_gEditUid) return;   // no pisar una edición de gestión en curso
+      _syncDownload().then(function(){
+        // Refrescar solo pantallas de lectura (nunca formularios a medias)
+        var id = _pantallaActivaId();
+        if (id && PANTALLAS_REFRESH[id]) { try { PANTALLAS_REFRESH[id](); } catch(e){} }
+      });
+    }
+    document.addEventListener('visibilitychange', function(){
+      if (document.visibilityState === 'visible') _autoResync();
+    });
+    window.addEventListener('focus', _autoResync);
+    setInterval(_autoResync, 5 * 60 * 1000);
 
     // ── Sync: localStorage → Supabase ─────────────────────────
 
@@ -3239,6 +3313,11 @@
     // Cuentas con acceso al panel de gestión de la academia: gestor y EN3 (nivel3).
     // EN1 y EN2 (nivel2) NO gestionan a otros.
     function esGestionCuenta() { return _esGestor || !!(_sbGrupo && _sbGrupo.rol === 'nivel3'); }
+    // EN2 (nivel2): del entrenamiento solo ve Iniciación y Avanzado
+    // (ni Competición ni Equipo/Individual/Técnica), también en Sesiones.
+    function esEN2Cuenta() { return !!(_sbGrupo && _sbGrupo.rol === 'nivel2'); }
+    var NIVELES_EN2 = ['iniciacion','avanzado'];
+    function nivelPermitido(key) { return !esEN2Cuenta() || NIVELES_EN2.indexOf(key) >= 0; }
     function _monitorGuardar(m) { _lzSet('padel-monitor', JSON.stringify(m)); }
 
     function monitorActivar() {
@@ -4348,6 +4427,7 @@
 
     function _planGuardar(p) { try { escribirPlan(p); } catch (e) { console.warn('plan no se pudo guardar:', e); } }
     function planSetNivel(nv) {
+      if (!nivelPermitido(nv)) nv = 'iniciacion';
       var p = leerPlan(); p.nivel = nv;
       mostrarPlanificacion(); window.scrollTo(0,0);
       _planGuardar(p);
@@ -4830,6 +4910,8 @@
     function mostrarPlanificacion() {
       _planSesCache = null;   // refresca clases/ejercicios para las sesiones inline
       var p = leerPlan();
+      // EN2: si tenía guardado un nivel no permitido, cae a Iniciación
+      if (!nivelPermitido(p.nivel)) { p.nivel = 'iniciacion'; _planGuardar(p); }
       var nivel = p.nivel;
       var cont0 = planContenido(p);
       var meses = cont0[nivel] || {};
@@ -4841,9 +4923,9 @@
         (nivel === 'competicion' ? 'ciclo + áreas' : etapas.length + ' etapas') + (edit ? ' · editando' : '');
       var h = '';
 
-      // Tabs de nivel
+      // Tabs de nivel (EN2 solo ve Iniciación y Avanzado)
       h += '<div class="plan-nivelbar nivelbar">';
-      PLAN_NIVELES_META.forEach(function(n){
+      PLAN_NIVELES_META.filter(function(n){ return nivelPermitido(n.key); }).forEach(function(n){
         var act = n.key === nivel ? ' activo' : '';
         h += '<button class="nivel-btn' + act + '" onclick="planSetNivel(\'' + n.key + '\')">' +
              '<span class="nivel-btn-ico">' + n.icono + '</span>' +
@@ -5030,6 +5112,9 @@
       // "Mi academia": solo para EN3 (el gestor ya vive en su panel)
       var acadBtn = document.getElementById('home-btn-academia');
       if (acadBtn) acadBtn.style.display = (!mon && esGestionCuenta() && !_esGestor) ? 'flex' : 'none';
+      // EN2: sin botón de plan de Competición
+      var compBtn = document.getElementById('home-plan-comp');
+      if (compBtn) compBtn.style.display = nivelPermitido('competicion') ? '' : 'none';
       var pie = document.getElementById('inicio-pie');
       if (pie) pie.style.display = mon ? 'none' : 'flex';
 
@@ -6129,7 +6214,7 @@
       var cont = document.getElementById('home-niveles');
       if (!cont) return;
       var porNivel = _clasesPorNivel();
-      cont.innerHTML = NIV_HOME.map(function(n){
+      cont.innerHTML = NIV_HOME.filter(function(n){ return nivelPermitido(n.key); }).map(function(n){
         return '<button class="home-niv-btn" onclick="irClasesNivel(\'' + n.key + '\')">' +
           '<span class="home-niv-ico">' + n.icono + '</span>' +
           '<span class="home-niv-lbl">' + n.label + '</span>' +
@@ -6143,7 +6228,7 @@
       var cont = document.getElementById('clases-niveles-cont');
       if (!cont) return;
       var porNivel = _clasesPorNivel();
-      cont.innerHTML = NIV_HOME.map(function(n){
+      cont.innerHTML = NIV_HOME.filter(function(n){ return nivelPermitido(n.key); }).map(function(n){
         return '<button class="home-niv-btn" onclick="irClasesNivel(\'' + n.key + '\')">' +
           '<span class="home-niv-ico">' + n.icono + '</span>' +
           '<span class="home-niv-lbl">' + n.label + '</span>' +
@@ -6153,7 +6238,10 @@
     }
 
     // Inicio → Planificación de un nivel concreto (un clic).
-    function irPlanNivel(nivel) { var p = leerPlan(); p.nivel = nivel; _planGuardar(p); irA('pantalla-planificacion'); }
+    function irPlanNivel(nivel) {
+      if (!nivelPermitido(nivel)) nivel = 'iniciacion';
+      var p = leerPlan(); p.nivel = nivel; _planGuardar(p); irA('pantalla-planificacion');
+    }
     // Inicio → desplegable de Sesiones (muestra los niveles).
     function toggleHomeSesiones() {
       var drop = document.getElementById('home-ses-drop'), btn = document.getElementById('home-ses-btn');
@@ -6171,11 +6259,16 @@
       if (btn) btn.classList.toggle('open', open);
     }
 
-    function irClasesNivel(nivel) { nivelClasesSel = nivel; grupoClasesSel = null; irA('pantalla-clases'); }
+    function irClasesNivel(nivel) {
+      if (!nivelPermitido(nivel)) nivel = 'iniciacion';
+      nivelClasesSel = nivel; grupoClasesSel = null; irA('pantalla-clases');
+    }
     function irClasesGrupo(key)   { grupoClasesSel = key;   irA('pantalla-clases-grupo'); }
 
     // Pantalla de NIVEL: botones por golpe/intención (cada uno abre sus sesiones).
     function mostrarClases() {
+      // EN2: nunca aterrizar en un nivel no permitido
+      if (!nivelPermitido(nivelClasesSel)) { nivelClasesSel = 'iniciacion'; grupoClasesSel = null; }
       var mapEj     = _ejsById();
       var hub       = document.getElementById('clases-hub');
       var subClases = document.getElementById('sub-clases');
