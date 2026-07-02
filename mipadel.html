@@ -39,6 +39,21 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.48.0 — Detalle del gestor sin ruido: clases dadas agrupadas por día (2026-07)
+    · "Clases dadas": el nombre del día ya no se repite por cada
+      franja. Cada día de la semana es una tarjeta con cabecera
+      sombreada (Miércoles · 2 tramos · 7 dadas) y dentro sus
+      tramos horarios con el calendario de chips de siempre.
+    · Los dos apartados se fusionan: desaparece "Asistencia por
+      días". Cada chip del calendario (mismo tamaño) es ahora un
+      BOTÓN: al pulsarlo se abre debajo del tramo un desplegable
+      con la asistencia de esa fecha (✓/✗/↩, sin lista o sin
+      clase), lo que antes mostraba el apartado eliminado.
+    · Las clases extra aparecen como chips "+N" con borde
+      discontinuo dentro de su franja (antes eran una línea aparte).
+    · Solo un desplegable abierto por tramo; el chip activo se
+      marca con un aro.
+
   v0.47.0 — Sync en vivo entre móviles + niveles limitados para EN2 (2026-07)
     · Los cambios del grupo (añadir/quitar sesiones, ejercicios,
       categorías, partidos) llegan solos al resto de móviles: la app
@@ -761,10 +776,26 @@
     .ghd-dur { font-size:11px; font-weight:700; color:var(--lila); background:var(--lila-suave); border-radius:20px; padding:1px 8px; }
     .ghd-cont { margin-left:auto; font-size:12px; font-weight:800; color:var(--verde); }
     .ghd-dias { display:flex; flex-wrap:wrap; gap:5px; }
-    .ghd-day { min-width:26px; height:26px; padding:0 4px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; }
+    .ghd-day { min-width:26px; height:26px; padding:0 4px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; border:none; font-family:inherit; cursor:default; }
     .ghd-day.dada { background:#dcfce7; color:#166534; }
     .ghd-day.nodada { background:#fee2e2; color:#991b1b; }
     .ghd-day.sinlista { background:#f3f4f6; color:#9ca3af; }
+    /* Chips-botón del calendario (abren la asistencia de esa fecha) */
+    button.ghd-day { cursor:pointer; -webkit-tap-highlight-color:transparent; transition:box-shadow .12s; }
+    button.ghd-day:active { transform:scale(0.92); }
+    button.ghd-day.on { box-shadow:0 0 0 2px var(--verde); }
+    .ghd-day.extra { outline:1.5px dashed #b45309; outline-offset:-1.5px; }
+    /* Tarjeta por día de la semana (el nombre del día, una sola vez) */
+    .ghd-diacard { background:var(--blanco); border:1.5px solid var(--borde); border-radius:13px; margin-bottom:10px; overflow:hidden; }
+    .ghd-diacard-hdr { display:flex; align-items:center; justify-content:space-between; gap:8px; background:var(--verde-suave); padding:0.55rem 0.85rem; font-size:13.5px; font-weight:800; color:var(--verde); }
+    .ghd-diacard-tot { font-size:11.5px; font-weight:700; color:var(--gris); }
+    .ghd-diacard-body { padding:0.25rem 0.85rem 0.55rem; }
+    .ghd-tramo { padding:0.55rem 0; border-bottom:1px solid var(--borde); }
+    .ghd-tramo:last-child { border-bottom:none; }
+    /* Desplegable de asistencia bajo el tramo */
+    .gdd-det { margin-top:8px; background:#f8fafc; border:1px solid var(--borde); border-radius:10px; padding:0.55rem 0.7rem; }
+    .gdd-hdr { display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:800; color:var(--texto); }
+    .gdd-hdr .gad-estado { margin-left:auto; }
     .ghd-extra { font-size:12px; color:#16264f; font-weight:600; margin-top:7px; }
     .ghd-suma { background:var(--verde-suave); border-radius:12px; padding:0.6rem 0.9rem; margin-top:6px; }
     .ghd-suma-row { display:flex; justify-content:space-between; align-items:center; font-size:13.5px; color:var(--texto); padding:3px 0; }
@@ -2473,7 +2504,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.47.0';
+    var APP_VERSION = '0.48.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -3608,7 +3639,11 @@
       // datos de ESTE entrenador (clases, alumnos, listas). Gestor y EN3.
       h += '<button class="btn btn-verde" style="margin:0 0 1.1rem;" onclick="gestorGestionar()">✏️ Gestionar clases y listas</button>';
 
-      // ── Horario: clases dadas del mes (dada / no dada / sin lista) ──
+      // ── Clases dadas del mes, agrupadas por DÍA de la semana ──
+      // El nombre del día aparece UNA vez (cabecera sombreada) y debajo sus
+      // tramos horarios. Cada día del calendario es un BOTÓN (mismo tamaño):
+      // al pulsarlo se abre debajo del tramo la lista de asistencia de esa
+      // fecha (lo que antes vivía en el apartado "Asistencia por días").
       h += '<div class="grupo-titulo">Clases dadas · ' + _gEsc(mesLabel) + '</div>';
       if (!clases.length) {
         h += '<p class="ajustes-desc">Sin clases configuradas.</p>';
@@ -3622,123 +3657,121 @@
           '<span><span class="ghd-day dada" style="display:inline-flex;width:18px;height:18px;min-width:18px;">✓</span> dada</span>' +
           '<span><span class="ghd-day nodada" style="display:inline-flex;width:18px;height:18px;min-width:18px;">✗</span> no dada</span>' +
           '<span><span class="ghd-day sinlista" style="display:inline-flex;width:18px;height:18px;min-width:18px;">–</span> sin lista</span>' +
+          '<span style="margin-left:auto;">toca un día para ver su lista</span>' +
         '</div>';
+
+        // Detalle de asistencia de una clase en una fecha (desplegable del chip)
+        function _gddDetalle(clase, f, reg, extra) {
+          var p = f.split('-');
+          var s = '<div class="gdd-hdr">' + _GDIASL[new Date(+p[0],+p[1]-1,+p[2]).getDay()] + ' ' + parseInt(p[2],10) + '/' + p[1] +
+                  (extra ? ' <span class="gad-extra">extra</span>' : '');
+          if (reg && reg.sinClase) {
+            return s + ' <span class="gad-estado sin">🚫 Sin clase</span></div>';
+          }
+          if (!reg) {
+            s += ' <span class="gad-estado nolista">— Sin lista</span></div>';
+            var activos = alumnosActivos(clase, f);
+            if (activos.length) s += '<div class="gad-alumnos">' + activos.map(function(n){
+              return '<span class="gad-al pend">' + _gEsc(n) + '</span>';
+            }).join('') + '</div>';
+            return s;
+          }
+          var activos2 = alumnosActivos(clase, f);
+          s += ' <span class="gad-estado ok">' + (reg.presentes||[]).length + '/' + activos2.length + '</span></div>';
+          var chips = '';
+          activos2.forEach(function(n){
+            var ok = (reg.presentes||[]).indexOf(n) !== -1;
+            chips += '<span class="gad-al ' + (ok?'si':'no') + '">' + (ok?'✓ ':'✗ ') + _gEsc(n) + '</span>';
+          });
+          // Recuperaciones: presentes que no son alumnos activos de la clase
+          (reg.presentes||[]).forEach(function(n){
+            if (activos2.indexOf(n) === -1) chips += '<span class="gad-al rec">↩ ' + _gEsc(n) + '</span>';
+          });
+          if (chips) s += '<div class="gad-alumnos">' + chips + '</div>';
+          return s;
+        }
+
+        // Agrupar clases por día de la semana (el día se pinta UNA vez)
+        var porDiaSem = {};
         cls.forEach(function(c){
-          var dn  = (c.diaSemana>=0) ? _GDIASL[c.diaSemana] : '(sin día)';
-          var dur = _duracionFranja(c.franja);
-          var fechas = fechasClaseEnMes(c, mesISO);
-          var cf = regCF[c.id] || {};
-          var dadas = 0, chips = '';
-          fechas.forEach(function(f){
-            var reg = cf[f], st;
-            if (reg && !reg.sinClase) { st='dada'; dadas++; }
-            else if (reg && reg.sinClase) { st='nodada'; }
-            else { st='sinlista'; }
-            chips += '<span class="ghd-day '+st+'">' + parseInt(f.split('-')[2],10) + '</span>';
-          });
-          // Clases extra: registros de esta clase en una fecha que NO es su día habitual
-          var extras = [];
-          Object.keys(cf).forEach(function(f){
-            if (fechas.indexOf(f) === -1 && cf[f] && !cf[f].sinClase) extras.push(f);
-          });
-          extras.sort();
-          var totalDadas = dadas + extras.length;
-
-          h += '<div class="ghd-clase">';
-          h += '<div class="ghd-clase-hdr"><span class="ghd-dia">' + _gEsc(dn) + '</span>';
-          if (c.franja) h += '<span class="ghd-fr">' + _gEsc(c.franja) + '</span>';
-          if (_durLabel(dur)) h += '<span class="ghd-dur">' + _durLabel(dur) + '</span>';
-          h += '<span class="ghd-cont">' + totalDadas + ' dada' + (totalDadas!==1?'s':'') + '</span></div>';
-          h += '<div class="ghd-dias">' + (chips || '<span class="ajustes-desc" style="margin:0;">sin días este mes</span>') + '</div>';
-          extras.forEach(function(f){
-            var p = f.split('-');
-            var dw = _GDIAS[new Date(+p[0], +p[1]-1, +p[2]).getDay()];
-            h += '<div class="ghd-extra">+ Clase extra el ' + p[2] + '/' + p[1] + ' (' + dw + ')</div>';
-          });
-          h += '</div>';
+          var k = (c.diaSemana >= 0) ? String(c.diaSemana) : 'x';
+          (porDiaSem[k] = porDiaSem[k] || []).push(c);
         });
-        // (El sumatorio 1h/1h30 vive ahora en el KPI "Clases dadas" de arriba)
-      }
+        var ordenDias = ['1','2','3','4','5','6','0','x'].filter(function(k){ return !!porDiaSem[k]; });
 
-      // ── Asistencia del mes: un desplegable por DÍA; dentro, todos los
-      // tramos horarios de ese día (así no hay que abrir hora por hora) ──
-      h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Asistencia por días</div>';
-      // fecha → [{clase, reg|null}]
-      var porDia = {};
-      function _pd(f){ if(!porDia[f]) porDia[f]=[]; return porDia[f]; }
-      var regPorClaseFecha = {};
-      regsMes.forEach(function(r){ regPorClaseFecha[r.claseId + '|' + r.fecha] = r; });
-      clases.forEach(function(clase){
-        fechasClaseEnMes(clase, mesISO).forEach(function(f){
-          _pd(f).push({ clase:clase, reg: regPorClaseFecha[clase.id + '|' + f] || null });
+        ordenDias.forEach(function(k){
+          var dn = (k === 'x') ? '(sin día)' : _GDIASL[+k];
+          var clasesDia = porDiaSem[k];
+          // Total dadas del día (todas sus franjas) para la cabecera
+          var totDia = 0;
+          var bloques = '';
+          clasesDia.forEach(function(c){
+            var dur = _duracionFranja(c.franja);
+            var fechas = fechasClaseEnMes(c, mesISO);
+            var cf = regCF[c.id] || {};
+            var dadas = 0, chips = '', dets = '';
+            function _chip(f, st, extra) {
+              var did = 'gdd-' + c.id + '-' + f;
+              chips += '<button type="button" class="ghd-day ' + st + (extra?' extra':'') + '" onclick="gestorToggleDet(\'' + did + '\',this)">' +
+                       (extra?'+':'') + parseInt(f.split('-')[2],10) + '</button>';
+              dets  += '<div class="gdd-det" id="' + did + '" style="display:none;">' +
+                       _gddDetalle(c, f, cf[f] || null, extra) + '</div>';
+            }
+            fechas.forEach(function(f){
+              var reg = cf[f], st;
+              if (reg && !reg.sinClase) { st='dada'; dadas++; }
+              else if (reg && reg.sinClase) { st='nodada'; }
+              else { st='sinlista'; }
+              _chip(f, st, false);
+            });
+            // Clases extra: registros en fecha que NO es su día habitual
+            var extras = [];
+            Object.keys(cf).forEach(function(f){
+              if (fechas.indexOf(f) === -1 && cf[f] && !cf[f].sinClase) extras.push(f);
+            });
+            extras.sort();
+            extras.forEach(function(f){ dadas++; _chip(f, 'dada', true); });
+            totDia += dadas;
+
+            bloques += '<div class="ghd-tramo">';
+            bloques += '<div class="ghd-clase-hdr" style="margin-bottom:7px;">' +
+              '<span class="ghd-fr" style="font-weight:800;color:var(--texto);">' + _gEsc(c.franja||'—') + '</span>' +
+              (c.nombre ? '<span class="ghd-fr">' + _gEsc(c.nombre) + '</span>' : '') +
+              (_durLabel(dur) ? '<span class="ghd-dur">' + _durLabel(dur) + '</span>' : '') +
+              '<span class="ghd-cont">' + dadas + ' dada' + (dadas!==1?'s':'') + '</span></div>';
+            bloques += '<div class="ghd-dias">' + (chips || '<span class="ajustes-desc" style="margin:0;">sin días este mes</span>') + '</div>';
+            bloques += dets;
+            bloques += '</div>';
+          });
+          h += '<div class="ghd-diacard">' +
+            '<div class="ghd-diacard-hdr"><span>' + _gEsc(dn) + '</span>' +
+            '<span class="ghd-diacard-tot">' + clasesDia.length + ' tramo' + (clasesDia.length!==1?'s':'') + ' · ' + totDia + ' dada' + (totDia!==1?'s':'') + '</span></div>' +
+            '<div class="ghd-diacard-body">' + bloques + '</div></div>';
         });
-      });
-      // Clases extra (registro en fecha que no es el día habitual de la clase)
-      regsMes.forEach(function(r){
-        var clase = clases.filter(function(c){ return c.id===r.claseId; })[0];
-        if (!clase) return;
-        var ya = _pd(r.fecha).some(function(it){ return it.clase.id === clase.id; });
-        if (!ya) _pd(r.fecha).push({ clase:clase, reg:r, extra:true });
-      });
-      var diasMes = Object.keys(porDia).sort();
-      if (!diasMes.length) {
-        h += '<p class="ajustes-desc">Sin clases este mes.</p>';
-      } else {
-        h += '<div class="asist-matriz-leyenda">' +
+        // (El sumatorio 1h/1h30 vive en el KPI "Clases dadas" de arriba)
+        h += '<div class="asist-matriz-leyenda" style="margin-top:0.5rem;">' +
           '<span style="color:#166534;font-weight:700">✓</span> asistió &nbsp; ' +
           '<span style="color:#991b1b;font-weight:700">✗</span> faltó &nbsp; ' +
           '<span style="color:#16264f;font-weight:700">↩</span> recup &nbsp; ' +
           '<span style="color:#9ca3af;font-weight:700">—</span> sin lista</div>';
-        var hoyISO = hoyLocal();
-        diasMes.forEach(function(f){
-          var items = porDia[f].slice().sort(function(a,b){ return (a.clase.franja||'').localeCompare(b.clase.franja||''); });
-          var p = f.split('-');
-          var dw = new Date(+p[0], +p[1]-1, +p[2]).getDay();
-          // Resumen del día para el encabezado
-          var pres=0, aus=0, conLista=0;
-          items.forEach(function(it){
-            if (it.reg && !it.reg.sinClase) { conLista++; pres += (it.reg.presentes||[]).length; aus += (it.reg.ausentes||[]).length; }
-          });
-          var metaDia = items.length + ' tramo' + (items.length!==1?'s':'') +
-            (conLista ? ' · ' + pres + '✓ ' + aus + '✗' : (f <= hoyISO ? ' · sin listas' : ''));
-          h += '<details class="gas-clase"><summary class="gas-sum">' +
-            '<span class="gas-dia">' + _GDIASL[dw] + ' ' + parseInt(p[2],10) + '</span>' +
-            '<span class="gas-meta">' + metaDia + '</span>' +
-            '<span class="gas-chev">▾</span></summary><div class="gas-body">';
-          items.forEach(function(it){
-            var clase = it.clase, reg = it.reg;
-            h += '<div class="gad-tramo"><div class="gad-tramo-hdr"><span class="gad-fr">' + _gEsc(clase.franja||'—') + '</span>' +
-              (clase.nombre ? '<span class="gad-nom">' + _gEsc(clase.nombre) + '</span>' : '') +
-              (it.extra ? '<span class="gad-extra">extra</span>' : '');
-            if (reg && reg.sinClase) {
-              h += '<span class="gad-estado sin">🚫 Sin clase</span></div>';
-            } else if (!reg) {
-              h += '<span class="gad-estado nolista">— Sin lista</span></div>';
-              var activos = alumnosActivos(clase, f);
-              if (activos.length) h += '<div class="gad-alumnos">' + activos.map(function(n){
-                return '<span class="gad-al pend">' + _gEsc(n) + '</span>';
-              }).join('') + '</div>';
-            } else {
-              var activos2 = alumnosActivos(clase, f);
-              h += '<span class="gad-estado ok">' + (reg.presentes||[]).length + '/' + activos2.length + '</span></div>';
-              var chips = '';
-              activos2.forEach(function(n){
-                var ok = (reg.presentes||[]).indexOf(n) !== -1;
-                chips += '<span class="gad-al ' + (ok?'si':'no') + '">' + (ok?'✓ ':'✗ ') + _gEsc(n) + '</span>';
-              });
-              // Recuperaciones: presentes que no son alumnos activos de la clase
-              (reg.presentes||[]).forEach(function(n){
-                if (activos2.indexOf(n) === -1) chips += '<span class="gad-al rec">↩ ' + _gEsc(n) + '</span>';
-              });
-              if (chips) h += '<div class="gad-alumnos">' + chips + '</div>';
-            }
-            h += '</div>';
-          });
-          h += '</div></details>';
-        });
       }
 
       cont.innerHTML = h;
+    }
+
+    // Abre/cierra el desplegable de asistencia de un día (chip del calendario)
+    function gestorToggleDet(id, btn) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      var abrir = el.style.display === 'none';
+      // Solo un desplegable abierto por tramo: cierra los hermanos
+      var tramo = el.parentNode;
+      if (abrir && tramo) {
+        tramo.querySelectorAll('.gdd-det').forEach(function(d){ d.style.display = 'none'; });
+        tramo.querySelectorAll('.ghd-day.on').forEach(function(b){ b.classList.remove('on'); });
+      }
+      el.style.display = abrir ? 'block' : 'none';
+      if (btn) btn.classList.toggle('on', abrir);
     }
 
     // Sumatorio de clases dadas del mes por duración (1h / 1h30 / otras)
