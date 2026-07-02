@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.43.0
+  TU APP DE PÁDEL — v0.45.0
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,33 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.45.0 — Rol 'monitor' renombrado a 'EN1' (2026-07)
+    · El rol de cuenta que antes se llamaba 'monitor' pasa a llamarse
+      'en1' (mismo comportamiento: bloqueo permanente a solo
+      Asistencia, con su propia asistencia, sin PIN, sale con
+      "Cerrar sesión"). Badge de Inicio: "🔒 EN1" en vez de
+      "🔒 monitor".
+    · Requiere ejecutar la migración v0.45 de supabase_schema.sql
+      (renombra las filas existentes y actualiza el CHECK constraint
+      de grupo_miembros.rol) una sola vez en Supabase.
+    · El "modo monitor" local con PIN (independiente del rol de
+      cuenta, ya retirado de la interfaz) NO se ha tocado: sigue
+      siendo un mecanismo aparte y conserva su nombre interno.
+
+  v0.44.0 — Plan sincronizado entre cuentas del grupo (2026-07)
+    · El Plan (Planificación: apartados, sesiones enlazadas, biblioteca
+      y marcados "trabajado") dejaba de verse igual en cada cuenta
+      porque solo vivía en localStorage del dispositivo. Ahora se
+      sincroniza vía Supabase (tabla plan_grupo): una fila compartida
+      por TODO el grupo, igual que categorías/ejercicios/clases.
+    · Requiere ejecutar la migración v0.44 de supabase_schema.sql
+      (tabla plan_grupo + RLS) una sola vez en el proyecto Supabase.
+    · La primera cuenta del grupo que entre con esta versión sube su
+      plan local para sembrar la fila compartida; el resto de cuentas
+      (EN2, EN3...) lo descargan solo con volver a iniciar sesión.
+    · etapasAbiertas/analisisAbierto/nivel seleccionado siguen siendo
+      solo locales (estado de pantalla, no contenido de entrenamiento).
+
   v0.43.0 — Nuevo nivel de Sesiones: Técnica (2026-07)
     · En "Sesiones" (hub por nivel) se añade un 6º bloque "Técnica" 🎯,
       junto a Iniciación/Avanzado/Competición/Equipo/Individual.
@@ -2347,7 +2374,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.43.0';
+    var APP_VERSION = '0.45.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -2361,7 +2388,7 @@
     var _sb     = null;   // cliente Supabase
     var _sbUser = null;   // usuario actual { id, email }
     var _sbGrupo = null;  // { id: uuid, rol: 'nivel2'|'nivel3' } | null
-    var _esMonitor = false; // true si la cuenta tiene rol 'monitor' (acceso solo a Asistencia)
+    var _esEN1 = false; // true si la cuenta tiene rol 'en1' (antes 'monitor'; acceso solo a Asistencia)
     var _esGestor  = false; // true si la cuenta tiene rol 'gestor' (panel de asistencia global, solo lectura)
 
     function _sbConfigurado() {
@@ -2379,7 +2406,7 @@
         _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         _sb.auth.onAuthStateChange(function(event, session) {
           _sbUser = session ? { id: session.user.id, email: session.user.email } : null;
-          if (!_sbUser) { _sbGrupo = null; _esMonitor = false; _esGestor = false; }
+          if (!_sbUser) { _sbGrupo = null; _esEN1 = false; _esGestor = false; }
           if (event === 'SIGNED_IN') {
             _authActualizarBadge();
             _fetchGrupo(_sbUser.id).then(function() {
@@ -2473,7 +2500,7 @@
       if (_sbUser) {
         badge.style.display = 'flex';
         var rolTxt = '';
-        if (_esMonitor) rolTxt = ' · 🔒 monitor';
+        if (_esEN1) rolTxt = ' · 🔒 EN1';
         else if (_esGestor) rolTxt = ' · 📊 gestor';
         else if (_sbGrupo) rolTxt = ' · ' + (_sbGrupo.rol === 'nivel3' ? '★ N3' : 'N2');
         emailEl.textContent = _sbUser.email + rolTxt;
@@ -2489,10 +2516,10 @@
         .eq('user_id', uid).maybeSingle()
         .then(function(r) {
           var rol = r.data ? r.data.rol : null;
-          _esMonitor = (rol === 'monitor');
+          _esEN1 = (rol === 'en1');
           _esGestor  = (rol === 'gestor');
-          // Monitor y gestor trabajan en solitario (no se unen al sync de grupo).
-          _sbGrupo = (rol && rol !== 'monitor' && rol !== 'gestor')
+          // EN1 y gestor trabajan en solitario (no se unen al sync de grupo).
+          _sbGrupo = (rol && rol !== 'en1' && rol !== 'gestor')
                        ? { id: r.data.grupo_id, rol: rol } : null;
           _authActualizarBadge();
           // El perfil (correo/nombre) se guarda en Supabase para que un gestor
@@ -2503,12 +2530,12 @@
           // (el rol se resuelve después de pintar la pantalla inicial).
           if (_esGestor) {
             irA('pantalla-gestor');
-          } else if (_esMonitor) {
+          } else if (_esEN1) {
             irA('pantalla-inicio');
           } else if (document.getElementById('pantalla-inicio').classList.contains('activa')) {
             actualizarInicio();
           }
-        }).catch(function() { _sbGrupo = null; _esMonitor = false; _esGestor = false; });
+        }).catch(function() { _sbGrupo = null; _esEN1 = false; _esGestor = false; });
     }
 
     // Guarda en Supabase la ficha del usuario (correo + nombre) para que un
@@ -2540,7 +2567,7 @@
     // limpiarlos para que cada entrenador/monitor vea solo lo suyo.
     function _limpiarCachesCuenta() {
       ['padel-categorias','padel-ejercicios','padel-clases','padel-partidos',
-       'padel-asistencia-cfg','padel-asistencia-reg'].forEach(function(k){
+       'padel-asistencia-cfg','padel-asistencia-reg','padel-plan'].forEach(function(k){
         try { localStorage.removeItem(k); } catch(e){}
       });
     }
@@ -2558,7 +2585,7 @@
       try { lastUid = localStorage.getItem('padel-uid'); } catch(e){}
       // Un monitor nunca debe heredar datos del dispositivo: siempre parte
       // limpio y carga solo lo suyo desde Supabase.
-      if (_esMonitor || (lastUid && lastUid !== uid)) { _limpiarCachesCuenta(); }
+      if (_esEN1 || (lastUid && lastUid !== uid)) { _limpiarCachesCuenta(); }
       try { localStorage.setItem('padel-uid', uid); } catch(e){}
       var gid = _sbGrupo ? _sbGrupo.id : null;
       // Tablas compartidas: filtra por grupo si el entrenador pertenece a uno
@@ -2570,10 +2597,13 @@
                      : _sb.from('clases').select('*').eq('user_id', uid).order('fecha', { ascending: true });
       var qPrt = gid ? _sb.from('partidos').select('*').eq('grupo_id', gid).order('fecha', { ascending: false })
                      : _sb.from('partidos').select('*').eq('user_id', uid).order('fecha', { ascending: false });
+      // Plan: una sola fila por grupo (o por cuenta en solitario)
+      var qPlan = _sb.from('plan_grupo').select('*').eq('scope_id', gid || uid).maybeSingle();
       return Promise.all([
         qCat, qEj, qCls, qPrt,
         _sb.from('asistencia_clases').select('*').eq('user_id', uid),    // siempre privada
-        _sb.from('asistencia_registros').select('*').eq('user_id', uid)  // siempre privada
+        _sb.from('asistencia_registros').select('*').eq('user_id', uid), // siempre privada
+        qPlan
       ]).then(function(results) {
         // ── Mapear filas del servidor al formato local ──
         // _ownerUid preserva el user_id original del creador para no
@@ -2632,6 +2662,25 @@
         escribirPartidos(_mergeListas(leerPartidos(), partsServ, 'partidos'), true);
         escribirAsistConfig({ clases: _mergeListas(leerAsistConfig().clases||[], asistServ, 'asistencia_clases') }, true);
         escribirAsistRegistros(_mergeListas(leerAsistRegistros(), regsServ, 'asistencia_registros'), true);
+
+        // ── Plan: el servidor manda en lo compartido (contenido/biblioteca/
+        // hechos). Si aún no hay fila en el servidor pero sí hay plan local
+        // (cuenta que ya tenía plan antes de esta versión), lo sube tal cual
+        // para sembrar la fila del grupo.
+        var planServ = results[6] && results[6].data;
+        if (planServ) {
+          var pLocal = leerPlan();
+          pLocal.contenido       = planServ.contenido  || pLocal.contenido;
+          pLocal.biblioteca      = planServ.biblioteca || pLocal.biblioteca;
+          pLocal.hechos          = planServ.hechos      || pLocal.hechos || {};
+          pLocal.planEtapasV     = planServ.plan_etapas_v   != null ? planServ.plan_etapas_v   : pLocal.planEtapasV;
+          pLocal.bibVersion      = planServ.bib_version     != null ? planServ.bib_version     : pLocal.bibVersion;
+          pLocal.bibEstrategias  = planServ.bib_estrategias != null ? planServ.bib_estrategias : pLocal.bibEstrategias;
+          escribirPlan(pLocal, true);
+        } else {
+          var pPropio = leerPlan();
+          if (pPropio.contenido) _bgUpsertPlan(pPropio);
+        }
 
         actualizarInicio && actualizarInicio();
         // Subida deliberada: empuja lo local que faltaba en el servidor
@@ -2770,6 +2819,32 @@
           filas.map(function(x){ return _upMap[tabla](x, uid, gid); }),
           { onConflict: conflict }
         ).then(function(r){ if (r.error) console.warn('bg sync', tabla, r.error); });
+      }, 0);
+    }
+
+    // Upsert en background del Plan (Planificación). A diferencia del resto de
+    // tablas no es una lista de filas: es UNA fila por grupo (o por cuenta si
+    // se trabaja en solitario), compartida por todos los miembros del grupo.
+    // El gestor no tiene plan propio; EN1 tampoco accede a Planificación.
+    function _bgUpsertPlan(p) {
+      if (!_sb || !_sbUser || _esGestor) return;
+      var uid = _sbUser.id;
+      var gid = _sbGrupo ? _sbGrupo.id : null;
+      var scope = gid || uid;
+      var row = {
+        scope_id:        scope,
+        contenido:       p.contenido || {},
+        biblioteca:      p.biblioteca || [],
+        hechos:          p.hechos || {},
+        plan_etapas_v:   p.planEtapasV || 2,
+        bib_version:     p.bibVersion || 3,
+        bib_estrategias: !!p.bibEstrategias,
+        updated_by:      uid,
+        updated_at:      new Date().toISOString()
+      };
+      setTimeout(function() {
+        _sb.from('plan_grupo').upsert(row, { onConflict: 'scope_id' })
+          .then(function(r){ if (r.error) console.warn('bg sync plan', r.error); });
       }, 0);
     }
 
@@ -3007,8 +3082,8 @@
       catch(e) { return {activo:false, pin:''}; }
     }
     function monitorActivo() { return !!monitorEstado().activo; }
-    // Monitor por cuenta Supabase (rol 'monitor'): bloqueo permanente, sin PIN.
-    function esMonitorCuenta() { return !!_esMonitor; }
+    // EN1 por cuenta Supabase (rol 'en1', antes 'monitor'): bloqueo permanente, sin PIN.
+    function esEN1Cuenta() { return !!_esEN1; }
     function _monitorGuardar(m) { _lzSet('padel-monitor', JSON.stringify(m)); }
 
     function monitorActivar() {
@@ -3691,7 +3766,12 @@
       if (!p.nivel || !PLAN_ETAPAS[p.nivel]) p.nivel = 'iniciacion';
       return p;
     }
-    function escribirPlan(p) { _lzSet('padel-plan', JSON.stringify(p)); }
+    // soloLocal=true: solo escribe local, sin eco de subida (lo usa _syncDownload
+    // al fusionar lo que baja del servidor, igual que el resto de escribirX()).
+    function escribirPlan(p, soloLocal) {
+      _lzSet('padel-plan', JSON.stringify(p));
+      if (!soloLocal) _bgUpsertPlan(p);
+    }
 
     function planMesActualNombre() {
       var p = leerPlan();
@@ -4456,7 +4536,7 @@
       var nav = document.getElementById('appnav');
       if (!nav) return;
       var restringido = false;
-      try { restringido = _esGestor || (typeof monitorActivo==='function' && monitorActivo()) || (typeof esMonitorCuenta==='function' && esMonitorCuenta()); } catch(e){}
+      try { restringido = _esGestor || (typeof monitorActivo==='function' && monitorActivo()) || (typeof esEN1Cuenta==='function' && esEN1Cuenta()); } catch(e){}
       var ocultar = (id === 'pantalla-login') || restringido;
       nav.classList.toggle('oculto', !!ocultar);
       var grupo = null;
@@ -4470,7 +4550,7 @@
       // El gestor solo accede a su panel; el monitor solo a Asistencia.
       if (_esGestor) {
         if (id !== 'pantalla-gestor' && id !== 'pantalla-gestor-detalle') { id = 'pantalla-gestor'; }
-      } else if ((monitorActivo() || esMonitorCuenta()) && MONITOR_PANTALLAS_OK.indexOf(id) < 0) {
+      } else if ((monitorActivo() || esEN1Cuenta()) && MONITOR_PANTALLAS_OK.indexOf(id) < 0) {
         id = 'pantalla-inicio';
       }
 
@@ -4516,13 +4596,13 @@
 
     function actualizarInicio() {
       // ── Modo monitor: ocultar todo salvo Asistencia + mostrar banner ──
-      var monCuenta = esMonitorCuenta();
+      var monCuenta = esEN1Cuenta();
       var mon = monitorActivo() || monCuenta;
       ['home-sec-entreno','home-sec-partido','home-sec-comp','home-sec-ajustes'].forEach(function(id){
         var el = document.getElementById(id);
         if (el) el.style.display = mon ? 'none' : '';
       });
-      // El botón Perfil del encabezado tampoco está disponible para monitores
+      // El botón Perfil del encabezado tampoco está disponible para EN1
       var perfBtn = document.getElementById('cab-perfil-btn');
       if (perfBtn) perfBtn.style.display = mon ? 'none' : 'flex';
       var pie = document.getElementById('inicio-pie');
