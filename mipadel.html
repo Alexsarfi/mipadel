@@ -39,6 +39,15 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.52.0 — Panel del gestor: alumnos de toda la academia (2026-07)
+    · El KPI "Alumnos" del panel es ahora un botón → nueva pantalla
+      con TODOS los alumnos de la academia (todos los entrenadores)
+      y el mismo buscador en vivo de la pantalla "Alumnos".
+    · Cada alumno muestra sus clases este curso y con quién
+      ("con Alex ×12 · María ×2"). Al tocarlo: historial completo
+      por mes con clase, entrenador, estado (✓/J/IJ) y las
+      recuperaciones indicando con quién se hicieron (↩).
+    · Sin migración de Supabase.
   v0.51.0 — Faltas justificadas (J/IJ) en asistencia (2026-07)
     · Al pasar lista, cada ausencia se marca J (justificada) o IJ
       (injustificada, por defecto). Nuevo campo justificadas[] en
@@ -1884,6 +1893,30 @@
     </div>
   </div>
 
+  <!-- ══ GESTOR — TODOS LOS ALUMNOS DE LA ACADEMIA ══ -->
+  <div id="pantalla-gestor-todos-alumnos" class="pantalla">
+    <div class="cabecera">
+      <button class="btn-volver" onclick="irA('pantalla-gestor')">‹ Panel</button>
+      <div class="cab-titulo">Alumnos de la academia</div>
+      <div class="cab-sub" id="gta-sub">—</div>
+    </div>
+    <div class="contenido">
+      <div id="gta-contenido"></div>
+    </div>
+  </div>
+
+  <!-- ══ GESTOR — CLASES DE UN ALUMNO (GLOBAL) ══════ -->
+  <div id="pantalla-gestor-todos-alumno" class="pantalla">
+    <div class="cabecera">
+      <button class="btn-volver" onclick="irA('pantalla-gestor-todos-alumnos')">‹ Alumnos</button>
+      <div class="cab-titulo" id="gta-al-nombre">Alumno</div>
+      <div class="cab-sub" id="gta-al-sub">—</div>
+    </div>
+    <div class="contenido">
+      <div id="gta-al-contenido"></div>
+    </div>
+  </div>
+
   <!-- ══ CATEGORÍAS ══════════════════════════════ -->
   <div id="pantalla-categorias" class="pantalla">
     <div class="cabecera">
@@ -2556,7 +2589,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.51.0';
+    var APP_VERSION = '0.52.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -3557,7 +3590,7 @@
       var h = '<div class="gestor-resumen">' +
         '<div class="gestor-kpi"><div class="gestor-kpi-num">' + uids.length + '</div><div class="gestor-kpi-lbl">Entrenadores</div></div>' +
         '<div class="gestor-kpi"><div class="gestor-kpi-num">' + totClases + '</div><div class="gestor-kpi-lbl">Clases</div></div>' +
-        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + totAlumnos + '</div><div class="gestor-kpi-lbl">Alumnos</div></div>' +
+        '<div class="gestor-kpi gestor-kpi-btn" onclick="abrirGestorTodosAlumnos()"><div class="gestor-kpi-num">' + totAlumnos + '</div><div class="gestor-kpi-lbl">Alumnos</div><div class="gestor-kpi-sub">Ver por alumno ›</div></div>' +
         '</div>';
       if (!uids.length) {
         h += '<p class="ajustes-desc" style="text-align:center;padding:1rem 0;">Aún no hay datos de asistencia de ningún entrenador.</p>';
@@ -4134,6 +4167,190 @@
         h += '</div></details>';
       });
 
+      cont.innerHTML = h;
+    }
+
+    // ══════════════════════════════════════════
+    // GESTOR — TODOS LOS ALUMNOS DE LA ACADEMIA
+    // (KPI "Alumnos" del panel → lista global con buscador;
+    //  cada alumno → sus clases, con qué entrenador, y recups)
+    // ══════════════════════════════════════════
+    var _gtaFiltroTxt = '';   // texto del buscador global
+    var _gtaAlumno    = null; // alumno abierto en el detalle global
+    var _gtaCache     = null; // índice { nombre: { sesiones:[], clases:{} } }
+
+    function abrirGestorTodosAlumnos() { _gtaFiltroTxt = ''; irA('pantalla-gestor-todos-alumnos'); }
+    function abrirGestorTodosAlumno(n) { _gtaAlumno = n; irA('pantalla-gestor-todos-alumno'); }
+    function gtaFiltrar(v) { _gtaFiltroTxt = v || ''; _gtaRenderLista(); }
+
+    // Índice global: por alumno, todas sus sesiones de TODOS los
+    // entrenadores. Cada sesión lleva el entrenador y la clase.
+    function _gtaIndex() {
+      var by  = _gestorAgrupar();
+      var map = {};
+      function ensA(n){ if(!map[n]) map[n]={ sesiones:[] }; return map[n]; }
+      Object.keys(by).forEach(function(uid){
+        var d = by[uid];
+        if (!d.clases.length && !d.regs.length) return;
+        var entrenador = _gestorNombre(d);
+        var clases = _gestorClasesLocal(d);
+        var regs   = _gestorRegsLocal(d);
+        // Alumnos de cupo (aparecen aunque aún no tengan registros)
+        clases.forEach(function(c){ (c.alumnos||[]).forEach(function(a){ var n=alNom(a); if(n) ensA(n); }); });
+        regs.forEach(function(r){
+          if (r.sinClase) return;
+          var clase = clases.filter(function(c){ return c.id===r.claseId; })[0];
+          if (!clase) return;
+          var clNom = clase.nombre ||
+                      (((clase.diaSemana>=0 ? DIAS_NOMBRES_A[clase.diaSemana] : '') + ' ' + (clase.franja||'')).trim() || 'Clase');
+          function push(n, presente){
+            var entry   = alumnoEnClase(clase, n);
+            var esRecup = presente && (!entry || !alActivo(entry, r.fecha));
+            ensA(n).sesiones.push({
+              fecha:r.fecha, claseNombre:clNom, franja:clase.franja||'',
+              entrenador:entrenador, presente:presente, recup:esRecup,
+              justif: !presente && (r.justificadas||[]).indexOf(n)!==-1
+            });
+          }
+          (r.presentes||[]).forEach(function(n){ if(n) push(n, true); });
+          (r.ausentes ||[]).forEach(function(n){ if(n) push(n, false); });
+        });
+      });
+      Object.keys(map).forEach(function(n){
+        map[n].sesiones.sort(function(a,b){ return b.fecha.localeCompare(a.fecha); });
+      });
+      return map;
+    }
+
+    // Texto "con quién": presencias por entrenador (más frecuente primero)
+    function _gtaConQuien(sesiones) {
+      var cnt = {};
+      sesiones.forEach(function(s){ if (s.presente) cnt[s.entrenador] = (cnt[s.entrenador]||0)+1; });
+      var ents = Object.keys(cnt).sort(function(a,b){ return cnt[b]-cnt[a]; });
+      if (!ents.length) return '';
+      return 'con ' + ents.map(function(e){ return e + ' ×' + cnt[e]; }).join(' · ');
+    }
+
+    function renderGestorTodosAlumnos() {
+      var cont = document.getElementById('gta-contenido');
+      if (!cont) return;
+      if (!_gestorData) { cont.innerHTML = '<p class="ajustes-desc">Sin datos.</p>'; return; }
+      _gtaCache = _gtaIndex();
+      var lista = Object.keys(_gtaCache).sort();
+      document.getElementById('gta-sub').textContent =
+        lista.length + ' alumno' + (lista.length!==1?'s':'') + ' · todos los entrenadores';
+      if (!lista.length) {
+        cont.innerHTML = '<p class="ajustes-desc" style="text-align:center;padding:1rem 0;">Aún no hay alumnos con datos.</p>';
+        return;
+      }
+      // Barra fija (buscador + contador); la lista se pinta aparte para
+      // que el input no pierda el foco al filtrar (mismo motor que "Alumnos").
+      cont.innerHTML =
+        '<input id="gta-input" class="form-input" type="search" placeholder="🔍 Buscar alumno…" ' +
+          'autocomplete="off" oninput="gtaFiltrar(this.value)" style="margin-bottom:0.6rem;">' +
+        '<p class="ajustes-desc" id="gta-count" style="margin:0.15rem 0 0.6rem;"></p>' +
+        '<div id="gta-lista"></div>';
+      _gtaRenderLista();
+    }
+
+    function _gtaRenderLista() {
+      var el  = document.getElementById('gta-lista');
+      var cnt = document.getElementById('gta-count');
+      if (!el || !_gtaCache) return;
+      var txt = _galsNorm(_gtaFiltroTxt);
+      var todos = Object.keys(_gtaCache).sort();
+      var visibles = todos.filter(function(n){ return !txt || _galsNorm(n).indexOf(txt) >= 0; });
+      var cursoAct = _cursoActual();
+      if (cnt) cnt.textContent = (visibles.length === todos.length)
+        ? todos.length + ' alumno' + (todos.length!==1?'s':'') + ' · toca uno para ver sus clases'
+        : visibles.length + ' de ' + todos.length + ' alumnos';
+      if (!visibles.length) {
+        el.innerHTML = '<p class="ajustes-desc" style="text-align:center;padding:0.8rem 0;">Ningún alumno coincide con el filtro.</p>';
+        return;
+      }
+      var h = '';
+      visibles.forEach(function(n){
+        var sesCurso = _gtaCache[n].sesiones.filter(function(x){ return _cursoDe(x.fecha) === cursoAct; });
+        var s = _histStats(sesCurso);
+        var conQuien = _gtaConQuien(sesCurso);
+        var meta = s.tot ? (s.pres + '/' + s.tot + ' este curso' +
+                             (s.recups ? ' · +' + s.recups + ' recup' : '') +
+                             (conQuien ? ' · ' + conQuien : ''))
+                         : (_gtaCache[n].sesiones.length ? 'sin clases este curso' : 'sin registros');
+        var pctTxt = s.pct == null ? '—' : s.pct + '%';
+        h += '<div class="gestor-card" onclick="abrirGestorTodosAlumno(\'' + _gEsc(n).replace(/'/g,"\\'") + '\')">' +
+          '<div class="gestor-card-ava">' + _gEsc(n.charAt(0).toUpperCase()) + '</div>' +
+          '<div class="gestor-card-body">' +
+            '<div class="gestor-card-nom">' + _gEsc(n) + '</div>' +
+            '<div class="gestor-card-meta">' + _gEsc(meta) + '</div>' +
+          '</div>' +
+          '<div class="gestor-card-pct" style="color:' + _pctColor(s.pct) + '">' + pctTxt + '</div>' +
+          '<div class="gestor-card-arr">›</div>' +
+        '</div>';
+      });
+      el.innerHTML = h;
+    }
+
+    // Detalle global de un alumno: todas sus clases, con quién, y recups
+    function renderGestorTodosAlumno() {
+      var cont = document.getElementById('gta-al-contenido');
+      if (!cont) return;
+      if (!_gtaAlumno) { irA('pantalla-gestor-todos-alumnos'); return; }
+      if (!_gtaCache) _gtaCache = _gtaIndex();
+      var al = _gtaCache[_gtaAlumno];
+      document.getElementById('gta-al-nombre').textContent = _gtaAlumno;
+      if (!al || !al.sesiones.length) {
+        document.getElementById('gta-al-sub').textContent = 'Sin registros';
+        cont.innerHTML = '<div class="vacio"><div class="vacio-icono">📅</div><p>Sin registros de asistencia para este alumno.</p></div>';
+        return;
+      }
+      var cursoAct = _cursoActual();
+      var sesCurso = al.sesiones.filter(function(x){ return _cursoDe(x.fecha) === cursoAct; });
+      var sc = _histStats(sesCurso);
+      document.getElementById('gta-al-sub').textContent =
+        (sc.tot ? sc.pres + '/' + sc.tot + ' este curso' +
+                  ((sc.fJ||sc.fIJ) ? ' · faltas: ' + sc.fJ + ' J · ' + sc.fIJ + ' IJ' : '') +
+                  (sc.recups ? ' · +' + sc.recups + ' recup' : '')
+                : 'sin clases este curso');
+
+      var conQuien = _gtaConQuien(sesCurso);
+      var h = '';
+      if (conQuien) {
+        h += '<div class="asist-global-card" style="margin-bottom:10px;">' +
+          '<div class="asist-global-info">' +
+            '<div class="asist-global-titulo">Este curso ' + _gEsc(conQuien) + '</div>' +
+            '<div class="asist-global-sub">Las recuperaciones indican con quién se hicieron ↩</div>' +
+          '</div></div>';
+      }
+
+      // Agrupar por mes (más reciente primero)
+      var porMes = {};
+      al.sesiones.forEach(function(x){ var m = x.fecha.substring(0,7); (porMes[m] = porMes[m] || []).push(x); });
+      Object.keys(porMes).sort().reverse().forEach(function(mes){
+        var p = mes.split('-');
+        var items = porMes[mes];
+        var sm = _histStats(items);
+        h += '<div class="grupo-titulo">' + MESES_NOMBRES_A[parseInt(p[1],10)-1] + ' ' + p[0] +
+             ' · ' + sm.pres + '/' + sm.tot +
+             ((sm.fJ||sm.fIJ) ? ' · ' + sm.fJ + 'J/' + sm.fIJ + 'IJ' : '') +
+             (sm.recups ? ' · +' + sm.recups + '↩' : '') + '</div>';
+        items.forEach(function(x){
+          var linea2 = x.recup
+            ? '↩ Recuperación con ' + x.entrenador
+            : 'con ' + x.entrenador + (x.franja ? ' · ' + x.franja : '');
+          h += '<div class="asist-hist-item">' +
+            '<div class="asist-hist-fecha">' + formatFechaCorta(x.fecha) + '</div>' +
+            '<div class="asist-hist-clase">' +
+              '<div class="asist-hist-clase-nombre">' + _gEsc(x.claseNombre) + '</div>' +
+              '<div class="asist-hist-clase-franja">' + _gEsc(linea2) + '</div>' +
+            '</div>' +
+            (x.recup ? '<span class="asist-hist-presente">↩ Recup.</span>'
+                     : (x.presente ? '<span class="asist-hist-presente">✓ Presente</span>'
+                                   : (x.justif ? '<span class="asist-hist-j">✗ Falta J</span>'
+                                               : '<span class="asist-hist-ausente">✗ Falta IJ</span>'))) +
+          '</div>';
+        });
+      });
       cont.innerHTML = h;
     }
 
@@ -5225,7 +5442,8 @@
       'pantalla-asistencia-nueva-clase','pantalla-asistencia-lista',
       'pantalla-asistencia-resumen','pantalla-asistencia-alumno'];
     var GESTOR_PANTALLAS = ['pantalla-gestor','pantalla-gestor-detalle',
-      'pantalla-gestor-alumnos','pantalla-gestor-alumno'];
+      'pantalla-gestor-alumnos','pantalla-gestor-alumno',
+      'pantalla-gestor-todos-alumnos','pantalla-gestor-todos-alumno'];
 
     function irA(id) {
       // Salir de las pantallas de asistencia/panel apaga el modo gestión
@@ -5265,6 +5483,8 @@
       if (id === 'pantalla-gestor-detalle')         renderGestorDetalle();
       if (id === 'pantalla-gestor-alumnos')         renderGestorAlumnos();
       if (id === 'pantalla-gestor-alumno')          renderGestorAlumno();
+      if (id === 'pantalla-gestor-todos-alumnos')   renderGestorTodosAlumnos();
+      if (id === 'pantalla-gestor-todos-alumno')    renderGestorTodosAlumno();
 
       if (id === 'pantalla-asistencia')             mostrarAsistencia();
       if (id === 'pantalla-asistencia-config')      mostrarAsistenciaConfig();
