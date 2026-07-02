@@ -39,6 +39,31 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.46.0 — Gestión de asistencia para gestor y EN3 (2026-07)
+    · El gestor deja de ser solo lectura: puede GESTIONAR la
+      asistencia de todos los entrenadores de la academia (crear/
+      editar/borrar clases, altas y bajas de alumnos, pasar y
+      corregir listas). El rol EN3 (nivel3) gana el mismo panel
+      desde Inicio → "Mi academia". EN1 y EN2 NO gestionan a otros.
+    · Modo gestión: botón "✏️ Gestionar clases y listas" en el
+      detalle de un entrenador. Reutiliza las pantallas de
+      Asistencia de siempre, pero leyendo/escribiendo los datos de
+      ESE entrenador directamente en Supabase (_gEditUid).
+    · Detalle del entrenador: el KPI "Días clase" pasa a "Clases
+      dadas" con el sumatorio 1h/1h30 (desaparece el bloque
+      duplicado de abajo); el KPI "Alumnos" es ahora un botón que
+      abre el historial de alumnos.
+    · Nuevo historial por alumno: mes con navegación, resumen del
+      curso en curso (sep–jun) y cursos anteriores plegados.
+    · "Asistencia por clase" pasa a "Asistencia por días": un
+      desplegable por día del mes que muestra TODOS los tramos
+      horarios de ese día con su lista (✓/✗/↩), sin abrir hora a hora.
+    · Requiere ejecutar la migración v0.46 de supabase_schema.sql
+      (RLS de escritura para gestor/nivel3 + perfiles para nivel3 +
+      mover los EN1 al grupo "Mi academia") una sola vez.
+    · Fix: las clases de domingo (diaSemana 0) ya no pierden su día
+      al subirse a Supabase.
+
   v0.45.0 — Rol 'monitor' renombrado a 'EN1' (2026-07)
     · El rol de cuenta que antes se llamaba 'monitor' pasa a llamarse
       'en1' (mismo comportamiento: bloqueo permanente a solo
@@ -687,6 +712,28 @@
     .gestor-alum-fill { height:100%; border-radius:5px; }
     .gestor-alum-pct { font-size:13px; font-weight:800; min-width:42px; text-align:right; flex-shrink:0; }
     .gestor-alum-det { font-size:11.5px; color:var(--gris); min-width:58px; text-align:right; flex-shrink:0; }
+    /* KPI ampliado (sumatorio 1h/1h30 y botón de alumnos) */
+    .gestor-kpi-sub { font-size:10px; font-weight:600; color:var(--gris); margin-top:3px; line-height:1.25; }
+    .gestor-kpi-btn { cursor:pointer; border-color:var(--lila-claro); }
+    .gestor-kpi-btn:active { background:var(--lila-suave); }
+    .gestor-kpi-btn .gestor-kpi-sub { color:var(--lila); }
+    /* Asistencia por días: tramos horarios dentro de cada día */
+    .gad-tramo { padding:0.55rem 0; border-bottom:1px solid var(--borde); }
+    .gad-tramo:last-child { border-bottom:none; }
+    .gad-tramo-hdr { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .gad-fr { font-weight:800; color:var(--texto); font-size:13px; }
+    .gad-nom { font-size:12.5px; color:var(--gris); }
+    .gad-extra { font-size:10.5px; font-weight:700; color:#b45309; background:#fef3c7; border-radius:6px; padding:1px 6px; }
+    .gad-estado { margin-left:auto; font-size:12px; font-weight:700; }
+    .gad-estado.ok { color:#166534; }
+    .gad-estado.sin { color:#64748b; }
+    .gad-estado.nolista { color:#9ca3af; font-style:italic; }
+    .gad-alumnos { display:flex; flex-wrap:wrap; gap:5px; margin-top:6px; }
+    .gad-al { font-size:11.5px; font-weight:700; border-radius:8px; padding:2px 8px; }
+    .gad-al.si   { background:#dcfce7; color:#166534; }
+    .gad-al.no   { background:#fee2e2; color:#991b1b; }
+    .gad-al.rec  { background:#e0e7ff; color:#16264f; }
+    .gad-al.pend { background:#f1f5f9; color:#64748b; }
     /* Clases dadas del mes (vista del gestor) */
     .ghd-leyenda { font-size:11px; color:var(--gris); margin:0.1rem 0 0.7rem; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
     .ghd-clase { background:var(--blanco); border:1.5px solid var(--borde); border-radius:13px; padding:0.7rem 0.8rem; margin-bottom:9px; }
@@ -1551,6 +1598,15 @@
           </div>
           <div class="menu-flecha">›</div>
         </div>
+        <!-- Panel de gestión (solo gestor/EN3): asistencia de toda la academia -->
+        <div class="tarjeta-menu" id="home-btn-academia" style="display:none;" onclick="irA('pantalla-gestor')">
+          <div class="menu-icono" style="background:var(--navy-suave);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/></svg></div>
+          <div class="menu-texto">
+            <div class="menu-nombre">Mi academia</div>
+            <div class="menu-desc">Gestión de asistencia de todos los entrenadores</div>
+          </div>
+          <div class="menu-flecha">›</div>
+        </div>
       </div>
 
       <!-- ── ENTRENAMIENTO ── -->
@@ -1672,11 +1728,12 @@
     </div>
   </div>
 
-  <!-- ══ GESTOR — PANEL DE ASISTENCIA GLOBAL ═══════ -->
+  <!-- ══ GESTOR/EN3 — PANEL DE ASISTENCIA GLOBAL ═══════ -->
   <div id="pantalla-gestor" class="pantalla">
     <div class="cabecera">
+      <button class="btn-volver" id="gestor-volver-btn" style="display:none;" onclick="irA('pantalla-inicio')">‹ Inicio</button>
       <div class="cab-etiqueta">📊 Gestión</div>
-      <div class="cab-titulo">Panel de asistencia</div>
+      <div class="cab-titulo">Mi academia</div>
       <div class="cab-sub" id="gestor-sub">Todos los entrenadores</div>
     </div>
     <div class="contenido">
@@ -1699,6 +1756,30 @@
     </div>
     <div class="contenido">
       <div id="gestor-det-contenido"></div>
+    </div>
+  </div>
+
+  <!-- ══ GESTOR/EN3 — ALUMNOS DE UN ENTRENADOR ════ -->
+  <div id="pantalla-gestor-alumnos" class="pantalla">
+    <div class="cabecera">
+      <button class="btn-volver" onclick="irA('pantalla-gestor-detalle')">‹ Detalle</button>
+      <div class="cab-titulo">Alumnos</div>
+      <div class="cab-sub" id="gestor-als-sub">—</div>
+    </div>
+    <div class="contenido">
+      <div id="gestor-als-contenido"></div>
+    </div>
+  </div>
+
+  <!-- ══ GESTOR/EN3 — HISTORIAL DE UN ALUMNO ══════ -->
+  <div id="pantalla-gestor-alumno" class="pantalla">
+    <div class="cabecera">
+      <button class="btn-volver" onclick="irA('pantalla-gestor-alumnos')">‹ Alumnos</button>
+      <div class="cab-titulo" id="gestor-al-nombre">Alumno</div>
+      <div class="cab-sub" id="gestor-al-sub">—</div>
+    </div>
+    <div class="contenido">
+      <div id="gestor-al-contenido"></div>
     </div>
   </div>
 
@@ -2137,7 +2218,7 @@
   <!-- ══ ASISTENCIA — HUB ══════════════════════════ -->
   <div id="pantalla-asistencia" class="pantalla">
     <div class="cabecera">
-      <button class="btn-volver" onclick="irA('pantalla-inicio')">‹ Inicio</button>
+      <button class="btn-volver" id="asist-volver-btn" onclick="asistVolverHub()">‹ Inicio</button>
       <div class="cab-titulo">Asistencia</div>
       <div class="cab-sub" id="asist-sub">—</div>
     </div>
@@ -2374,7 +2455,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.45.0';
+    var APP_VERSION = '0.46.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -2798,7 +2879,8 @@
       },
       asistencia_clases: function(c, uid) { return {   // siempre privada
         id:c.id, user_id:uid, nombre:c.nombre,
-        dia_semana:c.diaSemana||'', franja:c.franja||'',
+        dia_semana:(c.diaSemana == null || c.diaSemana === '' || c.diaSemana < 0) ? '' : String(c.diaSemana),
+        franja:c.franja||'',
         alumnos:c.alumnos||[]
       }; },
       asistencia_registros: function(r, uid) { return {  // siempre privada
@@ -2859,6 +2941,11 @@
       localStorage.setItem('padel-del-pendientes', JSON.stringify(cola));
     }
     function _sbDelete(tabla, id) {
+      // Modo gestión: el borrado va directo con el user_id del gestionado
+      if (_gEditUid && (tabla === 'asistencia_clases' || tabla === 'asistencia_registros')) {
+        _gEditDelete(tabla, id);
+        return;
+      }
       var cola = _delLeerCola();
       var ya = cola.some(function(p){ return p.t === tabla && p.id === id; });
       if (!ya) { cola.push({ t:tabla, id:id }); _delGuardarCola(cola); }
@@ -3045,13 +3132,78 @@
       if (!soloLocal) _bgUpsert('partidos', d);
     }
 
-    function leerAsistConfig()        { var d = _lzGet('padel-asistencia-cfg'); return d ? JSON.parse(d) : {clases:[]}; }
+    // ── MODO GESTIÓN (gestor / EN3): cuando _gEditUid está activo, las
+    // funciones de asistencia leen/escriben los datos de OTRO entrenador
+    // (en _gestorData + Supabase) en vez del localStorage propio. Así las
+    // pantallas de Asistencia sirven tal cual para gestionar a cualquiera.
+    var _gEditUid = null;   // user_id del entrenador gestionado (null = modo normal)
+
+    function _gEditDatos() {   // {clases:[…srv], regs:[…srv]} del gestionado
+      var out = { clases: [], regs: [] };
+      if (!_gestorData || !_gEditUid) return out;
+      out.clases = (_gestorData.clases    || []).filter(function(c){ return c.user_id === _gEditUid; });
+      out.regs   = (_gestorData.registros || []).filter(function(r){ return r.user_id === _gEditUid; });
+      return out;
+    }
+    // Upsert directo con el user_id del gestionado (la RLS v0.46 lo permite
+    // a gestor y nivel3). Mantiene _gestorData al día en memoria.
+    function _gEditUpsert(tabla, filas) {
+      if (!_sb || !_gEditUid || !filas.length) return;
+      var uid = _gEditUid;
+      _sb.from(tabla).upsert(
+        filas.map(function(x){ return _upMap[tabla](x, uid); }),
+        { onConflict: 'user_id,id' }
+      ).then(function(r){
+        if (r.error) { console.warn('gestión sync', tabla, r.error); alert('⚠️ No se pudo guardar en el servidor: ' + r.error.message); }
+      });
+    }
+    function _gEditDelete(tabla, id) {
+      if (!_sb || !_gEditUid) return;
+      _sb.from(tabla).delete().match({ user_id: _gEditUid, id: id })
+        .then(function(r){ if (r.error) { console.warn('gestión delete', tabla, r.error); alert('⚠️ No se pudo borrar en el servidor: ' + r.error.message); } });
+    }
+
+    function leerAsistConfig() {
+      if (_gEditUid) {
+        var g = _gEditDatos();
+        return { clases: g.clases.map(function(c){
+          var ds = (c.dia_semana === '' || c.dia_semana == null) ? -1 : Number(c.dia_semana);
+          return { id:c.id, nombre:c.nombre || '', diaSemana:ds, franja:c.franja || '', alumnos:c.alumnos || [] };
+        }) };
+      }
+      var d = _lzGet('padel-asistencia-cfg'); return d ? JSON.parse(d) : {clases:[]};
+    }
     function escribirAsistConfig(d, soloLocal) {
+      if (_gEditUid) {
+        // Sustituye en memoria las clases del gestionado y sube a Supabase
+        if (_gestorData) {
+          var otras = (_gestorData.clases || []).filter(function(c){ return c.user_id !== _gEditUid; });
+          _gestorData.clases = otras.concat((d.clases || []).map(function(c){ return _upMap.asistencia_clases(c, _gEditUid); }));
+        }
+        _gEditUpsert('asistencia_clases', d.clases || []);
+        return;
+      }
       _lzSet('padel-asistencia-cfg', JSON.stringify(d));
       if (!soloLocal) _bgUpsert('asistencia_clases', d.clases||[]);
     }
-    function leerAsistRegistros()     { var d = _lzGet('padel-asistencia-reg'); return d ? JSON.parse(d) : []; }
+    function leerAsistRegistros() {
+      if (_gEditUid) {
+        return _gEditDatos().regs.map(function(r){
+          return { id:r.id, claseId:r.clase_id, fecha:r.fecha,
+                   presentes:r.presentes || [], ausentes:r.ausentes || [], sinClase:!!r.sin_clase };
+        });
+      }
+      var d = _lzGet('padel-asistencia-reg'); return d ? JSON.parse(d) : [];
+    }
     function escribirAsistRegistros(d, soloLocal) {
+      if (_gEditUid) {
+        if (_gestorData) {
+          var otras = (_gestorData.registros || []).filter(function(r){ return r.user_id !== _gEditUid; });
+          _gestorData.registros = otras.concat((d || []).map(function(r){ return _upMap.asistencia_registros(r, _gEditUid); }));
+        }
+        _gEditUpsert('asistencia_registros', d || []);
+        return;
+      }
       _lzSet('padel-asistencia-reg', JSON.stringify(d));
       if (!soloLocal) _bgUpsert('asistencia_registros', d);
     }
@@ -3084,6 +3236,9 @@
     function monitorActivo() { return !!monitorEstado().activo; }
     // EN1 por cuenta Supabase (rol 'en1', antes 'monitor'): bloqueo permanente, sin PIN.
     function esEN1Cuenta() { return !!_esEN1; }
+    // Cuentas con acceso al panel de gestión de la academia: gestor y EN3 (nivel3).
+    // EN1 y EN2 (nivel2) NO gestionan a otros.
+    function esGestionCuenta() { return _esGestor || !!(_sbGrupo && _sbGrupo.rol === 'nivel3'); }
     function _monitorGuardar(m) { _lzSet('padel-monitor', JSON.stringify(m)); }
 
     function monitorActivar() {
@@ -3155,6 +3310,9 @@
     function cargarDatosGestor() {
       var emailEl = document.getElementById('gestor-email');
       if (emailEl && _sbUser) emailEl.textContent = _sbUser.email;
+      // El EN3 entra desde Inicio y puede volver; el gestor vive aquí
+      var volverBtn = document.getElementById('gestor-volver-btn');
+      if (volverBtn) volverBtn.style.display = _esGestor ? 'none' : '';
       var cont = document.getElementById('gestor-contenido');
       if (cont) cont.innerHTML = '<p class="ajustes-desc" style="text-align:center;padding:1.5rem 0;">Cargando datos…</p>';
       if (!_sb) { if (cont) cont.innerHTML = '<p class="ajustes-desc">Supabase no configurado.</p>'; return; }
@@ -3354,11 +3512,22 @@
       var totPres=0, totPlazas=0;
       alumnos.forEach(function(a){ totPres+=alumnosMap[a].presencias; totPlazas+=alumnosMap[a].totalClases; });
       var pctMes = totPlazas ? Math.round(totPres*100/totPlazas) : null;
+      // Sumatorio de clases dadas por duración (sustituye al antiguo "Días clase"
+      // y al bloque de sumatorio que había duplicado más abajo)
+      var suma = _gestorSumaMes(clases, regsMes, mesISO);
+      var sumaTxt = [];
+      if (suma.m60)   sumaTxt.push(suma.m60 + '×1h');
+      if (suma.m90)   sumaTxt.push(suma.m90 + '×1h30');
+      if (suma.otras) sumaTxt.push(suma.otras + ' otras');
       h += '<div class="gestor-resumen">' +
-        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + fechasCols.length + '</div><div class="gestor-kpi-lbl">Días clase</div></div>' +
-        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + alumnos.length + '</div><div class="gestor-kpi-lbl">Alumnos</div></div>' +
-        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + (pctMes==null?'—':pctMes+'%') + '</div><div class="gestor-kpi-lbl">Asistencia</div></div>' +
+        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + suma.total + '</div><div class="gestor-kpi-lbl">Clases dadas</div><div class="gestor-kpi-sub">' + (sumaTxt.length ? sumaTxt.join(' · ') : '—') + '</div></div>' +
+        '<div class="gestor-kpi gestor-kpi-btn" onclick="abrirGestorAlumnos()"><div class="gestor-kpi-num">' + alumnos.length + '</div><div class="gestor-kpi-lbl">Alumnos</div><div class="gestor-kpi-sub">Ver historial ›</div></div>' +
+        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + (pctMes==null?'—':pctMes+'%') + '</div><div class="gestor-kpi-lbl">Asistencia</div><div class="gestor-kpi-sub">' + fechasCols.length + ' día' + (fechasCols.length!==1?'s':'') + ' clase</div></div>' +
       '</div>';
+
+      // ── Botón de gestión: abre las pantallas de Asistencia sobre los
+      // datos de ESTE entrenador (clases, alumnos, listas). Gestor y EN3.
+      h += '<button class="btn btn-verde" style="margin:0 0 1.1rem;" onclick="gestorGestionar()">✏️ Gestionar clases y listas</button>';
 
       // ── Horario: clases dadas del mes (dada / no dada / sin lista) ──
       h += '<div class="grupo-titulo">Clases dadas · ' + _gEsc(mesLabel) + '</div>';
@@ -3368,7 +3537,6 @@
         // Registros del mes indexados por clase y fecha
         var regCF = {};
         regsMes.forEach(function(r){ (regCF[r.claseId] = regCF[r.claseId] || {})[r.fecha] = r; });
-        var suma = { m60:0, m90:0, otras:0 };
         var ordDia = function(ds){ return ds<0 ? 8 : (ds===0 ? 7 : ds); };
         var cls = clases.slice().sort(function(a,b){ return ordDia(a.diaSemana)-ordDia(b.diaSemana) || (a.franja||'').localeCompare(b.franja||''); });
         h += '<div class="ghd-leyenda">' +
@@ -3396,9 +3564,6 @@
           });
           extras.sort();
           var totalDadas = dadas + extras.length;
-          if (dur === 60) suma.m60 += totalDadas;
-          else if (dur === 90) suma.m90 += totalDadas;
-          else suma.otras += totalDadas;
 
           h += '<div class="ghd-clase">';
           h += '<div class="ghd-clase-hdr"><span class="ghd-dia">' + _gEsc(dn) + '</span>';
@@ -3413,55 +3578,298 @@
           });
           h += '</div>';
         });
-        // Sumatorio de horas del mes
-        h += '<div class="ghd-suma">' +
-          '<div class="ghd-suma-row"><span>Clases de 1 h</span><b>' + suma.m60 + '</b></div>' +
-          '<div class="ghd-suma-row"><span>Clases de 1 h 30</span><b>' + suma.m90 + '</b></div>' +
-          (suma.otras ? '<div class="ghd-suma-row"><span>Otras duraciones</span><b>' + suma.otras + '</b></div>' : '') +
-        '</div>';
+        // (El sumatorio 1h/1h30 vive ahora en el KPI "Clases dadas" de arriba)
       }
 
-      // ── Asistencia del mes (cuadrícula, igual que la exportación) ──
-      h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Asistencia por clase</div>';
-      var CEL = { pres:{txt:'✓',col:'#166534'}, falta:{txt:'✗',col:'#991b1b'}, recup:{txt:'↩',col:'#16264f'}, nolist:{txt:'—',col:'#9ca3af'} };
-      var ordDia2 = function(ds){ return ds<0 ? 8 : (ds===0 ? 7 : ds); };
-      var clsA = clases.slice().sort(function(a,b){ return ordDia2(a.diaSemana)-ordDia2(b.diaSemana) || (a.franja||'').localeCompare(b.franja||''); });
-      var bodyCl = '', nCl = 0;
-      clsA.forEach(function(clase){
-        var mz = _gestorClaseMatriz(clase, mesISO, regsMes);
-        if (!mz.alumnos.length) return;
-        nCl++;
-        var dn = (clase.diaSemana>=0) ? _GDIASL[clase.diaSemana] : '(sin día)';
-        var p=0, t=0; mz.alumnos.forEach(function(a){ p+=mz.map[a].presencias; t+=mz.map[a].totalClases; });
-        var pct = t ? Math.round(p*100/t) : null;
-        bodyCl += '<details class="gas-clase"><summary class="gas-sum">' +
-          '<span class="gas-dia">' + _gEsc(dn) + (clase.franja ? ' · ' + _gEsc(clase.franja) : '') + '</span>' +
-          '<span class="gas-meta">' + mz.alumnos.length + ' alum · ' + (pct==null?'—':pct+'%') + '</span>' +
-          '<span class="gas-chev">▾</span></summary><div class="gas-body">';
-        bodyCl += '<div class="asist-matriz-wrap"><table class="asist-matriz"><thead><tr><th class="am-nom">Alumno</th>';
-        mz.fechas.forEach(function(f){ bodyCl += '<th>'+formatFechaCorta(f)+'</th>'; });
-        bodyCl += '<th class="am-tot">Tot</th></tr></thead><tbody>';
-        mz.alumnos.forEach(function(al){
-          var dat=mz.map[al];
-          bodyCl += '<tr><td class="am-nom">'+_gEsc(al)+(dat.recups?' <span class="am-recup">↩+'+dat.recups+'</span>':'')+'</td>';
-          mz.fechas.forEach(function(f){
-            var st=dat.cells[f];
-            if(!st){ bodyCl+='<td style="color:#d1d5db">·</td>'; }
-            else { var c=CEL[st]; bodyCl+='<td style="color:'+c.col+';font-weight:700">'+c.txt+'</td>'; }
-          });
-          bodyCl += '<td class="am-tot">'+dat.presencias+'/'+dat.totalClases+'</td></tr>';
+      // ── Asistencia del mes: un desplegable por DÍA; dentro, todos los
+      // tramos horarios de ese día (así no hay que abrir hora por hora) ──
+      h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Asistencia por días</div>';
+      // fecha → [{clase, reg|null}]
+      var porDia = {};
+      function _pd(f){ if(!porDia[f]) porDia[f]=[]; return porDia[f]; }
+      var regPorClaseFecha = {};
+      regsMes.forEach(function(r){ regPorClaseFecha[r.claseId + '|' + r.fecha] = r; });
+      clases.forEach(function(clase){
+        fechasClaseEnMes(clase, mesISO).forEach(function(f){
+          _pd(f).push({ clase:clase, reg: regPorClaseFecha[clase.id + '|' + f] || null });
         });
-        bodyCl += '</tbody></table></div></div></details>';
       });
-      if (!nCl) {
-        h += '<p class="ajustes-desc">Sin listas registradas este mes.</p>';
+      // Clases extra (registro en fecha que no es el día habitual de la clase)
+      regsMes.forEach(function(r){
+        var clase = clases.filter(function(c){ return c.id===r.claseId; })[0];
+        if (!clase) return;
+        var ya = _pd(r.fecha).some(function(it){ return it.clase.id === clase.id; });
+        if (!ya) _pd(r.fecha).push({ clase:clase, reg:r, extra:true });
+      });
+      var diasMes = Object.keys(porDia).sort();
+      if (!diasMes.length) {
+        h += '<p class="ajustes-desc">Sin clases este mes.</p>';
       } else {
         h += '<div class="asist-matriz-leyenda">' +
           '<span style="color:#166534;font-weight:700">✓</span> asistió &nbsp; ' +
           '<span style="color:#991b1b;font-weight:700">✗</span> faltó &nbsp; ' +
           '<span style="color:#16264f;font-weight:700">↩</span> recup &nbsp; ' +
-          '<span style="color:#9ca3af;font-weight:700">—</span> sin lista</div>' + bodyCl;
+          '<span style="color:#9ca3af;font-weight:700">—</span> sin lista</div>';
+        var hoyISO = hoyLocal();
+        diasMes.forEach(function(f){
+          var items = porDia[f].slice().sort(function(a,b){ return (a.clase.franja||'').localeCompare(b.clase.franja||''); });
+          var p = f.split('-');
+          var dw = new Date(+p[0], +p[1]-1, +p[2]).getDay();
+          // Resumen del día para el encabezado
+          var pres=0, aus=0, conLista=0;
+          items.forEach(function(it){
+            if (it.reg && !it.reg.sinClase) { conLista++; pres += (it.reg.presentes||[]).length; aus += (it.reg.ausentes||[]).length; }
+          });
+          var metaDia = items.length + ' tramo' + (items.length!==1?'s':'') +
+            (conLista ? ' · ' + pres + '✓ ' + aus + '✗' : (f <= hoyISO ? ' · sin listas' : ''));
+          h += '<details class="gas-clase"><summary class="gas-sum">' +
+            '<span class="gas-dia">' + _GDIASL[dw] + ' ' + parseInt(p[2],10) + '</span>' +
+            '<span class="gas-meta">' + metaDia + '</span>' +
+            '<span class="gas-chev">▾</span></summary><div class="gas-body">';
+          items.forEach(function(it){
+            var clase = it.clase, reg = it.reg;
+            h += '<div class="gad-tramo"><div class="gad-tramo-hdr"><span class="gad-fr">' + _gEsc(clase.franja||'—') + '</span>' +
+              (clase.nombre ? '<span class="gad-nom">' + _gEsc(clase.nombre) + '</span>' : '') +
+              (it.extra ? '<span class="gad-extra">extra</span>' : '');
+            if (reg && reg.sinClase) {
+              h += '<span class="gad-estado sin">🚫 Sin clase</span></div>';
+            } else if (!reg) {
+              h += '<span class="gad-estado nolista">— Sin lista</span></div>';
+              var activos = alumnosActivos(clase, f);
+              if (activos.length) h += '<div class="gad-alumnos">' + activos.map(function(n){
+                return '<span class="gad-al pend">' + _gEsc(n) + '</span>';
+              }).join('') + '</div>';
+            } else {
+              var activos2 = alumnosActivos(clase, f);
+              h += '<span class="gad-estado ok">' + (reg.presentes||[]).length + '/' + activos2.length + '</span></div>';
+              var chips = '';
+              activos2.forEach(function(n){
+                var ok = (reg.presentes||[]).indexOf(n) !== -1;
+                chips += '<span class="gad-al ' + (ok?'si':'no') + '">' + (ok?'✓ ':'✗ ') + _gEsc(n) + '</span>';
+              });
+              // Recuperaciones: presentes que no son alumnos activos de la clase
+              (reg.presentes||[]).forEach(function(n){
+                if (activos2.indexOf(n) === -1) chips += '<span class="gad-al rec">↩ ' + _gEsc(n) + '</span>';
+              });
+              if (chips) h += '<div class="gad-alumnos">' + chips + '</div>';
+            }
+            h += '</div>';
+          });
+          h += '</div></details>';
+        });
       }
+
+      cont.innerHTML = h;
+    }
+
+    // Sumatorio de clases dadas del mes por duración (1h / 1h30 / otras)
+    function _gestorSumaMes(clases, regsMes, mesISO) {
+      var suma = { m60:0, m90:0, otras:0, total:0 };
+      var regCF = {};
+      regsMes.forEach(function(r){ (regCF[r.claseId] = regCF[r.claseId] || {})[r.fecha] = r; });
+      clases.forEach(function(c){
+        var dur = _duracionFranja(c.franja);
+        var fechas = fechasClaseEnMes(c, mesISO);
+        var cf = regCF[c.id] || {}, dadas = 0;
+        fechas.forEach(function(f){ if (cf[f] && !cf[f].sinClase) dadas++; });
+        Object.keys(cf).forEach(function(f){
+          if (fechas.indexOf(f) === -1 && cf[f] && !cf[f].sinClase) dadas++;   // extras
+        });
+        if (dur === 60) suma.m60 += dadas;
+        else if (dur === 90) suma.m90 += dadas;
+        else suma.otras += dadas;
+      });
+      suma.total = suma.m60 + suma.m90 + suma.otras;
+      return suma;
+    }
+
+    // Activa el modo gestión sobre el entrenador abierto y entra en Asistencia.
+    // Si un EN3 se abre a sí mismo, usa su modo normal (localStorage + sync
+    // propio) para no divergir de sus datos locales.
+    function gestorGestionar() {
+      if (!_gestorUid) return;
+      _gEditUid = (_sbUser && _gestorUid === _sbUser.id) ? null : _gestorUid;
+      irA('pantalla-asistencia');
+    }
+
+    // ══════════════════════════════════════════
+    // GESTOR/EN3 — Historial de alumnos (mes + curso sep–jun + cursos anteriores)
+    // ══════════════════════════════════════════
+    var _gestorAlumno = null;   // alumno abierto en el historial
+    var _gAlMesOff    = 0;      // navegación por meses en el detalle del alumno
+
+    function abrirGestorAlumnos() { irA('pantalla-gestor-alumnos'); }
+    function abrirGestorAlumno(nombre) { _gestorAlumno = nombre; _gAlMesOff = 0; irA('pantalla-gestor-alumno'); }
+    function gestorAlMesNav(delta) { _gAlMesOff += delta; renderGestorAlumno(); }
+
+    // Curso escolar de una fecha (sep–jun): "2025-2026"
+    function _cursoDe(fechaISO) {
+      var p = fechaISO.split('-'), y = +p[0], m = +p[1];
+      var ini = (m >= 9) ? y : y - 1;
+      return ini + '-' + (ini + 1);
+    }
+    function _cursoActual() { return _cursoDe(hoyLocal()); }
+
+    // Historial completo de un alumno del entrenador abierto:
+    // [{fecha, franja, claseNombre, presente, recup}] con lista pasada
+    function _gestorHistAlumno(nombre) {
+      var d = _gestorAgrupar()[_gestorUid];
+      if (!d) return [];
+      var clases = _gestorClasesLocal(d);
+      var regs   = _gestorRegsLocal(d);
+      var out = [];
+      regs.forEach(function(r){
+        if (r.sinClase) return;
+        var clase = clases.filter(function(c){ return c.id===r.claseId; })[0];
+        if (!clase) return;
+        var enP = (r.presentes||[]).indexOf(nombre)!==-1;
+        var enA = (r.ausentes||[]).indexOf(nombre)!==-1;
+        if (!enP && !enA) return;
+        var entry   = alumnoEnClase(clase, nombre);
+        var esRecup = enP && (!entry || !alActivo(entry, r.fecha));
+        out.push({ fecha:r.fecha, franja:clase.franja||'', claseNombre:clase.nombre||'',
+                   presente:enP, recup:esRecup });
+      });
+      out.sort(function(a,b){ return b.fecha.localeCompare(a.fecha); });
+      return out;
+    }
+    function _histStats(items) {
+      var propias = items.filter(function(h){ return !h.recup; });
+      var pres    = propias.filter(function(h){ return h.presente; }).length;
+      return { pres:pres, tot:propias.length, recups:items.length - propias.length,
+               pct: propias.length ? Math.round(pres*100/propias.length) : null };
+    }
+    function _pctColor(p) { return p==null ? '#9ca3af' : (p>=80 ? '#166534' : (p>=60 ? '#b45309' : '#991b1b')); }
+
+    // ── Listado de alumnos del entrenador ──
+    function renderGestorAlumnos() {
+      var cont = document.getElementById('gestor-als-contenido');
+      if (!cont) return;
+      if (!_gestorData || !_gestorUid) { cont.innerHTML = '<p class="ajustes-desc">Sin datos.</p>'; return; }
+      var d = _gestorAgrupar()[_gestorUid];
+      if (!d) { cont.innerHTML = '<p class="ajustes-desc">Entrenador sin datos.</p>'; return; }
+      document.getElementById('gestor-als-sub').textContent = _gestorNombre(d);
+
+      var clases = _gestorClasesLocal(d);
+      // Todos los alumnos: los de las clases + los que aparecen en registros
+      var nombres = {};
+      clases.forEach(function(c){ (c.alumnos||[]).forEach(function(a){ var n=alNom(a); if(n) nombres[n]=true; }); });
+      _gestorRegsLocal(d).forEach(function(r){
+        (r.presentes||[]).concat(r.ausentes||[]).forEach(function(n){ if(n) nombres[n]=true; });
+      });
+      var lista = Object.keys(nombres).sort();
+      if (!lista.length) { cont.innerHTML = '<p class="ajustes-desc">Este entrenador aún no tiene alumnos.</p>'; return; }
+
+      var cursoAct = _cursoActual();
+      var h = '<p class="ajustes-desc" style="margin-bottom:0.7rem;">Toca un alumno para ver su historial del mes, del curso actual (sep–jun) y de cursos anteriores.</p>';
+      lista.forEach(function(n){
+        var hist = _gestorHistAlumno(n);
+        var histCurso = hist.filter(function(x){ return _cursoDe(x.fecha) === cursoAct; });
+        var s = _histStats(histCurso);
+        var meta = s.tot ? (s.pres + '/' + s.tot + ' este curso' + (s.recups ? ' · +' + s.recups + ' recup' : ''))
+                         : (hist.length ? 'sin clases este curso' : 'sin registros');
+        var pctTxt = s.pct == null ? '—' : s.pct + '%';
+        h += '<div class="gestor-card" onclick="abrirGestorAlumno(\'' + _gEsc(n).replace(/'/g,"\\'") + '\')">' +
+          '<div class="gestor-card-ava">' + _gEsc(n.charAt(0).toUpperCase()) + '</div>' +
+          '<div class="gestor-card-body">' +
+            '<div class="gestor-card-nom">' + _gEsc(n) + '</div>' +
+            '<div class="gestor-card-meta">' + meta + '</div>' +
+          '</div>' +
+          '<div class="gestor-card-pct" style="color:' + _pctColor(s.pct) + '">' + pctTxt + '</div>' +
+          '<div class="gestor-card-arr">›</div>' +
+        '</div>';
+      });
+      cont.innerHTML = h;
+    }
+
+    // ── Detalle de un alumno: mes + curso en curso + cursos anteriores ──
+    function renderGestorAlumno() {
+      var cont = document.getElementById('gestor-al-contenido');
+      if (!cont) return;
+      if (!_gestorData || !_gestorUid || !_gestorAlumno) { cont.innerHTML = '<p class="ajustes-desc">Sin datos.</p>'; return; }
+      var d = _gestorAgrupar()[_gestorUid];
+      document.getElementById('gestor-al-nombre').textContent = _gestorAlumno;
+      document.getElementById('gestor-al-sub').textContent = d ? ('Alumno de ' + _gestorNombre(d)) : '';
+
+      var hist = _gestorHistAlumno(_gestorAlumno);
+      if (!hist.length) {
+        cont.innerHTML = '<div class="vacio"><div class="vacio-icono">📅</div><p>Sin registros de asistencia para este alumno.</p></div>';
+        return;
+      }
+
+      // ── Resumen del curso en curso ──
+      var cursoAct  = _cursoActual();
+      var histCurso = hist.filter(function(x){ return _cursoDe(x.fecha) === cursoAct; });
+      var sc = _histStats(histCurso);
+      var h = '<div class="asist-global-card" style="margin-bottom:10px;">' +
+        '<div class="asist-global-num">' + (sc.pct==null?'—':sc.pct+'%') + '</div>' +
+        '<div class="asist-global-info">' +
+          '<div class="asist-global-titulo">Curso ' + cursoAct + '</div>' +
+          '<div class="asist-global-sub">' + sc.pres + ' presencias de ' + sc.tot + ' clases' +
+            (sc.recups ? ' · ' + sc.recups + ' recuperación' + (sc.recups!==1?'es':'') : '') + '</div>' +
+          '<div class="asist-progreso" style="margin-top:8px;"><div class="asist-progreso-fill" style="width:' + (sc.pct||0) + '%"></div></div>' +
+        '</div></div>';
+
+      // ── Mes seleccionado (con navegación) ──
+      var mesISO   = getMesISO_A(_gAlMesOff);
+      var mesLabel = getMesLabelA(_gAlMesOff);
+      h += '<div class="gestor-mes-nav" style="margin-top:0.4rem;">' +
+        '<button class="gestor-mes-btn" onclick="gestorAlMesNav(-1)">‹</button>' +
+        '<span class="gestor-mes-lbl">' + _gEsc(mesLabel) + '</span>' +
+        '<button class="gestor-mes-btn" onclick="gestorAlMesNav(1)">›</button>' +
+      '</div>';
+      var itemsMes = hist.filter(function(x){ return x.fecha.startsWith(mesISO); });
+      if (!itemsMes.length) {
+        h += '<p class="ajustes-desc" style="text-align:center;">Sin registros este mes.</p>';
+      } else {
+        itemsMes.forEach(function(x){
+          var clasNom = x.claseNombre || x.franja || '';
+          h += '<div class="asist-hist-item">' +
+            '<div class="asist-hist-fecha">' + formatFechaCorta(x.fecha) + '</div>' +
+            '<div class="asist-hist-clase">' +
+              '<div class="asist-hist-clase-nombre">' + _gEsc(clasNom) + '</div>' +
+              '<div class="asist-hist-clase-franja">' + _gEsc(x.franja) + '</div>' +
+            '</div>' +
+            (x.recup ? '<span class="asist-hist-presente">✓ Recup.</span>'
+                     : (x.presente ? '<span class="asist-hist-presente">✓ Presente</span>'
+                                   : '<span class="asist-hist-ausente">✗ Ausente</span>')) +
+          '</div>';
+        });
+      }
+
+      // ── Cursos (sep–jun): el actual desplegado, los anteriores plegados ──
+      var porCurso = {};
+      hist.forEach(function(x){
+        var c = _cursoDe(x.fecha);
+        (porCurso[c] = porCurso[c] || []).push(x);
+      });
+      var cursos = Object.keys(porCurso).sort().reverse();
+      var ORDEN_MESES_CURSO = [9,10,11,12,1,2,3,4,5,6,7,8];   // sep→jun (+verano por si acaso)
+      h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Historial por curso</div>';
+      cursos.forEach(function(curso){
+        var items = porCurso[curso];
+        var s = _histStats(items);
+        var esActual = curso === cursoAct;
+        h += '<details class="gas-clase"' + (esActual ? ' open' : '') + '><summary class="gas-sum">' +
+          '<span class="gas-dia">Curso ' + curso + (esActual ? ' · en curso' : '') + '</span>' +
+          '<span class="gas-meta" style="color:' + _pctColor(s.pct) + '">' + s.pres + '/' + s.tot + (s.pct!=null ? ' · ' + s.pct + '%' : '') + '</span>' +
+          '<span class="gas-chev">▾</span></summary><div class="gas-body">';
+        // Reparto por mes del curso
+        var porMes = {};
+        items.forEach(function(x){ var m = +x.fecha.split('-')[1]; (porMes[m] = porMes[m] || []).push(x); });
+        ORDEN_MESES_CURSO.forEach(function(m){
+          if (!porMes[m]) return;
+          var sm = _histStats(porMes[m]);
+          var pctM = sm.pct == null ? '—' : sm.pct + '%';
+          h += '<div class="gestor-alum-row">' +
+            '<div class="gestor-alum-nom">' + MESES_NOMBRES_A[m-1] + '</div>' +
+            '<div class="gestor-alum-det">' + sm.pres + '/' + sm.tot + (sm.recups ? ' +' + sm.recups + '↩' : '') + '</div>' +
+            '<div class="gestor-alum-bar"><div class="gestor-alum-fill" style="width:' + (sm.pct||0) + '%;background:' + _pctColor(sm.pct) + '"></div></div>' +
+            '<div class="gestor-alum-pct" style="color:' + _pctColor(sm.pct) + '">' + pctM + '</div>' +
+          '</div>';
+        });
+        h += '</div></details>';
+      });
 
       cont.innerHTML = h;
     }
@@ -4546,10 +4954,22 @@
       });
     }
 
+    // Pantallas de Asistencia reutilizadas por el modo gestión (gestor/EN3)
+    var GESTION_ASIST_OK = ['pantalla-asistencia','pantalla-asistencia-config',
+      'pantalla-asistencia-nueva-clase','pantalla-asistencia-lista',
+      'pantalla-asistencia-resumen','pantalla-asistencia-alumno'];
+    var GESTOR_PANTALLAS = ['pantalla-gestor','pantalla-gestor-detalle',
+      'pantalla-gestor-alumnos','pantalla-gestor-alumno'];
+
     function irA(id) {
-      // El gestor solo accede a su panel; el monitor solo a Asistencia.
+      // Salir de las pantallas de asistencia/panel apaga el modo gestión
+      if (_gEditUid && GESTION_ASIST_OK.indexOf(id) < 0) { _gEditUid = null; }
+      // El gestor solo accede a su panel (y a Asistencia en modo gestión);
+      // el monitor/EN1 solo a Asistencia.
       if (_esGestor) {
-        if (id !== 'pantalla-gestor' && id !== 'pantalla-gestor-detalle') { id = 'pantalla-gestor'; }
+        var okGestor = GESTOR_PANTALLAS.indexOf(id) >= 0 ||
+                       (_gEditUid && GESTION_ASIST_OK.indexOf(id) >= 0);
+        if (!okGestor) { id = 'pantalla-gestor'; }
       } else if ((monitorActivo() || esEN1Cuenta()) && MONITOR_PANTALLAS_OK.indexOf(id) < 0) {
         id = 'pantalla-inicio';
       }
@@ -4574,6 +4994,8 @@
 
       if (id === 'pantalla-gestor')                 cargarDatosGestor();
       if (id === 'pantalla-gestor-detalle')         renderGestorDetalle();
+      if (id === 'pantalla-gestor-alumnos')         renderGestorAlumnos();
+      if (id === 'pantalla-gestor-alumno')          renderGestorAlumno();
 
       if (id === 'pantalla-asistencia')             mostrarAsistencia();
       if (id === 'pantalla-asistencia-config')      mostrarAsistenciaConfig();
@@ -4605,6 +5027,9 @@
       // El botón Perfil del encabezado tampoco está disponible para EN1
       var perfBtn = document.getElementById('cab-perfil-btn');
       if (perfBtn) perfBtn.style.display = mon ? 'none' : 'flex';
+      // "Mi academia": solo para EN3 (el gestor ya vive en su panel)
+      var acadBtn = document.getElementById('home-btn-academia');
+      if (acadBtn) acadBtn.style.display = (!mon && esGestionCuenta() && !_esGestor) ? 'flex' : 'none';
       var pie = document.getElementById('inicio-pie');
       if (pie) pie.style.display = mon ? 'none' : 'flex';
 
@@ -7432,14 +7857,29 @@
     // ══════════════════════════════════════════
     // ASISTENCIA — Hub (pantalla principal)
     // ══════════════════════════════════════════
+    // Nombre del entrenador gestionado (modo gestión del gestor/EN3)
+    function _gEditNombre() {
+      if (!_gEditUid || !_gestorData) return '';
+      var d = _gestorAgrupar()[_gEditUid];
+      return d ? _gestorNombre(d) : '';
+    }
+    // Volver del hub: al panel si estamos gestionando a otro; a Inicio si no
+    function asistVolverHub() {
+      if (_gEditUid) { irA('pantalla-gestor-detalle'); return; }
+      irA('pantalla-inicio');
+    }
+
     function mostrarAsistencia() {
       var cfg    = leerAsistConfig();
       var clases = cfg.clases || [];
       var regs   = leerAsistRegistros();
 
-      // Sub
+      // Sub (en modo gestión, deja claro de quién es la asistencia)
       document.getElementById('asist-sub').textContent =
+        (_gEditUid ? '✏️ Gestionando a ' + _gEditNombre() + ' · ' : '') +
         clases.length + ' clase' + (clases.length !== 1 ? 's' : '') + ' configuradas';
+      var volverBtn = document.getElementById('asist-volver-btn');
+      if (volverBtn) volverBtn.textContent = _gEditUid ? '‹ Panel' : '‹ Inicio';
 
       // Stats
       var todosAl = {};
