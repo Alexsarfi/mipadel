@@ -39,6 +39,15 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.53.0 — Alumnos de la academia: grupos y detalle por meses (2026-07)
+    · La lista global se agrupa por ENTRENADOR (desplegables
+      plegados); un alumno con dos entrenadores sale en ambos.
+      Al buscar, la lista vuelve a ser plana sobre toda la academia.
+    · Detalle del alumno reorganizado: tarjeta del curso en curso
+      (sep–jun) con "con quién", navegación mes a mes ‹ ›, y
+      "Cursos anteriores" plegados (solo si tuvieron clases),
+      con el desglose por mes de cada curso.
+    · Sin migración de Supabase.
   v0.52.0 — Panel del gestor: alumnos de toda la academia (2026-07)
     · El KPI "Alumnos" del panel es ahora un botón → nueva pantalla
       con TODOS los alumnos de la academia (todos los entrenadores)
@@ -2589,7 +2598,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.52.0';
+    var APP_VERSION = '0.53.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -4177,10 +4186,12 @@
     // ══════════════════════════════════════════
     var _gtaFiltroTxt = '';   // texto del buscador global
     var _gtaAlumno    = null; // alumno abierto en el detalle global
-    var _gtaCache     = null; // índice { nombre: { sesiones:[], clases:{} } }
+    var _gtaMesOff    = 0;    // navegación por meses en el detalle
+    var _gtaCache     = null; // índice { al:{nombre:{sesiones:[]}}, ents:[{nombre, alumnos:[]}] }
 
     function abrirGestorTodosAlumnos() { _gtaFiltroTxt = ''; irA('pantalla-gestor-todos-alumnos'); }
-    function abrirGestorTodosAlumno(n) { _gtaAlumno = n; irA('pantalla-gestor-todos-alumno'); }
+    function abrirGestorTodosAlumno(n) { _gtaAlumno = n; _gtaMesOff = 0; irA('pantalla-gestor-todos-alumno'); }
+    function gtaMesNav(delta) { _gtaMesOff += delta; renderGestorTodosAlumno(); }
     function gtaFiltrar(v) { _gtaFiltroTxt = v || ''; _gtaRenderLista(); }
 
     // Índice global: por alumno, todas sus sesiones de TODOS los
@@ -4188,15 +4199,17 @@
     function _gtaIndex() {
       var by  = _gestorAgrupar();
       var map = {};
+      var porEnt = {};   // entrenador → conjunto de sus alumnos (cupo + registros)
       function ensA(n){ if(!map[n]) map[n]={ sesiones:[] }; return map[n]; }
       Object.keys(by).forEach(function(uid){
         var d = by[uid];
         if (!d.clases.length && !d.regs.length) return;
         var entrenador = _gestorNombre(d);
+        var entAl = porEnt[entrenador] = porEnt[entrenador] || {};
         var clases = _gestorClasesLocal(d);
         var regs   = _gestorRegsLocal(d);
         // Alumnos de cupo (aparecen aunque aún no tengan registros)
-        clases.forEach(function(c){ (c.alumnos||[]).forEach(function(a){ var n=alNom(a); if(n) ensA(n); }); });
+        clases.forEach(function(c){ (c.alumnos||[]).forEach(function(a){ var n=alNom(a); if(n){ ensA(n); entAl[n]=true; } }); });
         regs.forEach(function(r){
           if (r.sinClase) return;
           var clase = clases.filter(function(c){ return c.id===r.claseId; })[0];
@@ -4204,6 +4217,7 @@
           var clNom = clase.nombre ||
                       (((clase.diaSemana>=0 ? DIAS_NOMBRES_A[clase.diaSemana] : '') + ' ' + (clase.franja||'')).trim() || 'Clase');
           function push(n, presente){
+            entAl[n] = true;
             var entry   = alumnoEnClase(clase, n);
             var esRecup = presente && (!entry || !alActivo(entry, r.fecha));
             ensA(n).sesiones.push({
@@ -4219,7 +4233,10 @@
       Object.keys(map).forEach(function(n){
         map[n].sesiones.sort(function(a,b){ return b.fecha.localeCompare(a.fecha); });
       });
-      return map;
+      var ents = Object.keys(porEnt).sort().map(function(e){
+        return { nombre:e, alumnos:Object.keys(porEnt[e]).sort() };
+      });
+      return { al:map, ents:ents };
     }
 
     // Texto "con quién": presencias por entrenador (más frecuente primero)
@@ -4236,7 +4253,7 @@
       if (!cont) return;
       if (!_gestorData) { cont.innerHTML = '<p class="ajustes-desc">Sin datos.</p>'; return; }
       _gtaCache = _gtaIndex();
-      var lista = Object.keys(_gtaCache).sort();
+      var lista = Object.keys(_gtaCache.al).sort();
       document.getElementById('gta-sub').textContent =
         lista.length + ' alumno' + (lista.length!==1?'s':'') + ' · todos los entrenadores';
       if (!lista.length) {
@@ -4253,51 +4270,69 @@
       _gtaRenderLista();
     }
 
+    // Tarjeta de un alumno (compartida por la lista plana y los grupos)
+    function _gtaCard(n) {
+      var cursoAct = _cursoActual();
+      var sesCurso = _gtaCache.al[n].sesiones.filter(function(x){ return _cursoDe(x.fecha) === cursoAct; });
+      var s = _histStats(sesCurso);
+      var conQuien = _gtaConQuien(sesCurso);
+      var meta = s.tot ? (s.pres + '/' + s.tot + ' este curso' +
+                           (s.recups ? ' · +' + s.recups + ' recup' : '') +
+                           (conQuien ? ' · ' + conQuien : ''))
+                       : (_gtaCache.al[n].sesiones.length ? 'sin clases este curso' : 'sin registros');
+      var pctTxt = s.pct == null ? '—' : s.pct + '%';
+      return '<div class="gestor-card" onclick="abrirGestorTodosAlumno(\'' + _gEsc(n).replace(/'/g,"\\'") + '\')">' +
+        '<div class="gestor-card-ava">' + _gEsc(n.charAt(0).toUpperCase()) + '</div>' +
+        '<div class="gestor-card-body">' +
+          '<div class="gestor-card-nom">' + _gEsc(n) + '</div>' +
+          '<div class="gestor-card-meta">' + _gEsc(meta) + '</div>' +
+        '</div>' +
+        '<div class="gestor-card-pct" style="color:' + _pctColor(s.pct) + '">' + pctTxt + '</div>' +
+        '<div class="gestor-card-arr">›</div>' +
+      '</div>';
+    }
+
     function _gtaRenderLista() {
       var el  = document.getElementById('gta-lista');
       var cnt = document.getElementById('gta-count');
       if (!el || !_gtaCache) return;
-      var txt = _galsNorm(_gtaFiltroTxt);
-      var todos = Object.keys(_gtaCache).sort();
-      var visibles = todos.filter(function(n){ return !txt || _galsNorm(n).indexOf(txt) >= 0; });
-      var cursoAct = _cursoActual();
-      if (cnt) cnt.textContent = (visibles.length === todos.length)
-        ? todos.length + ' alumno' + (todos.length!==1?'s':'') + ' · toca uno para ver sus clases'
-        : visibles.length + ' de ' + todos.length + ' alumnos';
-      if (!visibles.length) {
-        el.innerHTML = '<p class="ajustes-desc" style="text-align:center;padding:0.8rem 0;">Ningún alumno coincide con el filtro.</p>';
+      var txt   = _galsNorm(_gtaFiltroTxt);
+      var todos = Object.keys(_gtaCache.al).sort();
+
+      // Buscando: lista plana con las coincidencias de TODA la academia
+      if (txt) {
+        var visibles = todos.filter(function(n){ return _galsNorm(n).indexOf(txt) >= 0; });
+        if (cnt) cnt.textContent = visibles.length + ' de ' + todos.length + ' alumnos';
+        el.innerHTML = visibles.length
+          ? visibles.map(_gtaCard).join('')
+          : '<p class="ajustes-desc" style="text-align:center;padding:0.8rem 0;">Ningún alumno coincide con el filtro.</p>';
         return;
       }
+
+      // Sin búsqueda: agrupados por entrenador (desplegables plegados).
+      // Un alumno con dos entrenadores aparece en ambos grupos.
+      if (cnt) cnt.textContent = todos.length + ' alumno' + (todos.length!==1?'s':'') + ' · agrupados por entrenador';
       var h = '';
-      visibles.forEach(function(n){
-        var sesCurso = _gtaCache[n].sesiones.filter(function(x){ return _cursoDe(x.fecha) === cursoAct; });
-        var s = _histStats(sesCurso);
-        var conQuien = _gtaConQuien(sesCurso);
-        var meta = s.tot ? (s.pres + '/' + s.tot + ' este curso' +
-                             (s.recups ? ' · +' + s.recups + ' recup' : '') +
-                             (conQuien ? ' · ' + conQuien : ''))
-                         : (_gtaCache[n].sesiones.length ? 'sin clases este curso' : 'sin registros');
-        var pctTxt = s.pct == null ? '—' : s.pct + '%';
-        h += '<div class="gestor-card" onclick="abrirGestorTodosAlumno(\'' + _gEsc(n).replace(/'/g,"\\'") + '\')">' +
-          '<div class="gestor-card-ava">' + _gEsc(n.charAt(0).toUpperCase()) + '</div>' +
-          '<div class="gestor-card-body">' +
-            '<div class="gestor-card-nom">' + _gEsc(n) + '</div>' +
-            '<div class="gestor-card-meta">' + _gEsc(meta) + '</div>' +
-          '</div>' +
-          '<div class="gestor-card-pct" style="color:' + _pctColor(s.pct) + '">' + pctTxt + '</div>' +
-          '<div class="gestor-card-arr">›</div>' +
-        '</div>';
+      _gtaCache.ents.forEach(function(ent){
+        if (!ent.alumnos.length) return;
+        h += '<details class="gas-clase"><summary class="gas-sum">' +
+          '<span class="gas-dia">' + _gEsc(ent.nombre) + '</span>' +
+          '<span class="gas-meta">' + ent.alumnos.length + ' alumno' + (ent.alumnos.length!==1?'s':'') + '</span>' +
+          '<span class="gas-chev">▾</span></summary><div class="gas-body">' +
+          ent.alumnos.map(_gtaCard).join('') +
+          '</div></details>';
       });
       el.innerHTML = h;
     }
 
-    // Detalle global de un alumno: todas sus clases, con quién, y recups
+    // Detalle global de un alumno: curso en curso (sep–jun) con navegación
+    // mes a mes, y cursos anteriores plegados (solo si tienen clases).
     function renderGestorTodosAlumno() {
       var cont = document.getElementById('gta-al-contenido');
       if (!cont) return;
       if (!_gtaAlumno) { irA('pantalla-gestor-todos-alumnos'); return; }
       if (!_gtaCache) _gtaCache = _gtaIndex();
-      var al = _gtaCache[_gtaAlumno];
+      var al = _gtaCache.al[_gtaAlumno];
       document.getElementById('gta-al-nombre').textContent = _gtaAlumno;
       if (!al || !al.sesiones.length) {
         document.getElementById('gta-al-sub').textContent = 'Sin registros';
@@ -4314,27 +4349,35 @@
                 : 'sin clases este curso');
 
       var conQuien = _gtaConQuien(sesCurso);
-      var h = '';
-      if (conQuien) {
-        h += '<div class="asist-global-card" style="margin-bottom:10px;">' +
-          '<div class="asist-global-info">' +
-            '<div class="asist-global-titulo">Este curso ' + _gEsc(conQuien) + '</div>' +
-            '<div class="asist-global-sub">Las recuperaciones indican con quién se hicieron ↩</div>' +
-          '</div></div>';
-      }
 
-      // Agrupar por mes (más reciente primero)
-      var porMes = {};
-      al.sesiones.forEach(function(x){ var m = x.fecha.substring(0,7); (porMes[m] = porMes[m] || []).push(x); });
-      Object.keys(porMes).sort().reverse().forEach(function(mes){
-        var p = mes.split('-');
-        var items = porMes[mes];
-        var sm = _histStats(items);
-        h += '<div class="grupo-titulo">' + MESES_NOMBRES_A[parseInt(p[1],10)-1] + ' ' + p[0] +
-             ' · ' + sm.pres + '/' + sm.tot +
-             ((sm.fJ||sm.fIJ) ? ' · ' + sm.fJ + 'J/' + sm.fIJ + 'IJ' : '') +
-             (sm.recups ? ' · +' + sm.recups + '↩' : '') + '</div>';
-        items.forEach(function(x){
+      // ── Tarjeta del curso en curso ──
+      var h = '<div class="asist-global-card" style="margin-bottom:10px;">' +
+        '<div class="asist-global-num">' + (sc.pct==null?'—':sc.pct+'%') + '</div>' +
+        '<div class="asist-global-info">' +
+          '<div class="asist-global-titulo">Curso ' + cursoAct + '</div>' +
+          '<div class="asist-global-sub">' +
+            (sc.tot ? sc.pres + ' presencias de ' + sc.tot + ' clases' +
+                      ((sc.fJ||sc.fIJ) ? ' · faltas: ' + sc.fJ + ' J · ' + sc.fIJ + ' IJ' : '') +
+                      (sc.recups ? ' · ' + sc.recups + ' recuperación' + (sc.recups!==1?'es':'') : '')
+                    : 'sin clases este curso') +
+            (conQuien ? '<br>' + _gEsc(conQuien) : '') +
+          '</div>' +
+          '<div class="asist-progreso" style="margin-top:8px;"><div class="asist-progreso-fill" style="width:' + (sc.pct||0) + '%"></div></div>' +
+        '</div></div>';
+
+      // ── Mes seleccionado, con navegación ‹ › (el curso va sep–jun) ──
+      var mesISO   = getMesISO_A(_gtaMesOff);
+      var mesLabel = getMesLabelA(_gtaMesOff);
+      h += '<div class="gestor-mes-nav" style="margin-top:0.4rem;">' +
+        '<button class="gestor-mes-btn" onclick="gtaMesNav(-1)">‹</button>' +
+        '<span class="gestor-mes-lbl">' + _gEsc(mesLabel) + '</span>' +
+        '<button class="gestor-mes-btn" onclick="gtaMesNav(1)">›</button>' +
+      '</div>';
+      var itemsMes = al.sesiones.filter(function(x){ return x.fecha.startsWith(mesISO); });
+      if (!itemsMes.length) {
+        h += '<p class="ajustes-desc" style="text-align:center;">Sin registros este mes.</p>';
+      } else {
+        itemsMes.forEach(function(x){
           var linea2 = x.recup
             ? '↩ Recuperación con ' + x.entrenador
             : 'con ' + x.entrenador + (x.franja ? ' · ' + x.franja : '');
@@ -4350,7 +4393,46 @@
                                                : '<span class="asist-hist-ausente">✗ Falta IJ</span>'))) +
           '</div>';
         });
+      }
+
+      // ── Cursos anteriores (sep–jun), plegados; solo si tuvieron clases ──
+      var porCurso = {};
+      al.sesiones.forEach(function(x){
+        var c = _cursoDe(x.fecha);
+        if (c === cursoAct) return;   // el actual ya está arriba
+        (porCurso[c] = porCurso[c] || []).push(x);
       });
+      var cursos = Object.keys(porCurso).sort().reverse();
+      if (cursos.length) {
+        var ORDEN_MESES_CURSO = [9,10,11,12,1,2,3,4,5,6,7,8];   // sep→jun (+verano por si acaso)
+        h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Cursos anteriores</div>';
+        cursos.forEach(function(curso){
+          var items = porCurso[curso];
+          var s = _histStats(items);
+          h += '<details class="gas-clase"><summary class="gas-sum">' +
+            '<span class="gas-dia">Curso ' + curso + '</span>' +
+            '<span class="gas-meta" style="color:' + _pctColor(s.pct) + '">' + s.pres + '/' + s.tot +
+              ((s.fJ||s.fIJ) ? ' · ' + s.fJ + 'J/' + s.fIJ + 'IJ' : '') +
+              (s.pct!=null ? ' · ' + s.pct + '%' : '') + '</span>' +
+            '<span class="gas-chev">▾</span></summary><div class="gas-body">';
+          var porMes = {};
+          items.forEach(function(x){ var m = +x.fecha.split('-')[1]; (porMes[m] = porMes[m] || []).push(x); });
+          ORDEN_MESES_CURSO.forEach(function(m){
+            if (!porMes[m]) return;
+            var sm = _histStats(porMes[m]);
+            var pctM = sm.pct == null ? '—' : sm.pct + '%';
+            h += '<div class="gestor-alum-row">' +
+              '<div class="gestor-alum-nom">' + MESES_NOMBRES_A[m-1] + '</div>' +
+              '<div class="gestor-alum-det">' + sm.pres + '/' + sm.tot +
+                ((sm.fJ||sm.fIJ) ? ' · ' + sm.fJ + 'J/' + sm.fIJ + 'IJ' : '') +
+                (sm.recups ? ' +' + sm.recups + '↩' : '') + '</div>' +
+              '<div class="gestor-alum-bar"><div class="gestor-alum-fill" style="width:' + (sm.pct||0) + '%;background:' + _pctColor(sm.pct) + '"></div></div>' +
+              '<div class="gestor-alum-pct" style="color:' + _pctColor(sm.pct) + '">' + pctM + '</div>' +
+            '</div>';
+          });
+          h += '</div></details>';
+        });
+      }
       cont.innerHTML = h;
     }
 
