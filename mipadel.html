@@ -39,6 +39,15 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.51.0 — Faltas justificadas (J/IJ) en asistencia (2026-07)
+    · Al pasar lista, cada ausencia se marca J (justificada) o IJ
+      (injustificada, por defecto). Nuevo campo justificadas[] en
+      los registros (+ columna jsonb, migración v0.51 en Supabase).
+    · El gestor lo ve en: desplegables por fecha del detalle del
+      entrenador, listado de alumnos e historial por alumno
+      (contadores de faltas J/IJ por mes y por curso).
+    · El entrenador lo ve en el resumen mensual (J en ámbar), en el
+      historial del alumno y en el PDF (leyenda + columna Faltas).
   v0.50.0 — El panel de la academia es exclusivo del gestor (2026-07)
     · EN3 (nivel3) deja de gestionar la asistencia de otros: cada
       entrenador (EN2/EN3) gestiona SOLO la suya, y la de los EN1
@@ -1381,6 +1390,13 @@
     .asist-hist-clase-franja { font-size:11px; color:var(--gris); }
     .asist-hist-presente { font-size:11px; font-weight:700; color:#166534; background:#dcfce7; border-radius:10px; padding:2px 8px; flex-shrink:0; }
     .asist-hist-ausente  { font-size:11px; font-weight:700; color:#991b1b; background:var(--rojo-suave); border-radius:10px; padding:2px 8px; flex-shrink:0; }
+    .asist-hist-j        { font-size:11px; font-weight:700; color:#92400e; background:#fef3c7; border-radius:10px; padding:2px 8px; flex-shrink:0; }
+
+    /* Toggle J/IJ en la fila de un alumno ausente (pasar lista) */
+    .asist-jij { display:flex; gap:4px; margin-left:auto; flex-shrink:0; }
+    .asist-jij-btn { border:1.5px solid #e5e7eb; background:var(--blanco); color:#9ca3af; font-size:11px; font-weight:800; border-radius:10px; padding:3px 9px; cursor:pointer; }
+    .asist-jij-btn.j.on  { border-color:#f59e0b; background:#fef3c7; color:#92400e; }
+    .asist-jij-btn.ij.on { border-color:#f87171; background:#fee2e2; color:#991b1b; }
 
     /* Stats asistencia en Hub */
     .asist-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
@@ -2540,7 +2556,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.50.0';
+    var APP_VERSION = '0.51.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -2818,6 +2834,7 @@
         var regsServ = (results[5].data || []).map(function(r){ return {
           id:r.id, claseId:r.clase_id, fecha:r.fecha,
           presentes:r.presentes||[], ausentes:r.ausentes||[],
+          justificadas:r.justificadas||[],
           sinClase:!!r.sin_clase
         }; });
 
@@ -3033,6 +3050,7 @@
       asistencia_registros: function(r, uid) { return {  // siempre privada
         id:r.id, user_id:uid, clase_id:r.claseId, fecha:r.fecha,
         presentes:r.presentes||[], ausentes:r.ausentes||[],
+        justificadas:r.justificadas||[],
         sin_clase:!!r.sinClase
       }; }
     };
@@ -3344,7 +3362,8 @@
       if (_gEditUid) {
         return _gEditDatos().regs.map(function(r){
           return { id:r.id, claseId:r.clase_id, fecha:r.fecha,
-                   presentes:r.presentes || [], ausentes:r.ausentes || [], sinClase:!!r.sin_clase };
+                   presentes:r.presentes || [], ausentes:r.ausentes || [],
+                   justificadas:r.justificadas || [], sinClase:!!r.sin_clase };
         });
       }
       var d = _lzGet('padel-asistencia-reg'); return d ? JSON.parse(d) : [];
@@ -3583,7 +3602,8 @@
     function _gestorRegsLocal(d) {
       return (d.regs || []).map(function(r){
         return { id:r.id, claseId:r.clase_id, fecha:r.fecha,
-                 presentes:r.presentes || [], ausentes:r.ausentes || [], sinClase:!!r.sin_clase };
+                 presentes:r.presentes || [], ausentes:r.ausentes || [],
+                 justificadas:r.justificadas || [], sinClase:!!r.sin_clase };
       });
     }
 
@@ -3731,7 +3751,8 @@
           var chips = '';
           activos2.forEach(function(n){
             var ok = (reg.presentes||[]).indexOf(n) !== -1;
-            chips += '<span class="gad-al ' + (ok?'si':'no') + '">' + (ok?'✓ ':'✗ ') + _gEsc(n) + '</span>';
+            var jj = !ok && (reg.justificadas||[]).indexOf(n) !== -1;
+            chips += '<span class="gad-al ' + (ok?'si':'no') + '">' + (ok?'✓ ':'✗ ') + _gEsc(n) + (ok?'':' · ' + (jj?'J':'IJ')) + '</span>';
           });
           // Recuperaciones: presentes que no son alumnos activos de la clase
           (reg.presentes||[]).forEach(function(n){
@@ -3801,7 +3822,7 @@
         // (El sumatorio 1h/1h30 vive en el KPI "Clases dadas" de arriba)
         h += '<div class="asist-matriz-leyenda" style="margin-top:0.5rem;">' +
           '<span style="color:#166534;font-weight:700">✓</span> asistió &nbsp; ' +
-          '<span style="color:#991b1b;font-weight:700">✗</span> faltó &nbsp; ' +
+          '<span style="color:#991b1b;font-weight:700">✗</span> faltó (<b>J</b> justificada · <b>IJ</b> injustificada) &nbsp; ' +
           '<span style="color:#16264f;font-weight:700">↩</span> recup &nbsp; ' +
           '<span style="color:#9ca3af;font-weight:700">—</span> sin lista</div>';
       }
@@ -3904,7 +3925,8 @@
         var entry   = alumnoEnClase(clase, nombre);
         var esRecup = enP && (!entry || !alActivo(entry, r.fecha));
         out.push({ fecha:r.fecha, franja:clase.franja||'', claseNombre:clase.nombre||'',
-                   presente:enP, recup:esRecup });
+                   presente:enP, recup:esRecup,
+                   justif: !enP && (r.justificadas||[]).indexOf(nombre)!==-1 });
       });
       out.sort(function(a,b){ return b.fecha.localeCompare(a.fecha); });
       return out;
@@ -3912,7 +3934,10 @@
     function _histStats(items) {
       var propias = items.filter(function(h){ return !h.recup; });
       var pres    = propias.filter(function(h){ return h.presente; }).length;
+      var fJ      = propias.filter(function(h){ return !h.presente && h.justif; }).length;
+      var fIJ     = propias.length - pres - fJ;
       return { pres:pres, tot:propias.length, recups:items.length - propias.length,
+               fJ:fJ, fIJ:fIJ,
                pct: propias.length ? Math.round(pres*100/propias.length) : null };
     }
     function _pctColor(p) { return p==null ? '#9ca3af' : (p>=80 ? '#166534' : (p>=60 ? '#b45309' : '#991b1b')); }
@@ -4000,7 +4025,9 @@
         var hist = _gestorHistAlumno(n);
         var histCurso = hist.filter(function(x){ return _cursoDe(x.fecha) === cursoAct; });
         var s = _histStats(histCurso);
-        var meta = s.tot ? (s.pres + '/' + s.tot + ' este curso' + (s.recups ? ' · +' + s.recups + ' recup' : ''))
+        var meta = s.tot ? (s.pres + '/' + s.tot + ' este curso' +
+                             ((s.fJ || s.fIJ) ? ' · faltas: ' + s.fJ + ' J · ' + s.fIJ + ' IJ' : '') +
+                             (s.recups ? ' · +' + s.recups + ' recup' : ''))
                          : (hist.length ? 'sin clases este curso' : 'sin registros');
         var pctTxt = s.pct == null ? '—' : s.pct + '%';
         h += '<div class="gestor-card" onclick="abrirGestorAlumno(\'' + _gEsc(n).replace(/'/g,"\\'") + '\')">' +
@@ -4040,6 +4067,7 @@
         '<div class="asist-global-info">' +
           '<div class="asist-global-titulo">Curso ' + cursoAct + '</div>' +
           '<div class="asist-global-sub">' + sc.pres + ' presencias de ' + sc.tot + ' clases' +
+            ((sc.fJ || sc.fIJ) ? ' · faltas: ' + sc.fJ + ' J · ' + sc.fIJ + ' IJ' : '') +
             (sc.recups ? ' · ' + sc.recups + ' recuperación' + (sc.recups!==1?'es':'') : '') + '</div>' +
           '<div class="asist-progreso" style="margin-top:8px;"><div class="asist-progreso-fill" style="width:' + (sc.pct||0) + '%"></div></div>' +
         '</div></div>';
@@ -4066,7 +4094,8 @@
             '</div>' +
             (x.recup ? '<span class="asist-hist-presente">✓ Recup.</span>'
                      : (x.presente ? '<span class="asist-hist-presente">✓ Presente</span>'
-                                   : '<span class="asist-hist-ausente">✗ Ausente</span>')) +
+                                   : (x.justif ? '<span class="asist-hist-j">✗ Falta J</span>'
+                                               : '<span class="asist-hist-ausente">✗ Falta IJ</span>'))) +
           '</div>';
         });
       }
@@ -4086,7 +4115,7 @@
         var esActual = curso === cursoAct;
         h += '<details class="gas-clase"' + (esActual ? ' open' : '') + '><summary class="gas-sum">' +
           '<span class="gas-dia">Curso ' + curso + (esActual ? ' · en curso' : '') + '</span>' +
-          '<span class="gas-meta" style="color:' + _pctColor(s.pct) + '">' + s.pres + '/' + s.tot + (s.pct!=null ? ' · ' + s.pct + '%' : '') + '</span>' +
+          '<span class="gas-meta" style="color:' + _pctColor(s.pct) + '">' + s.pres + '/' + s.tot + ((s.fJ||s.fIJ) ? ' · ' + s.fJ + 'J/' + s.fIJ + 'IJ' : '') + (s.pct!=null ? ' · ' + s.pct + '%' : '') + '</span>' +
           '<span class="gas-chev">▾</span></summary><div class="gas-body">';
         // Reparto por mes del curso
         var porMes = {};
@@ -4097,7 +4126,7 @@
           var pctM = sm.pct == null ? '—' : sm.pct + '%';
           h += '<div class="gestor-alum-row">' +
             '<div class="gestor-alum-nom">' + MESES_NOMBRES_A[m-1] + '</div>' +
-            '<div class="gestor-alum-det">' + sm.pres + '/' + sm.tot + (sm.recups ? ' +' + sm.recups + '↩' : '') + '</div>' +
+            '<div class="gestor-alum-det">' + sm.pres + '/' + sm.tot + ((sm.fJ||sm.fIJ) ? ' · ' + sm.fJ + 'J/' + sm.fIJ + 'IJ' : '') + (sm.recups ? ' +' + sm.recups + '↩' : '') + '</div>' +
             '<div class="gestor-alum-bar"><div class="gestor-alum-fill" style="width:' + (sm.pct||0) + '%;background:' + _pctColor(sm.pct) + '"></div></div>' +
             '<div class="gestor-alum-pct" style="color:' + _pctColor(sm.pct) + '">' + pctM + '</div>' +
           '</div>';
@@ -7988,6 +8017,7 @@
     var asistFechaActiva   = null; // fecha activa en pasar lista
     var asistAlumnosForm   = [];   // alumnos en el formulario
     var asistEstadoLista   = {};   // { nombre: true/false } durante pase
+    var asistJustifs       = {};   // { nombre: true } ausencia justificada (J); sin marca = IJ
     var asistRecups        = [];   // nombres de recuperaciones (invitados) ese día
     var asistRecupPanelOn  = false;
     var asistMesOffset     = 0;    // meses desde el actual
@@ -8247,6 +8277,10 @@
         asistEstadoLista[n] = regExiste ? (regExiste.presentes||[]).indexOf(n) !== -1 : true;
       });
 
+      // Justificaciones guardadas (J); toda ausencia sin marca cuenta como IJ
+      asistJustifs = {};
+      if (regExiste) (regExiste.justificadas||[]).forEach(function(n){ asistJustifs[n] = true; });
+
       // Recuperaciones = presentes guardados que NO son del cupo activo
       asistRecups = [];
       if (regExiste) {
@@ -8281,8 +8315,15 @@
         h += '<span class="asist-al-nombre">' + nombre + (esRecup?'<span class="asist-recup-badge">RECUP</span>':'') + '</span>';
         if (esRecup) {
           h += '<button class="asist-chip-quitar" style="margin-left:auto;" onclick="event.stopPropagation();asistQuitarRecup(\'' + safe + '\')">✕</button>';
+        } else if (presente) {
+          h += '<span class="asist-al-estado">Presente</span>';
         } else {
-          h += '<span class="asist-al-estado">' + (presente?'Presente':'Ausente') + '</span>';
+          // Ausente: elegir J (justificada) o IJ (injustificada, por defecto)
+          var esJ = !!asistJustifs[nombre];
+          h += '<span class="asist-jij">' +
+               '<button type="button" class="asist-jij-btn j' + (esJ?' on':'') + '" onclick="event.stopPropagation();asistSetJustif(\'' + safe + '\',true)">J</button>' +
+               '<button type="button" class="asist-jij-btn ij' + (!esJ?' on':'') + '" onclick="event.stopPropagation();asistSetJustif(\'' + safe + '\',false)">IJ</button>' +
+               '</span>';
         }
         h += '</div>';
         return h;
@@ -8362,6 +8403,12 @@
       renderToggleAlumnos(null);
     }
 
+    // Marca la ausencia como justificada (J) o injustificada (IJ)
+    function asistSetJustif(nombre, j) {
+      if (j) asistJustifs[nombre] = true; else delete asistJustifs[nombre];
+      renderToggleAlumnos(null);
+    }
+
     function asistMarcarTodos(estado) {
       Object.keys(asistEstadoLista).forEach(function(k){ asistEstadoLista[k] = estado; });
       renderToggleAlumnos(null);
@@ -8381,6 +8428,7 @@
         fecha:    fecha,
         presentes: [],
         ausentes:  [],
+        justificadas: [],
         sinClase:  true
       };
       if (idx>=0) { regs[idx]=nuevoReg; } else { regs.push(nuevoReg); }
@@ -8395,6 +8443,7 @@
 
       var presentes = Object.keys(asistEstadoLista).filter(function(k){ return asistEstadoLista[k]; });
       var ausentes  = Object.keys(asistEstadoLista).filter(function(k){ return !asistEstadoLista[k]; });
+      var justificadas = ausentes.filter(function(n){ return !!asistJustifs[n]; });
 
       var regs = leerAsistRegistros();
       var idx  = -1;
@@ -8405,7 +8454,8 @@
         claseId:  asistClaseActivaId,
         fecha:    fecha,
         presentes:presentes,
-        ausentes: ausentes
+        ausentes: ausentes,
+        justificadas: justificadas
       };
 
       if (idx>=0) { regs[idx]=nuevoReg; } else { regs.push(nuevoReg); }
@@ -8624,7 +8674,7 @@
             dat.totalClases += 1;
             var ok = reg && (reg.presentes||[]).indexOf(nombre)!==-1;
             if (ok) dat.presencias += 1;
-            dat.cells[f] = reg ? (ok ? 'pres' : 'falta') : 'nolist';
+            dat.cells[f] = reg ? (ok ? 'pres' : (((reg.justificadas||[]).indexOf(nombre)!==-1) ? 'faltaJ' : 'falta')) : 'nolist';
           });
         });
         // Recuperaciones: presentes que NO son del cupo activo esa fecha
@@ -8658,6 +8708,7 @@
       var CEL = {
         pres:   { txt:'✓', col:'#166534' },
         falta:  { txt:'✗', col:'#991b1b' },
+        faltaJ: { txt:'J', col:'#b45309' },
         recup:  { txt:'↩', col:'#16264f' },
         nolist: { txt:'—', col:'#9ca3af' }
       };
@@ -8665,7 +8716,8 @@
       var html = '';
       html += '<div class="asist-matriz-leyenda">';
       html += '<span style="color:#166534;font-weight:700">✓</span> asistió &nbsp; ';
-      html += '<span style="color:#991b1b;font-weight:700">✗</span> faltó &nbsp; ';
+      html += '<span style="color:#991b1b;font-weight:700">✗</span> falta injustif. &nbsp; ';
+      html += '<span style="color:#b45309;font-weight:700">J</span> falta justif. &nbsp; ';
       html += '<span style="color:#16264f;font-weight:700">↩</span> recup &nbsp; ';
       html += '<span style="color:#9ca3af;font-weight:700">—</span> sin lista &nbsp; ';
       html += '<span style="color:#d1d5db;font-weight:700">·</span> no aplica';
@@ -8725,7 +8777,8 @@
         if (!enPresentes && !enAusentes) return;
         var entry   = alumnoEnClase(clase, alumno);
         var esRecup = enPresentes && (!entry || !alActivo(entry, r.fecha));
-        historial.push({ fecha:r.fecha, clase:clase, presente:enPresentes, recup:esRecup });
+        historial.push({ fecha:r.fecha, clase:clase, presente:enPresentes, recup:esRecup,
+                         justif: !enPresentes && (r.justificadas||[]).indexOf(alumno)!==-1 });
       });
 
       historial.sort(function(a,b){ return b.fecha.localeCompare(a.fecha); });
@@ -8735,9 +8788,14 @@
       var pres    = propias.filter(function(h){ return h.presente; }).length;
       var pct     = propias.length>0 ? Math.round(pres/propias.length*100) : 0;
       var nRecup  = historial.filter(function(h){ return h.recup; }).length;
+      var faltasP = propias.filter(function(h){ return !h.presente; });
+      var nJ      = faltasP.filter(function(h){ return h.justif; }).length;
+      var nIJ     = faltasP.length - nJ;
 
       document.getElementById('asist-alumno-sub').textContent =
-        pres + '/' + propias.length + ' asistencias (' + pct + '%)' + (nRecup ? ' · +' + nRecup + ' recup' : '');
+        pres + '/' + propias.length + ' asistencias (' + pct + '%)' +
+        (faltasP.length ? ' · faltas: ' + nJ + ' J · ' + nIJ + ' IJ' : '') +
+        (nRecup ? ' · +' + nRecup + ' recup' : '');
 
       if (historial.length === 0) {
         document.getElementById('asist-alumno-contenido').innerHTML =
@@ -8759,7 +8817,7 @@
       html += '<div class="asist-global-num">' + pct + '%</div>';
       html += '<div class="asist-global-info">';
       html += '<div class="asist-global-titulo">Asistencia total</div>';
-      html += '<div class="asist-global-sub">' + pres + ' presencias de ' + propias.length + ' clases propias' + (nRecup ? ' · ' + nRecup + ' recuperación' + (nRecup!==1?'es':'') : '') + '</div>';
+      html += '<div class="asist-global-sub">' + pres + ' presencias de ' + propias.length + ' clases propias' + (faltasP.length ? ' · faltas: ' + nJ + ' J · ' + nIJ + ' IJ' : '') + (nRecup ? ' · ' + nRecup + ' recuperación' + (nRecup!==1?'es':'') : '') + '</div>';
       html += '<div class="asist-progreso" style="margin-top:8px;"><div class="asist-progreso-fill" style="width:' + pct + '%"></div></div>';
       html += '</div></div>';
 
@@ -8783,7 +8841,8 @@
             ? '<span class="asist-hist-presente">✓ Recup.</span>'
             : (h.presente
                 ? '<span class="asist-hist-presente">✓ Presente</span>'
-                : '<span class="asist-hist-ausente">✗ Ausente</span>');
+                : (h.justif ? '<span class="asist-hist-j">✗ Falta J</span>'
+                            : '<span class="asist-hist-ausente">✗ Falta IJ</span>'));
           html += '</div>';
         });
       });
@@ -8804,7 +8863,7 @@
       var occ    = ocurrenciasDiaEnMes(mesISO);
 
       var alumnosMap = {};
-      function ensureP(n){ if(!alumnosMap[n]) alumnosMap[n]={totalClases:0,presencias:0,recups:0}; return alumnosMap[n]; }
+      function ensureP(n){ if(!alumnosMap[n]) alumnosMap[n]={totalClases:0,presencias:0,recups:0,fJ:0,fIJ:0}; return alumnosMap[n]; }
       clases.forEach(function(clase) {
         var fechasMes = fechasClaseEnMes(clase, mesISO);
         var regsClase = regs.filter(function(r){ return r.claseId===clase.id; });
@@ -8817,6 +8876,7 @@
             if (reg && reg.sinClase) return;
             dat.totalClases += 1;
             if (reg && (reg.presentes||[]).indexOf(nombre)!==-1) dat.presencias += 1;
+            else if (reg) { if ((reg.justificadas||[]).indexOf(nombre)!==-1) dat.fJ += 1; else dat.fIJ += 1; }
           });
         });
         // Recuperaciones: presentes que no son del cupo activo
@@ -8885,6 +8945,7 @@
       var _club = (_perf.club||'').trim() || 'Club de Pádel';
       h += '<h1>📋 Resumen de Asistencia</h1>';
       h += '<div class="sub">' + mesLabel + ' &nbsp;·&nbsp; ' + _club + ' &nbsp;·&nbsp; Generado el ' + new Date().toLocaleDateString('es-ES') + '</div>';
+      h += '<div class="sub"><b style="color:#166534">✓</b> asistió &nbsp;·&nbsp; <b style="color:#b45309">J</b> falta justificada &nbsp;·&nbsp; <b style="color:#991b1b">✗</b> falta injustificada (IJ) &nbsp;·&nbsp; ↩ recuperación</div>';
       if (_entrenador) {
         h += '<div style="font-size:13px;color:#374151;margin:-12px 0 22px;"><strong>Entrenador/a:</strong> ' + _entrenador + '</div>';
       }
@@ -8940,7 +9001,8 @@
                 } else {
                   posibles++;
                   var ok = reg && reg.presentes.indexOf(nombre)!==-1;
-                  h += '<td style="text-align:center;font-weight:700;color:' + (reg?(ok?'#166534':'#991b1b'):'#9ca3af') + '">' + (reg?(ok?'✓':'✗'):'—') + '</td>';
+                  var jj = reg && !ok && (reg.justificadas||[]).indexOf(nombre)!==-1;
+                  h += '<td style="text-align:center;font-weight:700;color:' + (reg?(ok?'#166534':(jj?'#b45309':'#991b1b')):'#9ca3af') + '">' + (reg?(ok?'✓':(jj?'J':'✗')):'—') + '</td>';
                   if (ok) pres++;
                 }
               });
@@ -8976,13 +9038,14 @@
       // ── 2. Resumen por alumno ────────────────────────────────────
       if (alumnos.length > 0) {
         h += '<h2>Resumen por alumno</h2>';
-        h += '<table><thead><tr><th>Alumno</th><th>Asistencias</th><th>Total posible</th><th>%</th><th>Estado</th></tr></thead><tbody>';
+        h += '<table><thead><tr><th>Alumno</th><th>Asistencias</th><th>Total posible</th><th>Faltas (J · IJ)</th><th>%</th><th>Estado</th></tr></thead><tbody>';
         alumnos.forEach(function(a) {
           var dat = alumnosMap[a];
           var pct = dat.totalClases>0 ? Math.round(dat.presencias/dat.totalClases*100) : 0;
           var cls = pct>=80 ? 'verde' : pct>=60 ? 'ambar' : 'rojo';
           var niv = pct>=80 ? '● Buena' : pct>=60 ? '● Regular' : '● Baja';
           h += '<tr><td>' + nombrePDF(a) + (dat.recups ? ' <span class="tag-recup">↩ +' + dat.recups + '</span>' : '') + '</td><td style="text-align:center">' + dat.presencias + '</td><td style="text-align:center">' + dat.totalClases + '</td>';
+          h += '<td style="text-align:center">' + ((dat.fJ||dat.fIJ) ? ('<span class="ambar">' + dat.fJ + ' J</span> · <span class="rojo">' + dat.fIJ + ' IJ</span>') : '—') + '</td>';
           h += '<td><span class="' + cls + '">' + pct + '%</span><span class="barra-wrap"><span class="barra-fill" style="width:' + pct + '%"></span></span></td>';
           h += '<td class="' + cls + '">' + niv + '</td></tr>';
         });
