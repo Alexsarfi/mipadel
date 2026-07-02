@@ -39,6 +39,31 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.49.1 — FIX: una cuenta nueva podía machacar el plan del grupo (2026-07)
+    · Bug real detectado con mpaulano (EN3): al entrar y tocar
+      Planificación antes de que terminara la descarga inicial, su
+      plan por defecto se subía a plan_grupo y PISABA el plan
+      compartido (todos perdían las sesiones enlazadas sesInc).
+    · Candado _planSyncOK: el plan NO se sube hasta que la descarga
+      haya consultado plan_grupo con éxito en esta sesión. Si la
+      consulta falla, los cambios de plan quedan en local hasta la
+      siguiente descarga buena. Se resetea al cerrar sesión.
+    · La siembra (no hay fila en el servidor) ahora exige consulta
+      sin error: un fallo de red ya no se confunde con "no hay plan".
+    · Recuperación tras el pisotón: borrar la fila de plan_grupo y
+      entrar primero con el dispositivo que conserva el plan bueno
+      (se siembra solo). Ver pasos en ESTADO.md.
+
+  v0.49.0 — Alumnos del gestor: buscador y filtro por clase (2026-07)
+    · Pantalla "Alumnos" del detalle del gestor: campo de búsqueda
+      con filtrado en vivo al teclear (ignora mayúsculas y acentos)
+      y fila de chips por clase/tramo ("Todos", "Lun 17:00-18:00"…)
+      para ver solo los alumnos de un grupo.
+    · Contador "X de Y alumnos" que confirma el filtro activo; el
+      input no pierde el foco al filtrar (solo se repinta la lista).
+    · Los alumnos que solo aparecen por recuperaciones no pertenecen
+      a ninguna clase: se ven en "Todos" y al buscar por texto.
+
   v0.48.0 — Detalle del gestor sin ruido: clases dadas agrupadas por día (2026-07)
     · "Clases dadas": el nombre del día ya no se repite por cada
       franja. Cada día de la semana es una tarjeta con cabecera
@@ -750,6 +775,13 @@
     .gestor-kpi-btn { cursor:pointer; border-color:var(--lila-claro); }
     .gestor-kpi-btn:active { background:var(--lila-suave); }
     .gestor-kpi-btn .gestor-kpi-sub { color:var(--lila); }
+    /* Buscador y filtro por clase en Alumnos (gestor) */
+    .gals-chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:0.35rem; }
+    .gals-chip { border:1.5px solid var(--borde); background:var(--blanco); color:var(--gris);
+                 font-family:inherit; font-size:12px; font-weight:700; border-radius:20px;
+                 padding:4px 11px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .gals-chip.activo { background:var(--verde); border-color:var(--verde); color:#fff; }
+    .gals-chip:active { transform:scale(0.95); }
     /* Asistencia por días: tramos horarios dentro de cada día */
     .gad-tramo { padding:0.55rem 0; border-bottom:1px solid var(--borde); }
     .gad-tramo:last-child { border-bottom:none; }
@@ -2504,7 +2536,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.48.0';
+    var APP_VERSION = '0.49.1';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -2536,7 +2568,7 @@
         _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         _sb.auth.onAuthStateChange(function(event, session) {
           _sbUser = session ? { id: session.user.id, email: session.user.email } : null;
-          if (!_sbUser) { _sbGrupo = null; _esEN1 = false; _esGestor = false; }
+          if (!_sbUser) { _sbGrupo = null; _esEN1 = false; _esGestor = false; _planSyncOK = false; }
           if (event === 'SIGNED_IN') {
             _authActualizarBadge();
             _fetchGrupo(_sbUser.id).then(function() {
@@ -2799,7 +2831,11 @@
         // hechos). Si aún no hay fila en el servidor pero sí hay plan local
         // (cuenta que ya tenía plan antes de esta versión), lo sube tal cual
         // para sembrar la fila del grupo.
-        var planServ = results[6] && results[6].data;
+        var qPlanRes = results[6] || {};
+        // Solo si la consulta fue bien sabemos qué hay en el servidor:
+        // a partir de aquí se permite subir el plan (candado _planSyncOK).
+        if (!qPlanRes.error) { _planSyncOK = true; }
+        var planServ = qPlanRes.data;
         if (planServ) {
           var pLocal = leerPlan();
           pLocal.contenido       = planServ.contenido  || pLocal.contenido;
@@ -2809,7 +2845,9 @@
           pLocal.bibVersion      = planServ.bib_version     != null ? planServ.bib_version     : pLocal.bibVersion;
           pLocal.bibEstrategias  = planServ.bib_estrategias != null ? planServ.bib_estrategias : pLocal.bibEstrategias;
           escribirPlan(pLocal, true);
-        } else {
+        } else if (!qPlanRes.error) {
+          // No hay fila en el servidor: sembrar con el plan local (primera
+          // cuenta del grupo que entra con v0.44+)
           var pPropio = leerPlan();
           if (pPropio.contenido) _bgUpsertPlan(pPropio);
         }
@@ -3013,8 +3051,15 @@
     // tablas no es una lista de filas: es UNA fila por grupo (o por cuenta si
     // se trabaja en solitario), compartida por todos los miembros del grupo.
     // El gestor no tiene plan propio; EN1 tampoco accede a Planificación.
+    //
+    // CANDADO (v0.49.1): _planSyncOK impide subir el plan hasta que la
+    // descarga inicial haya consultado el servidor con éxito. Sin esto, una
+    // cuenta recién entrada que tocara Planificación antes de terminar la
+    // descarga subía su plan por defecto y MACHACABA el plan del grupo
+    // (los apartados perdían las sesiones enlazadas para todos).
+    var _planSyncOK = false;
     function _bgUpsertPlan(p) {
-      if (!_sb || !_sbUser || _esGestor) return;
+      if (!_sb || !_sbUser || _esGestor || !_planSyncOK) return;
       var uid = _sbUser.id;
       var gid = _sbGrupo ? _sbGrupo.id : null;
       var scope = gid || uid;
@@ -3810,7 +3855,21 @@
     var _gestorAlumno = null;   // alumno abierto en el historial
     var _gAlMesOff    = 0;      // navegación por meses en el detalle del alumno
 
-    function abrirGestorAlumnos() { irA('pantalla-gestor-alumnos'); }
+    var _gAlsFiltroTxt   = '';     // texto del buscador de alumnos
+    var _gAlsFiltroClase = null;   // id de clase seleccionada en los chips (null = todas)
+
+    function abrirGestorAlumnos() { _gAlsFiltroTxt = ''; _gAlsFiltroClase = null; irA('pantalla-gestor-alumnos'); }
+    // Normaliza para buscar: minúsculas y sin acentos
+    function _galsNorm(s) {
+      s = String(s || '').toLowerCase();
+      try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch(e) {}
+      return s;
+    }
+    function galsFiltrar(v) { _gAlsFiltroTxt = v || ''; _galsRenderLista(); }
+    function galsFiltroClase(id) {
+      _gAlsFiltroClase = (_gAlsFiltroClase === id) ? null : id;
+      _galsRenderChips(); _galsRenderLista();
+    }
     function abrirGestorAlumno(nombre) { _gestorAlumno = nombre; _gAlMesOff = 0; irA('pantalla-gestor-alumno'); }
     function gestorAlMesNav(delta) { _gAlMesOff += delta; renderGestorAlumno(); }
 
@@ -3853,7 +3912,10 @@
     }
     function _pctColor(p) { return p==null ? '#9ca3af' : (p>=80 ? '#166534' : (p>=60 ? '#b45309' : '#991b1b')); }
 
-    // ── Listado de alumnos del entrenador ──
+    // ── Listado de alumnos del entrenador (con buscador y filtro por clase) ──
+    // Cache de la pantalla: lista completa + a qué clases va cada alumno
+    var _galsCache = null;   // { alumnos:[nombre], clasesAl:{nombre:{claseId:true}}, clases:[...] }
+
     function renderGestorAlumnos() {
       var cont = document.getElementById('gestor-als-contenido');
       if (!cont) return;
@@ -3864,17 +3926,72 @@
 
       var clases = _gestorClasesLocal(d);
       // Todos los alumnos: los de las clases + los que aparecen en registros
-      var nombres = {};
-      clases.forEach(function(c){ (c.alumnos||[]).forEach(function(a){ var n=alNom(a); if(n) nombres[n]=true; }); });
+      var nombres = {}, clasesAl = {};
+      clases.forEach(function(c){
+        (c.alumnos||[]).forEach(function(a){
+          var n = alNom(a); if (!n) return;
+          nombres[n] = true;
+          (clasesAl[n] = clasesAl[n] || {})[c.id] = true;
+        });
+      });
       _gestorRegsLocal(d).forEach(function(r){
         (r.presentes||[]).concat(r.ausentes||[]).forEach(function(n){ if(n) nombres[n]=true; });
       });
       var lista = Object.keys(nombres).sort();
       if (!lista.length) { cont.innerHTML = '<p class="ajustes-desc">Este entrenador aún no tiene alumnos.</p>'; return; }
+      _galsCache = { alumnos: lista, clasesAl: clasesAl, clases: clases };
 
+      // Barra fija (buscador + chips + contador); la lista se pinta aparte
+      // para que el input no pierda el foco al filtrar.
+      cont.innerHTML =
+        '<input id="gals-input" class="form-input" type="search" placeholder="🔍 Buscar alumno…" ' +
+          'autocomplete="off" oninput="galsFiltrar(this.value)" style="margin-bottom:0.6rem;">' +
+        '<div class="gals-chips" id="gals-chips"></div>' +
+        '<p class="ajustes-desc" id="gals-count" style="margin:0.15rem 0 0.6rem;"></p>' +
+        '<div id="gals-lista"></div>';
+      _galsRenderChips();
+      _galsRenderLista();
+    }
+
+    // Chips de filtro por clase/tramo ("Todos" + una por clase, ordenadas por día)
+    function _galsRenderChips() {
+      var el = document.getElementById('gals-chips');
+      if (!el || !_galsCache) return;
+      var ordDia = function(ds){ return ds<0 ? 8 : (ds===0 ? 7 : ds); };
+      var cls = _galsCache.clases.slice().sort(function(a,b){
+        return ordDia(a.diaSemana)-ordDia(b.diaSemana) || (a.franja||'').localeCompare(b.franja||'');
+      });
+      var h = '<button type="button" class="gals-chip' + (_gAlsFiltroClase==null?' activo':'') + '" onclick="galsFiltroClase(null)">Todos</button>';
+      cls.forEach(function(c){
+        var lbl = (c.diaSemana>=0 ? _GDIAS[c.diaSemana] + ' ' : '') + (c.franja || c.nombre || ('Clase ' + c.id));
+        h += '<button type="button" class="gals-chip' + (_gAlsFiltroClase===c.id?' activo':'') + '" ' +
+             'onclick="galsFiltroClase(' + c.id + ')">' + _gEsc(lbl) + '</button>';
+      });
+      el.innerHTML = h;
+    }
+
+    // Pinta solo las tarjetas que pasan el texto y el filtro de clase
+    function _galsRenderLista() {
+      var el  = document.getElementById('gals-lista');
+      var cnt = document.getElementById('gals-count');
+      if (!el || !_galsCache) return;
+      var txt = _galsNorm(_gAlsFiltroTxt);
       var cursoAct = _cursoActual();
-      var h = '<p class="ajustes-desc" style="margin-bottom:0.7rem;">Toca un alumno para ver su historial del mes, del curso actual (sep–jun) y de cursos anteriores.</p>';
-      lista.forEach(function(n){
+      var visibles = _galsCache.alumnos.filter(function(n){
+        if (txt && _galsNorm(n).indexOf(txt) < 0) return false;
+        if (_gAlsFiltroClase != null &&
+            !(_galsCache.clasesAl[n] && _galsCache.clasesAl[n][_gAlsFiltroClase])) return false;
+        return true;
+      });
+      if (cnt) cnt.textContent = (visibles.length === _galsCache.alumnos.length)
+        ? _galsCache.alumnos.length + ' alumno' + (_galsCache.alumnos.length!==1?'s':'') + ' · toca uno para ver su historial'
+        : visibles.length + ' de ' + _galsCache.alumnos.length + ' alumnos';
+      if (!visibles.length) {
+        el.innerHTML = '<p class="ajustes-desc" style="text-align:center;padding:0.8rem 0;">Ningún alumno coincide con el filtro.</p>';
+        return;
+      }
+      var h = '';
+      visibles.forEach(function(n){
         var hist = _gestorHistAlumno(n);
         var histCurso = hist.filter(function(x){ return _cursoDe(x.fecha) === cursoAct; });
         var s = _histStats(histCurso);
@@ -3891,7 +4008,7 @@
           '<div class="gestor-card-arr">›</div>' +
         '</div>';
       });
-      cont.innerHTML = h;
+      el.innerHTML = h;
     }
 
     // ── Detalle de un alumno: mes + curso en curso + cursos anteriores ──
