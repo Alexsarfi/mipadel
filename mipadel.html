@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.57.0
+  TU APP DE PÁDEL — v0.45.0
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,13 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.58.0 — Historial del alumno: días de clase por mes (2026-07)
+    · En "Historial por curso" cada mes ya no muestra la barra de
+      porcentaje: muestra UN CHIP POR DÍA de clase con la letra del
+      día de la semana + día del mes (L10, M11, X12…). Verde =
+      asistió (con ↩ si fue recuperación), rojo = faltó, ámbar =
+      falta justificada. Se mantiene el total y % del mes a la
+      derecha, y se añade una leyenda.
   v0.57.0 — Editar datos del alumno + chips junto a la hora (2026-07)
     · Historial del alumno: botón "✏ Editar datos" para cambiar
       nombre, apellidos y teléfono. Si cambia el nombre se actualiza
@@ -923,6 +930,17 @@
     button.ghd-al:active { transform:scale(0.96); }
     .ghd-al.baja { color:#92400e; background:#fef9c3; border-color:#fde68a; }
     .ghd-al.fut  { color:var(--gris); background:#f3f4f6; border-color:#e5e7eb; }
+    /* Historial del alumno: chips de días por mes (L10, M11…) */
+    .gal-mes-row { padding:7px 0 8px; border-bottom:1px solid var(--borde); }
+    .gal-mes-row:last-child { border-bottom:none; }
+    .gal-mes-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .gal-mes-nom { font-size:12.5px; font-weight:800; color:var(--texto); }
+    .gal-mes-pct { font-size:11.5px; font-weight:700; }
+    .gal-mes-dias { display:flex; flex-wrap:wrap; gap:5px; margin-top:6px; }
+    .gal-dia { font-size:11px; font-weight:700; border-radius:8px; padding:3px 7px; white-space:nowrap; }
+    .gal-dia.si { color:#166534; background:#dcfce7; }
+    .gal-dia.no { color:#991b1b; background:#fee2e2; }
+    .gal-dia.jj { color:#92400e; background:#fef3c7; }
     .ghd-dias { display:flex; flex-wrap:wrap; gap:5px; }
     .ghd-day { min-width:26px; height:26px; padding:0 4px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; border:none; font-family:inherit; cursor:default; }
     .ghd-day.dada { background:#dcfce7; color:#166534; }
@@ -2682,7 +2700,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.57.0';
+    var APP_VERSION = '0.58.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -3587,6 +3605,7 @@
     var _gestorUid  = null;   // entrenador abierto en el detalle
     var _GDIAS  = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
     var _GDIASL = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+    var _GALLETRAS = ['D','L','M','X','J','V','S'];   // letra del día (chips L10, M11…)
     var _gestorMesOff = 0;   // navegación por meses en el detalle
 
     function _gEsc(s) {
@@ -4649,6 +4668,9 @@
       var cursos = Object.keys(porCurso).sort().reverse();
       var ORDEN_MESES_CURSO = [9,10,11,12,1,2,3,4,5,6,7,8];   // sep→jun (+verano por si acaso)
       h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Historial por curso</div>';
+      h += '<p class="ajustes-desc" style="margin:-2px 0 0.5rem;font-size:11px;">' +
+        '<span class="gal-dia si">L10</span> asistió &nbsp;<span class="gal-dia no">M11</span> faltó &nbsp;' +
+        '<span class="gal-dia jj">X12</span> falta justificada &nbsp;<span class="gal-dia si">↩J13</span> recuperación</p>';
       cursos.forEach(function(curso){
         var items = porCurso[curso];
         var s = _histStats(items);
@@ -4657,18 +4679,29 @@
           '<span class="gas-dia">Curso ' + curso + (esActual ? ' · en curso' : '') + '</span>' +
           '<span class="gas-meta" style="color:' + _pctColor(s.pct) + '">' + s.pres + '/' + s.tot + ((s.fJ||s.fIJ) ? ' · ' + s.fJ + 'J/' + s.fIJ + 'IJ' : '') + (s.pct!=null ? ' · ' + s.pct + '%' : '') + '</span>' +
           '<span class="gas-chev">▾</span></summary><div class="gas-body">';
-        // Reparto por mes del curso
+        // Reparto por mes del curso: un chip por día de clase con la letra
+        // del día de la semana + día del mes (L10, M11, X12…). Verde =
+        // asistió (↩ si fue recuperación), rojo = faltó, ámbar = falta J.
         var porMes = {};
         items.forEach(function(x){ var m = +x.fecha.split('-')[1]; (porMes[m] = porMes[m] || []).push(x); });
         ORDEN_MESES_CURSO.forEach(function(m){
           if (!porMes[m]) return;
           var sm = _histStats(porMes[m]);
           var pctM = sm.pct == null ? '—' : sm.pct + '%';
-          h += '<div class="gestor-alum-row">' +
-            '<div class="gestor-alum-nom">' + MESES_NOMBRES_A[m-1] + '</div>' +
-            '<div class="gestor-alum-det">' + sm.pres + '/' + sm.tot + ((sm.fJ||sm.fIJ) ? ' · ' + sm.fJ + 'J/' + sm.fIJ + 'IJ' : '') + (sm.recups ? ' +' + sm.recups + '↩' : '') + '</div>' +
-            '<div class="gestor-alum-bar"><div class="gestor-alum-fill" style="width:' + (sm.pct||0) + '%;background:' + _pctColor(sm.pct) + '"></div></div>' +
-            '<div class="gestor-alum-pct" style="color:' + _pctColor(sm.pct) + '">' + pctM + '</div>' +
+          var chipsM = '';
+          porMes[m].slice().sort(function(a,b){ return a.fecha.localeCompare(b.fecha); }).forEach(function(x){
+            var p  = x.fecha.split('-');
+            var wd = _GALLETRAS[new Date(+p[0], +p[1]-1, +p[2]).getDay()];
+            var ok = x.presente || x.recup;
+            var cls = ok ? 'si' : (x.justif ? 'jj' : 'no');
+            chipsM += '<span class="gal-dia ' + cls + '">' + (x.recup ? '↩' : '') + wd + parseInt(p[2],10) + '</span>';
+          });
+          h += '<div class="gal-mes-row">' +
+            '<div class="gal-mes-top">' +
+              '<span class="gal-mes-nom">' + MESES_NOMBRES_A[m-1] + '</span>' +
+              '<span class="gal-mes-pct" style="color:' + _pctColor(sm.pct) + '">' + sm.pres + '/' + sm.tot + ' · ' + pctM + '</span>' +
+            '</div>' +
+            '<div class="gal-mes-dias">' + chipsM + '</div>' +
           '</div>';
         });
         h += '</div></details>';
