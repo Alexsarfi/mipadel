@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.59.0
+  TU APP DE PÁDEL — v0.45.0
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,31 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.60.0 — Recuperaciones previstas, alta rápida y autocompletado (2026-07)
+    · RECUPERACIONES: al añadir una recuperación solo se anota el
+      nombre (campo recups del registro, migración v0.60), SIN
+      asistencia: la marca el entrenador ese día si acude, y se
+      puede borrar con ✕ si no viene o fue un error. Un registro
+      con solo recuperaciones previstas NO cuenta como lista pasada
+      ni como clase dada en ninguna vista (_regPasada). La semana
+      del entrenador avisa con "↩ N recup".
+    · Desplegable de cada día del detalle: botones "↩ Recuperación"
+      y "＋ Añadir alumno" bajo "Pasar lista" (la alta rápida apunta
+      al alumno a la clase con fecha de alta = ese día).
+    · BASE DE ALUMNOS: autocompletado con todos los alumnos de la
+      academia (datalist) al escribir nombres en el formulario de
+      clase, la recuperación y el alta rápida; apellidos y teléfono
+      se rellenan solos si el alumno ya existe.
+    · Detalle del alumno: un solo bloque (clases con alta/baja +
+      resumen del curso) sin porcentaje ni barra. El historial por
+      curso ya no repite el mes actual y ordena los meses del más
+      reciente al más antiguo.
+    · Detalle del gestor: "📦 Cerrar curso…" baja al pie junto al
+      nuevo "📄 Resumen…" que exporta (imprimir/PDF) un resumen
+      breve del mes o del curso: días dados por franja y recuentos
+      por alumno, sin porcentajes.
+    · Las fechas de alta/baja abren el calendario con un toque
+      (showPicker).
   v0.59.0 — Alta y baja del alumno visibles y editables (2026-07)
     · Historial del alumno: tarjeta con sus clases y, por cada una,
       la fecha de ALTA ("inicio" si no consta) y su estado: chip
@@ -2560,10 +2585,11 @@
         </div>
         <div class="form-grupo">
           <label class="form-label">Alumnos</label>
+          <datalist id="dl-alumnos"></datalist>
           <div class="asist-form-alumnos-lista" id="asist-form-alumnos"></div>
           <div class="asist-form-add-alumno" style="flex-wrap:wrap;">
-            <input id="asist-form-nuevo-alumno" class="form-input" type="text" placeholder="Nombre *" style="flex:1;min-width:105px;"
-                   onkeydown="if(event.key==='Enter'){event.preventDefault();asistAnadirAlumno();}">
+            <input id="asist-form-nuevo-alumno" class="form-input" type="text" placeholder="Nombre *" style="flex:1;min-width:105px;" list="dl-alumnos"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();asistAnadirAlumno();}" oninput="asistAutoRellenar(this.value)">
             <input id="asist-form-nuevo-apellidos" class="form-input" type="text" placeholder="Apellidos" style="flex:1;min-width:105px;"
                    onkeydown="if(event.key==='Enter'){event.preventDefault();asistAnadirAlumno();}">
             <input id="asist-form-nuevo-telefono" class="form-input" type="tel" placeholder="Teléfono" style="flex:1;min-width:105px;"
@@ -2714,7 +2740,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.59.0';
+    var APP_VERSION = '0.60.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -2994,6 +3020,7 @@
           id:r.id, claseId:r.clase_id, fecha:r.fecha,
           presentes:r.presentes||[], ausentes:r.ausentes||[],
           justificadas:r.justificadas||[],
+          recups:r.recups||[],
           sinClase:!!r.sin_clase
         }; });
 
@@ -3214,6 +3241,7 @@
         id:r.id, user_id:uid, clase_id:r.claseId, fecha:r.fecha,
         presentes:r.presentes||[], ausentes:r.ausentes||[],
         justificadas:r.justificadas||[],
+        recups:r.recups||[],       // v0.60: recuperaciones previstas ese día
         sin_clase:!!r.sinClase
       }; }
     };
@@ -3526,7 +3554,8 @@
         return _gEditDatos().regs.map(function(r){
           return { id:r.id, claseId:r.clase_id, fecha:r.fecha,
                    presentes:r.presentes || [], ausentes:r.ausentes || [],
-                   justificadas:r.justificadas || [], sinClase:!!r.sin_clase };
+                   justificadas:r.justificadas || [], recups:r.recups || [],
+                   sinClase:!!r.sin_clase };
         });
       }
       var d = _lzGet('padel-asistencia-reg'); return d ? JSON.parse(d) : [];
@@ -3716,7 +3745,7 @@
       d.clases.forEach(function(c){ (c.alumnos || []).forEach(function(a){ var n = alNom(a); if (n) al[n] = true; }); });
       var pres = 0, tot = 0, dias = 0;
       d.regs.forEach(function(r){
-        if (r.sin_clase) return;
+        if (!_regPasada(r)) return;   // sin clase o solo recups previstas
         dias++;
         var np = (r.presentes || []).length, na = (r.ausentes || []).length;
         pres += np; tot += np + na;
@@ -3767,8 +3796,8 @@
       if (sub) sub.textContent = uids.length + ' entrenador' + (uids.length !== 1 ? 'es' : '') + ' con datos';
     }
 
-    function abrirGestorDetalle(uid) { _gestorUid = uid; _gestorMesOff = 0; _gHist = null; _gCierreOpen = false; irA('pantalla-gestor-detalle'); }
-    function gestorMesNav(delta) { _gestorMesOff += delta; _gCierreOpen = false; renderGestorDetalle(); }
+    function abrirGestorDetalle(uid) { _gestorUid = uid; _gestorMesOff = 0; _gHist = null; _gCierreOpen = false; _gResumenOpen = false; irA('pantalla-gestor-detalle'); }
+    function gestorMesNav(delta) { _gestorMesOff += delta; _gCierreOpen = false; _gResumenOpen = false; renderGestorDetalle(); }
 
     // Convierte los datos de servidor de un entrenador al formato local
     // que entienden las funciones de asistencia ya existentes.
@@ -3782,7 +3811,8 @@
       return (d.regs || []).map(function(r){
         return { id:r.id, claseId:r.clase_id, fecha:r.fecha,
                  presentes:r.presentes || [], ausentes:r.ausentes || [],
-                 justificadas:r.justificadas || [], sinClase:!!r.sin_clase };
+                 justificadas:r.justificadas || [], recups:r.recups || [],
+                 sinClase:!!r.sin_clase };
       });
     }
 
@@ -3798,6 +3828,7 @@
         fechas.forEach(function(f){
           if(!alActivo(a,f)) return;
           var reg=regPorFecha[f]; if(reg&&reg.sinClase) return;
+          if(!_regPasada(reg)) reg=null;   // solo recups previstas = sin lista
           fechasSet[f]=true; dat.totalClases++;
           var ok=reg&&(reg.presentes||[]).indexOf(nombre)!==-1;
           if(ok) dat.presencias++;
@@ -3871,6 +3902,7 @@
           fechas.forEach(function(f){
             if(!alActivo(a,f)) return;
             var reg=regPorFecha[f]; if(reg&&reg.sinClase) return;
+            if(!_regPasada(reg)) reg=null;   // solo recups previstas = sin lista
             fechasSet[f]=true; dat.totalClases+=1;
             var ok = reg && (reg.presentes||[]).indexOf(nombre)!==-1;
             if(ok) dat.presencias+=1;
@@ -3913,25 +3945,7 @@
       // (Ocultas al consultar un curso archivado: es solo lectura.)
       if (!hist) {
         var esCursoFuturo = cursoMes !== cursoDeFecha(hoyLocal());
-        h += '<div style="display:flex;gap:8px;margin:0 0 1.1rem;flex-wrap:wrap;">' +
-          '<button class="btn btn-verde" style="margin:0;flex:1;min-width:150px;" onclick="gestorNuevaClase(\'' + cursoMes + '\')">＋ Añadir clase' + (esCursoFuturo ? ' · curso ' + cursoMes : '') + '</button>' +
-          (clases.length ? '<button class="btn btn-sec" style="margin:0;flex:1;min-width:150px;" onclick="gestorToggleCierre()">📦 Cerrar curso…</button>' : '') +
-        '</div>';
-        if (_gCierreOpen && clases.length) {
-          h += '<div class="gcierre-card">' +
-            '<div class="gcierre-tit">¿Qué quieres cerrar y archivar del curso ' + _gEsc(cursoMes) + '?</div>' +
-            '<button type="button" class="gcierre-opt todas" onclick="gestorCerrarCurso(\'' + cursoMes + '\', null)">📦 Todas las clases (' + clases.length + ') — empezar de cero</button>';
-          clases.slice().sort(function(a,b){
-            var oa = a.diaSemana===0?7:a.diaSemana, ob = b.diaSemana===0?7:b.diaSemana;
-            return oa-ob || (a.franja||'').localeCompare(b.franja||'');
-          }).forEach(function(c){
-            h += '<button type="button" class="gcierre-opt" onclick="gestorCerrarCurso(\'' + cursoMes + '\', ' + c.id + ')">' +
-              _gEsc(_GDIASL[c.diaSemana] || '(sin día)') + ' · ' + _gEsc(c.franja||'—') +
-              (c.nombre ? ' · ' + _gEsc(c.nombre) : '') + '</button>';
-          });
-          h += '<button type="button" class="gcierre-opt cancel" onclick="gestorToggleCierre()">Cancelar</button>' +
-          '</div>';
-        }
+        h += '<button class="btn btn-verde" style="margin:0 0 1.1rem;" onclick="gestorNuevaClase(\'' + cursoMes + '\')">＋ Añadir clase' + (esCursoFuturo ? ' · curso ' + cursoMes : '') + '</button>';
       }
 
       // ── Clases dadas del mes, agrupadas por DÍA de la semana ──
@@ -3959,22 +3973,37 @@
         // Detalle de asistencia de una clase en una fecha (desplegable del chip)
         function _gddDetalle(clase, f, reg, extra) {
           var p = f.split('-');
-          // En el curso vivo, cada día permite pasar/corregir su lista
+          var pasada = _regPasada(reg);
+          // En el curso vivo, cada día permite pasar/corregir su lista y,
+          // debajo, apuntar recuperaciones o dar de alta a un alumno nuevo
           var btnLista = hist ? '' :
-            ' <button type="button" class="ghd-edit-btn" style="margin-left:auto;" onclick="gestorEditarLista(' + clase.id + ',\'' + f + '\')">✏ ' + (reg ? 'Corregir lista' : 'Pasar lista') + '</button>';
+            ' <button type="button" class="ghd-edit-btn" style="margin-left:auto;" onclick="gestorEditarLista(' + clase.id + ',\'' + f + '\')">✏ ' + (pasada ? 'Corregir lista' : 'Pasar lista') + '</button>';
+          var btnsExtra = hist ? '' :
+            '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;">' +
+              '<button type="button" class="ghd-edit-btn" onclick="gestorListaPanel(' + clase.id + ',\'' + f + '\',\'recup\')">↩ Recuperación</button>' +
+              '<button type="button" class="ghd-edit-btn" style="border-color:#bbf7d0;color:#166534;background:#f0fdf4;" onclick="gestorListaPanel(' + clase.id + ',\'' + f + '\',\'alta\')">＋ Añadir alumno</button>' +
+            '</div>';
+          // Recuperaciones PREVISTAS del día (v0.60): solo el nombre, sin asistencia
+          var previstas = '';
+          if (reg && !pasada && (reg.recups||[]).length) {
+            previstas = '<div class="gad-alumnos">' + reg.recups.map(function(n){
+              return '<span class="gad-al rec">↩ ' + _gEsc(n) + ' · prevista</span>';
+            }).join('') + '</div>';
+          }
           var s = '<div class="gdd-hdr" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">' + _GDIASL[new Date(+p[0],+p[1]-1,+p[2]).getDay()] + ' ' + parseInt(p[2],10) + '/' + p[1] +
                   (extra ? ' <span class="gad-extra">extra</span>' : '');
           // (btnLista se añade al final de la cabecera en cada rama)
           if (reg && reg.sinClase) {
-            return s + ' <span class="gad-estado sin">🚫 Sin clase</span>' + btnLista + '</div>';
+            return s + ' <span class="gad-estado sin">🚫 Sin clase</span>' + btnLista + '</div>' + btnsExtra;
           }
-          if (!reg) {
+          if (!pasada) {
             s += ' <span class="gad-estado nolista">— Sin lista</span>' + btnLista + '</div>';
+            s += previstas;
             var activos = alumnosActivos(clase, f);
             if (activos.length) s += '<div class="gad-alumnos">' + activos.map(function(n){
               return '<span class="gad-al pend">' + _gEsc(n) + '</span>';
             }).join('') + '</div>';
-            return s;
+            return s + btnsExtra;
           }
           var activos2 = alumnosActivos(clase, f);
           s += ' <span class="gad-estado ok">' + (reg.presentes||[]).length + '/' + activos2.length + '</span>' + btnLista + '</div>';
@@ -3988,8 +4017,12 @@
           (reg.presentes||[]).forEach(function(n){
             if (activos2.indexOf(n) === -1) chips += '<span class="gad-al rec">↩ ' + _gEsc(n) + '</span>';
           });
+          // Recuperaciones previstas que finalmente no acudieron
+          (reg.recups||[]).forEach(function(n){
+            if ((reg.presentes||[]).indexOf(n) === -1) chips += '<span class="gad-al rec" style="opacity:.55;">↩ ' + _gEsc(n) + ' · no vino</span>';
+          });
           if (chips) s += '<div class="gad-alumnos">' + chips + '</div>';
-          return s;
+          return s + btnsExtra;
         }
 
         // Agrupar clases por día de la semana (el día se pinta UNA vez)
@@ -4020,15 +4053,15 @@
             }
             fechas.forEach(function(f){
               var reg = cf[f], st;
-              if (reg && !reg.sinClase) { st='dada'; dadas++; }
+              if (_regPasada(reg)) { st='dada'; dadas++; }
               else if (reg && reg.sinClase) { st='nodada'; }
-              else { st='sinlista'; }
+              else { st='sinlista'; }   // sin registro o solo recups previstas
               _chip(f, st, false);
             });
             // Clases extra: registros en fecha que NO es su día habitual
             var extras = [];
             Object.keys(cf).forEach(function(f){
-              if (fechas.indexOf(f) === -1 && cf[f] && !cf[f].sinClase) extras.push(f);
+              if (fechas.indexOf(f) === -1 && _regPasada(cf[f])) extras.push(f);
             });
             extras.sort();
             extras.forEach(function(f){ dadas++; _chip(f, 'dada', true); });
@@ -4091,6 +4124,37 @@
           '<span style="color:#9ca3af;font-weight:700">—</span> sin lista</div>';
       }
 
+      // ── Acciones al pie (v0.60): resumen exportable + cierre de curso ──
+      if (!hist) {
+        h += '<div style="display:flex;gap:8px;margin-top:1.2rem;flex-wrap:wrap;">' +
+          '<button class="btn btn-sec" style="margin:0;flex:1;min-width:150px;" onclick="gestorToggleResumen()">📄 Resumen…</button>' +
+          (clases.length ? '<button class="btn btn-sec" style="margin:0;flex:1;min-width:150px;" onclick="gestorToggleCierre()">📦 Cerrar curso…</button>' : '') +
+        '</div>';
+        if (_gResumenOpen) {
+          h += '<div class="gcierre-card" style="margin-top:8px;">' +
+            '<div class="gcierre-tit">📄 Exportar resumen breve de las clases (sin porcentajes)</div>' +
+            '<button type="button" class="gcierre-opt" onclick="gestorResumenExport(\'mes\')">Resumen del mes · ' + _gEsc(mesLabel) + '</button>' +
+            '<button type="button" class="gcierre-opt" onclick="gestorResumenExport(\'curso\')">Resumen del curso ' + _gEsc(cursoMes) + '</button>' +
+            '<button type="button" class="gcierre-opt cancel" onclick="gestorToggleResumen()">Cancelar</button>' +
+          '</div>';
+        }
+        if (_gCierreOpen && clases.length) {
+          h += '<div class="gcierre-card" style="margin-top:8px;">' +
+            '<div class="gcierre-tit">¿Qué quieres cerrar y archivar del curso ' + _gEsc(cursoMes) + '?</div>' +
+            '<button type="button" class="gcierre-opt todas" onclick="gestorCerrarCurso(\'' + cursoMes + '\', null)">📦 Todas las clases (' + clases.length + ') — empezar de cero</button>';
+          clases.slice().sort(function(a,b){
+            var oa = a.diaSemana===0?7:a.diaSemana, ob = b.diaSemana===0?7:b.diaSemana;
+            return oa-ob || (a.franja||'').localeCompare(b.franja||'');
+          }).forEach(function(c){
+            h += '<button type="button" class="gcierre-opt" onclick="gestorCerrarCurso(\'' + cursoMes + '\', ' + c.id + ')">' +
+              _gEsc(_GDIASL[c.diaSemana] || '(sin día)') + ' · ' + _gEsc(c.franja||'—') +
+              (c.nombre ? ' · ' + _gEsc(c.nombre) : '') + '</button>';
+          });
+          h += '<button type="button" class="gcierre-opt cancel" onclick="gestorToggleCierre()">Cancelar</button>' +
+          '</div>';
+        }
+      }
+
       cont.innerHTML = h;
     }
 
@@ -4118,9 +4182,9 @@
         var dur = _duracionFranja(c.franja);
         var fechas = fechasClaseEnMes(c, mesISO);
         var cf = regCF[c.id] || {}, dadas = 0;
-        fechas.forEach(function(f){ if (cf[f] && !cf[f].sinClase) dadas++; });
+        fechas.forEach(function(f){ if (_regPasada(cf[f])) dadas++; });
         Object.keys(cf).forEach(function(f){
-          if (fechas.indexOf(f) === -1 && cf[f] && !cf[f].sinClase) dadas++;   // extras
+          if (fechas.indexOf(f) === -1 && _regPasada(cf[f])) dadas++;   // extras
         });
         if (dur === 60) suma.m60 += dadas;
         else if (dur === 90) suma.m90 += dadas;
@@ -4173,6 +4237,13 @@
       asistFechaActiva   = fecha;
       irA('pantalla-asistencia-lista');
     }
+    // Abre la lista de un día con el panel de recuperación o de alta
+    // rápida ya desplegado (botones del desplegable del detalle, v0.60)
+    function gestorListaPanel(cid, fecha, tipo) {
+      if (tipo === 'recup') _abrirPanelRecup = true;
+      if (tipo === 'alta')  _abrirPanelAlta  = true;
+      gestorEditarLista(cid, fecha);
+    }
     // Salida del formulario de clase (volver / guardar / borrar)
     function _asistFormSalida() {
       if (_gEditDesdeDet) { _gEditDesdeDet = false; irA('pantalla-gestor-detalle'); return; }
@@ -4187,7 +4258,88 @@
     // Panel de cierre del detalle: elegir si se cierra TODO el curso o
     // solo una franja horaria concreta.
     var _gCierreOpen = false;
-    function gestorToggleCierre() { _gCierreOpen = !_gCierreOpen; renderGestorDetalle(); }
+    function gestorToggleCierre() { _gCierreOpen = !_gCierreOpen; if (_gCierreOpen) _gResumenOpen = false; renderGestorDetalle(); }
+
+    // ── Resumen breve exportable (v0.60): del mes visto o del curso ──
+    // Sin porcentajes: días dados por franja y asistencias por alumno.
+    var _gResumenOpen = false;
+    function gestorToggleResumen() { _gResumenOpen = !_gResumenOpen; if (_gResumenOpen) _gCierreOpen = false; renderGestorDetalle(); }
+    function gestorResumenExport(tipo) {
+      var d = _gestorAgrupar()[_gestorUid];
+      if (!d) return;
+      var mesISO   = getMesISO_A(_gestorMesOff);
+      var mesLabel = getMesLabelA(_gestorMesOff);
+      var cursoMes = cursoDeFecha(mesISO);
+      var clases   = _gestorClasesLocal(d).filter(function(c){ return _claseCurso(c) === cursoMes; });
+      var regsAll  = _gestorRegsLocal(d);
+      var enAmbito = function(f){ return tipo === 'mes' ? (f||'').slice(0,7) === mesISO : cursoDeFecha(f||'') === cursoMes; };
+      var titulo   = tipo === 'mes' ? mesLabel : 'Curso ' + cursoMes;
+
+      var h = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">';
+      h += '<title>Resumen · ' + _gEsc(titulo) + '</title><style>';
+      h += 'body{font-family:Arial,sans-serif;padding:28px 32px;color:#1a1a2e;max-width:800px;margin:0 auto;}';
+      h += 'h1{color:#16264f;font-size:20px;margin:0 0 2px;}';
+      h += '.sub{color:#6b7280;font-size:13px;margin-bottom:20px;}';
+      h += 'h2{color:#16264f;font-size:14px;margin:18px 0 4px;padding-bottom:3px;border-bottom:2px solid #e9ecf5;}';
+      h += '.dias{font-size:12px;color:#374151;margin:2px 0 8px;}';
+      h += 'table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;}';
+      h += 'th{background:#e9ecf5;color:#16264f;padding:5px 9px;text-align:left;font-weight:700;}';
+      h += 'td{padding:5px 9px;border-bottom:1px solid #e5e7eb;}';
+      h += '.baja{color:#991b1b;} .rec{color:#16264f;font-weight:700;}';
+      h += '.btn-print{display:block;margin:1.6rem auto 0;padding:.7rem 1.8rem;background:#2d6a4f;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;}';
+      h += '@media print{.btn-print{display:none;}}';
+      h += '</style></head><body>';
+      h += '<h1>Resumen de clases · ' + _gEsc(titulo) + '</h1>';
+      h += '<div class="sub">' + _gEsc(_gestorNombre(d)) + ' · generado el ' + formatFechaCorta(hoyLocal()) + '</div>';
+
+      var totDadas = 0, bloques = '';
+      var ordDia2 = function(ds){ return ds<0 ? 8 : (ds===0 ? 7 : ds); };
+      clases.slice().sort(function(a,b){ return ordDia2(a.diaSemana)-ordDia2(b.diaSemana) || (a.franja||'').localeCompare(b.franja||''); })
+        .forEach(function(c){
+          var regsC = regsAll.filter(function(r){ return r.claseId === c.id && enAmbito(r.fecha); });
+          var dadas = regsC.filter(_regPasada).sort(function(a,b){ return a.fecha.localeCompare(b.fecha); });
+          totDadas += dadas.length;
+          bloques += '<h2>' + _gEsc((_GDIASL[c.diaSemana] || '(sin día)') + ' · ' + (c.franja||'—')) +
+                     (c.nombre ? ' · ' + _gEsc(c.nombre) : '') +
+                     ' — ' + dadas.length + ' clase' + (dadas.length!==1?'s':'') + ' dada' + (dadas.length!==1?'s':'') + '</h2>';
+          bloques += '<div class="dias">Días: ' + (dadas.length ? dadas.map(function(r){ return _gFecha(r.fecha); }).join(' · ') : '—') + '</div>';
+          if (!dadas.length) return;
+          // Asistencias por alumno (solo recuentos, sin %)
+          var filas = '';
+          (c.alumnos || []).forEach(function(a){
+            var n = alNom(a); if (!n) return;
+            var pres = 0, pos = 0, fJ = 0, fIJ = 0;
+            dadas.forEach(function(r){
+              if (!alActivo(a, r.fecha)) return;
+              pos++;
+              if ((r.presentes||[]).indexOf(n) !== -1) pres++;
+              else if ((r.justificadas||[]).indexOf(n) !== -1) fJ++; else fIJ++;
+            });
+            if (!pos) return;
+            filas += '<tr><td>' + _gEsc(alCorto(a)) + (alBaja(a) ? ' <span class="baja">(baja ' + _gFecha(alBaja(a)) + ')</span>' : '') + '</td>' +
+              '<td>' + pres + ' de ' + pos + '</td>' +
+              '<td>' + ((fJ||fIJ) ? (fJ + ' J · ' + fIJ + ' IJ') : '—') + '</td></tr>';
+          });
+          // Recuperaciones que asistieron
+          var recups = {};
+          dadas.forEach(function(r){
+            var act = alumnosActivos(c, r.fecha);
+            (r.presentes||[]).forEach(function(n){ if (act.indexOf(n) === -1) recups[n] = (recups[n]||0) + 1; });
+          });
+          Object.keys(recups).sort().forEach(function(n){
+            filas += '<tr><td><span class="rec">↩ ' + _gEsc(n) + '</span></td><td>' + recups[n] + ' recuperación' + (recups[n]!==1?'es':'') + '</td><td>—</td></tr>';
+          });
+          if (filas) bloques += '<table><tr><th>Alumno</th><th>Asistencias</th><th>Faltas</th></tr>' + filas + '</table>';
+        });
+
+      h += '<div class="sub" style="margin-bottom:12px;"><b>' + totDadas + ' clase' + (totDadas!==1?'s':'') + ' dada' + (totDadas!==1?'s':'') + '</b> en total</div>';
+      h += bloques || '<p>Sin clases en este periodo.</p>';
+      h += '<button class="btn-print" onclick="window.print()">🖨️ Imprimir / Guardar como PDF</button>';
+      h += '</body></html>';
+
+      var blob = new Blob([h], { type: 'text/html' });
+      window.open(URL.createObjectURL(blob), '_blank');
+    }
     function gestorCerrarCurso(curso, claseId) {
       if (!_gestorUid) return;
       _gEditUid = (_sbUser && _gestorUid === _sbUser.id) ? null : _gestorUid;
@@ -4627,22 +4779,28 @@
 
       // ── Editar datos del alumno (v0.57): nombre, apellidos, teléfono
       //    y, por cada clase, sus fechas de alta y baja (v0.59) ──
+      var hist     = _gestorHistAlumno(_gestorAlumno);
+      var cursoAct = _cursoActual();
+      var sc       = _histStats(hist.filter(function(x){ return _cursoDe(x.fecha) === cursoAct; }));
       var h = '';
       if (!_gAlEditOpen) {
         h += '<button class="btn btn-sec btn-sm" style="margin:0 0 10px;" onclick="gestorAlToggleEdit()">✏ Editar datos del alumno</button>';
-        // Alta/baja visibles por clase
-        if (clasesAl.length) {
-          h += '<div class="gal-altas-card">';
-          clasesAl.forEach(function(x){
-            h += '<div class="gal-altas-row">' +
-              '<span class="gal-altas-clase">' + _gEsc(x.dia + ' · ' + x.franja) + '</span>' +
-              '<span class="gal-altas-fechas">Alta: ' + (x.alta ? _gFecha(x.alta) : 'inicio') + '</span>' +
-              (x.baja ? '<span class="gal-dia no">✗ Baja: ' + _gFecha(x.baja) + '</span>'
-                      : '<span class="gal-dia si">De alta</span>') +
-            '</div>';
-          });
-          h += '</div>';
-        }
+        // Un único bloque (v0.60): clases con alta/baja + resumen del
+        // curso en curso SIN porcentaje ni barra.
+        h += '<div class="gal-altas-card">';
+        clasesAl.forEach(function(x){
+          h += '<div class="gal-altas-row">' +
+            '<span class="gal-altas-clase">' + _gEsc(x.dia + ' · ' + x.franja) + '</span>' +
+            '<span class="gal-altas-fechas">Alta: ' + (x.alta ? _gFecha(x.alta) : 'inicio') + '</span>' +
+            (x.baja ? '<span class="gal-dia no">✗ Baja: ' + _gFecha(x.baja) + '</span>'
+                    : '<span class="gal-dia si">De alta</span>') +
+          '</div>';
+        });
+        h += '<div class="gal-altas-row"><span class="gal-altas-clase">Curso ' + cursoAct + '</span>' +
+          '<span class="gal-altas-fechas">' + sc.pres + ' presencias de ' + sc.tot + ' clases' +
+          ((sc.fJ || sc.fIJ) ? ' · faltas: ' + sc.fJ + ' J · ' + sc.fIJ + ' IJ' : '') +
+          (sc.recups ? ' · ' + sc.recups + ' recuperación' + (sc.recups!==1?'es':'') : '') + '</span></div>';
+        h += '</div>';
       } else {
         h += '<div class="form-card" style="margin-bottom:10px;gap:0.6rem;">' +
           '<div class="form-grupo"><label class="form-label">Nombre *</label>' +
@@ -4655,8 +4813,8 @@
         clasesAl.forEach(function(x){
           h += '<div class="form-grupo"><label class="form-label">' + _gEsc(x.dia + ' · ' + x.franja) + '</label>' +
             '<div class="asist-al-fila-fechas" style="margin-top:2px;">' +
-              '<label>Alta (desde)<input type="date" id="gal-edit-alta-' + x.id + '" value="' + (x.alta||'') + '"></label>' +
-              '<label>Baja (hasta)<input type="date" id="gal-edit-baja-' + x.id + '" value="' + (x.baja||'') + '"></label>' +
+              '<label>Alta (desde)<input type="date" id="gal-edit-alta-' + x.id + '" value="' + (x.alta||'') + '" onclick="if(this.showPicker)this.showPicker()"></label>' +
+              '<label>Baja (hasta)<input type="date" id="gal-edit-baja-' + x.id + '" value="' + (x.baja||'') + '" onclick="if(this.showPicker)this.showPicker()"></label>' +
             '</div></div>';
         });
         h += '<div style="display:flex;gap:8px;">' +
@@ -4667,25 +4825,10 @@
         '</div>';
       }
 
-      var hist = _gestorHistAlumno(_gestorAlumno);
       if (!hist.length) {
         cont.innerHTML = h + '<div class="vacio"><div class="vacio-icono">📅</div><p>Sin registros de asistencia para este alumno.</p></div>';
         return;
       }
-
-      // ── Resumen del curso en curso ──
-      var cursoAct  = _cursoActual();
-      var histCurso = hist.filter(function(x){ return _cursoDe(x.fecha) === cursoAct; });
-      var sc = _histStats(histCurso);
-      h += '<div class="asist-global-card" style="margin-bottom:10px;">' +
-        '<div class="asist-global-num">' + (sc.pct==null?'—':sc.pct+'%') + '</div>' +
-        '<div class="asist-global-info">' +
-          '<div class="asist-global-titulo">Curso ' + cursoAct + '</div>' +
-          '<div class="asist-global-sub">' + sc.pres + ' presencias de ' + sc.tot + ' clases' +
-            ((sc.fJ || sc.fIJ) ? ' · faltas: ' + sc.fJ + ' J · ' + sc.fIJ + ' IJ' : '') +
-            (sc.recups ? ' · ' + sc.recups + ' recuperación' + (sc.recups!==1?'es':'') : '') + '</div>' +
-          '<div class="asist-progreso" style="margin-top:8px;"><div class="asist-progreso-fill" style="width:' + (sc.pct||0) + '%"></div></div>' +
-        '</div></div>';
 
       // ── Mes seleccionado (con navegación) ──
       var mesISO   = getMesISO_A(_gAlMesOff);
@@ -4722,7 +4865,6 @@
         (porCurso[c] = porCurso[c] || []).push(x);
       });
       var cursos = Object.keys(porCurso).sort().reverse();
-      var ORDEN_MESES_CURSO = [9,10,11,12,1,2,3,4,5,6,7,8];   // sep→jun (+verano por si acaso)
       h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Historial por curso</div>';
       h += '<p class="ajustes-desc" style="margin:-2px 0 0.5rem;font-size:11px;">' +
         '<span class="gal-dia si">L10</span> asistió &nbsp;<span class="gal-dia no">M11</span> faltó &nbsp;' +
@@ -4738,14 +4880,17 @@
         // Reparto por mes del curso: un chip por día de clase con la letra
         // del día de la semana + día del mes (L10, M11, X12…). Verde =
         // asistió (↩ si fue recuperación), rojo = faltó, ámbar = falta J.
+        // Solo meses ANTERIORES al actual (el mes en curso ya está arriba),
+        // ordenados del más reciente al más antiguo (v0.60).
         var porMes = {};
-        items.forEach(function(x){ var m = +x.fecha.split('-')[1]; (porMes[m] = porMes[m] || []).push(x); });
-        ORDEN_MESES_CURSO.forEach(function(m){
-          if (!porMes[m]) return;
-          var sm = _histStats(porMes[m]);
-          var pctM = sm.pct == null ? '—' : sm.pct + '%';
+        items.forEach(function(x){ var k = x.fecha.slice(0,7); (porMes[k] = porMes[k] || []).push(x); });
+        var mesHoyISO = hoyLocal().slice(0,7);
+        Object.keys(porMes).sort().reverse().forEach(function(k){
+          if (k === mesHoyISO) return;   // el mes actual se ve arriba, con navegación
+          var m  = +k.slice(5,7);
+          var sm = _histStats(porMes[k]);
           var chipsM = '';
-          porMes[m].slice().sort(function(a,b){ return a.fecha.localeCompare(b.fecha); }).forEach(function(x){
+          porMes[k].slice().sort(function(a,b){ return a.fecha.localeCompare(b.fecha); }).forEach(function(x){
             var p  = x.fecha.split('-');
             var wd = _GALLETRAS[new Date(+p[0], +p[1]-1, +p[2]).getDay()];
             var ok = x.presente || x.recup;
@@ -4754,8 +4899,8 @@
           });
           h += '<div class="gal-mes-row">' +
             '<div class="gal-mes-top">' +
-              '<span class="gal-mes-nom">' + MESES_NOMBRES_A[m-1] + '</span>' +
-              '<span class="gal-mes-pct" style="color:' + _pctColor(sm.pct) + '">' + sm.pres + '/' + sm.tot + ' · ' + pctM + '</span>' +
+              '<span class="gal-mes-nom">' + MESES_NOMBRES_A[m-1] + ' ' + k.slice(0,4) + '</span>' +
+              '<span class="gal-mes-pct" style="color:' + _pctColor(sm.pct) + '">' + sm.pres + '/' + sm.tot + '</span>' +
             '</div>' +
             '<div class="gal-mes-dias">' + chipsM + '</div>' +
           '</div>';
@@ -8909,6 +9054,9 @@
     var asistJustifs       = {};   // { nombre: true } ausencia justificada (J); sin marca = IJ
     var asistRecups        = [];   // nombres de recuperaciones (invitados) ese día
     var asistRecupPanelOn  = false;
+    var asistAltaPanelOn   = false;   // panel de alta rápida (v0.60)
+    var _abrirPanelRecup   = false;   // abrir Pasar lista con el panel de recup ya abierto
+    var _abrirPanelAlta    = false;   // ídem con el panel de alta rápida
     var asistMesOffset     = 0;    // meses desde el actual
     var asistAlumnoActivo  = null; // nombre del alumno viendo historial
 
@@ -9011,6 +9159,48 @@
       if (baja && fecha > baja) return false;
       return true;
     }
+    // ¿La lista de este registro está realmente PASADA? Un registro que
+    // solo contiene recuperaciones previstas (v0.60) NO cuenta como lista
+    // pasada ni como clase dada. Acepta formato local y de servidor.
+    function _regPasada(r) {
+      if (!r || r.sinClase || r.sin_clase) return false;
+      return !!(((r.presentes || []).length) || ((r.ausentes || []).length));
+    }
+
+    // ── Base de datos de alumnos (v0.60) ────────────────────────
+    // Índice de TODOS los alumnos conocidos para autocompletar: si el
+    // gestor tiene el panel cargado, toda la academia (todas las clases
+    // de todos los entrenadores); si no, las clases propias/gestionadas.
+    function _alumnosAcademia() {
+      var vistos = {}, out = [];
+      function add(a) {
+        var n = alNom(a);
+        if (!n) return;
+        if (vistos[n]) {  // completar datos si otra entrada los tiene
+          if (!vistos[n].apellidos && alApe(a)) vistos[n].apellidos = alApe(a);
+          if (!vistos[n].telefono  && alTel(a)) vistos[n].telefono  = alTel(a);
+          return;
+        }
+        vistos[n] = { nombre:n, apellidos:alApe(a), telefono:alTel(a) };
+        out.push(vistos[n]);
+      }
+      if (_gestorData && _gestorData.clases) {
+        _gestorData.clases.forEach(function(c){ (c.alumnos || []).forEach(add); });
+      }
+      (leerAsistConfig().clases || []).forEach(function(c){ (c.alumnos || []).forEach(add); });
+      out.sort(function(a,b){ return a.nombre.localeCompare(b.nombre); });
+      return out;
+    }
+    // Rellena el <datalist> compartido de autocompletado de alumnos
+    function _dlAlumnosFill() {
+      var dl = document.getElementById('dl-alumnos');
+      if (!dl) return;
+      dl.innerHTML = _alumnosAcademia().map(function(a){
+        return '<option value="' + _gEsc(a.nombre) + '"' +
+               (a.apellidos ? ' label="' + _gEsc(a.nombre + ' ' + a.apellidos) + '"' : '') + '></option>';
+      }).join('');
+    }
+
     function alumnosNombres(clase) { return (clase.alumnos || []).map(alNom); }
     function alumnosActivos(clase, fecha) {
       return (clase.alumnos || []).filter(function(a){ return alActivo(a, fecha); }).map(alNom);
@@ -9116,18 +9306,20 @@
             var reg       = regs.filter(function(r){ return r.claseId===clase.id && r.fecha===fecha; })[0];
             var numAl     = alumnosActivos(clase, fecha).length;
             var badge     = '';
-            if (reg) {
-              if (reg.sinClase) {
-                badge = '<span class="asist-badge-sinclase">🚫 Sin clase</span>';
-              } else {
-                badge = '<span class="asist-badge-hecha">✓ ' + reg.presentes.length + '/' + numAl + '</span>';
-              }
+            if (reg && reg.sinClase) {
+              badge = '<span class="asist-badge-sinclase">🚫 Sin clase</span>';
+            } else if (_regPasada(reg)) {
+              badge = '<span class="asist-badge-hecha">✓ ' + reg.presentes.length + '/' + numAl + '</span>';
             } else if (esHoy) {
               badge = '<span class="asist-badge-pendiente">Pendiente</span>';
             } else if (esPas) {
               badge = '<span class="asist-badge-pendiente">Sin registrar</span>';
             } else {
               badge = '<span class="asist-badge-futura">Próxima</span>';
+            }
+            // Recuperaciones previstas ese día (v0.60): visibles ya en la semana
+            if (reg && !reg.sinClase && !_regPasada(reg) && (reg.recups||[]).length) {
+              badge = '<span class="asist-badge-pendiente">↩ ' + reg.recups.length + ' recup</span>' + badge;
             }
 
             var nombre = clase.nombre || (diasNom + ' · ' + (clase.franja||''));
@@ -9190,14 +9382,25 @@
       asistJustifs = {};
       if (regExiste) (regExiste.justificadas||[]).forEach(function(n){ asistJustifs[n] = true; });
 
-      // Recuperaciones = presentes guardados que NO son del cupo activo
+      // Recuperaciones = previstas guardadas (recups, v0.60) + presentes
+      // guardados que NO son del cupo activo. Una recuperación prevista
+      // aparece SIN marcar: es el entrenador quien marca si acude.
       asistRecups = [];
       if (regExiste) {
+        (regExiste.recups||[]).forEach(function(n) {
+          if (asistRecups.indexOf(n) === -1 && activos.indexOf(n) === -1) {
+            asistRecups.push(n);
+            asistEstadoLista[n] = (regExiste.presentes||[]).indexOf(n) !== -1;
+          }
+        });
         (regExiste.presentes||[]).forEach(function(n) {
-          if (activos.indexOf(n) === -1) { asistRecups.push(n); asistEstadoLista[n] = true; }
+          if (activos.indexOf(n) === -1 && asistRecups.indexOf(n) === -1) {
+            asistRecups.push(n); asistEstadoLista[n] = true;
+          }
         });
       }
-      asistRecupPanelOn = false;
+      asistRecupPanelOn = _abrirPanelRecup; _abrirPanelRecup = false;
+      asistAltaPanelOn  = _abrirPanelAlta;  _abrirPanelAlta  = false;
       renderToggleAlumnos(clase);
     }
 
@@ -9249,48 +9452,109 @@
       renderRecupZona(clase);
     }
 
-    // Botón + panel de recuperación
+    // Botones + paneles de recuperación y de alta rápida
     function renderRecupZona(clase) {
       var zona = document.getElementById('asist-recup-zona');
       if (!zona) return;
-      if (!asistRecupPanelOn) {
-        zona.innerHTML = '<button class="btn btn-sec btn-sm" style="border-color:var(--lila-claro);color:var(--lila);" onclick="asistToggleRecupPanel()">＋ Recuperación</button>';
+      _dlAlumnosFill();   // autocompletado con la base de alumnos de la academia
+      var html = '';
+      if (!asistRecupPanelOn && !asistAltaPanelOn) {
+        zona.innerHTML =
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+            '<button class="btn btn-sec btn-sm" style="flex:1;min-width:130px;border-color:var(--lila-claro);color:var(--lila);" onclick="asistToggleRecupPanel()">↩ Recuperación</button>' +
+            '<button class="btn btn-sec btn-sm" style="flex:1;min-width:130px;border-color:#bbf7d0;color:#166534;" onclick="asistToggleAltaPanel()">＋ Añadir alumno</button>' +
+          '</div>';
         return;
       }
-      // candidatos: alumnos de otras clases (o de esta inactivos hoy) que no estén ya en la lista
+      if (asistAltaPanelOn) {
+        // ── Alta rápida: se apunta a la clase con alta = esta fecha ──
+        zona.innerHTML =
+          '<div class="asist-recup-panel">' +
+            '<div style="font-size:12px;font-weight:700;color:var(--texto);margin-bottom:4px;">＋ Añadir alumno a la clase (alta el ' + formatFechaCorta(asistFechaActiva) + ')</div>' +
+            '<div class="asist-form-add-alumno" style="flex-wrap:wrap;">' +
+              '<input id="asist-alta-nombre" class="form-input" type="text" placeholder="Nombre *" style="flex:1;min-width:100px;" list="dl-alumnos" ' +
+                'oninput="asistAltaAutoRellenar(this.value)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();asistAltaRapida();}">' +
+              '<input id="asist-alta-apellidos" class="form-input" type="text" placeholder="Apellidos" style="flex:1;min-width:100px;">' +
+              '<input id="asist-alta-telefono" class="form-input" type="tel" placeholder="Teléfono" style="flex:1;min-width:100px;">' +
+              '<button class="btn btn-verde btn-sm" style="flex-shrink:0;" onclick="asistAltaRapida()">＋ Alta</button>' +
+            '</div>' +
+            '<button class="btn btn-sec btn-sm" style="margin-top:8px;" onclick="asistToggleAltaPanel()">Cancelar</button>' +
+          '</div>';
+        return;
+      }
+      // ── Recuperación: solo se anota el nombre, SIN asistencia; el
+      // entrenador la marca ese día si acude (y puede borrarla con ✕) ──
       var yaEnLista = {};
       Object.keys(asistEstadoLista).forEach(function(k){ yaEnLista[k]=true; });
       var activos = clase ? alumnosActivos(clase, asistFechaActiva) : [];
       activos.forEach(function(n){ yaEnLista[n]=true; });
-      var todos = {};
-      (leerAsistConfig().clases||[]).forEach(function(c){
-        alumnosNombres(c).forEach(function(n){ todos[n]=true; });
-      });
-      var candidatos = Object.keys(todos).filter(function(n){ return !yaEnLista[n]; }).sort();
+      var candidatos = _alumnosAcademia().map(function(a){ return a.nombre; })
+                        .filter(function(n){ return !yaEnLista[n]; });
       var chips = candidatos.map(function(n){
-        return '<span class="asist-recup-chip" onclick="asistAnadirRecup(\'' + n.replace(/'/g,"\\'") + '\')">' + n + '</span>';
+        return '<span class="asist-recup-chip" onclick="asistAnadirRecup(\'' + n.replace(/'/g,"\\'") + '\')">' + _gEsc(n) + '</span>';
       }).join('') || '<span style="font-size:12px;color:var(--gris);">No hay otros alumnos; escribe un nombre.</span>';
       zona.innerHTML =
         '<div class="asist-recup-panel">' +
-          '<div style="font-size:12px;font-weight:700;color:var(--texto);margin-bottom:4px;">Añadir recuperación</div>' +
+          '<div style="font-size:12px;font-weight:700;color:var(--texto);margin-bottom:4px;">↩ Añadir recuperación (solo el nombre; la asistencia se marca ese día)</div>' +
           '<div class="asist-form-add-alumno">' +
-            '<input id="asist-recup-input" class="form-input" type="text" placeholder="Escribir nombre…" ' +
+            '<input id="asist-recup-input" class="form-input" type="text" placeholder="Escribir nombre…" list="dl-alumnos" ' +
               'onkeydown="if(event.key===\'Enter\'){event.preventDefault();asistAnadirRecupInput();}">' +
             '<button class="btn btn-verde btn-sm" style="flex-shrink:0;" onclick="asistAnadirRecupInput()">＋</button>' +
           '</div>' +
           '<div class="asist-recup-chips">' + chips + '</div>' +
+          '<button class="btn btn-sec btn-sm" style="margin-top:8px;" onclick="asistToggleRecupPanel()">Cancelar</button>' +
         '</div>';
     }
 
     function asistToggleRecupPanel() {
       asistRecupPanelOn = !asistRecupPanelOn;
+      if (asistRecupPanelOn) asistAltaPanelOn = false;
       renderToggleAlumnos(null);
     }
+    function asistToggleAltaPanel() {
+      asistAltaPanelOn = !asistAltaPanelOn;
+      if (asistAltaPanelOn) asistRecupPanelOn = false;
+      renderToggleAlumnos(null);
+    }
+    function asistAltaAutoRellenar(v) {
+      var n = (v || '').trim();
+      if (!n) return;
+      var m = _alumnosAcademia().filter(function(a){ return a.nombre === n; })[0];
+      if (!m) return;
+      var iA = document.getElementById('asist-alta-apellidos');
+      var iT = document.getElementById('asist-alta-telefono');
+      if (iA && !iA.value && m.apellidos) iA.value = m.apellidos;
+      if (iT && !iT.value && m.telefono)  iT.value = m.telefono;
+    }
+    // Alta rápida desde la lista: añade el alumno a ESTA clase con
+    // fecha de alta = el día de la lista, y aparece ya en el cupo.
+    function asistAltaRapida() {
+      var iN = document.getElementById('asist-alta-nombre');
+      var nombre = iN ? iN.value.trim() : '';
+      if (!nombre) return;
+      asistAltaAutoRellenar(nombre);
+      var ape = (document.getElementById('asist-alta-apellidos')||{}).value || '';
+      var tel = (document.getElementById('asist-alta-telefono')||{}).value || '';
+      var cfg = leerAsistConfig();
+      var clase = (cfg.clases||[]).filter(function(c){ return c.id===asistClaseActivaId; })[0];
+      if (!clase) return;
+      if ((clase.alumnos||[]).some(function(a){ return alNom(a) === nombre; })) {
+        alert('"' + nombre + '" ya está en esta clase (revisa sus fechas de alta/baja).'); return;
+      }
+      clase.alumnos = (clase.alumnos||[]).concat([{ nombre:nombre, apellidos:ape.trim(), telefono:tel.trim(),
+                                                    alta:asistFechaActiva, baja:'' }]);
+      escribirAsistConfig(cfg);
+      asistAltaPanelOn = false;
+      renderizarPasarLista();   // el alumno aparece ya en la lista del día
+    }
+    // Añadir recuperación: se guarda EN EL MOMENTO (campo recups del
+    // registro) sin marcar asistencia, para que el entrenador la vea.
     function asistAnadirRecup(nombre) {
       if (!nombre) return;
       if (asistRecups.indexOf(nombre) === -1 && asistEstadoLista[nombre] === undefined) {
         asistRecups.push(nombre);
-        asistEstadoLista[nombre] = true;
+        asistEstadoLista[nombre] = false;   // sin marcar: la marca el entrenador
+        _recupPersistir();
       }
       asistRecupPanelOn = false;
       renderToggleAlumnos(null);
@@ -9304,7 +9568,38 @@
     function asistQuitarRecup(nombre) {
       asistRecups = asistRecups.filter(function(n){ return n !== nombre; });
       delete asistEstadoLista[nombre];
+      _recupPersistir();
       renderToggleAlumnos(null);
+    }
+    // Guarda SOLO las recuperaciones previstas del día en el registro,
+    // sin tocar la asistencia. Un registro que quede totalmente vacío
+    // (sin lista pasada, sin recups, sin "sin clase") se elimina.
+    function _recupPersistir() {
+      var regs = leerAsistRegistros();
+      var idx = -1;
+      regs.forEach(function(r,i){ if (r.claseId===asistClaseActivaId && r.fecha===asistFechaActiva) idx=i; });
+      if (idx >= 0) {
+        var r = regs[idx];
+        r.recups = asistRecups.slice();
+        // si se quitó una recup que estaba marcada presente, sale de presentes
+        var cfg = leerAsistConfig();
+        var clase = (cfg.clases||[]).filter(function(c){ return c.id===asistClaseActivaId; })[0];
+        var cupo = clase ? alumnosActivos(clase, asistFechaActiva) : [];
+        r.presentes = (r.presentes||[]).filter(function(n){
+          return cupo.indexOf(n) !== -1 || asistRecups.indexOf(n) !== -1;
+        });
+        if (!r.sinClase && !(r.presentes||[]).length && !(r.ausentes||[]).length && !(r.recups||[]).length) {
+          _sbDelete('asistencia_registros', r.id);
+          regs.splice(idx, 1);
+        }
+        escribirAsistRegistros(regs);
+      } else {
+        if (!asistRecups.length) return;
+        var newId = regs.length>0 ? Math.max.apply(null,regs.map(function(r){return r.id||0;}))+1 : 1;
+        regs.push({ id:newId, claseId:asistClaseActivaId, fecha:asistFechaActiva,
+                    presentes:[], ausentes:[], justificadas:[], recups:asistRecups.slice() });
+        escribirAsistRegistros(regs);
+      }
     }
 
     function asistToggleAlumno(nombre) {
@@ -9338,6 +9633,7 @@
         presentes: [],
         ausentes:  [],
         justificadas: [],
+        recups:    [],
         sinClase:  true
       };
       if (idx>=0) { regs[idx]=nuevoReg; } else { regs.push(nuevoReg); }
@@ -9351,7 +9647,11 @@
       if (!asistClaseActivaId) return;
 
       var presentes = Object.keys(asistEstadoLista).filter(function(k){ return asistEstadoLista[k]; });
-      var ausentes  = Object.keys(asistEstadoLista).filter(function(k){ return !asistEstadoLista[k]; });
+      // Ausentes: SOLO el cupo de la clase. Una recuperación sin marcar no
+      // es una falta: queda solo anotada en recups (v0.60).
+      var ausentes  = Object.keys(asistEstadoLista).filter(function(k){
+        return !asistEstadoLista[k] && asistRecups.indexOf(k) === -1;
+      });
       var justificadas = ausentes.filter(function(n){ return !!asistJustifs[n]; });
 
       var regs = leerAsistRegistros();
@@ -9364,7 +9664,8 @@
         fecha:    fecha,
         presentes:presentes,
         ausentes: ausentes,
-        justificadas: justificadas
+        justificadas: justificadas,
+        recups:   asistRecups.slice()
       };
 
       if (idx>=0) { regs[idx]=nuevoReg; } else { regs.push(nuevoReg); }
@@ -9468,6 +9769,7 @@
       document.getElementById('asist-form-nuevo-apellidos').value = '';
       document.getElementById('asist-form-nuevo-telefono').value  = '';
       document.getElementById('asist-form-franja').classList.remove('form-error');
+      _dlAlumnosFill();   // autocompletado con la base de alumnos (v0.60)
       renderAlumnosForm();
     }
 
@@ -9488,8 +9790,8 @@
             '<label>Teléfono<input type="tel" value="' + _gEsc(a.telefono||'') + '" placeholder="Teléfono" onchange="asistSetAlumnoFecha(' + i + ',\'telefono\',this.value)"></label>' +
           '</div>' +
           '<div class="asist-al-fila-fechas">' +
-            '<label>Desde<input type="date" value="' + (a.alta||'') + '" onchange="asistSetAlumnoFecha(' + i + ',\'alta\',this.value)"></label>' +
-            '<label>Hasta<input type="date" value="' + (a.baja||'') + '" onchange="asistSetAlumnoFecha(' + i + ',\'baja\',this.value)"></label>' +
+            '<label>Desde<input type="date" value="' + (a.alta||'') + '" onclick="if(this.showPicker)this.showPicker()" onchange="asistSetAlumnoFecha(' + i + ',\'alta\',this.value)"></label>' +
+            '<label>Hasta<input type="date" value="' + (a.baja||'') + '" onclick="if(this.showPicker)this.showPicker()" onchange="asistSetAlumnoFecha(' + i + ',\'baja\',this.value)"></label>' +
           '</div>' +
         '</div>';
       }).join('');
@@ -9499,6 +9801,19 @@
       if (asistAlumnosForm[idx]) asistAlumnosForm[idx][campo] = val || '';
     }
 
+    // Si el nombre tecleado coincide con un alumno conocido de la academia,
+    // se rellenan solos apellidos y teléfono (v0.60, evita duplicar datos)
+    function asistAutoRellenar(v) {
+      var n = (v || '').trim();
+      if (!n) return;
+      var m = _alumnosAcademia().filter(function(a){ return a.nombre === n; })[0];
+      if (!m) return;
+      var inpApe = document.getElementById('asist-form-nuevo-apellidos');
+      var inpTel = document.getElementById('asist-form-nuevo-telefono');
+      if (inpApe && !inpApe.value && m.apellidos) inpApe.value = m.apellidos;
+      if (inpTel && !inpTel.value && m.telefono)  inpTel.value = m.telefono;
+    }
+
     function asistAnadirAlumno() {
       var input  = document.getElementById('asist-form-nuevo-alumno');
       var inpApe = document.getElementById('asist-form-nuevo-apellidos');
@@ -9506,6 +9821,7 @@
       var nombre = input.value.trim();
       if (!nombre) return;
       if (asistAlumnosForm.some(function(a){ return alNom(a) === nombre; })) { input.value=''; return; }
+      asistAutoRellenar(nombre);
       asistAlumnosForm.push({ nombre: nombre, apellidos: inpApe.value.trim(), telefono: inpTel.value.trim(), alta: '', baja: '' });
       input.value = ''; inpApe.value = ''; inpTel.value = '';
       renderAlumnosForm();
@@ -9600,6 +9916,7 @@
             if (!alActivo(a, f)) return;
             var reg = regPorFecha[f];
             if (reg && reg.sinClase) return;
+            if (!_regPasada(reg)) reg = null;   // solo recups previstas = sin lista
             fechasSet[f] = true;
             dat.totalClases += 1;
             var ok = reg && (reg.presentes||[]).indexOf(nombre)!==-1;
@@ -9804,6 +10121,7 @@
             if (!alActivo(a, f)) return;
             var reg = regPorFecha[f];
             if (reg && reg.sinClase) return;
+            if (!_regPasada(reg)) reg = null;   // solo recups previstas = sin lista
             dat.totalClases += 1;
             if (reg && (reg.presentes||[]).indexOf(nombre)!==-1) dat.presencias += 1;
             else if (reg) { if ((reg.justificadas||[]).indexOf(nombre)!==-1) dat.fJ += 1; else dat.fIJ += 1; }
@@ -9924,6 +10242,7 @@
               var pres = 0, posibles = 0;
               fechas.forEach(function(f) {
                 var reg = regsClase.filter(function(r){ return r.fecha===f; })[0];
+                if (reg && !reg.sinClase && !_regPasada(reg)) reg = null;   // solo recups previstas
                 if (!alActivo(entry, f)) {            // fuera de su alta/baja
                   h += '<td style="text-align:center;color:#d1d5db">·</td>';
                 } else if (reg && reg.sinClase) {
