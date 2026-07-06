@@ -39,6 +39,27 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.55.0 — Curso por clase: septiembre vacío automático + cierre selectivo (2026-07)
+    · Cada clase lleva su CURSO escolar ("2025-26", columna curso en
+      asistencia_clases, migración v0.55). Las vistas por mes/semana
+      solo muestran las clases del curso al que pertenece la fecha:
+      septiembre 2026 aparece VACÍO automáticamente y se pueden ir
+      añadiendo ya las clases del curso nuevo (con su curso estampado).
+      Agosto cuenta como curso nuevo. Las clases antiguas se estampan
+      solas (tras la descarga de sync, en local sin sesión, y el
+      gestor estampa las de cualquier entrenador al abrir el panel).
+    · Detalle del gestor: fuera "✏️ Gestionar clases y listas"
+      (redundante con el ✏ Editar por tramo). En su lugar:
+      "＋ Añadir clase" (estampa el curso del mes visto) y
+      "📦 Cerrar curso…" con panel para elegir QUÉ se cierra:
+      todas las clases del curso o solo una franja horaria.
+    · El cierre FUSIONA con lo ya archivado del mismo curso (se puede
+      cerrar franja a franja) y solo borra lo cerrado (deja intactas
+      las clases ya creadas del curso siguiente).
+    · Desplegable de cada día: botón "✏ Pasar/Corregir lista" para
+      editar la asistencia de esa fecha sin salir del detalle.
+    · Requiere ejecutar la migración v0.55 de supabase_schema.sql
+      (columna curso; sin ella la subida de clases falla en v0.55).
   v0.54.0 — Histórico de cursos + edición rápida desde el detalle (2026-07)
     · Cerrar curso: botón "📦 Cerrar curso" en Gestionar clases.
       Archiva las clases y listas del curso (sep–jul) en la nueva
@@ -870,6 +891,12 @@
     .ghd-cursos-row { display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin:0 0 0.9rem; font-size:12px; font-weight:700; color:var(--gris); }
     .ghd-curso-chip { font-size:11.5px; font-weight:700; color:var(--lila); background:var(--blanco); border:1.5px solid var(--lila-claro); border-radius:20px; padding:4px 12px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
     .ghd-curso-chip:active { transform:scale(0.96); }
+    .gcierre-card { background:var(--blanco); border:1.5px solid var(--borde); border-radius:13px; padding:0.8rem 0.85rem; margin:-0.4rem 0 1.1rem; }
+    .gcierre-tit { font-size:13px; font-weight:800; color:var(--texto); margin-bottom:9px; }
+    .gcierre-opt { display:block; width:100%; text-align:left; font-size:12.5px; font-weight:600; color:var(--texto); background:var(--arena); border:1.5px solid transparent; border-radius:10px; padding:0.6rem 0.8rem; margin-bottom:6px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .gcierre-opt:active { transform:scale(0.99); }
+    .gcierre-opt.todas { font-weight:800; color:#991b1b; background:#fef2f2; border-color:#fecaca; }
+    .gcierre-opt.cancel { text-align:center; font-weight:700; color:var(--gris); background:var(--blanco); border-color:var(--borde); margin-bottom:0; }
     .ghd-dias { display:flex; flex-wrap:wrap; gap:5px; }
     .ghd-day { min-width:26px; height:26px; padding:0 4px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; border:none; font-family:inherit; cursor:default; }
     .ghd-day.dada { background:#dcfce7; color:#166534; }
@@ -2407,7 +2434,7 @@
   <!-- ══ ASISTENCIA — PASAR LISTA ══════════════════ -->
   <div id="pantalla-asistencia-lista" class="pantalla">
     <div class="cabecera">
-      <button class="btn-volver" onclick="irA('pantalla-asistencia')">‹ Asistencia</button>
+      <button class="btn-volver" id="asist-lista-volver-btn" onclick="_asistListaSalida()">‹ Asistencia</button>
       <div class="cab-titulo" id="asist-lista-titulo">Pasar lista</div>
       <div class="cab-sub"   id="asist-lista-sub">—</div>
     </div>
@@ -2625,7 +2652,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.54.0';
+    var APP_VERSION = '0.55.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -2897,7 +2924,8 @@
         var asistServ = (results[4].data || []).map(function(c){ return {
           id:c.id, nombre:c.nombre,
           diaSemana:c.dia_semana||'', franja:c.franja||'',
-          alumnos:c.alumnos||[]
+          alumnos:c.alumnos||[],
+          curso:c.curso||''
         }; });
 
         var regsServ = (results[5].data || []).map(function(r){ return {
@@ -2916,6 +2944,9 @@
         escribirPartidos(_mergeListas(leerPartidos(), partsServ, 'partidos', !results[3].error), true);
         escribirAsistConfig({ clases: _mergeListas(leerAsistConfig().clases||[], asistServ, 'asistencia_clases') }, true);
         escribirAsistRegistros(_mergeListas(leerAsistRegistros(), regsServ, 'asistencia_registros'), true);
+        // v0.55: estampar el curso en las clases que aún no lo tengan
+        // (con los datos recién fusionados; la escritura lo sube al servidor)
+        _asistStampCurso();
 
         // ── Plan: el servidor manda en lo compartido (contenido/biblioteca/
         // hechos). Si aún no hay fila en el servidor pero sí hay plan local
@@ -3114,7 +3145,8 @@
         id:c.id, user_id:uid, nombre:c.nombre,
         dia_semana:(c.diaSemana == null || c.diaSemana === '' || c.diaSemana < 0) ? '' : String(c.diaSemana),
         franja:c.franja||'',
-        alumnos:c.alumnos||[]
+        alumnos:c.alumnos||[],
+        curso:c.curso||''       // v0.55: curso escolar de la clase ("2025-26")
       }; },
       asistencia_registros: function(r, uid) { return {  // siempre privada
         id:r.id, user_id:uid, clase_id:r.claseId, fecha:r.fecha,
@@ -3409,7 +3441,7 @@
         var g = _gEditDatos();
         return { clases: g.clases.map(function(c){
           var ds = (c.dia_semana === '' || c.dia_semana == null) ? -1 : Number(c.dia_semana);
-          return { id:c.id, nombre:c.nombre || '', diaSemana:ds, franja:c.franja || '', alumnos:c.alumnos || [] };
+          return { id:c.id, nombre:c.nombre || '', diaSemana:ds, franja:c.franja || '', alumnos:c.alumnos || [], curso:c.curso || '' };
         }) };
       }
       var d = _lzGet('padel-asistencia-cfg'); return d ? JSON.parse(d) : {clases:[]};
@@ -3577,6 +3609,19 @@
           registros: res[2].data || [],
           historico: (res[3] && !res[3].error && res[3].data) || []
         };
+        // v0.55: estampar el curso actual en las clases de CUALQUIER
+        // entrenador que aún no lo tengan (la RLS del gestor lo permite).
+        // Así el cambio de curso funciona aunque un entrenador no
+        // actualice su app. Fallo silencioso si falta la migración v0.55.
+        var sinCurso = _gestorData.clases.filter(function(c){ return !c.curso; });
+        if (sinCurso.length && _esGestor) {
+          var cAct = cursoDeFecha(hoyLocal());
+          sinCurso.forEach(function(c){ c.curso = cAct; });
+          _sb.from('asistencia_clases').update({ curso: cAct }).is('curso', null)
+            .then(function(r){ if (r.error) console.warn('stamp curso (null)', r.error); });
+          _sb.from('asistencia_clases').update({ curso: cAct }).eq('curso', '')
+            .then(function(r){ if (r.error) console.warn('stamp curso (vacío)', r.error); });
+        }
         renderGestor();
       }).catch(function(e) {
         if (cont) cont.innerHTML = '<p class="ajustes-desc" style="color:#b91c1c;">No se pudieron cargar los datos: ' + _gEsc(e && e.message) + '</p>';
@@ -3659,15 +3704,15 @@
       if (sub) sub.textContent = uids.length + ' entrenador' + (uids.length !== 1 ? 'es' : '') + ' con datos';
     }
 
-    function abrirGestorDetalle(uid) { _gestorUid = uid; _gestorMesOff = 0; _gHist = null; irA('pantalla-gestor-detalle'); }
-    function gestorMesNav(delta) { _gestorMesOff += delta; renderGestorDetalle(); }
+    function abrirGestorDetalle(uid) { _gestorUid = uid; _gestorMesOff = 0; _gHist = null; _gCierreOpen = false; irA('pantalla-gestor-detalle'); }
+    function gestorMesNav(delta) { _gestorMesOff += delta; _gCierreOpen = false; renderGestorDetalle(); }
 
     // Convierte los datos de servidor de un entrenador al formato local
     // que entienden las funciones de asistencia ya existentes.
     function _gestorClasesLocal(d) {
       return (d.clases || []).map(function(c){
         var ds = (c.dia_semana === '' || c.dia_semana == null) ? -1 : Number(c.dia_semana);
-        return { id:c.id, nombre:c.nombre || 'Clase', diaSemana:ds, franja:c.franja || '', alumnos:c.alumnos || [] };
+        return { id:c.id, nombre:c.nombre || 'Clase', diaSemana:ds, franja:c.franja || '', alumnos:c.alumnos || [], curso:c.curso || '' };
       });
     }
     function _gestorRegsLocal(d) {
@@ -3718,11 +3763,15 @@
         (d.perfil && d.perfil.email ? d.perfil.email : '') +
         (d.perfil && d.perfil.club ? ' · ' + d.perfil.club : '');
 
-      // Curso archivado abierto (_gHist) o curso actual
+      // Curso archivado abierto (_gHist) o curso vivo. Las clases vivas se
+      // filtran por el CURSO del mes que se está viendo: septiembre ya
+      // pertenece al curso nuevo y aparece vacío hasta añadir sus clases.
       var hist     = _gHist;
-      var clases   = hist ? (hist.clases || []) : _gestorClasesLocal(d);
       var mesISO   = getMesISO_A(_gestorMesOff);
       var mesLabel = getMesLabelA(_gestorMesOff);
+      var cursoMes = cursoDeFecha(mesISO);
+      var clases   = hist ? (hist.clases || [])
+                          : _gestorClasesLocal(d).filter(function(c){ return _claseCurso(c) === cursoMes; });
       var regsAll  = hist ? (hist.regs || []) : _gestorRegsLocal(d);
       var regsMes  = regsAll.filter(function(r){ return r.fecha && r.fecha.startsWith(mesISO); });
 
@@ -3795,10 +3844,32 @@
         '<div class="gestor-kpi"><div class="gestor-kpi-num">' + (pctMes==null?'—':pctMes+'%') + '</div><div class="gestor-kpi-lbl">Asistencia</div><div class="gestor-kpi-sub">' + fechasCols.length + ' día' + (fechasCols.length!==1?'s':'') + ' clase</div></div>' +
       '</div>';
 
-      // ── Botón de gestión: abre las pantallas de Asistencia sobre los
-      // datos de ESTE entrenador (clases, alumnos, listas). Gestor y EN3.
-      // (Oculto al consultar un curso archivado: es solo lectura.)
-      if (!hist) h += '<button class="btn btn-verde" style="margin:0 0 1.1rem;" onclick="gestorGestionar()">✏️ Gestionar clases y listas</button>';
+      // ── Acciones del curso: añadir clase (con el curso del mes visto) y
+      // cerrar curso (todas las clases o solo una franja). El antiguo botón
+      // "Gestionar clases y listas" sobra: cada tramo tiene su ✏ Editar.
+      // (Ocultas al consultar un curso archivado: es solo lectura.)
+      if (!hist) {
+        var esCursoFuturo = cursoMes !== cursoDeFecha(hoyLocal());
+        h += '<div style="display:flex;gap:8px;margin:0 0 1.1rem;flex-wrap:wrap;">' +
+          '<button class="btn btn-verde" style="margin:0;flex:1;min-width:150px;" onclick="gestorNuevaClase(\'' + cursoMes + '\')">＋ Añadir clase' + (esCursoFuturo ? ' · curso ' + cursoMes : '') + '</button>' +
+          (clases.length ? '<button class="btn btn-sec" style="margin:0;flex:1;min-width:150px;" onclick="gestorToggleCierre()">📦 Cerrar curso…</button>' : '') +
+        '</div>';
+        if (_gCierreOpen && clases.length) {
+          h += '<div class="gcierre-card">' +
+            '<div class="gcierre-tit">¿Qué quieres cerrar y archivar del curso ' + _gEsc(cursoMes) + '?</div>' +
+            '<button type="button" class="gcierre-opt todas" onclick="gestorCerrarCurso(\'' + cursoMes + '\', null)">📦 Todas las clases (' + clases.length + ') — empezar de cero</button>';
+          clases.slice().sort(function(a,b){
+            var oa = a.diaSemana===0?7:a.diaSemana, ob = b.diaSemana===0?7:b.diaSemana;
+            return oa-ob || (a.franja||'').localeCompare(b.franja||'');
+          }).forEach(function(c){
+            h += '<button type="button" class="gcierre-opt" onclick="gestorCerrarCurso(\'' + cursoMes + '\', ' + c.id + ')">' +
+              _gEsc(_GDIASL[c.diaSemana] || '(sin día)') + ' · ' + _gEsc(c.franja||'—') +
+              (c.nombre ? ' · ' + _gEsc(c.nombre) : '') + '</button>';
+          });
+          h += '<button type="button" class="gcierre-opt cancel" onclick="gestorToggleCierre()">Cancelar</button>' +
+          '</div>';
+        }
+      }
 
       // ── Clases dadas del mes, agrupadas por DÍA de la semana ──
       // El nombre del día aparece UNA vez (cabecera sombreada) y debajo sus
@@ -3808,7 +3879,8 @@
       h += '<div class="grupo-titulo">Clases dadas · ' + _gEsc(mesLabel) + '</div>';
       h += '<p class="ajustes-desc" style="margin:-2px 0 0.6rem;">Pinche en cada día para ver asistencia.</p>';
       if (!clases.length) {
-        h += '<p class="ajustes-desc">Sin clases configuradas.</p>';
+        h += '<p class="ajustes-desc">Sin clases en el curso ' + _gEsc(hist ? hist.curso : cursoMes) + ' todavía.' +
+             (hist ? '' : ' Usa "＋ Añadir clase" para ir apuntando a la gente del curso nuevo.') + '</p>';
       } else {
         // Registros del mes indexados por clase y fecha
         var regCF = {};
@@ -3824,13 +3896,17 @@
         // Detalle de asistencia de una clase en una fecha (desplegable del chip)
         function _gddDetalle(clase, f, reg, extra) {
           var p = f.split('-');
-          var s = '<div class="gdd-hdr">' + _GDIASL[new Date(+p[0],+p[1]-1,+p[2]).getDay()] + ' ' + parseInt(p[2],10) + '/' + p[1] +
+          // En el curso vivo, cada día permite pasar/corregir su lista
+          var btnLista = hist ? '' :
+            ' <button type="button" class="ghd-edit-btn" style="margin-left:auto;" onclick="gestorEditarLista(' + clase.id + ',\'' + f + '\')">✏ ' + (reg ? 'Corregir lista' : 'Pasar lista') + '</button>';
+          var s = '<div class="gdd-hdr" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">' + _GDIASL[new Date(+p[0],+p[1]-1,+p[2]).getDay()] + ' ' + parseInt(p[2],10) + '/' + p[1] +
                   (extra ? ' <span class="gad-extra">extra</span>' : '');
+          // (btnLista se añade al final de la cabecera en cada rama)
           if (reg && reg.sinClase) {
-            return s + ' <span class="gad-estado sin">🚫 Sin clase</span></div>';
+            return s + ' <span class="gad-estado sin">🚫 Sin clase</span>' + btnLista + '</div>';
           }
           if (!reg) {
-            s += ' <span class="gad-estado nolista">— Sin lista</span></div>';
+            s += ' <span class="gad-estado nolista">— Sin lista</span>' + btnLista + '</div>';
             var activos = alumnosActivos(clase, f);
             if (activos.length) s += '<div class="gad-alumnos">' + activos.map(function(n){
               return '<span class="gad-al pend">' + _gEsc(n) + '</span>';
@@ -3838,7 +3914,7 @@
             return s;
           }
           var activos2 = alumnosActivos(clase, f);
-          s += ' <span class="gad-estado ok">' + (reg.presentes||[]).length + '/' + activos2.length + '</span></div>';
+          s += ' <span class="gad-estado ok">' + (reg.presentes||[]).length + '/' + activos2.length + '</span>' + btnLista + '</div>';
           var chips = '';
           activos2.forEach(function(n){
             var ok = (reg.presentes||[]).indexOf(n) !== -1;
@@ -3973,17 +4049,58 @@
     // activa el modo gestión y abre el formulario de esa clase. Al guardar,
     // borrar o volver se regresa al detalle del entrenador (_gEditDesdeDet).
     var _gEditDesdeDet = false;
+    var _cursoNuevoCtx = null;   // curso a estampar en la clase nueva (desde el detalle)
     function gestorEditarClase(cid) {
       if (!_gestorUid) return;
       _gEditUid = (_sbUser && _gestorUid === _sbUser.id) ? null : _gestorUid;
       _gEditDesdeDet   = true;
+      _cursoNuevoCtx   = null;
       asistClaseEditId = cid;
       irA('pantalla-asistencia-nueva-clase');
+    }
+    // Nueva clase desde el detalle: se estampa el curso del MES que se está
+    // viendo (así en julio se pueden crear ya las clases de septiembre).
+    function gestorNuevaClase(curso) {
+      if (!_gestorUid) return;
+      _gEditUid = (_sbUser && _gestorUid === _sbUser.id) ? null : _gestorUid;
+      _gEditDesdeDet   = true;
+      _cursoNuevoCtx   = curso || null;
+      asistClaseEditId = null;
+      asistAlumnosForm = [];
+      irA('pantalla-asistencia-nueva-clase');
+    }
+    // Pasar/corregir la lista de un día desde el desplegable del detalle
+    function gestorEditarLista(cid, fecha) {
+      if (!_gestorUid) return;
+      _gEditUid = (_sbUser && _gestorUid === _sbUser.id) ? null : _gestorUid;
+      _gEditDesdeDet     = true;
+      asistClaseActivaId = cid;
+      asistFechaActiva   = fecha;
+      irA('pantalla-asistencia-lista');
     }
     // Salida del formulario de clase (volver / guardar / borrar)
     function _asistFormSalida() {
       if (_gEditDesdeDet) { _gEditDesdeDet = false; irA('pantalla-gestor-detalle'); return; }
       irA('pantalla-asistencia-config');
+    }
+    // Salida de la pantalla de pasar lista (volver / guardar / sin clase)
+    function _asistListaSalida() {
+      if (_gEditDesdeDet) { _gEditDesdeDet = false; irA('pantalla-gestor-detalle'); return; }
+      irA('pantalla-asistencia');
+    }
+
+    // Panel de cierre del detalle: elegir si se cierra TODO el curso o
+    // solo una franja horaria concreta.
+    var _gCierreOpen = false;
+    function gestorToggleCierre() { _gCierreOpen = !_gCierreOpen; renderGestorDetalle(); }
+    function gestorCerrarCurso(curso, claseId) {
+      if (!_gestorUid) return;
+      _gEditUid = (_sbUser && _gestorUid === _sbUser.id) ? null : _gestorUid;
+      asistCerrarCurso(curso, claseId, function(){
+        _gEditUid = null;
+        _gCierreOpen = false;
+        renderGestorDetalle();
+      });
     }
 
     // ══════════════════════════════════════════
@@ -4000,15 +4117,27 @@
     function leerAsistHistLocal()     { var d = _lzGet('padel-asist-historico'); return d ? JSON.parse(d) : []; }
     function escribirAsistHistLocal(l){ _lzSet('padel-asist-historico', JSON.stringify(l)); }
 
-    // Etiqueta del curso actual, deducida de la última lista pasada
-    // (ago–dic → "2026-27"; ene–jul → "2025-26")
-    function _asistCursoActualLabel() {
-      var regs = leerAsistRegistros(), max = '';
-      regs.forEach(function(r){ if (r.fecha && r.fecha > max) max = r.fecha; });
-      var base = max || hoyLocal();
-      var y = parseInt(base.slice(0,4),10), m = parseInt(base.slice(5,7),10);
+    // Curso escolar (sep–jul) al que pertenece una fecha o un mes ISO.
+    // Agosto ya cuenta como curso nuevo: ago–dic → "2026-27"; ene–jul → "2025-26".
+    function cursoDeFecha(iso) {
+      var y = parseInt(iso.slice(0,4),10), m = parseInt(iso.slice(5,7),10);
       var y0 = (m >= 8) ? y : y - 1;
       return y0 + '-' + ('0' + ((y0 + 1) % 100)).slice(-2);
+    }
+    // Curso de una clase. Las clases antiguas (sin campo curso, v<0.55)
+    // se consideran del curso actual de HOY hasta que se les estampe.
+    function _claseCurso(c) { return (c && c.curso) || cursoDeFecha(hoyLocal()); }
+
+    // Estampa el curso en las clases que no lo tengan (migración v0.55).
+    // Se llama tras la descarga de sync (datos frescos) y en las pantallas
+    // de asistencia cuando no hay sesión (uso solo-local).
+    function _asistStampCurso() {
+      if (_gEditUid) return;
+      var cfg = leerAsistConfig(), camb = false;
+      (cfg.clases || []).forEach(function(c){
+        if (!c.curso) { c.curso = cursoDeFecha(hoyLocal()); camb = true; }
+      });
+      if (camb) escribirAsistConfig(cfg);
     }
 
     // Cursos archivados de un entrenador (metadatos descargados por el panel)
@@ -4037,52 +4166,93 @@
       });
     }
 
-    // Cierra el curso actual: archiva y vacía. Funciona en modo propio
+    // Cierra el curso (o UNA sola clase del curso): archiva y vacía lo
+    // cerrado. Lo archivado se FUSIONA con lo ya existente en la fila del
+    // curso (así se puede cerrar franja a franja). Funciona en modo propio
     // (entrenador) y en modo gestión (_gEditUid, el gestor sobre otro).
-    function asistCerrarCurso() {
-      var cfg = leerAsistConfig(), clases = cfg.clases || [], regs = leerAsistRegistros();
-      if (!clases.length && !regs.length) { alert('No hay clases ni registros que archivar.'); return; }
-      var curso = _asistCursoActualLabel();
-      if (!confirm('📦 Cerrar el curso ' + curso + '\n\nSe archivarán ' + clases.length + ' clase' + (clases.length!==1?'s':'') +
-        ' y ' + regs.length + ' lista' + (regs.length!==1?'s':'') + ' de asistencia, y se VACIARÁN las clases y registros actuales' +
-        ' para introducir las del curso nuevo.\n\nEl curso cerrado quedará consultable en "Años anteriores" del panel del gestor.\n\n¿Continuar?')) return;
+    //   curso:      etiqueta ("2025-26"); si falta, el curso más antiguo presente
+    //   claseId:    id de UNA clase a cerrar (null = todas las del curso)
+    //   alTerminar: callback llamado SIEMPRE al acabar (éxito, cancelación o error)
+    function asistCerrarCurso(curso, claseId, alTerminar) {
+      var fin = alTerminar || function(){ mostrarAsistenciaConfig(); };
+      var cfg = leerAsistConfig(), todasC = cfg.clases || [], todosR = leerAsistRegistros();
+      if (!curso) {
+        // Por defecto, el curso más antiguo entre las clases configuradas
+        var cursos = todasC.map(_claseCurso).sort();
+        curso = cursos[0] || cursoDeFecha(hoyLocal());
+      }
+      var cerrarC = todasC.filter(function(c){
+        return claseId != null ? c.id === claseId : _claseCurso(c) === curso;
+      });
+      if (!cerrarC.length) { alert('No hay clases del curso ' + curso + ' que cerrar.'); fin(); return; }
+      if (claseId != null) curso = _claseCurso(cerrarC[0]);
+      var ids = {}; cerrarC.forEach(function(c){ ids[c.id] = true; });
+      var cerrarR = todosR.filter(function(r){ return ids[r.claseId]; });
+      var quedanC = todasC.filter(function(c){ return !ids[c.id]; });
+      var quedanR = todosR.filter(function(r){ return !ids[r.claseId]; });
+
+      var desc = (claseId != null)
+        ? 'la clase ' + (DIAS_NOMBRES_A[cerrarC[0].diaSemana] || '') + ' ' + (cerrarC[0].franja || '') +
+          (cerrarC[0].nombre ? ' (' + cerrarC[0].nombre + ')' : '')
+        : 'las ' + cerrarC.length + ' clases del curso';
+      if (!confirm('📦 Cerrar curso ' + curso + '\n\nSe archivará ' + desc + ' con sus ' + cerrarR.length +
+        ' lista' + (cerrarR.length!==1?'s':'') + ' de asistencia, y quedará vacía para empezar de cero el curso nuevo.\n\n' +
+        'Lo cerrado se consulta en "Años anteriores" del panel del gestor.\n\n¿Continuar?')) { fin(); return; }
 
       var uid = _gEditUid || (_sbUser && _sbUser.id) || null;
 
+      function _mergeHist(prevC, prevR) {
+        var mC = (prevC || []).filter(function(c){ return !ids[c.id]; }).concat(cerrarC);
+        var rIds = {}; cerrarR.forEach(function(r){ rIds[r.id] = true; });
+        var mR = (prevR || []).filter(function(r){ return !rIds[r.id]; }).concat(cerrarR);
+        return { clases: mC, registros: mR };
+      }
       function _guardarLocal() {
-        var l = leerAsistHistLocal().filter(function(x){ return x.curso !== curso; });
-        l.push({ curso: curso, clases: clases, registros: regs, creado: new Date().toISOString() });
+        var l = leerAsistHistLocal();
+        var prev = null;
+        l.forEach(function(x){ if (x.curso === curso) prev = x; });
+        var m = _mergeHist(prev && prev.clases, prev && prev.registros);
+        l = l.filter(function(x){ return x.curso !== curso; });
+        l.push({ curso: curso, clases: m.clases, registros: m.registros, creado: new Date().toISOString() });
         escribirAsistHistLocal(l);
       }
       function _vaciar() {
-        escribirAsistRegistros([]);
-        escribirAsistConfig({ clases: [] });
-        alert('✔ Curso ' + curso + ' archivado. Ya puedes introducir las clases del curso nuevo.');
-        mostrarAsistenciaConfig();
+        escribirAsistRegistros(quedanR);
+        escribirAsistConfig({ clases: quedanC });
+        alert('✔ Archivado en el curso ' + curso + '. Ya puedes introducir las clases del curso nuevo.');
+        fin();
       }
 
       if (_sb && _sbUser && uid) {
-        // 1) Archivar en el servidor; 2) solo si va bien, vaciar el curso
-        _sb.from('asistencia_historico')
-          .upsert({ user_id: uid, curso: curso, clases: clases, registros: regs }, { onConflict: 'user_id,curso' })
-          .select('id,user_id,curso')
-          .then(function(r){
-            if (r.error) { alert('⚠️ No se pudo archivar en el servidor: ' + r.error.message + '\nNo se ha borrado nada.\n\n¿Está ejecutada la migración v0.54 en Supabase?'); return; }
-            if (!_gEditUid) _guardarLocal();
-            // refrescar los metadatos del panel en memoria
-            if (_gestorData && r.data && r.data.length) {
-              _gestorData.historico = ((_gestorData.historico || []).filter(function(x){
-                return !(x.user_id === uid && x.curso === curso);
-              })).concat(r.data);
-            }
-            Promise.all([
-              _sb.from('asistencia_registros').delete().eq('user_id', uid),
-              _sb.from('asistencia_clases').delete().eq('user_id', uid)
-            ]).then(function(rs){
-              var err = (rs[0] && rs[0].error) || (rs[1] && rs[1].error);
-              if (err) { alert('⚠️ El curso se archivó pero no se pudo vaciar en el servidor: ' + err.message); return; }
-              _vaciar();
-            });
+        // 1) Leer lo ya archivado de ese curso y fusionar; 2) subir;
+        // 3) solo si va bien, borrar lo cerrado del curso vivo.
+        _sb.from('asistencia_historico').select('*')
+          .eq('user_id', uid).eq('curso', curso).maybeSingle()
+          .then(function(r0){
+            if (r0.error) { alert('⚠️ No se pudo leer el histórico: ' + r0.error.message + '\nNo se ha borrado nada.\n\n¿Está ejecutada la migración v0.54 en Supabase?'); fin(); return; }
+            var m = _mergeHist(r0.data && r0.data.clases, r0.data && r0.data.registros);
+            _sb.from('asistencia_historico')
+              .upsert({ user_id: uid, curso: curso, clases: m.clases, registros: m.registros }, { onConflict: 'user_id,curso' })
+              .select('id,user_id,curso')
+              .then(function(r){
+                if (r.error) { alert('⚠️ No se pudo archivar en el servidor: ' + r.error.message + '\nNo se ha borrado nada.'); fin(); return; }
+                if (!_gEditUid) _guardarLocal();
+                // refrescar los metadatos del panel en memoria
+                if (_gestorData && r.data && r.data.length) {
+                  _gestorData.historico = ((_gestorData.historico || []).filter(function(x){
+                    return !(x.user_id === uid && x.curso === curso);
+                  })).concat(r.data);
+                }
+                var idsNum = Object.keys(ids).map(Number);
+                Promise.all([
+                  _sb.from('asistencia_registros').delete().eq('user_id', uid).in('clase_id', idsNum),
+                  _sb.from('asistencia_clases').delete().eq('user_id', uid).in('id', idsNum)
+                ]).then(function(rs){
+                  var err = (rs[0] && rs[0].error) || (rs[1] && rs[1].error);
+                  if (err) { alert('⚠️ Se archivó pero no se pudo vaciar en el servidor: ' + err.message); fin(); return; }
+                  _vaciar();
+                });
+              });
           });
       } else if (!_gEditUid) {
         // Sin sesión: archivo solo local (se conserva en este dispositivo)
@@ -4090,6 +4260,7 @@
         _vaciar();
       } else {
         alert('Sin conexión con el servidor.');
+        fin();
       }
     }
 
@@ -8626,6 +8797,7 @@
     }
 
     function mostrarAsistencia() {
+      if (!_sb || !_sbUser) _asistStampCurso();   // uso solo-local: migración v0.55
       var cfg    = leerAsistConfig();
       var clases = cfg.clases || [];
       var regs   = leerAsistRegistros();
@@ -8678,6 +8850,11 @@
           var esPas   = fecha < hoy;
           var diasNom = DIAS_NOMBRES_A[dia];
 
+          // v0.55: solo las clases del curso al que pertenece esa fecha
+          // (septiembre = curso nuevo → aparece vacío hasta añadir clases)
+          var clasesCurso = diasMap[dia].filter(function(c){ return _claseCurso(c) === cursoDeFecha(fecha); });
+          if (!clasesCurso.length) return;
+
           html += '<div class="asist-dia-card' + (esHoy ? ' es-hoy' : '') + '">';
           html += '<div class="asist-dia-header">';
           html += '<span class="asist-dia-etiq">' + diasNom + '</span>';
@@ -8685,7 +8862,7 @@
           if (esHoy) html += '<span class="asist-hoy-badge">HOY</span>';
           html += '</div>';
 
-          var clasesDelDia = diasMap[dia].slice().sort(function(a,b){ return (a.franja||'').localeCompare(b.franja||''); });
+          var clasesDelDia = clasesCurso.slice().sort(function(a,b){ return (a.franja||'').localeCompare(b.franja||''); });
           clasesDelDia.forEach(function(clase) {
             var reg       = regs.filter(function(r){ return r.claseId===clase.id && r.fecha===fecha; })[0];
             var numAl     = alumnosActivos(clase, fecha).length;
@@ -8716,6 +8893,10 @@
 
           html += '</div>';
         });
+        if (!html) {
+          html = '<div class="vacio"><div class="vacio-icono">🗓️</div><p>Sin clases esta semana: pertenece al curso ' +
+                 cursoDeFecha(dateToISOLocal(lunes)) + '.<br>Añade sus clases desde "⚙ Gestionar clases".</p></div>';
+        }
       }
 
       document.getElementById('asist-dias-lista').innerHTML = html;
@@ -8746,6 +8927,7 @@
 
       document.getElementById('asist-lista-titulo').textContent = nombre;
       document.getElementById('asist-lista-sub').textContent    = formatFechaCompleta(asistFechaActiva);
+      document.getElementById('asist-lista-volver-btn').textContent = _gEditDesdeDet ? '‹ Detalle' : '‹ Asistencia';
       document.getElementById('asist-lista-fecha').value        = asistFechaActiva || hoyLocal();
 
       // Solo alumnos ACTIVOS en esa fecha
@@ -8911,7 +9093,7 @@
       };
       if (idx>=0) { regs[idx]=nuevoReg; } else { regs.push(nuevoReg); }
       escribirAsistRegistros(regs);
-      irA('pantalla-asistencia');
+      _asistListaSalida();
     }
 
     function asistGuardarLista() {
@@ -8938,13 +9120,14 @@
 
       if (idx>=0) { regs[idx]=nuevoReg; } else { regs.push(nuevoReg); }
       escribirAsistRegistros(regs);
-      irA('pantalla-asistencia');
+      _asistListaSalida();
     }
 
     // ══════════════════════════════════════════
     // ASISTENCIA — Config de clases
     // ══════════════════════════════════════════
     function mostrarAsistenciaConfig() {
+      if (!_sb || !_sbUser) _asistStampCurso();   // uso solo-local: migración v0.55
       var cfg    = leerAsistConfig();
       var clases = cfg.clases || [];
 
@@ -8976,6 +9159,9 @@
           html += '<div class="asist-cfg-clase-hdr">';
           html += '<span class="asist-cfg-dia-pill">' + DIAS_NOMBRES_A[clase.diaSemana] + '</span>';
           html += '<span class="asist-cfg-franja">🕐 ' + (clase.franja||'Sin horario') + '</span>';
+          // v0.55: si la clase no es del curso actual, se indica su curso
+          if (_claseCurso(clase) !== cursoDeFecha(hoyLocal()))
+            html += '<span class="ghd-dur">curso ' + _claseCurso(clase) + '</span>';
           html += '</div>';
           if (clase.nombre) html += '<div class="asist-cfg-clase-nombre">' + clase.nombre + '</div>';
           html += '<div class="asist-cfg-alumnos-tag">👥 ' + activosHoy + ' activo' + (activosHoy!==1?'s':'') +
@@ -8993,6 +9179,7 @@
 
     function asistNuevaClase() {
       _gEditDesdeDet    = false;
+      _cursoNuevoCtx    = null;
       asistClaseEditId  = null;
       asistAlumnosForm  = [];
       irA('pantalla-asistencia-nueva-clase');
@@ -9000,6 +9187,7 @@
 
     function asistEditarClase(id) {
       _gEditDesdeDet   = false;
+      _cursoNuevoCtx   = null;
       asistClaseEditId = id;
       irA('pantalla-asistencia-nueva-clase');
     }
@@ -9090,11 +9278,14 @@
       if (asistClaseEditId) {
         cfg.clases = cfg.clases.map(function(c) {
           if (c.id !== asistClaseEditId) return c;
-          return { id:c.id, diaSemana:dia, franja:franja, nombre:nombre, alumnos:asistAlumnosForm.slice() };
+          return { id:c.id, diaSemana:dia, franja:franja, nombre:nombre, alumnos:asistAlumnosForm.slice(), curso:_claseCurso(c) };
         });
       } else {
         var newId = cfg.clases.length > 0 ? Math.max.apply(null, cfg.clases.map(function(c){return c.id||0;}))+1 : 1;
-        cfg.clases.push({ id:newId, diaSemana:dia, franja:franja, nombre:nombre, alumnos:asistAlumnosForm.slice() });
+        // v0.55: la clase nueva se estampa con el curso del contexto (mes
+        // visto en el detalle del gestor) o con el curso actual de hoy
+        cfg.clases.push({ id:newId, diaSemana:dia, franja:franja, nombre:nombre, alumnos:asistAlumnosForm.slice(),
+                          curso: _cursoNuevoCtx || cursoDeFecha(hoyLocal()) });
       }
 
       escribirAsistConfig(cfg);
@@ -9130,7 +9321,8 @@
       document.getElementById('asist-mes-label').textContent = mesLabel;
 
       var cfg    = leerAsistConfig();
-      var clases = cfg.clases || [];
+      // v0.55: solo las clases del curso al que pertenece el mes visto
+      var clases = (cfg.clases || []).filter(function(c){ return _claseCurso(c) === cursoDeFecha(mesISO); });
       var regs   = leerAsistRegistros().filter(function(r){ return r.fecha && r.fecha.startsWith(mesISO); });
       var occ    = ocurrenciasDiaEnMes(mesISO);
 
