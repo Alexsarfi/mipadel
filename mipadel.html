@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.45.0
+  TU APP DE PÁDEL — v0.57.0
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,17 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.57.0 — Editar datos del alumno + chips junto a la hora (2026-07)
+    · Historial del alumno: botón "✏ Editar datos" para cambiar
+      nombre, apellidos y teléfono. Si cambia el nombre se actualiza
+      en todas las clases Y en todas sus listas de asistencia
+      (presentes/ausentes/justificadas); aviso si el nombre nuevo
+      choca con otro alumno.
+    · Los chips de alumnos pasan de debajo del calendario a la
+      cabecera del tramo, junto a la hora. Azul claro = de alta;
+      amarillo = de baja pero con alguna asistencia en el curso
+      (los de baja sin asistencias ya no se muestran); gris ⏳ =
+      alta futura. Siguen abriendo el historial del alumno.
   v0.56.0 — Alumnos con apellidos y teléfono + chips por tramo (2026-07)
     · Cada alumno admite APELLIDOS y TELÉFONO (campos opcionales en
       el formulario de la clase, tanto al añadirlo como editándolo).
@@ -908,10 +919,9 @@
     .gcierre-opt:active { transform:scale(0.99); }
     .gcierre-opt.todas { font-weight:800; color:#991b1b; background:#fef2f2; border-color:#fecaca; }
     .gcierre-opt.cancel { text-align:center; font-weight:700; color:var(--gris); background:var(--blanco); border-color:var(--borde); margin-bottom:0; }
-    .ghd-als { display:flex; flex-wrap:wrap; gap:5px; margin-top:7px; }
-    .ghd-al { font-size:11px; font-weight:700; color:#166534; background:#f0fdf4; border:1.5px solid #bbf7d0; border-radius:20px; padding:3px 9px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .ghd-al { font-size:11px; font-weight:700; color:#1e40af; background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:20px; padding:3px 9px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
     button.ghd-al:active { transform:scale(0.96); }
-    .ghd-al.baja { color:#991b1b; background:#fef2f2; border-color:#fecaca; text-decoration:line-through; }
+    .ghd-al.baja { color:#92400e; background:#fef9c3; border-color:#fde68a; }
     .ghd-al.fut  { color:var(--gris); background:#f3f4f6; border-color:#e5e7eb; }
     .ghd-dias { display:flex; flex-wrap:wrap; gap:5px; }
     .ghd-day { min-width:26px; height:26px; padding:0 4px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; border:none; font-family:inherit; cursor:default; }
@@ -2672,7 +2682,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.56.0';
+    var APP_VERSION = '0.57.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -3991,30 +4001,29 @@
             extras.forEach(function(f){ dadas++; _chip(f, 'dada', true); });
             totDia += dadas;
 
-            bloques += '<div class="ghd-tramo">';
-            bloques += '<div class="ghd-clase-hdr" style="margin-bottom:7px;">' +
-              '<span class="ghd-fr" style="font-weight:800;color:var(--texto);">' + _gEsc(c.franja||'—') + '</span>' +
-              (c.nombre ? '<span class="ghd-fr">' + _gEsc(c.nombre) + '</span>' : '') +
-              (_durLabel(dur) ? '<span class="ghd-dur">' + _durLabel(dur) + '</span>' : '') +
-              '<span class="ghd-cont">' + dadas + ' dada' + (dadas!==1?'s':'') + '</span>' +
-              (hist ? '' : '<button type="button" class="ghd-edit-btn" onclick="gestorEditarClase(' + c.id + ')">✏ Editar</button>') +
-              '</div>';
-            bloques += '<div class="ghd-dias">' + (chips || '<span class="ajustes-desc" style="margin:0;">sin días este mes</span>') + '</div>';
-
-            // ── Alumnos de la clase en el mes visto: de alta (verde, con
-            // enlace a su historial por meses) y de baja (✗, tachados).
-            // Nombre + iniciales de apellidos ("Marta G.L.").
+            // ── Alumnos de la clase, junto a la hora (v0.57): azul claro
+            // los de alta; amarillo los de baja que asistieron algún día
+            // del curso (los de baja sin ninguna asistencia no salen).
+            // Nombre + iniciales de apellidos ("Marta G.L."); al tocar se
+            // abre su historial por meses.
+            var cursoRef = hist ? hist.curso : cursoMes;
+            var asistieron = {};
+            regsAll.forEach(function(r){
+              if (r.claseId !== c.id || r.sinClase) return;
+              if (cursoDeFecha(r.fecha || '') !== cursoRef) return;
+              (r.presentes || []).forEach(function(n){ asistieron[n] = true; });
+            });
             var finMes = mesISO + '-31';
             var alsHtml = '';
             (c.alumnos || []).forEach(function(a){
               var nom = alNom(a);
               if (!nom) return;
-              var lbl   = _gEsc(alCorto(a));
               var alta  = alAlta(a);
               var fut   = alta && alta > finMes;                 // aún no ha empezado
               var baja  = !fut && !alActivo(a, finMes);          // de baja a fin de mes
+              if (baja && !asistieron[nom]) return;              // baja sin asistencias → fuera
               var cls   = 'ghd-al' + (baja ? ' baja' : (fut ? ' fut' : ''));
-              var texto = (baja ? '✗ ' : (fut ? '⏳ ' : '')) + lbl;
+              var texto = (baja ? '✗ ' : (fut ? '⏳ ' : '')) + _gEsc(alCorto(a));
               if (hist) {
                 alsHtml += '<span class="' + cls + '">' + texto + '</span>';
               } else {
@@ -4022,8 +4031,17 @@
                            _gEsc(nom).replace(/'/g, "\\'") + '\')">' + texto + '</button>';
               }
             });
-            if (alsHtml) bloques += '<div class="ghd-als">' + alsHtml + '</div>';
 
+            bloques += '<div class="ghd-tramo">';
+            bloques += '<div class="ghd-clase-hdr" style="margin-bottom:7px;">' +
+              '<span class="ghd-fr" style="font-weight:800;color:var(--texto);">' + _gEsc(c.franja||'—') + '</span>' +
+              (c.nombre ? '<span class="ghd-fr">' + _gEsc(c.nombre) + '</span>' : '') +
+              (_durLabel(dur) ? '<span class="ghd-dur">' + _durLabel(dur) + '</span>' : '') +
+              alsHtml +
+              '<span class="ghd-cont">' + dadas + ' dada' + (dadas!==1?'s':'') + '</span>' +
+              (hist ? '' : '<button type="button" class="ghd-edit-btn" onclick="gestorEditarClase(' + c.id + ')">✏ Editar</button>') +
+              '</div>';
+            bloques += '<div class="ghd-dias">' + (chips || '<span class="ajustes-desc" style="margin:0;">sin días este mes</span>') + '</div>';
             bloques += dets;
             bloques += '</div>';
           });
@@ -4330,10 +4348,63 @@
       _galsRenderChips(); _galsRenderLista();
     }
     var _gAlVolver = 'pantalla-gestor-alumnos';   // a dónde vuelve el historial del alumno
-    function abrirGestorAlumno(nombre) { _gestorAlumno = nombre; _gAlMesOff = 0; _gAlVolver = 'pantalla-gestor-alumnos'; irA('pantalla-gestor-alumno'); }
+    function abrirGestorAlumno(nombre) { _gestorAlumno = nombre; _gAlMesOff = 0; _gAlVolver = 'pantalla-gestor-alumnos'; _gAlEditOpen = false; irA('pantalla-gestor-alumno'); }
     // Desde los chips de alumnos del detalle: vuelve al detalle del entrenador
-    function abrirGestorAlumnoDet(nombre) { _gestorAlumno = nombre; _gAlMesOff = 0; _gAlVolver = 'pantalla-gestor-detalle'; irA('pantalla-gestor-alumno'); }
+    function abrirGestorAlumnoDet(nombre) { _gestorAlumno = nombre; _gAlMesOff = 0; _gAlVolver = 'pantalla-gestor-detalle'; _gAlEditOpen = false; irA('pantalla-gestor-alumno'); }
     function gestorAlVolver() { irA(_gAlVolver); }
+
+    // ── Editar los datos del alumno (nombre / apellidos / teléfono) ──
+    // Actualiza su entrada en TODAS las clases del entrenador; si cambia
+    // el nombre, también en presentes/ausentes/justificadas de todas sus
+    // listas (el nombre es la clave de identidad en los registros).
+    var _gAlEditOpen = false;
+    function gestorAlToggleEdit() { _gAlEditOpen = !_gAlEditOpen; renderGestorAlumno(); }
+    function gestorAlGuardarDatos() {
+      var nom = document.getElementById('gal-edit-nombre').value.trim();
+      var ape = document.getElementById('gal-edit-apellidos').value.trim();
+      var tel = document.getElementById('gal-edit-telefono').value.trim();
+      if (!nom) { alert('El nombre no puede quedar vacío.'); return; }
+      var viejo = _gestorAlumno;
+
+      // Modo gestión temporal sobre el entrenador abierto (mismo patrón
+      // que el cierre de curso: sin navegar, se restaura al terminar)
+      _gEditUid = (_sbUser && _gestorUid === _sbUser.id) ? null : _gestorUid;
+      try {
+        var cfg = leerAsistConfig();
+        // Colisión: ya existe OTRO alumno con el nombre nuevo
+        if (nom !== viejo) {
+          var choca = (cfg.clases || []).some(function(c){
+            return (c.alumnos || []).some(function(a){ return alNom(a) === nom; });
+          });
+          if (choca) { alert('Ya existe otro alumno llamado "' + nom + '". Usa un nombre distinto (o añade una inicial).'); return; }
+        }
+        var enAlguna = false;
+        (cfg.clases || []).forEach(function(c){
+          c.alumnos = (c.alumnos || []).map(function(a){
+            if (alNom(a) !== viejo) return a;
+            enAlguna = true;
+            return { nombre: nom, apellidos: ape, telefono: tel, alta: alAlta(a), baja: alBaja(a) };
+          });
+        });
+        if (enAlguna) escribirAsistConfig(cfg);
+        if (nom !== viejo) {
+          var regs = leerAsistRegistros(), camb = false;
+          regs.forEach(function(r){
+            ['presentes','ausentes','justificadas'].forEach(function(k){
+              var arr = r[k] || [];
+              var i = arr.indexOf(viejo);
+              if (i !== -1) { arr[i] = nom; r[k] = arr; camb = true; }
+            });
+          });
+          if (camb) escribirAsistRegistros(regs);
+          _gestorAlumno = nom;
+        }
+      } finally {
+        _gEditUid = null;
+      }
+      _gAlEditOpen = false;
+      renderGestorAlumno();
+    }
     function gestorAlMesNav(delta) { _gAlMesOff += delta; renderGestorAlumno(); }
 
     // Curso escolar de una fecha (sep–jun): "2025-2026"
@@ -4501,9 +4572,29 @@
       document.getElementById('gestor-al-sub').textContent =
         (d ? 'Alumno de ' + _gestorNombre(d) : '') + (tel ? ' · 📞 ' + tel : '');
 
+      // ── Editar datos del alumno (v0.57): nombre, apellidos, teléfono ──
+      var h = '';
+      if (!_gAlEditOpen) {
+        h += '<button class="btn btn-sec btn-sm" style="margin:0 0 10px;" onclick="gestorAlToggleEdit()">✏ Editar datos del alumno</button>';
+      } else {
+        h += '<div class="form-card" style="margin-bottom:10px;gap:0.6rem;">' +
+          '<div class="form-grupo"><label class="form-label">Nombre *</label>' +
+            '<input id="gal-edit-nombre" class="form-input" type="text" value="' + _gEsc(_gestorAlumno) + '"></div>' +
+          '<div class="form-grupo"><label class="form-label">Apellidos</label>' +
+            '<input id="gal-edit-apellidos" class="form-input" type="text" value="' + _gEsc(ape) + '"></div>' +
+          '<div class="form-grupo"><label class="form-label">Teléfono</label>' +
+            '<input id="gal-edit-telefono" class="form-input" type="tel" value="' + _gEsc(tel) + '"></div>' +
+          '<div style="display:flex;gap:8px;">' +
+            '<button class="btn btn-verde btn-sm" style="flex:1;" onclick="gestorAlGuardarDatos()">💾 Guardar</button>' +
+            '<button class="btn btn-sec btn-sm" style="flex:1;" onclick="gestorAlToggleEdit()">Cancelar</button>' +
+          '</div>' +
+          '<p class="form-hint" style="margin:0;">Si cambias el nombre, se actualiza también en todas sus listas de asistencia.</p>' +
+        '</div>';
+      }
+
       var hist = _gestorHistAlumno(_gestorAlumno);
       if (!hist.length) {
-        cont.innerHTML = '<div class="vacio"><div class="vacio-icono">📅</div><p>Sin registros de asistencia para este alumno.</p></div>';
+        cont.innerHTML = h + '<div class="vacio"><div class="vacio-icono">📅</div><p>Sin registros de asistencia para este alumno.</p></div>';
         return;
       }
 
@@ -4511,7 +4602,7 @@
       var cursoAct  = _cursoActual();
       var histCurso = hist.filter(function(x){ return _cursoDe(x.fecha) === cursoAct; });
       var sc = _histStats(histCurso);
-      var h = '<div class="asist-global-card" style="margin-bottom:10px;">' +
+      h += '<div class="asist-global-card" style="margin-bottom:10px;">' +
         '<div class="asist-global-num">' + (sc.pct==null?'—':sc.pct+'%') + '</div>' +
         '<div class="asist-global-info">' +
           '<div class="asist-global-titulo">Curso ' + cursoAct + '</div>' +
