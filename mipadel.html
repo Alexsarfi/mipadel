@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.45.0
+  TU APP DE PÁDEL — v0.58.0
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,14 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.59.0 — Alta y baja del alumno visibles y editables (2026-07)
+    · Historial del alumno: tarjeta con sus clases y, por cada una,
+      la fecha de ALTA ("inicio" si no consta) y su estado: chip
+      verde "De alta" o rojo "✗ Baja: fecha".
+    · "✏ Editar datos" incluye ahora, además de nombre/apellidos/
+      teléfono, las fechas de alta (desde) y baja (hasta) POR CLASE.
+      Vaciar la baja reactiva al alumno; sin alta = desde el
+      principio.
   v0.58.0 — Historial del alumno: días de clase por mes (2026-07)
     · En "Historial por curso" cada mes ya no muestra la barra de
       porcentaje: muestra UN CHIP POR DÍA de clase con la letra del
@@ -930,6 +938,12 @@
     button.ghd-al:active { transform:scale(0.96); }
     .ghd-al.baja { color:#92400e; background:#fef9c3; border-color:#fde68a; }
     .ghd-al.fut  { color:var(--gris); background:#f3f4f6; border-color:#e5e7eb; }
+    /* Historial del alumno: alta/baja por clase */
+    .gal-altas-card { background:var(--blanco); border:1.5px solid var(--borde); border-radius:12px; padding:0.35rem 0.8rem; margin-bottom:10px; }
+    .gal-altas-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:6px 0; border-bottom:1px solid var(--borde); font-size:12px; }
+    .gal-altas-row:last-child { border-bottom:none; }
+    .gal-altas-clase { font-weight:800; color:var(--texto); }
+    .gal-altas-fechas { color:var(--gris); font-weight:600; margin-left:auto; }
     /* Historial del alumno: chips de días por mes (L10, M11…) */
     .gal-mes-row { padding:7px 0 8px; border-bottom:1px solid var(--borde); }
     .gal-mes-row:last-child { border-bottom:none; }
@@ -2700,7 +2714,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.58.0';
+    var APP_VERSION = '0.59.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -4399,10 +4413,15 @@
         }
         var enAlguna = false;
         (cfg.clases || []).forEach(function(c){
+          // Fechas de alta/baja editadas para ESTA clase (v0.59)
+          var elA = document.getElementById('gal-edit-alta-' + c.id);
+          var elB = document.getElementById('gal-edit-baja-' + c.id);
           c.alumnos = (c.alumnos || []).map(function(a){
             if (alNom(a) !== viejo) return a;
             enAlguna = true;
-            return { nombre: nom, apellidos: ape, telefono: tel, alta: alAlta(a), baja: alBaja(a) };
+            return { nombre: nom, apellidos: ape, telefono: tel,
+                     alta: elA ? (elA.value || '') : alAlta(a),
+                     baja: elB ? (elB.value || '') : alBaja(a) };
           });
         });
         if (enAlguna) escribirAsistConfig(cfg);
@@ -4591,10 +4610,39 @@
       document.getElementById('gestor-al-sub').textContent =
         (d ? 'Alumno de ' + _gestorNombre(d) : '') + (tel ? ' · 📞 ' + tel : '');
 
-      // ── Editar datos del alumno (v0.57): nombre, apellidos, teléfono ──
+      // ── Clases del alumno con sus fechas de alta/baja (v0.59) ──
+      var clasesAl = [];
+      if (d) _gestorClasesLocal(d).forEach(function(cl){
+        (cl.alumnos || []).forEach(function(a){
+          if (alNom(a) !== _gestorAlumno) return;
+          clasesAl.push({ id: cl.id, dia: _GDIAS[cl.diaSemana] || '¿?', franja: cl.franja || '—',
+                          alta: alAlta(a), baja: alBaja(a) });
+        });
+      });
+      clasesAl.sort(function(a,b){
+        var oa = a.dia === 'Dom' ? 7 : 'LunMarMiéJueVieSáb'.indexOf(a.dia)/3 + 1;
+        var ob = b.dia === 'Dom' ? 7 : 'LunMarMiéJueVieSáb'.indexOf(b.dia)/3 + 1;
+        return oa - ob || a.franja.localeCompare(b.franja);
+      });
+
+      // ── Editar datos del alumno (v0.57): nombre, apellidos, teléfono
+      //    y, por cada clase, sus fechas de alta y baja (v0.59) ──
       var h = '';
       if (!_gAlEditOpen) {
         h += '<button class="btn btn-sec btn-sm" style="margin:0 0 10px;" onclick="gestorAlToggleEdit()">✏ Editar datos del alumno</button>';
+        // Alta/baja visibles por clase
+        if (clasesAl.length) {
+          h += '<div class="gal-altas-card">';
+          clasesAl.forEach(function(x){
+            h += '<div class="gal-altas-row">' +
+              '<span class="gal-altas-clase">' + _gEsc(x.dia + ' · ' + x.franja) + '</span>' +
+              '<span class="gal-altas-fechas">Alta: ' + (x.alta ? _gFecha(x.alta) : 'inicio') + '</span>' +
+              (x.baja ? '<span class="gal-dia no">✗ Baja: ' + _gFecha(x.baja) + '</span>'
+                      : '<span class="gal-dia si">De alta</span>') +
+            '</div>';
+          });
+          h += '</div>';
+        }
       } else {
         h += '<div class="form-card" style="margin-bottom:10px;gap:0.6rem;">' +
           '<div class="form-grupo"><label class="form-label">Nombre *</label>' +
@@ -4602,12 +4650,20 @@
           '<div class="form-grupo"><label class="form-label">Apellidos</label>' +
             '<input id="gal-edit-apellidos" class="form-input" type="text" value="' + _gEsc(ape) + '"></div>' +
           '<div class="form-grupo"><label class="form-label">Teléfono</label>' +
-            '<input id="gal-edit-telefono" class="form-input" type="tel" value="' + _gEsc(tel) + '"></div>' +
-          '<div style="display:flex;gap:8px;">' +
+            '<input id="gal-edit-telefono" class="form-input" type="tel" value="' + _gEsc(tel) + '"></div>';
+        // Fechas de alta/baja por clase
+        clasesAl.forEach(function(x){
+          h += '<div class="form-grupo"><label class="form-label">' + _gEsc(x.dia + ' · ' + x.franja) + '</label>' +
+            '<div class="asist-al-fila-fechas" style="margin-top:2px;">' +
+              '<label>Alta (desde)<input type="date" id="gal-edit-alta-' + x.id + '" value="' + (x.alta||'') + '"></label>' +
+              '<label>Baja (hasta)<input type="date" id="gal-edit-baja-' + x.id + '" value="' + (x.baja||'') + '"></label>' +
+            '</div></div>';
+        });
+        h += '<div style="display:flex;gap:8px;">' +
             '<button class="btn btn-verde btn-sm" style="flex:1;" onclick="gestorAlGuardarDatos()">💾 Guardar</button>' +
             '<button class="btn btn-sec btn-sm" style="flex:1;" onclick="gestorAlToggleEdit()">Cancelar</button>' +
           '</div>' +
-          '<p class="form-hint" style="margin:0;">Si cambias el nombre, se actualiza también en todas sus listas de asistencia.</p>' +
+          '<p class="form-hint" style="margin:0;">Sin fecha de alta = desde el principio. Sin fecha de baja = sigue de alta. Si cambias el nombre, se actualiza también en todas sus listas de asistencia.</p>' +
         '</div>';
       }
 
