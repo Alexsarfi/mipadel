@@ -39,6 +39,24 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.54.0 — Histórico de cursos + edición rápida desde el detalle (2026-07)
+    · Cerrar curso: botón "📦 Cerrar curso" en Gestionar clases.
+      Archiva las clases y listas del curso (sep–jul) en la nueva
+      tabla asistencia_historico (+ copia local del entrenador) y
+      vacía la asistencia actual para introducir el curso nuevo.
+      La etiqueta del curso se deduce de la última lista pasada.
+    · Detalle del gestor: chips "📚 Años anteriores" arriba para
+      consultar un curso archivado (solo lectura, con banner y
+      navegación por meses); "Volver al curso actual" lo cierra.
+    · Detalle del gestor: botón "✏ Editar" en cada tramo de
+      "Clases dadas" → abre directamente el formulario de esa
+      clase (modo gestión) y al guardar/volver regresa al detalle.
+    · "Clases dadas": nueva nota "Pinche en cada día para ver
+      asistencia" bajo el título (fuera de la leyenda).
+    · Asistencia: "⚙ Gestionar clases" sube arriba, justo bajo el
+      selector de semana.
+    · Requiere ejecutar la migración v0.54 de supabase_schema.sql
+      (tabla asistencia_historico + RLS propia y del gestor).
   v0.53.0 — Alumnos de la academia: grupos y detalle por meses (2026-07)
     · La lista global se agrupa por ENTRENADOR (desplegables
       plegados); un alumno con dos entrenadores sale en ambos.
@@ -845,6 +863,13 @@
     .ghd-fr { font-size:12.5px; font-weight:600; color:var(--gris); }
     .ghd-dur { font-size:11px; font-weight:700; color:var(--lila); background:var(--lila-suave); border-radius:20px; padding:1px 8px; }
     .ghd-cont { margin-left:auto; font-size:12px; font-weight:800; color:var(--verde); }
+    .ghd-edit-btn { flex-shrink:0; font-size:11px; font-weight:700; color:var(--lila); background:var(--lila-suave); border:1.5px solid var(--lila-claro); border-radius:8px; padding:3px 9px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .ghd-edit-btn:active { transform:scale(0.96); }
+    .ghd-hist-banner { display:flex; align-items:center; gap:8px; flex-wrap:wrap; background:var(--lila-suave); border:1.5px solid var(--lila-claro); border-radius:11px; padding:0.55rem 0.8rem; margin:0 0 0.9rem; font-size:12.5px; font-weight:700; color:var(--lila); }
+    .ghd-hist-banner button { margin-left:auto; font-size:11px; font-weight:700; color:var(--blanco); background:var(--lila); border:none; border-radius:8px; padding:4px 10px; cursor:pointer; }
+    .ghd-cursos-row { display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin:0 0 0.9rem; font-size:12px; font-weight:700; color:var(--gris); }
+    .ghd-curso-chip { font-size:11.5px; font-weight:700; color:var(--lila); background:var(--blanco); border:1.5px solid var(--lila-claro); border-radius:20px; padding:4px 12px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .ghd-curso-chip:active { transform:scale(0.96); }
     .ghd-dias { display:flex; flex-wrap:wrap; gap:5px; }
     .ghd-day { min-width:26px; height:26px; padding:0 4px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; border:none; font-family:inherit; cursor:default; }
     .ghd-day.dada { background:#dcfce7; color:#166534; }
@@ -2373,9 +2398,9 @@
         <button class="btn-semana" onclick="asistCambiarSemana(1)">›</button>
         <button class="btn-semana-hoy" onclick="asistWeekOffset=0;mostrarAsistencia()">Hoy</button>
       </div>
+      <button class="btn btn-sec" style="border-color:var(--lila-claro);color:var(--lila);margin:0 0 0.9rem;" onclick="irA('pantalla-asistencia-config')">⚙ Gestionar clases</button>
       <div id="asist-dias-lista"></div>
-      <button class="btn btn-sec" style="border-color:var(--lila-claro);color:var(--lila);" onclick="irA('pantalla-asistencia-config')">⚙ Gestionar clases</button>
-      <button class="btn btn-sec" style="margin-top:-4px;" onclick="irA('pantalla-asistencia-resumen')">📊 Resumen del mes</button>
+      <button class="btn btn-sec" onclick="irA('pantalla-asistencia-resumen')">📊 Resumen del mes</button>
     </div>
   </div>
 
@@ -2414,13 +2439,15 @@
     <div class="contenido">
       <div id="asist-config-lista"></div>
       <button class="btn btn-verde" onclick="asistNuevaClase()">＋ Añadir clase</button>
+      <button class="btn btn-sec" style="margin-top:-4px;" onclick="asistCerrarCurso()">📦 Cerrar curso (archivar y empezar de cero)</button>
+      <p class="ajustes-desc" style="margin-top:-4px;">Al terminar el curso (sep–jul) archiva las clases y listas como año anterior y deja la asistencia vacía para el curso nuevo.</p>
     </div>
   </div>
 
   <!-- ══ ASISTENCIA — NUEVA / EDITAR CLASE ════════ -->
   <div id="pantalla-asistencia-nueva-clase" class="pantalla">
     <div class="cabecera">
-      <button class="btn-volver" onclick="irA('pantalla-asistencia-config')">‹ Clases</button>
+      <button class="btn-volver" id="asist-form-volver-btn" onclick="_asistFormSalida()">‹ Clases</button>
       <div class="cab-titulo" id="asist-form-titulo">Nueva clase</div>
     </div>
     <div class="contenido">
@@ -2598,7 +2625,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.53.0';
+    var APP_VERSION = '0.54.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -2791,7 +2818,7 @@
     // limpiarlos para que cada entrenador/monitor vea solo lo suyo.
     function _limpiarCachesCuenta() {
       ['padel-categorias','padel-ejercicios','padel-clases','padel-partidos',
-       'padel-asistencia-cfg','padel-asistencia-reg','padel-plan'].forEach(function(k){
+       'padel-asistencia-cfg','padel-asistencia-reg','padel-asist-historico','padel-plan'].forEach(function(k){
         try { localStorage.removeItem(k); } catch(e){}
       });
     }
@@ -3540,13 +3567,15 @@
       Promise.all([
         _sb.from('perfiles').select('*'),
         _sb.from('asistencia_clases').select('*'),
-        _sb.from('asistencia_registros').select('*')
+        _sb.from('asistencia_registros').select('*'),
+        _sb.from('asistencia_historico').select('id,user_id,curso')   // v0.54 (si la tabla no existe aún, se ignora)
       ]).then(function(res) {
         if (res[1].error || res[2].error) { throw (res[1].error || res[2].error); }
         _gestorData = {
           perfiles:  res[0].data || [],
           clases:    res[1].data || [],
-          registros: res[2].data || []
+          registros: res[2].data || [],
+          historico: (res[3] && !res[3].error && res[3].data) || []
         };
         renderGestor();
       }).catch(function(e) {
@@ -3630,7 +3659,7 @@
       if (sub) sub.textContent = uids.length + ' entrenador' + (uids.length !== 1 ? 'es' : '') + ' con datos';
     }
 
-    function abrirGestorDetalle(uid) { _gestorUid = uid; _gestorMesOff = 0; irA('pantalla-gestor-detalle'); }
+    function abrirGestorDetalle(uid) { _gestorUid = uid; _gestorMesOff = 0; _gHist = null; irA('pantalla-gestor-detalle'); }
     function gestorMesNav(delta) { _gestorMesOff += delta; renderGestorDetalle(); }
 
     // Convierte los datos de servidor de un entrenador al formato local
@@ -3689,13 +3718,30 @@
         (d.perfil && d.perfil.email ? d.perfil.email : '') +
         (d.perfil && d.perfil.club ? ' · ' + d.perfil.club : '');
 
-      var clases   = _gestorClasesLocal(d);
+      // Curso archivado abierto (_gHist) o curso actual
+      var hist     = _gHist;
+      var clases   = hist ? (hist.clases || []) : _gestorClasesLocal(d);
       var mesISO   = getMesISO_A(_gestorMesOff);
       var mesLabel = getMesLabelA(_gestorMesOff);
-      var regsMes  = _gestorRegsLocal(d).filter(function(r){ return r.fecha && r.fecha.startsWith(mesISO); });
+      var regsAll  = hist ? (hist.regs || []) : _gestorRegsLocal(d);
+      var regsMes  = regsAll.filter(function(r){ return r.fecha && r.fecha.startsWith(mesISO); });
+
+      var h = '';
+      // ── Años anteriores (cursos archivados de este entrenador) ──
+      if (hist) {
+        h += '<div class="ghd-hist-banner">📚 Curso ' + _gEsc(hist.curso) + ' · archivado' +
+          '<button type="button" onclick="gestorVerCurso(null)">Volver al curso actual</button></div>';
+      } else {
+        var cursosArch = _gestorHistList(_gestorUid);
+        if (cursosArch.length) {
+          h += '<div class="ghd-cursos-row">📚 Años anteriores:' + cursosArch.map(function(c){
+            return '<button type="button" class="ghd-curso-chip" onclick="gestorVerCurso(\'' + _gEsc(c.id) + '\')">' + _gEsc(c.curso) + '</button>';
+          }).join('') + '</div>';
+        }
+      }
 
       // ── Selector de mes ──
-      var h = '<div class="gestor-mes-nav">' +
+      h += '<div class="gestor-mes-nav">' +
         '<button class="gestor-mes-btn" onclick="gestorMesNav(-1)">‹</button>' +
         '<span class="gestor-mes-lbl">' + _gEsc(mesLabel) + '</span>' +
         '<button class="gestor-mes-btn" onclick="gestorMesNav(1)">›</button>' +
@@ -3743,13 +3789,16 @@
       if (suma.otras) sumaTxt.push(suma.otras + ' otras');
       h += '<div class="gestor-resumen">' +
         '<div class="gestor-kpi"><div class="gestor-kpi-num">' + suma.total + '</div><div class="gestor-kpi-lbl">Clases dadas</div><div class="gestor-kpi-sub">' + (sumaTxt.length ? sumaTxt.join(' · ') : '—') + '</div></div>' +
-        '<div class="gestor-kpi gestor-kpi-btn" onclick="abrirGestorAlumnos()"><div class="gestor-kpi-num">' + alumnos.length + '</div><div class="gestor-kpi-lbl">Alumnos</div><div class="gestor-kpi-sub">Ver historial ›</div></div>' +
+        (hist
+          ? '<div class="gestor-kpi"><div class="gestor-kpi-num">' + alumnos.length + '</div><div class="gestor-kpi-lbl">Alumnos</div><div class="gestor-kpi-sub">curso archivado</div></div>'
+          : '<div class="gestor-kpi gestor-kpi-btn" onclick="abrirGestorAlumnos()"><div class="gestor-kpi-num">' + alumnos.length + '</div><div class="gestor-kpi-lbl">Alumnos</div><div class="gestor-kpi-sub">Ver historial ›</div></div>') +
         '<div class="gestor-kpi"><div class="gestor-kpi-num">' + (pctMes==null?'—':pctMes+'%') + '</div><div class="gestor-kpi-lbl">Asistencia</div><div class="gestor-kpi-sub">' + fechasCols.length + ' día' + (fechasCols.length!==1?'s':'') + ' clase</div></div>' +
       '</div>';
 
       // ── Botón de gestión: abre las pantallas de Asistencia sobre los
       // datos de ESTE entrenador (clases, alumnos, listas). Gestor y EN3.
-      h += '<button class="btn btn-verde" style="margin:0 0 1.1rem;" onclick="gestorGestionar()">✏️ Gestionar clases y listas</button>';
+      // (Oculto al consultar un curso archivado: es solo lectura.)
+      if (!hist) h += '<button class="btn btn-verde" style="margin:0 0 1.1rem;" onclick="gestorGestionar()">✏️ Gestionar clases y listas</button>';
 
       // ── Clases dadas del mes, agrupadas por DÍA de la semana ──
       // El nombre del día aparece UNA vez (cabecera sombreada) y debajo sus
@@ -3757,6 +3806,7 @@
       // al pulsarlo se abre debajo del tramo la lista de asistencia de esa
       // fecha (lo que antes vivía en el apartado "Asistencia por días").
       h += '<div class="grupo-titulo">Clases dadas · ' + _gEsc(mesLabel) + '</div>';
+      h += '<p class="ajustes-desc" style="margin:-2px 0 0.6rem;">Pinche en cada día para ver asistencia.</p>';
       if (!clases.length) {
         h += '<p class="ajustes-desc">Sin clases configuradas.</p>';
       } else {
@@ -3769,7 +3819,6 @@
           '<span><span class="ghd-day dada" style="display:inline-flex;width:18px;height:18px;min-width:18px;">✓</span> dada</span>' +
           '<span><span class="ghd-day nodada" style="display:inline-flex;width:18px;height:18px;min-width:18px;">✗</span> no dada</span>' +
           '<span><span class="ghd-day sinlista" style="display:inline-flex;width:18px;height:18px;min-width:18px;">–</span> sin lista</span>' +
-          '<span style="margin-left:auto;">toca un día para ver su lista</span>' +
         '</div>';
 
         // Detalle de asistencia de una clase en una fecha (desplegable del chip)
@@ -3851,7 +3900,9 @@
               '<span class="ghd-fr" style="font-weight:800;color:var(--texto);">' + _gEsc(c.franja||'—') + '</span>' +
               (c.nombre ? '<span class="ghd-fr">' + _gEsc(c.nombre) + '</span>' : '') +
               (_durLabel(dur) ? '<span class="ghd-dur">' + _durLabel(dur) + '</span>' : '') +
-              '<span class="ghd-cont">' + dadas + ' dada' + (dadas!==1?'s':'') + '</span></div>';
+              '<span class="ghd-cont">' + dadas + ' dada' + (dadas!==1?'s':'') + '</span>' +
+              (hist ? '' : '<button type="button" class="ghd-edit-btn" onclick="gestorEditarClase(' + c.id + ')">✏ Editar</button>') +
+              '</div>';
             bloques += '<div class="ghd-dias">' + (chips || '<span class="ajustes-desc" style="margin:0;">sin días este mes</span>') + '</div>';
             bloques += dets;
             bloques += '</div>';
@@ -3913,8 +3964,133 @@
     // propio) para no divergir de sus datos locales.
     function gestorGestionar() {
       if (!_gestorUid) return;
+      _gEditDesdeDet = false;
       _gEditUid = (_sbUser && _gestorUid === _sbUser.id) ? null : _gestorUid;
       irA('pantalla-asistencia');
+    }
+
+    // Edición directa de UNA clase desde el detalle (chip ✏ de cada tramo):
+    // activa el modo gestión y abre el formulario de esa clase. Al guardar,
+    // borrar o volver se regresa al detalle del entrenador (_gEditDesdeDet).
+    var _gEditDesdeDet = false;
+    function gestorEditarClase(cid) {
+      if (!_gestorUid) return;
+      _gEditUid = (_sbUser && _gestorUid === _sbUser.id) ? null : _gestorUid;
+      _gEditDesdeDet   = true;
+      asistClaseEditId = cid;
+      irA('pantalla-asistencia-nueva-clase');
+    }
+    // Salida del formulario de clase (volver / guardar / borrar)
+    function _asistFormSalida() {
+      if (_gEditDesdeDet) { _gEditDesdeDet = false; irA('pantalla-gestor-detalle'); return; }
+      irA('pantalla-asistencia-config');
+    }
+
+    // ══════════════════════════════════════════
+    // HISTÓRICO DE CURSOS (sep–jul) — cerrar curso y años anteriores
+    // ══════════════════════════════════════════
+    // Al terminar el curso (o al empezar septiembre) se archiva TODO
+    // (clases + registros) como un curso cerrado en la tabla
+    // asistencia_historico (+ copia local del propio entrenador) y se
+    // vacía la asistencia actual para introducir las clases del curso
+    // nuevo. El gestor consulta los cursos archivados con los chips
+    // "Años anteriores" del detalle (solo lectura).
+    var _gHist = null;   // curso archivado abierto: {curso, clases, regs} | null
+
+    function leerAsistHistLocal()     { var d = _lzGet('padel-asist-historico'); return d ? JSON.parse(d) : []; }
+    function escribirAsistHistLocal(l){ _lzSet('padel-asist-historico', JSON.stringify(l)); }
+
+    // Etiqueta del curso actual, deducida de la última lista pasada
+    // (ago–dic → "2026-27"; ene–jul → "2025-26")
+    function _asistCursoActualLabel() {
+      var regs = leerAsistRegistros(), max = '';
+      regs.forEach(function(r){ if (r.fecha && r.fecha > max) max = r.fecha; });
+      var base = max || hoyLocal();
+      var y = parseInt(base.slice(0,4),10), m = parseInt(base.slice(5,7),10);
+      var y0 = (m >= 8) ? y : y - 1;
+      return y0 + '-' + ('0' + ((y0 + 1) % 100)).slice(-2);
+    }
+
+    // Cursos archivados de un entrenador (metadatos descargados por el panel)
+    function _gestorHistList(uid) {
+      var l = (_gestorData && _gestorData.historico) || [];
+      return l.filter(function(x){ return x.user_id === uid; })
+              .sort(function(a,b){ return String(b.curso).localeCompare(String(a.curso)); });
+    }
+
+    // Abre un curso archivado en el detalle (histId null = volver al actual)
+    function gestorVerCurso(histId) {
+      if (!histId) { _gHist = null; _gestorMesOff = 0; renderGestorDetalle(); return; }
+      if (!_sb) return;
+      _sb.from('asistencia_historico').select('*').eq('id', histId).single().then(function(r){
+        if (r.error || !r.data) { alert('No se pudo cargar el curso: ' + _gEsc(r.error && r.error.message || 'sin datos')); return; }
+        _gHist = { curso: r.data.curso, clases: r.data.clases || [], regs: r.data.registros || [] };
+        // Colocar el navegador de meses en el último mes con datos del curso
+        var max = '';
+        _gHist.regs.forEach(function(x){ if (x.fecha && x.fecha > max) max = x.fecha; });
+        if (max) {
+          var hoy = new Date();
+          _gestorMesOff = (parseInt(max.slice(0,4),10) - hoy.getFullYear()) * 12 +
+                          (parseInt(max.slice(5,7),10) - (hoy.getMonth() + 1));
+        }
+        renderGestorDetalle();
+      });
+    }
+
+    // Cierra el curso actual: archiva y vacía. Funciona en modo propio
+    // (entrenador) y en modo gestión (_gEditUid, el gestor sobre otro).
+    function asistCerrarCurso() {
+      var cfg = leerAsistConfig(), clases = cfg.clases || [], regs = leerAsistRegistros();
+      if (!clases.length && !regs.length) { alert('No hay clases ni registros que archivar.'); return; }
+      var curso = _asistCursoActualLabel();
+      if (!confirm('📦 Cerrar el curso ' + curso + '\n\nSe archivarán ' + clases.length + ' clase' + (clases.length!==1?'s':'') +
+        ' y ' + regs.length + ' lista' + (regs.length!==1?'s':'') + ' de asistencia, y se VACIARÁN las clases y registros actuales' +
+        ' para introducir las del curso nuevo.\n\nEl curso cerrado quedará consultable en "Años anteriores" del panel del gestor.\n\n¿Continuar?')) return;
+
+      var uid = _gEditUid || (_sbUser && _sbUser.id) || null;
+
+      function _guardarLocal() {
+        var l = leerAsistHistLocal().filter(function(x){ return x.curso !== curso; });
+        l.push({ curso: curso, clases: clases, registros: regs, creado: new Date().toISOString() });
+        escribirAsistHistLocal(l);
+      }
+      function _vaciar() {
+        escribirAsistRegistros([]);
+        escribirAsistConfig({ clases: [] });
+        alert('✔ Curso ' + curso + ' archivado. Ya puedes introducir las clases del curso nuevo.');
+        mostrarAsistenciaConfig();
+      }
+
+      if (_sb && _sbUser && uid) {
+        // 1) Archivar en el servidor; 2) solo si va bien, vaciar el curso
+        _sb.from('asistencia_historico')
+          .upsert({ user_id: uid, curso: curso, clases: clases, registros: regs }, { onConflict: 'user_id,curso' })
+          .select('id,user_id,curso')
+          .then(function(r){
+            if (r.error) { alert('⚠️ No se pudo archivar en el servidor: ' + r.error.message + '\nNo se ha borrado nada.\n\n¿Está ejecutada la migración v0.54 en Supabase?'); return; }
+            if (!_gEditUid) _guardarLocal();
+            // refrescar los metadatos del panel en memoria
+            if (_gestorData && r.data && r.data.length) {
+              _gestorData.historico = ((_gestorData.historico || []).filter(function(x){
+                return !(x.user_id === uid && x.curso === curso);
+              })).concat(r.data);
+            }
+            Promise.all([
+              _sb.from('asistencia_registros').delete().eq('user_id', uid),
+              _sb.from('asistencia_clases').delete().eq('user_id', uid)
+            ]).then(function(rs){
+              var err = (rs[0] && rs[0].error) || (rs[1] && rs[1].error);
+              if (err) { alert('⚠️ El curso se archivó pero no se pudo vaciar en el servidor: ' + err.message); return; }
+              _vaciar();
+            });
+          });
+      } else if (!_gEditUid) {
+        // Sin sesión: archivo solo local (se conserva en este dispositivo)
+        _guardarLocal();
+        _vaciar();
+      } else {
+        alert('Sin conexión con el servidor.');
+      }
     }
 
     // ══════════════════════════════════════════
@@ -8816,12 +8992,14 @@
     }
 
     function asistNuevaClase() {
+      _gEditDesdeDet    = false;
       asistClaseEditId  = null;
       asistAlumnosForm  = [];
       irA('pantalla-asistencia-nueva-clase');
     }
 
     function asistEditarClase(id) {
+      _gEditDesdeDet   = false;
       asistClaseEditId = id;
       irA('pantalla-asistencia-nueva-clase');
     }
@@ -8832,6 +9010,7 @@
 
       document.getElementById('asist-form-titulo').textContent   = clase ? 'Editar clase' : 'Nueva clase';
       document.getElementById('asist-form-btn').textContent      = clase ? 'Guardar cambios' : 'Crear clase';
+      document.getElementById('asist-form-volver-btn').textContent = _gEditDesdeDet ? '‹ Detalle' : '‹ Clases';
       document.getElementById('asist-form-borrar-zona').style.display = clase ? 'block' : 'none';
 
       if (clase) {
@@ -8920,7 +9099,7 @@
 
       escribirAsistConfig(cfg);
       asistClaseEditId = null;
-      irA('pantalla-asistencia-config');
+      _asistFormSalida();
     }
 
     function asistBorrarClase() {
@@ -8938,7 +9117,7 @@
       escribirAsistRegistros(todos.filter(function(r){ return r.claseId!==asistClaseEditId; }));
 
       asistClaseEditId = null;
-      irA('pantalla-asistencia-config');
+      _asistFormSalida();
     }
 
     // ══════════════════════════════════════════
