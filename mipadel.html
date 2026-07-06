@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.45.0
+  TU APP DE PÁDEL — v0.61
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,28 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.61.0 — Mejoras de la auditoría (2026-07)
+    · Curso escolar UNIFICADO: una sola función (cursoDeFecha), el
+      curso nuevo empieza el 1 de SEPTIEMBRE (decisión del usuario;
+      antes el filtrado de clases usaba agosto y las estadísticas
+      septiembre) y una sola etiqueta ("2025-26") en toda la app.
+    · Cerrar curso exige sesión y conexión: sin servidor no se
+      borra nada (antes el cierre offline "resucitaba" al resync).
+    · Renombrar alumno: si el nombre nuevo existe con OTRO
+      entrenador de la academia, aviso + confirmación (los
+      historiales se fusionarían).
+    · Escapado HTML de nombres en Pasar lista, filas semanales,
+      Gestionar clases, resumen mensual y PDF exportado.
+    · Subida incremental de registros: al guardar una lista,
+      marcar "sin clase", apuntar/quitar una recuperación o
+      renombrar, solo viajan las filas cambiadas (antes se
+      re-subía la tabla completa, cientos de filas por toque).
+    · KPIs y sub de la pantalla Asistencia cuentan solo las clases
+      del curso actual (las de septiembre ya creadas no se suman).
+    · Limpieza: 13 funciones muertas eliminadas (163 líneas).
+  v0.60.1 — FIX (auditoría): renombrar un alumno no actualizaba su
+      nombre en las recuperaciones previstas (recups) de los
+      registros; quedaba el nombre viejo apuntado. (2026-07)
   v0.60.0 — Recuperaciones previstas, alta rápida y autocompletado (2026-07)
     · RECUPERACIONES: al añadir una recuperación solo se anota el
       nombre (campo recups del registro, migración v0.60), SIN
@@ -2740,7 +2762,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.60.0';
+    var APP_VERSION = '0.61.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -3560,17 +3582,21 @@
       }
       var d = _lzGet('padel-asistencia-reg'); return d ? JSON.parse(d) : [];
     }
-    function escribirAsistRegistros(d, soloLocal) {
+    // cambiadas (v0.61, opcional): si se pasa, al servidor solo se suben
+    // ESAS filas en vez de la tabla completa (auditoría §2: al pasar una
+    // lista o apuntar una recuperación se re-subían cientos de registros).
+    // Pasar [] = no subir nada (p. ej. tras borrar en servidor directamente).
+    function escribirAsistRegistros(d, soloLocal, cambiadas) {
       if (_gEditUid) {
         if (_gestorData) {
           var otras = (_gestorData.registros || []).filter(function(r){ return r.user_id !== _gEditUid; });
           _gestorData.registros = otras.concat((d || []).map(function(r){ return _upMap.asistencia_registros(r, _gEditUid); }));
         }
-        _gEditUpsert('asistencia_registros', d || []);
+        _gEditUpsert('asistencia_registros', cambiadas || d || []);
         return;
       }
       _lzSet('padel-asistencia-reg', JSON.stringify(d));
-      if (!soloLocal) _bgUpsert('asistencia_registros', d);
+      if (!soloLocal) _bgUpsert('asistencia_registros', cambiadas || d);
     }
 
     // ══════════════════════════════════════════
@@ -3580,10 +3606,6 @@
       try { var d = _lzGet('padel-perfil'); return d ? JSON.parse(d) : {}; } catch(e) { return {}; }
     }
     function escribirPerfil(p) { _lzSet('padel-perfil', JSON.stringify(p)); }
-    function perfilNombreCompleto() {
-      var p = leerPerfil();
-      return ((p.nombre||'') + ' ' + (p.apellidos||'')).trim();
-    }
     function guardarPerfil() {
       var p = leerPerfil();
       p.nombre    = document.getElementById('perf-nombre').value.trim();
@@ -3612,27 +3634,6 @@
     function nivelPermitido(key) { return !esEN2Cuenta() || NIVELES_EN2.indexOf(key) >= 0; }
     function _monitorGuardar(m) { _lzSet('padel-monitor', JSON.stringify(m)); }
 
-    function monitorActivar() {
-      var pin = prompt('Crea un PIN de 4 dígitos para poder salir luego del modo monitor:');
-      if (pin === null) return;
-      pin = pin.trim();
-      if (!/^\d{4}$/.test(pin)) { alert('El PIN debe tener exactamente 4 dígitos.'); return; }
-      var pin2 = prompt('Repite el PIN para confirmar:');
-      if (pin2 === null) return;
-      if (pin2.trim() !== pin) { alert('Los PIN no coinciden. Inténtalo de nuevo.'); return; }
-      _monitorGuardar({ activo:true, pin:pin });
-      irA('pantalla-inicio');
-    }
-    function monitorSalir() {
-      var m = monitorEstado();
-      if (!m.activo) return;
-      var pin = prompt('Introduce el PIN para salir del modo monitor:');
-      if (pin === null) return;
-      if (pin.trim() !== m.pin) { alert('PIN incorrecto.'); return; }
-      m.activo = false;
-      _monitorGuardar(m);
-      irA('pantalla-inicio');
-    }
 
     function mostrarAjustes() {
       var p = leerPerfil();
@@ -3816,34 +3817,6 @@
       });
     }
 
-    // Matriz de asistencia de UNA clase en el mes (alumnos × fechas)
-    function _gestorClaseMatriz(clase, mesISO, regsMes) {
-      var fechas    = fechasClaseEnMes(clase, mesISO);
-      var regsClase = regsMes.filter(function(r){ return r.claseId === clase.id; });
-      var regPorFecha = {}; regsClase.forEach(function(r){ regPorFecha[r.fecha] = r; });
-      var map = {}, fechasSet = {};
-      function ens(n){ if(!map[n]) map[n]={totalClases:0,presencias:0,recups:0,cells:{}}; return map[n]; }
-      (clase.alumnos||[]).forEach(function(a){
-        var nombre=alNom(a), dat=ens(nombre);
-        fechas.forEach(function(f){
-          if(!alActivo(a,f)) return;
-          var reg=regPorFecha[f]; if(reg&&reg.sinClase) return;
-          if(!_regPasada(reg)) reg=null;   // solo recups previstas = sin lista
-          fechasSet[f]=true; dat.totalClases++;
-          var ok=reg&&(reg.presentes||[]).indexOf(nombre)!==-1;
-          if(ok) dat.presencias++;
-          dat.cells[f]= reg ? (ok?'pres':'falta') : 'nolist';
-        });
-      });
-      regsClase.forEach(function(r){
-        if(r.sinClase) return;
-        var activos=alumnosActivos(clase,r.fecha);
-        (r.presentes||[]).forEach(function(n){
-          if(activos.indexOf(n)===-1){ var dd=ens(n); dd.recups++; fechasSet[r.fecha]=true; if(!dd.cells[r.fecha]) dd.cells[r.fecha]='recup'; }
-        });
-      });
-      return { alumnos:Object.keys(map).sort(), fechas:Object.keys(fechasSet).sort(), map:map };
-    }
 
     function renderGestorDetalle() {
       var cont = document.getElementById('gestor-det-contenido');
@@ -4194,15 +4167,6 @@
       return suma;
     }
 
-    // Activa el modo gestión sobre el entrenador abierto y entra en Asistencia.
-    // Si un EN3 se abre a sí mismo, usa su modo normal (localStorage + sync
-    // propio) para no divergir de sus datos locales.
-    function gestorGestionar() {
-      if (!_gestorUid) return;
-      _gEditDesdeDet = false;
-      _gEditUid = (_sbUser && _gestorUid === _sbUser.id) ? null : _gestorUid;
-      irA('pantalla-asistencia');
-    }
 
     // Edición directa de UNA clase desde el detalle (chip ✏ de cada tramo):
     // activa el modo gestión y abre el formulario de esa clase. Al guardar,
@@ -4364,11 +4328,12 @@
     function leerAsistHistLocal()     { var d = _lzGet('padel-asist-historico'); return d ? JSON.parse(d) : []; }
     function escribirAsistHistLocal(l){ _lzSet('padel-asist-historico', JSON.stringify(l)); }
 
-    // Curso escolar (sep–jul) al que pertenece una fecha o un mes ISO.
-    // Agosto ya cuenta como curso nuevo: ago–dic → "2026-27"; ene–jul → "2025-26".
+    // Curso escolar al que pertenece una fecha o un mes ISO. ÚNICA fuente
+    // de verdad (v0.61, auditoría 1.2): el curso nuevo empieza el 1 de
+    // SEPTIEMBRE. sep–dic → "2026-27"; ene–ago → "2025-26".
     function cursoDeFecha(iso) {
       var y = parseInt(iso.slice(0,4),10), m = parseInt(iso.slice(5,7),10);
-      var y0 = (m >= 8) ? y : y - 1;
+      var y0 = (m >= 9) ? y : y - 1;
       return y0 + '-' + ('0' + ((y0 + 1) % 100)).slice(-2);
     }
     // Curso de una clase. Las clases antiguas (sin campo curso, v<0.55)
@@ -4464,7 +4429,7 @@
         escribirAsistHistLocal(l);
       }
       function _vaciar() {
-        escribirAsistRegistros(quedanR);
+        escribirAsistRegistros(quedanR, false, []);   // los borrados ya viajaron
         escribirAsistConfig({ clases: quedanC });
         alert('✔ Archivado en el curso ' + curso + '. Ya puedes introducir las clases del curso nuevo.');
         fin();
@@ -4501,12 +4466,11 @@
                 });
               });
           });
-      } else if (!_gEditUid) {
-        // Sin sesión: archivo solo local (se conserva en este dispositivo)
-        _guardarLocal();
-        _vaciar();
       } else {
-        alert('Sin conexión con el servidor.');
+        // v0.61 (auditoría 1.3): sin sesión NO se cierra. Si se vaciara solo
+        // en local, la siguiente sincronización re-descargaría las filas del
+        // servidor y el curso cerrado "resucitaría".
+        alert('⛔ Para cerrar el curso hace falta sesión y conexión con el servidor.\nEntra con tu cuenta e inténtalo de nuevo.');
         fin();
       }
     }
@@ -4561,7 +4525,12 @@
           var choca = (cfg.clases || []).some(function(c){
             return (c.alumnos || []).some(function(a){ return alNom(a) === nom; });
           });
-          if (choca) { alert('Ya existe otro alumno llamado "' + nom + '". Usa un nombre distinto (o añade una inicial).'); return; }
+          if (choca) { alert('Ya existe otro alumno llamado "' + nom + '" con este entrenador. Usa un nombre distinto (o añade una inicial).'); return; }
+          // v0.61 (auditoría 1.5): si el nombre existe en OTRA parte de la
+          // academia, avisar — la identidad es el nombre y se fusionarían
+          // los historiales. Confirmar solo si de verdad es el mismo alumno.
+          var enAcademia = _alumnosAcademia().some(function(a){ return a.nombre === nom; });
+          if (enAcademia && !confirm('⚠️ Ya existe un alumno llamado "' + nom + '" con OTRO entrenador de la academia.\n\nSi continúas, la app los tratará como LA MISMA persona y sus historiales se fusionarán en las vistas globales.\n\n¿Es el mismo alumno y quieres continuar?')) return;
         }
         var enAlguna = false;
         (cfg.clases || []).forEach(function(c){
@@ -4578,15 +4547,17 @@
         });
         if (enAlguna) escribirAsistConfig(cfg);
         if (nom !== viejo) {
-          var regs = leerAsistRegistros(), camb = false;
+          var regs = leerAsistRegistros(), cambiados = [];
           regs.forEach(function(r){
-            ['presentes','ausentes','justificadas'].forEach(function(k){
+            var tocado = false;
+            ['presentes','ausentes','justificadas','recups'].forEach(function(k){
               var arr = r[k] || [];
               var i = arr.indexOf(viejo);
-              if (i !== -1) { arr[i] = nom; r[k] = arr; camb = true; }
+              if (i !== -1) { arr[i] = nom; r[k] = arr; tocado = true; }
             });
+            if (tocado) cambiados.push(r);
           });
-          if (camb) escribirAsistRegistros(regs);
+          if (cambiados.length) escribirAsistRegistros(regs, false, cambiados);
           _gestorAlumno = nom;
         }
       } finally {
@@ -4598,11 +4569,9 @@
     function gestorAlMesNav(delta) { _gAlMesOff += delta; renderGestorAlumno(); }
 
     // Curso escolar de una fecha (sep–jun): "2025-2026"
-    function _cursoDe(fechaISO) {
-      var p = fechaISO.split('-'), y = +p[0], m = +p[1];
-      var ini = (m >= 9) ? y : y - 1;
-      return ini + '-' + (ini + 1);
-    }
+    // Unificado con cursoDeFecha (v0.61): misma frontera (1 sep) y mismo
+    // formato de etiqueta ("2025-26") en toda la app.
+    function _cursoDe(fechaISO) { return cursoDeFecha(fechaISO); }
     function _cursoActual() { return _cursoDe(hoyLocal()); }
 
     // Historial completo de un alumno del entrenador abierto:
@@ -5475,11 +5444,6 @@
       if (!soloLocal) _bgUpsertPlan(p);
     }
 
-    function planMesActualNombre() {
-      var p = leerPlan();
-      if (p.mesActual && PLAN_MESES.indexOf(p.mesActual) >= 0) return p.mesActual;
-      return PLAN_MES_CAL[new Date().getMonth()] || 'Septiembre';
-    }
     function planNivelLabel(key) {
       var m = PLAN_NIVELES_META.filter(function(n){ return n.key===key; })[0];
       return m ? m.label : key;
@@ -5856,33 +5820,6 @@
       _planToastT = setTimeout(function(){ t.classList.remove('show'); }, 2600);
     }
 
-    // Pincha un apartado → ir a las sesiones relacionadas de ese nivel.
-    // Inic/Avz enlazan por golpe; Competición por intención.
-    function planIrASesiones(nivel, tipo, valor, etiqueta) {
-      var mapEj = _ejsById();
-      var sesNivel = leerClases().filter(function(c){ return nivelDeSesion(c, mapEj) === nivel; });
-      var match = sesNivel.filter(function(c){
-        return tipo === 'int' ? intencionDeSesion(c, mapEj) === valor : golpeDeSesion(c, mapEj) === valor;
-      });
-      nivelClasesSel = nivel;
-      var collKey = 'clz-' + nivel + '-' + valor;
-      try { localStorage.removeItem(collKey); } catch(e){}
-      document.querySelectorAll('.pantalla').forEach(function(p){ p.classList.remove('activa'); });
-      document.getElementById('pantalla-clases').classList.add('activa');
-      mostrarClases(false);
-      window.scrollTo(0,0);
-      if (!match.length) {
-        planToast('Aún no hay sesiones de «' + etiqueta + '» en ' + planNivelLabel(nivel));
-        return;
-      }
-      setTimeout(function(){
-        var hdrs = document.querySelectorAll('#clases-hub .zona-grupo-hdr');
-        for (var i=0;i<hdrs.length;i++){
-          var oc = hdrs[i].getAttribute('onclick') || '';
-          if (oc.indexOf("'" + collKey + "'") >= 0) { hdrs[i].scrollIntoView({behavior:'smooth', block:'center'}); break; }
-        }
-      }, 90);
-    }
 
     // ── Sesiones enlazadas a un bloque (pantalla aparte) ──
     function planAbrirSesionesBloque(nivel, mes, id) {
@@ -7377,22 +7314,8 @@
       return 'Sesión';
     }
 
-    function clasesVolver() {
-      irA('pantalla-inicio');
-    }
 
-    function seleccionarNivelClase(nv) {
-      nivelClasesSel = nv;
-      mostrarClases();
-    }
 
-    function toggleZonaGrupo(key, el) {
-      var body = el.nextElementSibling;
-      var oculto = body.style.display === 'none';
-      body.style.display = oculto ? 'block' : 'none';
-      el.querySelector('.zona-grupo-chev').textContent = oculto ? '▾' : '▸';
-      if (oculto) localStorage.removeItem(key); else localStorage.setItem(key, '1');
-    }
 
     function sesionRowHTML(c) {
       var titulo = nombreSesion(c);
@@ -7459,15 +7382,6 @@
     function irPlanNivel(nivel) {
       if (!nivelPermitido(nivel)) nivel = 'iniciacion';
       var p = leerPlan(); p.nivel = nivel; _planGuardar(p); irA('pantalla-planificacion');
-    }
-    // Inicio → desplegable de Sesiones (muestra los niveles).
-    function toggleHomeSesiones() {
-      var drop = document.getElementById('home-ses-drop'), btn = document.getElementById('home-ses-btn');
-      if (!drop) return;
-      var open = drop.style.display === 'none';
-      drop.style.display = open ? 'block' : 'none';
-      if (btn) btn.classList.toggle('open', open);
-      try { localStorage.setItem('padel-home-ses', open ? '1' : '0'); } catch(e){}
     }
     function _restoreHomeSes() {
       var drop = document.getElementById('home-ses-drop'), btn = document.getElementById('home-ses-btn');
@@ -7576,29 +7490,6 @@
     // ── Drag-to-reorder sesiones (touch) ──────
     var _dragSes = null;
 
-    function sesDragStart(e, id) {
-      e.preventDefault();
-      var lista = document.getElementById('lista-sesiones');
-      var item  = lista.querySelector('[data-sesid="' + id + '"]');
-      if (!item) return;
-      var rect  = item.getBoundingClientRect();
-      var touch = e.touches[0];
-
-      var clone = item.cloneNode(true);
-      clone.className = 'sesion-item sesion-drag-clone';
-      clone.style.left  = rect.left + 'px';
-      clone.style.top   = rect.top  + 'px';
-      clone.style.width = rect.width + 'px';
-      document.body.appendChild(clone);
-      item.style.opacity = '0.25';
-
-      _dragSes = {
-        id: id, lista: lista, item: item, clone: clone,
-        startY: touch.clientY, cloneTop: rect.top, currentY: touch.clientY
-      };
-      document.addEventListener('touchmove', _sesDragMove, { passive: false });
-      document.addEventListener('touchend',  _sesDragEnd,  { passive: false });
-    }
 
     function _sesDragMove(e) {
       if (!_dragSes) return;
@@ -7641,29 +7532,6 @@
     // EXPLORAR CATEGORÍA en pista
     // ══════════════════════════════════════════
 
-    function explorarCategoria(catId) {
-      var cat = leerCategorias().filter(function(c){ return c.id === catId; })[0];
-      var ejs = leerEjercicios().filter(function(e){ return e.categoriaId === catId; });
-
-      // Ordenar: destacados primero (valoracion desc)
-      ejs.sort(function(a,b){ return (b.valoracion||0) - (a.valoracion||0); });
-
-      document.getElementById('explorar-cat-titulo').textContent = cat ? cat.nombre : '—';
-      document.getElementById('explorar-cat-sub').textContent =
-        ejs.length + ' ejercicio' + (ejs.length!==1?'s':'') + ' disponibles';
-
-      var html = '';
-      if (!ejs.length) {
-        html = '<div class="vacio"><div class="vacio-icono">🏃</div><p>No hay ejercicios en esta categoría todavía.</p></div>';
-      } else {
-        ejs.forEach(function(ej){ html += itemEjercicioHTML(ej, 'explorar'); });
-      }
-      document.getElementById('explorar-cat-contenido').innerHTML = html;
-
-      document.querySelectorAll('.pantalla').forEach(function(p){ p.classList.remove('activa'); });
-      document.getElementById('pantalla-explorar-cat').classList.add('activa');
-      window.scrollTo(0,0);
-    }
 
     // ══════════════════════════════════════════
     // NUEVA SESIÓN — con filtro de categoría
@@ -9241,16 +9109,19 @@
       var clases = cfg.clases || [];
       var regs   = leerAsistRegistros();
 
+      // Solo las clases del curso actual para sub y KPIs (v0.61, auditoría
+      // §4: si ya has creado las clases de septiembre, no se suman aquí)
+      var cursoHoy    = cursoDeFecha(hoyLocal());
+      var clasesCursoAct = clases.filter(function(c){ return _claseCurso(c) === cursoHoy; });
+
       // Sub (en modo gestión, deja claro de quién es la asistencia)
       document.getElementById('asist-sub').textContent =
         (_gEditUid ? '✏️ Gestionando a ' + _gEditNombre() + ' · ' : '') +
-        clases.length + ' clase' + (clases.length !== 1 ? 's' : '') + ' configuradas';
+        clasesCursoAct.length + ' clase' + (clasesCursoAct.length !== 1 ? 's' : '') + ' configuradas';
       var volverBtn = document.getElementById('asist-volver-btn');
       if (volverBtn) volverBtn.textContent = _gEditUid ? '‹ Panel' : '‹ Inicio';
-
-      // Stats
       var todosAl = {};
-      clases.forEach(function(c){ (c.alumnos||[]).forEach(function(a){ todosAl[alNom(a)]=true; }); });
+      clasesCursoAct.forEach(function(c){ (c.alumnos||[]).forEach(function(a){ todosAl[alNom(a)]=true; }); });
       var mesActual = getMesISO_A(0);
       var regsMes   = regs.filter(function(r){ return r.fecha && r.fecha.startsWith(mesActual); });
       var presencias = 0;
@@ -9327,7 +9198,7 @@
             html += '<div class="asist-clase-row" onclick="asistAbrirLista(' + clase.id + ',\'' + fecha + '\')">';
             html += '<span class="asist-franja-pill">' + (clase.franja||'—') + '</span>';
             html += '<div class="asist-clase-row-info">';
-            html += '<div class="asist-clase-row-nombre">' + nombre + '</div>';
+            html += '<div class="asist-clase-row-nombre">' + _gEsc(nombre) + '</div>';
             html += '<div class="asist-clase-row-alumnos">' + numAl + ' alumno' + (numAl!==1?'s':'') + '</div>';
             html += '</div>' + badge + '</div>';
           });
@@ -9420,11 +9291,11 @@
 
       function fila(nombre, esRecup) {
         var presente = asistEstadoLista[nombre] !== false;
-        var safe = nombre.replace(/'/g,"\\'");
+        var safe = _gEsc(nombre).replace(/'/g,"\\'");   // v0.61: escapado HTML + comillas
         var h = '<div class="asist-al-toggle ' + (presente?'presente':'ausente') + (esRecup?' recup':'') +
                 '" onclick="asistToggleAlumno(\'' + safe + '\')">';
         h += '<div class="asist-al-icono">' + (presente ? '✓' : '✗') + '</div>';
-        h += '<span class="asist-al-nombre">' + nombre + (esRecup?'<span class="asist-recup-badge">RECUP</span>':'') + '</span>';
+        h += '<span class="asist-al-nombre">' + _gEsc(nombre) + (esRecup?'<span class="asist-recup-badge">RECUP</span>':'') + '</span>';
         if (esRecup) {
           h += '<button class="asist-chip-quitar" style="margin-left:auto;" onclick="event.stopPropagation();asistQuitarRecup(\'' + safe + '\')">✕</button>';
         } else if (presente) {
@@ -9591,14 +9462,17 @@
         if (!r.sinClase && !(r.presentes||[]).length && !(r.ausentes||[]).length && !(r.recups||[]).length) {
           _sbDelete('asistencia_registros', r.id);
           regs.splice(idx, 1);
+          escribirAsistRegistros(regs, false, []);   // el borrado ya viajó
+        } else {
+          escribirAsistRegistros(regs, false, [r]);
         }
-        escribirAsistRegistros(regs);
       } else {
         if (!asistRecups.length) return;
         var newId = regs.length>0 ? Math.max.apply(null,regs.map(function(r){return r.id||0;}))+1 : 1;
-        regs.push({ id:newId, claseId:asistClaseActivaId, fecha:asistFechaActiva,
-                    presentes:[], ausentes:[], justificadas:[], recups:asistRecups.slice() });
-        escribirAsistRegistros(regs);
+        var nuevo = { id:newId, claseId:asistClaseActivaId, fecha:asistFechaActiva,
+                      presentes:[], ausentes:[], justificadas:[], recups:asistRecups.slice() };
+        regs.push(nuevo);
+        escribirAsistRegistros(regs, false, [nuevo]);
       }
     }
 
@@ -9637,7 +9511,7 @@
         sinClase:  true
       };
       if (idx>=0) { regs[idx]=nuevoReg; } else { regs.push(nuevoReg); }
-      escribirAsistRegistros(regs);
+      escribirAsistRegistros(regs, false, [nuevoReg]);
       _asistListaSalida();
     }
 
@@ -9669,7 +9543,7 @@
       };
 
       if (idx>=0) { regs[idx]=nuevoReg; } else { regs.push(nuevoReg); }
-      escribirAsistRegistros(regs);
+      escribirAsistRegistros(regs, false, [nuevoReg]);
       _asistListaSalida();
     }
 
@@ -9713,10 +9587,10 @@
           if (_claseCurso(clase) !== cursoDeFecha(hoyLocal()))
             html += '<span class="ghd-dur">curso ' + _claseCurso(clase) + '</span>';
           html += '</div>';
-          if (clase.nombre) html += '<div class="asist-cfg-clase-nombre">' + clase.nombre + '</div>';
+          if (clase.nombre) html += '<div class="asist-cfg-clase-nombre">' + _gEsc(clase.nombre) + '</div>';
           html += '<div class="asist-cfg-alumnos-tag">👥 ' + activosHoy + ' activo' + (activosHoy!==1?'s':'') +
                   (numAl !== activosHoy ? ' · ' + numAl + ' en total' : '');
-          if (numAl > 0) html += ': ' + nombresAl.join(', ');
+          if (numAl > 0) html += ': ' + _gEsc(nombresAl.join(', '));
           html += '</div>';
           html += '<div class="asist-cfg-btns">';
           html += '<button class="btn btn-sec btn-sm" onclick="asistEditarClase(' + clase.id + ')">✏ Editar</button>';
@@ -9978,7 +9852,7 @@
       alumnos.forEach(function(alumno) {
         var dat = alumnosMap[alumno];
         html += '<tr onclick="asistVerAlumno(\'' + alumno.replace(/'/g,"\\'") + '\')">';
-        html += '<td class="am-nom">' + alumno + (dat.recups ? ' <span class="am-recup">↩+' + dat.recups + '</span>' : '') + '</td>';
+        html += '<td class="am-nom">' + _gEsc(alumno) + (dat.recups ? ' <span class="am-recup">↩+' + dat.recups + '</span>' : '') + '</td>';
         fechasCols.forEach(function(f){
           var st = dat.cells[f];
           if (!st) { html += '<td style="color:#d1d5db">·</td>'; }
@@ -10153,9 +10027,10 @@
       var hayRecups = alumnos.filter(function(n){ return alumnosMap[n].recups; }).length;
       // Nombre con marca de alta/baja del mes
       function nombrePDF(n){
-        if (altaMes[n]) return '<span class="nuevo">' + n + '</span> <span class="tag-nuevo">🆕 alta ' + formatFechaCorta(altaMes[n]) + '</span>';
-        if (bajaMes[n]) return '<span class="baja">' + n + '</span> <span class="tag-baja">baja ' + formatFechaCorta(bajaMes[n]) + '</span>';
-        return n;
+        var e = _gEsc(n);   // v0.61: escapado también en el documento exportado
+        if (altaMes[n]) return '<span class="nuevo">' + e + '</span> <span class="tag-nuevo">🆕 alta ' + formatFechaCorta(altaMes[n]) + '</span>';
+        if (bajaMes[n]) return '<span class="baja">' + e + '</span> <span class="tag-baja">baja ' + formatFechaCorta(bajaMes[n]) + '</span>';
+        return e;
       }
 
       var h = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">';
