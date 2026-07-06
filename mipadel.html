@@ -39,6 +39,17 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.56.0 — Alumnos con apellidos y teléfono + chips por tramo (2026-07)
+    · Cada alumno admite APELLIDOS y TELÉFONO (campos opcionales en
+      el formulario de la clase, tanto al añadirlo como editándolo).
+      Viajan dentro del jsonb alumnos: sin migración de Supabase.
+    · Detalle del gestor: bajo el calendario de cada tramo aparecen
+      los alumnos del mes como chips "Nombre G.L." (nombre +
+      iniciales de apellidos): verdes los de alta, ✗ tachados los de
+      baja a fin de mes y ⏳ los que aún no han empezado.
+    · Tocar un chip abre el HISTORIAL por meses de ese alumno (la
+      pantalla de siempre), con vuelta "‹ Detalle". La cabecera del
+      historial muestra apellidos completos y 📞 teléfono si constan.
   v0.55.0 — Curso por clase: septiembre vacío automático + cierre selectivo (2026-07)
     · Cada clase lleva su CURSO escolar ("2025-26", columna curso en
       asistencia_clases, migración v0.55). Las vistas por mes/semana
@@ -897,6 +908,11 @@
     .gcierre-opt:active { transform:scale(0.99); }
     .gcierre-opt.todas { font-weight:800; color:#991b1b; background:#fef2f2; border-color:#fecaca; }
     .gcierre-opt.cancel { text-align:center; font-weight:700; color:var(--gris); background:var(--blanco); border-color:var(--borde); margin-bottom:0; }
+    .ghd-als { display:flex; flex-wrap:wrap; gap:5px; margin-top:7px; }
+    .ghd-al { font-size:11px; font-weight:700; color:#166534; background:#f0fdf4; border:1.5px solid #bbf7d0; border-radius:20px; padding:3px 9px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    button.ghd-al:active { transform:scale(0.96); }
+    .ghd-al.baja { color:#991b1b; background:#fef2f2; border-color:#fecaca; text-decoration:line-through; }
+    .ghd-al.fut  { color:var(--gris); background:#f3f4f6; border-color:#e5e7eb; }
     .ghd-dias { display:flex; flex-wrap:wrap; gap:5px; }
     .ghd-day { min-width:26px; height:26px; padding:0 4px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; border:none; font-family:inherit; cursor:default; }
     .ghd-day.dada { background:#dcfce7; color:#166534; }
@@ -1945,7 +1961,7 @@
   <!-- ══ GESTOR/EN3 — HISTORIAL DE UN ALUMNO ══════ -->
   <div id="pantalla-gestor-alumno" class="pantalla">
     <div class="cabecera">
-      <button class="btn-volver" onclick="irA('pantalla-gestor-alumnos')">‹ Alumnos</button>
+      <button class="btn-volver" id="gestor-al-volver-btn" onclick="gestorAlVolver()">‹ Alumnos</button>
       <div class="cab-titulo" id="gestor-al-nombre">Alumno</div>
       <div class="cab-sub" id="gestor-al-sub">—</div>
     </div>
@@ -2503,12 +2519,16 @@
         <div class="form-grupo">
           <label class="form-label">Alumnos</label>
           <div class="asist-form-alumnos-lista" id="asist-form-alumnos"></div>
-          <div class="asist-form-add-alumno">
-            <input id="asist-form-nuevo-alumno" class="form-input" type="text" placeholder="Nombre del alumno"
+          <div class="asist-form-add-alumno" style="flex-wrap:wrap;">
+            <input id="asist-form-nuevo-alumno" class="form-input" type="text" placeholder="Nombre *" style="flex:1;min-width:105px;"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();asistAnadirAlumno();}">
+            <input id="asist-form-nuevo-apellidos" class="form-input" type="text" placeholder="Apellidos" style="flex:1;min-width:105px;"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();asistAnadirAlumno();}">
+            <input id="asist-form-nuevo-telefono" class="form-input" type="tel" placeholder="Teléfono" style="flex:1;min-width:105px;"
                    onkeydown="if(event.key==='Enter'){event.preventDefault();asistAnadirAlumno();}">
             <button class="btn btn-verde btn-sm" onclick="asistAnadirAlumno()" style="flex-shrink:0;">＋</button>
           </div>
-          <p class="form-hint">Pulsa ＋ o Enter para añadir cada alumno</p>
+          <p class="form-hint">Pulsa ＋ o Enter para añadir cada alumno (apellidos y teléfono opcionales)</p>
         </div>
         <button class="btn btn-verde" id="asist-form-btn" onclick="asistGuardarClase()">Crear clase</button>
       </div>
@@ -2652,7 +2672,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.55.0';
+    var APP_VERSION = '0.56.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -3980,6 +4000,30 @@
               (hist ? '' : '<button type="button" class="ghd-edit-btn" onclick="gestorEditarClase(' + c.id + ')">✏ Editar</button>') +
               '</div>';
             bloques += '<div class="ghd-dias">' + (chips || '<span class="ajustes-desc" style="margin:0;">sin días este mes</span>') + '</div>';
+
+            // ── Alumnos de la clase en el mes visto: de alta (verde, con
+            // enlace a su historial por meses) y de baja (✗, tachados).
+            // Nombre + iniciales de apellidos ("Marta G.L.").
+            var finMes = mesISO + '-31';
+            var alsHtml = '';
+            (c.alumnos || []).forEach(function(a){
+              var nom = alNom(a);
+              if (!nom) return;
+              var lbl   = _gEsc(alCorto(a));
+              var alta  = alAlta(a);
+              var fut   = alta && alta > finMes;                 // aún no ha empezado
+              var baja  = !fut && !alActivo(a, finMes);          // de baja a fin de mes
+              var cls   = 'ghd-al' + (baja ? ' baja' : (fut ? ' fut' : ''));
+              var texto = (baja ? '✗ ' : (fut ? '⏳ ' : '')) + lbl;
+              if (hist) {
+                alsHtml += '<span class="' + cls + '">' + texto + '</span>';
+              } else {
+                alsHtml += '<button type="button" class="' + cls + '" onclick="abrirGestorAlumnoDet(\'' +
+                           _gEsc(nom).replace(/'/g, "\\'") + '\')">' + texto + '</button>';
+              }
+            });
+            if (alsHtml) bloques += '<div class="ghd-als">' + alsHtml + '</div>';
+
             bloques += dets;
             bloques += '</div>';
           });
@@ -4285,7 +4329,11 @@
       _gAlsFiltroClase = (_gAlsFiltroClase === id) ? null : id;
       _galsRenderChips(); _galsRenderLista();
     }
-    function abrirGestorAlumno(nombre) { _gestorAlumno = nombre; _gAlMesOff = 0; irA('pantalla-gestor-alumno'); }
+    var _gAlVolver = 'pantalla-gestor-alumnos';   // a dónde vuelve el historial del alumno
+    function abrirGestorAlumno(nombre) { _gestorAlumno = nombre; _gAlMesOff = 0; _gAlVolver = 'pantalla-gestor-alumnos'; irA('pantalla-gestor-alumno'); }
+    // Desde los chips de alumnos del detalle: vuelve al detalle del entrenador
+    function abrirGestorAlumnoDet(nombre) { _gestorAlumno = nombre; _gAlMesOff = 0; _gAlVolver = 'pantalla-gestor-detalle'; irA('pantalla-gestor-alumno'); }
+    function gestorAlVolver() { irA(_gAlVolver); }
     function gestorAlMesNav(delta) { _gAlMesOff += delta; renderGestorAlumno(); }
 
     // Curso escolar de una fecha (sep–jun): "2025-2026"
@@ -4438,8 +4486,20 @@
       if (!cont) return;
       if (!_gestorData || !_gestorUid || !_gestorAlumno) { cont.innerHTML = '<p class="ajustes-desc">Sin datos.</p>'; return; }
       var d = _gestorAgrupar()[_gestorUid];
-      document.getElementById('gestor-al-nombre').textContent = _gestorAlumno;
-      document.getElementById('gestor-al-sub').textContent = d ? ('Alumno de ' + _gestorNombre(d)) : '';
+      document.getElementById('gestor-al-volver-btn').textContent =
+        _gAlVolver === 'pantalla-gestor-detalle' ? '‹ Detalle' : '‹ Alumnos';
+      // Apellidos y teléfono del alumno, si constan en alguna clase (v0.56)
+      var ape = '', tel = '';
+      if (d) (d.clases || []).forEach(function(cl){
+        (cl.alumnos || []).forEach(function(a){
+          if (alNom(a) !== _gestorAlumno) return;
+          if (!ape && alApe(a)) ape = alApe(a);
+          if (!tel && alTel(a)) tel = alTel(a);
+        });
+      });
+      document.getElementById('gestor-al-nombre').textContent = _gestorAlumno + (ape ? ' ' + ape : '');
+      document.getElementById('gestor-al-sub').textContent =
+        (d ? 'Alumno de ' + _gestorNombre(d) : '') + (tel ? ' · 📞 ' + tel : '');
 
       var hist = _gestorHistAlumno(_gestorAlumno);
       if (!hist.length) {
@@ -8755,6 +8815,15 @@
     function alNom(a)  { return (a && typeof a === 'object') ? (a.nombre || '') : (a || ''); }
     function alAlta(a) { return (a && typeof a === 'object') ? (a.alta || '') : ''; }
     function alBaja(a) { return (a && typeof a === 'object') ? (a.baja || '') : ''; }
+    function alApe(a)  { return (a && typeof a === 'object') ? (a.apellidos || '') : ''; }
+    function alTel(a)  { return (a && typeof a === 'object') ? (a.telefono || '') : ''; }
+    // Nombre corto para chips: nombre + iniciales de apellidos ("Marta G.L.")
+    function alCorto(a) {
+      var n = alNom(a), ap = alApe(a);
+      if (!ap) return n;
+      var ini = ap.split(/\s+/).filter(Boolean).map(function(w){ return w.charAt(0).toUpperCase() + '.'; }).join('');
+      return n + (ini ? ' ' + ini : '');
+    }
     function alActivo(a, fecha) {           // activo en esa fecha (alta<=fecha<=baja)
       if (!fecha) return true;
       var alta = alAlta(a), baja = alBaja(a);
@@ -9206,7 +9275,7 @@
         document.getElementById('asist-form-franja').value = clase.franja || '';
         document.getElementById('asist-form-nombre').value = clase.nombre || '';
         asistAlumnosForm = (clase.alumnos||[]).map(function(a){
-          return { nombre: alNom(a), alta: alAlta(a), baja: alBaja(a) };
+          return { nombre: alNom(a), apellidos: alApe(a), telefono: alTel(a), alta: alAlta(a), baja: alBaja(a) };
         });
       } else {
         document.getElementById('asist-form-dia').value    = '1';
@@ -9215,7 +9284,9 @@
         asistAlumnosForm = [];
       }
 
-      document.getElementById('asist-form-nuevo-alumno').value = '';
+      document.getElementById('asist-form-nuevo-alumno').value    = '';
+      document.getElementById('asist-form-nuevo-apellidos').value = '';
+      document.getElementById('asist-form-nuevo-telefono').value  = '';
       document.getElementById('asist-form-franja').classList.remove('form-error');
       renderAlumnosForm();
     }
@@ -9229,8 +9300,12 @@
       cont.innerHTML = asistAlumnosForm.map(function(a, i) {
         return '<div class="asist-al-fila">' +
           '<div class="asist-al-fila-top">' +
-            '<span class="asist-al-fila-nombre">' + alNom(a) + '</span>' +
+            '<span class="asist-al-fila-nombre">' + _gEsc(alNom(a)) + '</span>' +
             '<button class="asist-chip-quitar" onclick="asistQuitarAlumnoForm(' + i + ')">✕</button>' +
+          '</div>' +
+          '<div class="asist-al-fila-fechas">' +
+            '<label>Apellidos<input type="text" value="' + _gEsc(a.apellidos||'') + '" placeholder="Apellidos" onchange="asistSetAlumnoFecha(' + i + ',\'apellidos\',this.value)"></label>' +
+            '<label>Teléfono<input type="tel" value="' + _gEsc(a.telefono||'') + '" placeholder="Teléfono" onchange="asistSetAlumnoFecha(' + i + ',\'telefono\',this.value)"></label>' +
           '</div>' +
           '<div class="asist-al-fila-fechas">' +
             '<label>Desde<input type="date" value="' + (a.alta||'') + '" onchange="asistSetAlumnoFecha(' + i + ',\'alta\',this.value)"></label>' +
@@ -9246,11 +9321,13 @@
 
     function asistAnadirAlumno() {
       var input  = document.getElementById('asist-form-nuevo-alumno');
+      var inpApe = document.getElementById('asist-form-nuevo-apellidos');
+      var inpTel = document.getElementById('asist-form-nuevo-telefono');
       var nombre = input.value.trim();
       if (!nombre) return;
       if (asistAlumnosForm.some(function(a){ return alNom(a) === nombre; })) { input.value=''; return; }
-      asistAlumnosForm.push({ nombre: nombre, alta: '', baja: '' });
-      input.value = '';
+      asistAlumnosForm.push({ nombre: nombre, apellidos: inpApe.value.trim(), telefono: inpTel.value.trim(), alta: '', baja: '' });
+      input.value = ''; inpApe.value = ''; inpTel.value = '';
       renderAlumnosForm();
       input.focus();
     }
