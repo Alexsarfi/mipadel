@@ -39,6 +39,18 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.67.1 — Ventana "Clases dadas" en HORAS (2026-07)
+    · La ventana habla en horas, que es su función: HORAS TOTALES
+      del mes en grande (40px) arriba del todo, y debajo dos KPIs
+      con las horas de clases de 1h y de 1h30 (con el nº de clases
+      como subtexto). Las clases de otra duración se avisan aparte
+      sin sumarlas a las horas.
+    · Cada fila muestra las horas del entrenador (propias + las
+      que cubrió como sustituto). Las horas de SUSTITUCIÓN van en
+      ÁMBAR 🔁 (debajo del total y en el desglose) para
+      distinguirlas: ya incluidas en quien las dio, descontadas
+      del titular. Los externos, fila ámbar con sus horas.
+    · Nota al pie explicando el código de color.
   v0.67.0 — Panel del gestor: KPIs que abren ventanas (2026-07)
     · KPI "Clases" → ventana "Clases dadas": sumatorio del mes de
       TODA la academia (navegable ‹ ›): total, de 1h y de 1h30
@@ -2969,7 +2981,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.67.0';
+    var APP_VERSION = '0.67.1';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -4127,24 +4139,32 @@
       var cursoMes = cursoDeFecha(mesISO);
       document.getElementById('gcl-sub').textContent = 'Sumatorio de la academia por mes';
       var by = _gestorAgrupar();
-      var filas = [], tot = { m60:0, m90:0, otras:0, total:0 };
-      function _sumaTxt(s) {
+      // v0.67.1: la ventana habla en HORAS. Horas propias del entrenador
+      // (sin las sustituidas) + horas de sustitución (cubiertas a otros o
+      // dadas por un externo) en ÁMBAR para distinguirlas.
+      function _hTxt(min) {
+        var hn = min / 60;
+        return (hn % 1 === 0 ? hn : hn.toFixed(1).replace('.', ',')) + ' h';
+      }
+      function _minutos(s) { return s.m60 * 60 + s.m90 * 90; }
+      function _cntTxt(s, pref) {
         var t = [];
         if (s.m60)   t.push(s.m60 + '×1h');
         if (s.m90)   t.push(s.m90 + '×1h30');
         if (s.otras) t.push(s.otras + ' otras');
-        return t.length ? t.join(' · ') : '—';
+        return t.length ? (pref || '') + t.join(' · ') : '';
       }
+      var filas = [];
+      var CERO = { m60:0, m90:0, otras:0, total:0 };
       // Entrenadores: sus clases del mes (sin las sustituidas) + cubiertas
       Object.keys(by).forEach(function(u){
         var d = by[u];
         var clases  = _gestorClasesLocal(d).filter(function(c){ return _claseCurso(c) === cursoMes; });
         var regsMes = _gestorRegsLocal(d).filter(function(r){ return r.fecha && r.fecha.slice(0,7) === mesISO; });
-        var suma = _gestorSumaMes(clases, regsMes, mesISO);
-        var cub  = _gestorCubiertasMes(u, mesISO);
-        suma.m60 += cub.m60; suma.m90 += cub.m90; suma.otras += cub.otras; suma.total += cub.total;
-        if (!suma.total) return;
-        filas.push({ nom: _gestorNombre(d), suma: suma, ext: false });
+        var propias = _gestorSumaMes(clases, regsMes, mesISO);
+        var cub     = _gestorCubiertasMes(u, mesISO);
+        if (!propias.total && !cub.total) return;
+        filas.push({ nom: _gestorNombre(d), propias: propias, cub: cub, ext: false });
       });
       // Externos: clases que cubrieron ese mes (no son de ningún entrenador)
       var clasePor = {};
@@ -4160,38 +4180,59 @@
         e.total++;
       });
       Object.keys(exts).sort().forEach(function(nom){
-        filas.push({ nom: nom, suma: exts[nom], ext: true });
+        filas.push({ nom: nom, propias: CERO, cub: exts[nom], ext: true });
       });
+      // Totales de la academia (en clases y en horas)
+      var totC60 = 0, totC90 = 0, totOtras = 0;
       filas.forEach(function(f){
-        tot.m60 += f.suma.m60; tot.m90 += f.suma.m90; tot.otras += f.suma.otras; tot.total += f.suma.total;
+        totC60   += f.propias.m60   + f.cub.m60;
+        totC90   += f.propias.m90   + f.cub.m90;
+        totOtras += f.propias.otras + f.cub.otras;
       });
-      filas.sort(function(a,b){ return b.suma.total - a.suma.total || a.nom.localeCompare(b.nom); });
+      var totMin = totC60 * 60 + totC90 * 90;
+      filas.sort(function(a,b){
+        var ma = _minutos(a.propias) + _minutos(a.cub), mb = _minutos(b.propias) + _minutos(b.cub);
+        return mb - ma || a.nom.localeCompare(b.nom);
+      });
 
       var h = '<div class="gestor-mes-nav">' +
         '<button class="gestor-mes-btn" onclick="gestorClasesMesNav(-1)">‹</button>' +
         '<span class="gestor-mes-lbl">' + _gEsc(mesLabel) + '</span>' +
         '<button class="gestor-mes-btn" onclick="gestorClasesMesNav(1)">›</button>' +
       '</div>';
-      h += '<div class="gestor-resumen">' +
-        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + tot.total + '</div><div class="gestor-kpi-lbl">Total</div></div>' +
-        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + tot.m60 + '</div><div class="gestor-kpi-lbl">De 1h</div></div>' +
-        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + tot.m90 + '</div><div class="gestor-kpi-lbl">De 1h30</div></div>' +
+      // HORAS TOTALES en grande: es la función de esta ventana
+      h += '<div class="gestor-kpi" style="margin:0.4rem 0 8px;padding:1.1rem 0.5rem;">' +
+        '<div class="gestor-kpi-num" style="font-size:40px;">' + _hTxt(totMin) + '</div>' +
+        '<div class="gestor-kpi-lbl" style="font-size:12px;margin-top:7px;">Horas dadas · ' + _gEsc(mesLabel) + '</div>' +
       '</div>';
-      if (tot.otras) h += '<p class="ajustes-desc" style="margin:-4px 0 0.6rem;">Incluye ' + tot.otras + ' clase' + (tot.otras!==1?'s':'') + ' de otra duración.</p>';
+      h += '<div class="gestor-resumen" style="grid-template-columns:repeat(2,1fr);margin-top:0;">' +
+        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + _hTxt(totC60 * 60) + '</div><div class="gestor-kpi-lbl">Clases de 1h</div><div class="gestor-kpi-sub">' + totC60 + ' clase' + (totC60!==1?'s':'') + '</div></div>' +
+        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + _hTxt(totC90 * 90) + '</div><div class="gestor-kpi-lbl">Clases de 1h30</div><div class="gestor-kpi-sub">' + totC90 + ' clase' + (totC90!==1?'s':'') + '</div></div>' +
+      '</div>';
+      if (totOtras) h += '<p class="ajustes-desc" style="margin:-8px 0 0.6rem;">+ ' + totOtras + ' clase' + (totOtras!==1?'s':'') + ' de otra duración (no sumada' + (totOtras!==1?'s':'') + ' en horas).</p>';
       if (!filas.length) {
         h += '<p class="ajustes-desc" style="text-align:center;padding:1rem 0;">Sin clases dadas en ' + _gEsc(mesLabel) + '.</p>';
       } else {
         filas.forEach(function(f){
+          var minP = _minutos(f.propias), minC = _minutos(f.cub);
+          // Desglose: propias en gris, sustituciones en ámbar
+          var meta = _cntTxt(f.propias) || (f.ext ? '' : '—');
+          if (f.cub.total) meta += (meta ? ' ' : '') + '<span style="color:#92400e;font-weight:700;">🔁 ' + _cntTxt(f.cub) + ' sust.</span>';
+          // Horas: total del entrenador; debajo, en ámbar, las de sustitución
+          var horas = f.ext
+            ? '<span style="color:#92400e;">' + _hTxt(minC) + '</span>'
+            : _hTxt(minP + minC) + (minC ? '<div style="font-size:11px;font-weight:800;color:#92400e;">🔁 ' + _hTxt(minC) + '</div>' : '');
           h += '<div class="gestor-card" style="cursor:default;">' +
             '<div class="gestor-card-ava"' + (f.ext ? ' style="background:#fef3c7;color:#92400e;"' : '') + '>' +
               (f.ext ? '🔁' : _gEsc(f.nom.charAt(0).toUpperCase())) + '</div>' +
             '<div class="gestor-card-body">' +
               '<div class="gestor-card-nom">' + _gEsc(f.nom) + (f.ext ? ' <span style="font-size:10px;font-weight:700;color:#92400e;">EXTERNO</span>' : '') + '</div>' +
-              '<div class="gestor-card-meta">' + _sumaTxt(f.suma) + '</div>' +
+              '<div class="gestor-card-meta">' + meta + '</div>' +
             '</div>' +
-            '<div class="gestor-card-pct">' + f.suma.total + '</div>' +
+            '<div class="gestor-card-pct" style="text-align:right;">' + horas + '</div>' +
           '</div>';
         });
+        h += '<p class="ajustes-desc" style="margin-top:0.4rem;">Las horas en <span style="color:#92400e;font-weight:700;">ámbar 🔁</span> son sustituciones: ya están incluidas en el total de quien las dio y descontadas del titular.</p>';
       }
       cont.innerHTML = h;
     }
