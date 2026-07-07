@@ -39,6 +39,26 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.66.0 — Sustituciones: quién imparte cada clase (2026-07)
+    · Si un día la clase no la da su titular, el GESTOR (o EN3) lo
+      anota: al pasar/corregir lista desde su panel aparece el
+      desplegable "Impartida por" con los entrenadores del club y
+      los sustitutos EXTERNOS del catálogo (+ alta rápida inline).
+    · Catálogo "Sustitutos externos" en el panel del gestor (solo
+      nombre): añadir y quitar. Tabla sustitutos en Supabase con
+      RLS gestor/nivel3. Los internos salen de perfiles.
+    · El registro del día guarda impartida_por = {uid, nombre}
+      (uid null = externo; null = la dio el titular). Nueva columna
+      jsonb en asistencia_registros — REQUIERE la migración v0.66
+      del supabase_schema.sql. Se conserva aunque el titular
+      corrija la lista después (él no ve el selector).
+    · CÓMPUTO: la clase cuenta al SUSTITUTO, no al titular. KPI
+      "Clases dadas" del detalle: al titular se le apartan
+      ("🔁 N con sustituto") y al entrenador que cubre se le suman
+      ("+M cubiertas", con su duración 1h/1h30).
+    · Panel del gestor: bloque "Sustituciones · mes" con cada
+      sustituto, a quién cubrió y cuántas clases. En el detalle
+      del día, chip ámbar "🔁 nombre".
   v0.65.1 — Fecha de los días de la semana en negrita (2026-07)
     · En las tarjetas bajo el calendario de Asistencia, la fecha del
       día ("· 8 jul") pasa a negrita y color de texto para verse
@@ -2680,6 +2700,7 @@
           <label class="form-label">Fecha de la clase</label>
           <input id="asist-lista-fecha" class="form-input" type="date" onchange="asistCambiarFechaLista(this.value)">
         </div>
+        <div id="asist-lista-sust"></div><!-- v0.66: selector "Impartida por" (solo gestor/EN3) -->
       </div>
       <div id="asist-lista-alumnos"></div>
       <div id="asist-recup-zona"></div>
@@ -2893,7 +2914,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.65.1';
+    var APP_VERSION = '0.66.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -3174,6 +3195,7 @@
           presentes:r.presentes||[], ausentes:r.ausentes||[],
           justificadas:r.justificadas||[],
           recups:r.recups||[],
+          impartidaPor:r.impartida_por||null,
           sinClase:!!r.sin_clase
         }; });
 
@@ -3395,6 +3417,7 @@
         presentes:r.presentes||[], ausentes:r.ausentes||[],
         justificadas:r.justificadas||[],
         recups:r.recups||[],       // v0.60: recuperaciones previstas ese día
+        impartida_por:r.impartidaPor||null,   // v0.66: {uid,nombre} del sustituto (null = titular)
         sin_clase:!!r.sinClase
       }; }
     };
@@ -3708,6 +3731,7 @@
           return { id:r.id, claseId:r.clase_id, fecha:r.fecha,
                    presentes:r.presentes || [], ausentes:r.ausentes || [],
                    justificadas:r.justificadas || [], recups:r.recups || [],
+                   impartidaPor:r.impartida_por || null,
                    sinClase:!!r.sin_clase };
         });
       }
@@ -3824,14 +3848,16 @@
         _sb.from('perfiles').select('*'),
         _sb.from('asistencia_clases').select('*'),
         _sb.from('asistencia_registros').select('*'),
-        _sb.from('asistencia_historico').select('id,user_id,curso')   // v0.54 (si la tabla no existe aún, se ignora)
+        _sb.from('asistencia_historico').select('id,user_id,curso'),   // v0.54 (si la tabla no existe aún, se ignora)
+        _sb.from('sustitutos').select('*').order('nombre')             // v0.66 (si la tabla no existe aún, se ignora)
       ]).then(function(res) {
         if (res[1].error || res[2].error) { throw (res[1].error || res[2].error); }
         _gestorData = {
           perfiles:  res[0].data || [],
           clases:    res[1].data || [],
           registros: res[2].data || [],
-          historico: (res[3] && !res[3].error && res[3].data) || []
+          historico: (res[3] && !res[3].error && res[3].data) || [],
+          sustitutos:(res[4] && !res[4].error && res[4].data) || []
         };
         // v0.55: estampar el curso actual en las clases de CUALQUIER
         // entrenador que aún no lo tengan (la RLS del gestor lo permite).
@@ -3986,6 +4012,51 @@
       });
       h += '</div>';
 
+      // ── SUSTITUCIONES del mes seleccionado (v0.66) ──────────────
+      // Clases con impartida_por: quién las cubrió y a qué titular.
+      var sustMes = (_gestorData.registros || []).filter(function(r){
+        return r.impartida_por && r.fecha && r.fecha.slice(0,7) === _gPanelMes && _regPasada(r);
+      });
+      if (sustMes.length) {
+        var porSust = {};   // nombre → {n, titulares:{}}
+        sustMes.forEach(function(r){
+          var nom = r.impartida_por.nombre || '¿?';
+          var e = (porSust[nom] = porSust[nom] || { n:0, tits:{} });
+          e.n++;
+          e.tits[_gestorNombre(by[r.user_id] || { uid:r.user_id })] = true;
+        });
+        h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Sustituciones · ' +
+             MESES_NOMBRES_A[+_gPanelMes.slice(5,7)-1] + '</div>';
+        Object.keys(porSust).sort().forEach(function(nom){
+          var e = porSust[nom];
+          h += '<div class="gestor-card" style="cursor:default;">' +
+            '<div class="gestor-card-ava" style="background:#fef3c7;color:#92400e;">🔁</div>' +
+            '<div class="gestor-card-body">' +
+              '<div class="gestor-card-nom">' + _gEsc(nom) + '</div>' +
+              '<div class="gestor-card-meta">cubrió a ' + _gEsc(Object.keys(e.tits).join(', ')) + '</div>' +
+            '</div>' +
+            '<div class="gestor-card-pct">' + e.n + '</div>' +
+          '</div>';
+        });
+      }
+
+      // ── Catálogo de sustitutos EXTERNOS (v0.66) ─────────────────
+      // Los entrenadores del club no se apuntan aquí: salen de perfiles.
+      h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Sustitutos externos</div>';
+      h += '<p class="ajustes-desc" style="margin:0 0 0.5rem;">Personas ajenas al club que cubren clases puntualmente. Aparecen en el desplegable "Impartida por" al pasar lista.</p>';
+      var susts = _gestorData.sustitutos || [];
+      if (susts.length) {
+        h += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:0.6rem;">';
+        susts.forEach(function(s){
+          h += '<span class="ghd-al" style="display:inline-flex;align-items:center;gap:5px;">' + _gEsc(s.nombre) +
+               '<button type="button" class="asist-chip-quitar" onclick="gestorSustDel(\'' + s.id + '\')">✕</button></span>';
+        });
+        h += '</div>';
+      } else {
+        h += '<p class="ajustes-desc" style="margin:0 0 0.5rem;">Sin sustitutos externos todavía.</p>';
+      }
+      h += '<button class="btn btn-sec btn-sm" style="margin:0;" onclick="gestorSustNuevo()">＋ Añadir sustituto externo</button>';
+
       // ── Entrenadores (después del planning, v0.64.2) ──
       h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Entrenadores</div>';
       h += cards;
@@ -4023,6 +4094,106 @@
              (parseInt(_gPanelMes.slice(5,7),10) - (hoy.getMonth() + 1));
     }
     function gestorPanelMes(m) { _gPanelMes = m; renderGestor(); }
+
+    // ── SUSTITUTOS (v0.66) ───────────────────────────────────────
+    // Catálogo de sustitutos EXTERNOS (tabla sustitutos, solo nombre).
+    // Los internos salen de perfiles. El registro del día guarda
+    // impartidaPor = {uid, nombre} (uid null = externo; null = titular).
+    function gestorSustAdd(nombre, cb) {
+      nombre = (nombre || '').trim();
+      if (!nombre || !_sb) return;
+      var ya = ((_gestorData && _gestorData.sustitutos) || []).some(function(s){
+        return s.nombre.toLowerCase() === nombre.toLowerCase();
+      });
+      if (ya) { if (cb) cb(); return; }
+      _sb.from('sustitutos').insert({ nombre: nombre }).select().then(function(r){
+        if (r.error) { alert('⚠️ No se pudo guardar el sustituto: ' + r.error.message + '\n¿Está ejecutada la migración v0.66 en Supabase?'); return; }
+        if (_gestorData) {
+          _gestorData.sustitutos = (_gestorData.sustitutos || []).concat(r.data || []);
+          _gestorData.sustitutos.sort(function(a,b){ return a.nombre.localeCompare(b.nombre); });
+        }
+        if (cb) cb();
+      });
+    }
+    function gestorSustNuevo() {
+      var n = prompt('Nombre del sustituto externo:');
+      if (n && n.trim()) gestorSustAdd(n, renderGestor);
+    }
+    function gestorSustDel(id) {
+      if (!_sb || !confirm('¿Quitar este sustituto del catálogo?\nLas clases que ya cubrió no se tocan.')) return;
+      _sb.from('sustitutos').delete().eq('id', id).then(function(r){
+        if (r.error) { alert('⚠️ No se pudo borrar: ' + r.error.message); return; }
+        if (_gestorData) {
+          _gestorData.sustitutos = (_gestorData.sustitutos || []).filter(function(s){ return s.id !== id; });
+        }
+        renderGestor();
+      });
+    }
+    // Nombre corto de un perfil (para el desplegable y el registro)
+    function _sustPerfNom(p) {
+      var nom = ((p.nombre || '') + ' ' + (p.apellidos || '')).trim();
+      return nom || p.email || ('Entrenador ' + (p.user_id || '').slice(0,6));
+    }
+
+    // ── Selector "Impartida por" en la pantalla de pasar lista ──
+    // Solo visible cuando se llega desde el panel del gestor
+    // (_gEditVolverA). asistImpartida guarda el valor del día y se
+    // conserva aunque el titular corrija la lista después.
+    var asistImpartida = null;   // {uid, nombre} | null = titular
+    function renderSustSelector() {
+      var zona = document.getElementById('asist-lista-sust');
+      if (!zona) return;
+      if (!_gEditVolverA || !_gestorData) { zona.innerHTML = ''; return; }
+      var titularUid = _gEditUid || (_sbUser && _sbUser.id) || null;
+      var sel = asistImpartida ? (asistImpartida.uid ? 'u:' + asistImpartida.uid : 'x:' + asistImpartida.nombre) : '';
+      var ops = '<option value=""' + (sel===''?' selected':'') + '>El titular de la clase</option>';
+      var hayInt = false, intOps = '';
+      (_gestorData.perfiles || []).forEach(function(p){
+        if (p.user_id === titularUid) return;
+        var v = 'u:' + p.user_id;
+        intOps += '<option value="' + v + '"' + (sel===v?' selected':'') + '>' + _gEsc(_sustPerfNom(p)) + '</option>';
+        hayInt = true;
+      });
+      if (hayInt) ops += '<optgroup label="Entrenadores del club">' + intOps + '</optgroup>';
+      var extOps = '', selExtVisto = false;
+      ((_gestorData.sustitutos) || []).forEach(function(s){
+        var v = 'x:' + s.nombre;
+        if (sel === v) selExtVisto = true;
+        extOps += '<option value="' + _gEsc(v) + '"' + (sel===v?' selected':'') + '>' + _gEsc(s.nombre) + '</option>';
+      });
+      // Externo guardado en el registro pero ya fuera del catálogo
+      if (sel.slice(0,2) === 'x:' && !selExtVisto) {
+        extOps += '<option value="' + _gEsc(sel) + '" selected>' + _gEsc(asistImpartida.nombre) + '</option>';
+      }
+      if (extOps) ops += '<optgroup label="Externos">' + extOps + '</optgroup>';
+      ops += '<option value="__add">＋ Añadir externo…</option>';
+      zona.innerHTML = '<div class="form-grupo" style="margin-top:0.75rem;">' +
+        '<label class="form-label">Impartida por 🔁</label>' +
+        '<select class="form-input" onchange="asistSetImpartida(this.value)">' + ops + '</select>' +
+        (asistImpartida ? '<p class="ajustes-desc" style="margin:4px 0 0;">Esta clase contará al sustituto, no al titular.</p>' : '') +
+        '</div>';
+    }
+    function asistSetImpartida(val) {
+      if (val === '__add') {
+        var n = prompt('Nombre del sustituto externo:');
+        n = n ? n.trim() : '';
+        if (!n) { renderSustSelector(); return; }
+        gestorSustAdd(n, function(){
+          asistImpartida = { uid: null, nombre: n };
+          renderSustSelector();
+        });
+        return;
+      }
+      if (!val) { asistImpartida = null; }
+      else if (val.slice(0,2) === 'u:') {
+        var uid = val.slice(2);
+        var p = ((_gestorData && _gestorData.perfiles) || []).filter(function(x){ return x.user_id === uid; })[0];
+        asistImpartida = { uid: uid, nombre: p ? _sustPerfNom(p) : 'Entrenador' };
+      } else if (val.slice(0,2) === 'x:') {
+        asistImpartida = { uid: null, nombre: val.slice(2) };
+      }
+      renderSustSelector();
+    }
 
     function abrirGestorDetalle(uid) { _gestorUid = uid; _gestorMesOff = _gPanelMesOffset(); _gHist = null; _gCierreOpen = false; _gResumenOpen = false; irA('pantalla-gestor-detalle'); }
     function gestorMesNav(delta) { _gestorMesOff += delta; _gCierreOpen = false; _gResumenOpen = false; renderGestorDetalle(); }
@@ -4127,6 +4298,7 @@
         return { id:r.id, claseId:r.clase_id, fecha:r.fecha,
                  presentes:r.presentes || [], ausentes:r.ausentes || [],
                  justificadas:r.justificadas || [], recups:r.recups || [],
+                 impartidaPor:r.impartida_por || null,
                  sinClase:!!r.sin_clase };
       });
     }
@@ -4214,10 +4386,16 @@
       // Sumatorio de clases dadas por duración (sustituye al antiguo "Días clase"
       // y al bloque de sumatorio que había duplicado más abajo)
       var suma = _gestorSumaMes(clases, regsMes, mesISO);
+      // v0.66: sumar las clases que ESTE entrenador cubrió a otros y
+      // apartar las suyas que dio un sustituto (solo en el curso vivo)
+      var cub = hist ? { m60:0, m90:0, otras:0, total:0 } : _gestorCubiertasMes(_gestorUid, mesISO);
+      suma.m60 += cub.m60; suma.m90 += cub.m90; suma.otras += cub.otras; suma.total += cub.total;
       var sumaTxt = [];
       if (suma.m60)   sumaTxt.push(suma.m60 + '×1h');
       if (suma.m90)   sumaTxt.push(suma.m90 + '×1h30');
       if (suma.otras) sumaTxt.push(suma.otras + ' otras');
+      if (suma.sust)  sumaTxt.push('🔁 ' + suma.sust + ' con sustituto');
+      if (cub.total)  sumaTxt.push('+' + cub.total + ' cubiertas');
       h += '<div class="gestor-resumen">' +
         '<div class="gestor-kpi"><div class="gestor-kpi-num">' + suma.total + '</div><div class="gestor-kpi-lbl">Clases dadas</div><div class="gestor-kpi-sub">' + (sumaTxt.length ? sumaTxt.join(' · ') : '—') + '</div></div>' +
         (hist
@@ -4464,7 +4642,12 @@
         return s + btnsExtra;
       }
       var activos2 = alumnosActivos(clase, f);
-      s += ' <span class="gad-estado ok">' + (reg.presentes||[]).length + '/' + activos2.length + '</span>' + btnLista + '</div>';
+      s += ' <span class="gad-estado ok">' + (reg.presentes||[]).length + '/' + activos2.length + '</span>';
+      // v0.66: la clase la dio un sustituto ese día
+      if (reg.impartidaPor) {
+        s += ' <span class="gad-estado" style="background:#fef3c7;color:#92400e;">🔁 ' + _gEsc(reg.impartidaPor.nombre || '') + '</span>';
+      }
+      s += btnLista + '</div>';
       var chips = '';
       activos2.forEach(function(n){
         var ok = (reg.presentes||[]).indexOf(n) !== -1;
@@ -4483,18 +4666,25 @@
       return s + btnsExtra;
     }
 
-    // Sumatorio de clases dadas del mes por duración (1h / 1h30 / otras)
+    // Sumatorio de clases dadas del mes por duración (1h / 1h30 / otras).
+    // v0.66: las clases con impartidaPor (las dio un sustituto) NO cuentan
+    // al titular: van aparte en suma.sust.
     function _gestorSumaMes(clases, regsMes, mesISO) {
-      var suma = { m60:0, m90:0, otras:0, total:0 };
+      var suma = { m60:0, m90:0, otras:0, total:0, sust:0 };
       var regCF = {};
       regsMes.forEach(function(r){ (regCF[r.claseId] = regCF[r.claseId] || {})[r.fecha] = r; });
       clases.forEach(function(c){
         var dur = _duracionFranja(c.franja);
         var fechas = fechasClaseEnMes(c, mesISO);
         var cf = regCF[c.id] || {}, dadas = 0;
-        fechas.forEach(function(f){ if (_regPasada(cf[f])) dadas++; });
+        function cuenta(f) {
+          if (!_regPasada(cf[f])) return;
+          if (cf[f].impartidaPor) { suma.sust++; return; }
+          dadas++;
+        }
+        fechas.forEach(cuenta);
         Object.keys(cf).forEach(function(f){
-          if (fechas.indexOf(f) === -1 && _regPasada(cf[f])) dadas++;   // extras
+          if (fechas.indexOf(f) === -1) cuenta(f);   // extras
         });
         if (dur === 60) suma.m60 += dadas;
         else if (dur === 90) suma.m90 += dadas;
@@ -4502,6 +4692,26 @@
       });
       suma.total = suma.m60 + suma.m90 + suma.otras;
       return suma;
+    }
+
+    // v0.66: clases de OTROS entrenadores que este uid cubrió como
+    // sustituto en el mes (cuentan en SU KPI "Clases dadas")
+    function _gestorCubiertasMes(uid, mesISO) {
+      var out = { m60:0, m90:0, otras:0, total:0 };
+      if (!_gestorData) return out;
+      var clasePor = {};   // user_id|id → franja
+      (_gestorData.clases || []).forEach(function(c){ clasePor[c.user_id + '|' + c.id] = c.franja || ''; });
+      (_gestorData.registros || []).forEach(function(r){
+        if (r.user_id === uid) return;
+        if (!r.impartida_por || r.impartida_por.uid !== uid) return;
+        if (!r.fecha || r.fecha.slice(0,7) !== mesISO || !_regPasada(r)) return;
+        var dur = _duracionFranja(clasePor[r.user_id + '|' + r.clase_id] || '');
+        if (dur === 60) out.m60++;
+        else if (dur === 90) out.m90++;
+        else out.otras++;
+      });
+      out.total = out.m60 + out.m90 + out.otras;
+      return out;
     }
 
 
@@ -9710,6 +9920,11 @@
       asistJustifs = {};
       if (regExiste) (regExiste.justificadas||[]).forEach(function(n){ asistJustifs[n] = true; });
 
+      // v0.66: quién imparte la clase ese día (se conserva al corregir la
+      // lista, aunque el selector solo lo vea el gestor/EN3)
+      asistImpartida = (regExiste && regExiste.impartidaPor) || null;
+      renderSustSelector();
+
       // Recuperaciones = previstas guardadas (recups, v0.60) + presentes
       // guardados que NO son del cupo activo. Una recuperación prevista
       // aparece SIN marcar: es el entrenador quien marca si acude.
@@ -9976,6 +10191,7 @@
         ausentes:  [],
         justificadas: [],
         recups:    [],
+        impartidaPor: null,
         sinClase:  true
       };
       if (idx>=0) { regs[idx]=nuevoReg; } else { regs.push(nuevoReg); }
@@ -10007,7 +10223,8 @@
         presentes:presentes,
         ausentes: ausentes,
         justificadas: justificadas,
-        recups:   asistRecups.slice()
+        recups:   asistRecups.slice(),
+        impartidaPor: asistImpartida || null   // v0.66: sustituto del día
       };
 
       if (idx>=0) { regs[idx]=nuevoReg; } else { regs.push(nuevoReg); }
