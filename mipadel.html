@@ -39,6 +39,13 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.64.3 — Alumnos de la academia → misma ficha que por entrenador (2026-07)
+    · Al buscar un alumno en "Alumnos" del panel y tocarlo, se abre
+      la ficha completa de siempre (✏ editar datos, alta/baja por
+      clase, mes navegable, historial por curso con chips L10/M11…)
+      en lugar del detalle global antiguo. Si tiene datos con varios
+      entrenadores, se abre con su entrenador principal (cupo activo
+      > cupo con baja > más sesiones) y el volver regresa a la lista.
   v0.64.2 — Panel del gestor reordenado (2026-07)
     · El planning semanal (meses + grid) aparece PRIMERO, y debajo
       la lista de entrenadores con su título propio.
@@ -2849,7 +2856,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.64.2';
+    var APP_VERSION = '0.64.3';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -5203,7 +5210,32 @@
     var _gtaCache     = null; // índice { al:{nombre:{sesiones:[]}}, ents:[{nombre, alumnos:[]}] }
 
     function abrirGestorTodosAlumnos() { _gtaFiltroTxt = ''; irA('pantalla-gestor-todos-alumnos'); }
-    function abrirGestorTodosAlumno(n) { _gtaAlumno = n; _gtaMesOff = 0; irA('pantalla-gestor-todos-alumno'); }
+    // v0.64.3: al tocar un alumno en la lista global de la academia se
+    // abre la MISMA ficha que entrando por entrenador (editar datos,
+    // alta/baja, mes navegable e historial por curso). Si el alumno tiene
+    // datos con varios entrenadores, se abre con su entrenador principal:
+    // cupo activo > cupo con baja > más sesiones registradas.
+    function abrirGestorTodosAlumno(n) {
+      var by = _gestorAgrupar();
+      var mejor = null, mejorPts = -1;
+      Object.keys(by).forEach(function(uid){
+        var d = by[uid];
+        if (!d.clases.length && !d.regs.length) return;
+        var pts = 0;
+        _gestorClasesLocal(d).forEach(function(c){
+          var entry = alumnoEnClase(c, n);
+          if (!entry) return;
+          pts += alBaja(entry) ? 1000 : 10000;   // activo pesa más que de baja
+        });
+        _gestorRegsLocal(d).forEach(function(r){
+          if (r.sinClase) return;
+          if ((r.presentes||[]).indexOf(n) !== -1 || (r.ausentes||[]).indexOf(n) !== -1) pts++;
+        });
+        if (pts > mejorPts) { mejorPts = pts; mejor = uid; }
+      });
+      if (!mejor || mejorPts <= 0) return;
+      gestorAlumnoU(mejor, n, 'pantalla-gestor-todos-alumnos');
+    }
     function gtaMesNav(delta) { _gtaMesOff += delta; renderGestorTodosAlumno(); }
     function gtaFiltrar(v) { _gtaFiltroTxt = v || ''; _gtaRenderLista(); }
 
