@@ -39,6 +39,21 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.65.0 — Asistencia con calendario mensual (2026-07)
+    · La pantalla Asistencia cambia: fuera los KPIs (Alumnos/Listas/
+      Presencias — ya viven en el Resumen) y la barra de semana con
+      "Hoy". En su lugar, un CALENDARIO del mes L–V (S/D solo si hay
+      clases) navegable por meses con ‹ ›.
+    · Cada día con clase lleva su marca: verde = listas pasadas,
+      ámbar = pendiente/sin registrar, gris = sin clase, claro =
+      próxima, ↩ = recuperación prevista. El día de hoy con aro
+      verde y leyenda al pie.
+    · Tocar cualquier día SELECCIONA SU SEMANA (fila sombreada en
+      azul) y debajo aparecen las tarjetas de esa semana (las de
+      siempre, con badges y acceso a pasar lista). Al entrar, el mes
+      actual carga con la semana de hoy ya seleccionada.
+    · "⚙ Gestionar clases" pasa a la cabecera como botón pequeño
+      "⚙ Clases". Todo aplica también al modo gestión del gestor.
   v0.64.3 — Alumnos de la academia → misma ficha que por entrenador (2026-07)
     · Al buscar un alumno en "Alumnos" del panel y tocarlo, se abre
       la ficha completa de siempre (✏ editar datos, alta/baja por
@@ -1049,6 +1064,30 @@
     .gplan-ent:active { transform:scale(0.97); }
     .gplan-vacio { text-align:center; color:#d1d5db; font-weight:700; padding:6px 0; }
     .alquitar-panel { background:var(--arena); border:1.5px solid var(--borde); border-radius:10px; padding:0.7rem 0.75rem; margin-top:8px; }
+    /* Botón pequeño en la cabecera (⚙ Clases, v0.65) */
+    .cab-mini-btn { position:absolute; top:2.05rem; right:1.5rem; background:rgba(255,255,255,0.12); border:none; color:rgba(255,255,255,0.92); font-size:13px; font-weight:700; font-family:'Outfit',sans-serif; cursor:pointer; padding:8px 13px; border-radius:12px; -webkit-tap-highlight-color:transparent; z-index:2; }
+    .cab-mini-btn:active { background:rgba(255,255,255,0.28); transform:scale(0.97); }
+    /* Calendario mensual de Asistencia (v0.65) */
+    .acal { background:var(--blanco); border:1.5px solid var(--borde); border-radius:13px; padding:10px 10px 8px; margin-bottom:0.9rem; }
+    .acal-nav { display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:8px; }
+    .acal-head { display:grid; margin-bottom:2px; }
+    .acal-head span { text-align:center; font-size:10px; font-weight:800; letter-spacing:.05em; color:var(--gris); }
+    .acal-row { display:grid; border-radius:9px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .acal-row:active { background:var(--arena); }
+    .acal-row.sel { background:#eff6ff; box-shadow:inset 0 0 0 1.5px #bfdbfe; }
+    .acal-cell { text-align:center; padding:5px 0 4px; min-height:36px; }
+    .acal-num { display:inline-flex; width:22px; height:22px; align-items:center; justify-content:center; border-radius:50%; font-size:12.5px; font-weight:700; color:var(--texto); }
+    .acal-cell.fuera .acal-num { color:#d1d5db; font-weight:600; }
+    .acal-cell.hoy .acal-num { background:var(--verde); color:var(--blanco); }
+    .acal-marks { display:flex; gap:2px; align-items:center; justify-content:center; height:9px; }
+    .acal-dot { display:inline-block; width:6px; height:6px; border-radius:50%; }
+    .acal-dot.ok   { background:#22c55e; }
+    .acal-dot.pend { background:#f59e0b; }
+    .acal-dot.sc   { background:#9ca3af; }
+    .acal-dot.fut  { background:#d5dbe5; }
+    .acal-rec { font-size:9px; font-weight:800; color:#16264f; line-height:1; }
+    .acal-ley { display:flex; gap:9px; flex-wrap:wrap; align-items:center; font-size:10px; color:var(--gris); margin-top:7px; padding-top:6px; border-top:1px solid var(--borde); }
+    .acal-ley span { display:inline-flex; align-items:center; gap:3px; }
     /* Meses del curso en el panel del gestor (v0.64) */
     .gpmes-row { display:flex; gap:4px; flex-wrap:wrap; margin:0 0 4px; }
     .gpmes-chip { flex:1; min-width:44px; font-size:11px; font-weight:700; color:var(--gris); background:var(--blanco); border:1.5px solid var(--borde); border-radius:8px; padding:5px 2px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
@@ -2613,18 +2652,12 @@
   <div id="pantalla-asistencia" class="pantalla">
     <div class="cabecera">
       <button class="btn-volver" id="asist-volver-btn" onclick="asistVolverHub()">‹ Inicio</button>
+      <button class="cab-mini-btn" onclick="irA('pantalla-asistencia-config')">⚙ Clases</button>
       <div class="cab-titulo">Asistencia</div>
       <div class="cab-sub" id="asist-sub">—</div>
     </div>
     <div class="contenido">
-      <div class="asist-stats" id="asist-stats-row"></div>
-      <div class="asist-semana-nav">
-        <button class="btn-semana" onclick="asistCambiarSemana(-1)">‹</button>
-        <span class="asist-semana-label" id="asist-semana-label">—</span>
-        <button class="btn-semana" onclick="asistCambiarSemana(1)">›</button>
-        <button class="btn-semana-hoy" onclick="asistWeekOffset=0;mostrarAsistencia()">Hoy</button>
-      </div>
-      <button class="btn btn-sec" style="border-color:var(--lila-claro);color:var(--lila);margin:0 0 0.9rem;" onclick="irA('pantalla-asistencia-config')">⚙ Gestionar clases</button>
+      <div id="asist-calendario"></div>
       <div id="asist-dias-lista"></div>
       <button class="btn btn-sec" onclick="irA('pantalla-asistencia-resumen')">📊 Resumen del mes</button>
     </div>
@@ -2856,7 +2889,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.64.3';
+    var APP_VERSION = '0.65.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -9259,7 +9292,6 @@
     // ══════════════════════════════════════════
     // ASISTENCIA — Variables globales
     // ══════════════════════════════════════════
-    var asistWeekOffset    = 0;    // semanas desde la actual
     var asistClaseEditId   = null; // null=nueva, id=editar
     var asistClaseActivaId = null; // clase activa en pasar lista
     var asistFechaActiva   = null; // fecha activa en pasar lista
@@ -9298,14 +9330,6 @@
       return lunes;
     }
 
-    // Fecha ISO del día diaSemana (1=Lun…0=Dom) en la semana con offset wOff
-    function getFechaAsistencia(diaSemana, wOff) {
-      var lunes = getLunesDeSemana(wOff);
-      var offset = (diaSemana === 0) ? 6 : diaSemana - 1;
-      var t = new Date(lunes);
-      t.setDate(lunes.getDate() + offset);
-      return dateToISOLocal(t);
-    }
 
     function formatFechaCorta(iso) {
       if (!iso) return '';
@@ -9461,65 +9485,141 @@
       irA('pantalla-inicio');
     }
 
+    // Suma n días a una fecha ISO
+    function addDiasISO(iso, n) {
+      var p = iso.split('-');
+      var d = new Date(+p[0], +p[1]-1, +p[2]);
+      d.setDate(d.getDate() + n);
+      return dateToISOLocal(d);
+    }
+
+    // Estado del calendario de Asistencia (v0.65)
+    var asistCalMesOff = 0;      // mes visto (offset desde hoy)
+    var asistSemSel    = null;   // lunes ISO de la semana seleccionada
+
+    function asistCalMes(delta) { asistCalMesOff += delta; asistSemSel = null; mostrarAsistencia(); }
+    function asistCalSelSemana(lun) { asistSemSel = lun; mostrarAsistencia(); }
+
     function mostrarAsistencia() {
       if (!_sb || !_sbUser) _asistStampCurso();   // uso solo-local: migración v0.55
       var cfg    = leerAsistConfig();
       var clases = cfg.clases || [];
       var regs   = leerAsistRegistros();
-
-      // Solo las clases del curso actual para sub y KPIs (v0.61, auditoría
-      // §4: si ya has creado las clases de septiembre, no se suman aquí)
-      var cursoHoy    = cursoDeFecha(hoyLocal());
-      var clasesCursoAct = clases.filter(function(c){ return _claseCurso(c) === cursoHoy; });
+      var hoy    = hoyLocal();
 
       // Sub (en modo gestión, deja claro de quién es la asistencia)
+      var cursoHoy = cursoDeFecha(hoy);
+      var clasesCursoAct = clases.filter(function(c){ return _claseCurso(c) === cursoHoy; });
       document.getElementById('asist-sub').textContent =
         (_gEditUid ? '✏️ Gestionando a ' + _gEditNombre() + ' · ' : '') +
         clasesCursoAct.length + ' clase' + (clasesCursoAct.length !== 1 ? 's' : '') + ' configuradas';
       var volverBtn = document.getElementById('asist-volver-btn');
       if (volverBtn) volverBtn.textContent = _gEditUid ? '‹ Panel' : '‹ Inicio';
-      var todosAl = {};
-      clasesCursoAct.forEach(function(c){ (c.alumnos||[]).forEach(function(a){ todosAl[alNom(a)]=true; }); });
-      var mesActual = getMesISO_A(0);
-      var regsMes   = regs.filter(function(r){ return r.fecha && r.fecha.startsWith(mesActual); });
-      var presencias = 0;
-      regsMes.forEach(function(r){ presencias += (r.presentes||[]).length; });
 
-      document.getElementById('asist-stats-row').innerHTML =
-        '<div class="asist-stat-box"><div class="asist-stat-num">' + Object.keys(todosAl).length + '</div><div class="asist-stat-label">Alumnos</div></div>' +
-        '<div class="asist-stat-box"><div class="asist-stat-num">' + regsMes.length + '</div><div class="asist-stat-label">Listas este mes</div></div>' +
-        '<div class="asist-stat-box"><div class="asist-stat-num">' + presencias + '</div><div class="asist-stat-label">Presencias mes</div></div>';
-
-      // Etiqueta semana
-      var lunes   = getLunesDeSemana(asistWeekOffset);
-      var domingo = new Date(lunes); domingo.setDate(lunes.getDate()+6);
-      document.getElementById('asist-semana-label').textContent =
-        formatFechaCorta(dateToISOLocal(lunes)) + ' – ' + formatFechaCorta(dateToISOLocal(domingo));
-
-      var hoy = hoyLocal();
-
-      // Agrupar clases por día
+      // Agrupar clases por día de la semana
       var diasMap = {};
       clases.forEach(function(c) {
         if (!diasMap[c.diaSemana]) diasMap[c.diaSemana] = [];
         diasMap[c.diaSemana].push(c);
       });
 
+      // ── CALENDARIO MENSUAL (v0.65): sustituye a KPIs + barra semanal.
+      // L–V (S/D solo si hay clases), marcas de estado por día y semana
+      // seleccionable; debajo, las tarjetas de esa semana.
+      var mesISO   = getMesISO_A(asistCalMesOff);
+      var mesLabel = getMesLabelA(asistCalMesOff);
+      var y = +mesISO.slice(0,4), m = +mesISO.slice(5,7);
+      var cols = [1,2,3,4,5];
+      if (diasMap[6]) cols.push(6);
+      if (diasMap[0]) cols.push(0);
+
+      // Estado de un día: ok (todo pasado), pend (falta lista), sc (sin
+      // clase), fut (con clase, futuro), null (sin clases). rec = recups.
+      function _estadoDia(f) {
+        var dow = new Date(+f.slice(0,4), +f.slice(5,7)-1, +f.slice(8,10)).getDay();
+        var cls = (diasMap[dow] || []).filter(function(c){ return _claseCurso(c) === cursoDeFecha(f); });
+        if (!cls.length) return null;
+        var pas = 0, sc = 0, rec = false;
+        cls.forEach(function(c){
+          var reg = regs.filter(function(r){ return r.claseId === c.id && r.fecha === f; })[0];
+          if (reg && reg.sinClase) sc++;
+          else if (_regPasada(reg)) pas++;
+          else if (reg && (reg.recups||[]).length) rec = true;
+        });
+        var st;
+        if (pas + sc === cls.length) st = (sc === cls.length) ? 'sc' : 'ok';
+        else st = (f <= hoy) ? 'pend' : 'fut';
+        return { st: st, rec: rec };
+      }
+
+      // Semanas del mes (filas): desde el lunes de la semana del día 1
+      var d1   = new Date(y, m-1, 1);
+      var dow1 = d1.getDay();
+      var lun0 = new Date(d1); lun0.setDate(1 + ((dow1 === 0) ? -6 : 1 - dow1));
+      var finMes = new Date(y, m, 0);
+
+      // Semana seleccionada: la de hoy si toca el mes visto; si no, la 1ª
+      var lunesHoyISO = dateToISOLocal(getLunesDeSemana(0));
+      function _semanaTocaMes(lunISO) {
+        return lunISO.slice(0,7) === mesISO || addDiasISO(lunISO, 6).slice(0,7) === mesISO;
+      }
+      if (!asistSemSel || !_semanaTocaMes(asistSemSel)) {
+        asistSemSel = _semanaTocaMes(lunesHoyISO) ? lunesHoyISO : dateToISOLocal(lun0);
+      }
+
+      var cal = '<div class="acal">';
+      cal += '<div class="acal-nav">' +
+        '<button class="gestor-mes-btn" onclick="asistCalMes(-1)">‹</button>' +
+        '<span class="gestor-mes-lbl">' + _gEsc(mesLabel) + '</span>' +
+        '<button class="gestor-mes-btn" onclick="asistCalMes(1)">›</button>' +
+      '</div>';
+      var gridCols = 'grid-template-columns:repeat(' + cols.length + ',1fr);';
+      cal += '<div class="acal-head" style="' + gridCols + '">' +
+        cols.map(function(d){ return '<span>' + _GALLETRAS[d] + '</span>'; }).join('') + '</div>';
+      var lun = new Date(lun0);
+      while (lun <= finMes) {
+        var lunISO = dateToISOLocal(lun);
+        cal += '<div class="acal-row' + (lunISO === asistSemSel ? ' sel' : '') + '" style="' + gridCols +
+               '" onclick="asistCalSelSemana(\'' + lunISO + '\')">';
+        cols.forEach(function(d){
+          var off = (d === 0) ? 6 : d - 1;
+          var f = addDiasISO(lunISO, off);
+          var fuera = f.slice(0,7) !== mesISO;
+          var e = _estadoDia(f);
+          cal += '<div class="acal-cell' + (fuera ? ' fuera' : '') + (f === hoy ? ' hoy' : '') + '">' +
+            '<span class="acal-num">' + parseInt(f.slice(8,10),10) + '</span>' +
+            '<span class="acal-marks">' +
+              (e ? '<span class="acal-dot ' + e.st + '"></span>' + (e.rec ? '<span class="acal-rec">↩</span>' : '') : '') +
+            '</span></div>';
+        });
+        cal += '</div>';
+        lun.setDate(lun.getDate() + 7);
+      }
+      cal += '<div class="acal-ley">' +
+        '<span><span class="acal-dot ok"></span> listas pasadas</span>' +
+        '<span><span class="acal-dot pend"></span> pendiente</span>' +
+        '<span><span class="acal-dot sc"></span> sin clase</span>' +
+        '<span><span class="acal-dot fut"></span> próxima</span>' +
+        '<span><span class="acal-rec">↩</span> recup prevista</span>' +
+      '</div>';
+      cal += '</div>';
+      document.getElementById('asist-calendario').innerHTML = cal;
+
+      // ── Tarjetas de la SEMANA seleccionada ──
       var ordenDias = [1,2,3,4,5,6,0];
       var diasActivos = ordenDias.filter(function(d){ return !!diasMap[d]; });
 
       var html = '';
       if (diasActivos.length === 0) {
-        html = '<div class="vacio"><div class="vacio-icono">🗓️</div><p>Sin clases configuradas todavía.<br>Pulsa "⚙ Gestionar clases" para añadir tu primera clase.</p></div>';
+        html = '<div class="vacio"><div class="vacio-icono">🗓️</div><p>Sin clases configuradas todavía.<br>Pulsa "⚙ Clases" arriba para añadir tu primera clase.</p></div>';
       } else {
         diasActivos.forEach(function(dia) {
-          var fecha   = getFechaAsistencia(dia, asistWeekOffset);
+          var fecha   = addDiasISO(asistSemSel, (dia === 0) ? 6 : dia - 1);
           var esHoy   = fecha === hoy;
           var esPas   = fecha < hoy;
           var diasNom = DIAS_NOMBRES_A[dia];
 
           // v0.55: solo las clases del curso al que pertenece esa fecha
-          // (septiembre = curso nuevo → aparece vacío hasta añadir clases)
           var clasesCurso = diasMap[dia].filter(function(c){ return _claseCurso(c) === cursoDeFecha(fecha); });
           if (!clasesCurso.length) return;
 
@@ -9546,7 +9646,7 @@
             } else {
               badge = '<span class="asist-badge-futura">Próxima</span>';
             }
-            // Recuperaciones previstas ese día (v0.60): visibles ya en la semana
+            // Recuperaciones previstas ese día (v0.60)
             if (reg && !reg.sinClase && !_regPasada(reg) && (reg.recups||[]).length) {
               badge = '<span class="asist-badge-pendiente">↩ ' + reg.recups.length + ' recup</span>' + badge;
             }
@@ -9565,16 +9665,11 @@
         });
         if (!html) {
           html = '<div class="vacio"><div class="vacio-icono">🗓️</div><p>Sin clases esta semana: pertenece al curso ' +
-                 cursoDeFecha(dateToISOLocal(lunes)) + '.<br>Añade sus clases desde "⚙ Gestionar clases".</p></div>';
+                 cursoDeFecha(asistSemSel) + '.<br>Añade sus clases desde "⚙ Clases".</p></div>';
         }
       }
 
       document.getElementById('asist-dias-lista').innerHTML = html;
-    }
-
-    function asistCambiarSemana(delta) {
-      asistWeekOffset += delta;
-      mostrarAsistencia();
     }
 
     // ══════════════════════════════════════════
