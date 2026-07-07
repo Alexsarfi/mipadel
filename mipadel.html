@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.45.0
+  TU APP DE PÁDEL — v0.67.1
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,17 +39,17 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
-  v0.67.1 — Ventana "Clases dadas" en HORAS (2026-07)
-    · La ventana habla en horas, que es su función: HORAS TOTALES
-      del mes en grande (40px) arriba del todo, y debajo dos KPIs
-      con las horas de clases de 1h y de 1h30 (con el nº de clases
-      como subtexto). Las clases de otra duración se avisan aparte
-      sin sumarlas a las horas.
-    · Cada fila muestra las horas del entrenador (propias + las
-      que cubrió como sustituto). Las horas de SUSTITUCIÓN van en
-      ÁMBAR 🔁 (debajo del total y en el desglose) para
-      distinguirlas: ya incluidas en quien las dio, descontadas
-      del titular. Los externos, fila ámbar con sus horas.
+  v0.67.1 — Ventana "Clases dadas" en HORAS por entrenador (2026-07)
+    · La ventana habla en horas, que es su función. SIN recuadros
+      de totales de la academia arriba (sobraban): solo la
+      navegación de mes y una fila por entrenador.
+    · Lo destacado son las HORAS DE CADA ENTRENADOR: en grande
+      (26px, verde) a la derecha de su fila, con el desglose de
+      clases (N×1h · M×1h30) como subtexto.
+    · Las horas de SUSTITUCIÓN van en ÁMBAR 🔁: debajo del total
+      del entrenador que las cubrió (ya incluidas en él,
+      descontadas del titular) y en su desglose. Los externos,
+      fila ámbar entera con sus horas.
     · Nota al pie explicando el código de color.
   v0.67.0 — Panel del gestor: KPIs que abren ventanas (2026-07)
     · KPI "Clases" → ventana "Clases dadas": sumatorio del mes de
@@ -4182,14 +4182,6 @@
       Object.keys(exts).sort().forEach(function(nom){
         filas.push({ nom: nom, propias: CERO, cub: exts[nom], ext: true });
       });
-      // Totales de la academia (en clases y en horas)
-      var totC60 = 0, totC90 = 0, totOtras = 0;
-      filas.forEach(function(f){
-        totC60   += f.propias.m60   + f.cub.m60;
-        totC90   += f.propias.m90   + f.cub.m90;
-        totOtras += f.propias.otras + f.cub.otras;
-      });
-      var totMin = totC60 * 60 + totC90 * 90;
       filas.sort(function(a,b){
         var ma = _minutos(a.propias) + _minutos(a.cub), mb = _minutos(b.propias) + _minutos(b.cub);
         return mb - ma || a.nom.localeCompare(b.nom);
@@ -4200,16 +4192,6 @@
         '<span class="gestor-mes-lbl">' + _gEsc(mesLabel) + '</span>' +
         '<button class="gestor-mes-btn" onclick="gestorClasesMesNav(1)">›</button>' +
       '</div>';
-      // HORAS TOTALES en grande: es la función de esta ventana
-      h += '<div class="gestor-kpi" style="margin:0.4rem 0 8px;padding:1.1rem 0.5rem;">' +
-        '<div class="gestor-kpi-num" style="font-size:40px;">' + _hTxt(totMin) + '</div>' +
-        '<div class="gestor-kpi-lbl" style="font-size:12px;margin-top:7px;">Horas dadas · ' + _gEsc(mesLabel) + '</div>' +
-      '</div>';
-      h += '<div class="gestor-resumen" style="grid-template-columns:repeat(2,1fr);margin-top:0;">' +
-        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + _hTxt(totC60 * 60) + '</div><div class="gestor-kpi-lbl">Clases de 1h</div><div class="gestor-kpi-sub">' + totC60 + ' clase' + (totC60!==1?'s':'') + '</div></div>' +
-        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + _hTxt(totC90 * 90) + '</div><div class="gestor-kpi-lbl">Clases de 1h30</div><div class="gestor-kpi-sub">' + totC90 + ' clase' + (totC90!==1?'s':'') + '</div></div>' +
-      '</div>';
-      if (totOtras) h += '<p class="ajustes-desc" style="margin:-8px 0 0.6rem;">+ ' + totOtras + ' clase' + (totOtras!==1?'s':'') + ' de otra duración (no sumada' + (totOtras!==1?'s':'') + ' en horas).</p>';
       if (!filas.length) {
         h += '<p class="ajustes-desc" style="text-align:center;padding:1rem 0;">Sin clases dadas en ' + _gEsc(mesLabel) + '.</p>';
       } else {
@@ -4218,10 +4200,12 @@
           // Desglose: propias en gris, sustituciones en ámbar
           var meta = _cntTxt(f.propias) || (f.ext ? '' : '—');
           if (f.cub.total) meta += (meta ? ' ' : '') + '<span style="color:#92400e;font-weight:700;">🔁 ' + _cntTxt(f.cub) + ' sust.</span>';
-          // Horas: total del entrenador; debajo, en ámbar, las de sustitución
+          // HORAS del entrenador EN GRANDE (es la función de esta ventana);
+          // debajo, en ámbar, las de sustitución incluidas en ese total
           var horas = f.ext
-            ? '<span style="color:#92400e;">' + _hTxt(minC) + '</span>'
-            : _hTxt(minP + minC) + (minC ? '<div style="font-size:11px;font-weight:800;color:#92400e;">🔁 ' + _hTxt(minC) + '</div>' : '');
+            ? '<div style="font-size:26px;font-weight:800;line-height:1;color:#92400e;">' + _hTxt(minC) + '</div>'
+            : '<div style="font-size:26px;font-weight:800;line-height:1;color:var(--verde);">' + _hTxt(minP + minC) + '</div>' +
+              (minC ? '<div style="font-size:12px;font-weight:800;color:#92400e;margin-top:3px;">🔁 ' + _hTxt(minC) + '</div>' : '');
           h += '<div class="gestor-card" style="cursor:default;">' +
             '<div class="gestor-card-ava"' + (f.ext ? ' style="background:#fef3c7;color:#92400e;"' : '') + '>' +
               (f.ext ? '🔁' : _gEsc(f.nom.charAt(0).toUpperCase())) + '</div>' +
@@ -4229,7 +4213,7 @@
               '<div class="gestor-card-nom">' + _gEsc(f.nom) + (f.ext ? ' <span style="font-size:10px;font-weight:700;color:#92400e;">EXTERNO</span>' : '') + '</div>' +
               '<div class="gestor-card-meta">' + meta + '</div>' +
             '</div>' +
-            '<div class="gestor-card-pct" style="text-align:right;">' + horas + '</div>' +
+            '<div style="text-align:right;flex-shrink:0;">' + horas + '</div>' +
           '</div>';
         });
         h += '<p class="ajustes-desc" style="margin-top:0.4rem;">Las horas en <span style="color:#92400e;font-weight:700;">ámbar 🔁</span> son sustituciones: ya están incluidas en el total de quien las dio y descontadas del titular.</p>';
