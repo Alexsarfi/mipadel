@@ -39,6 +39,18 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.67.0 — Panel del gestor: KPIs que abren ventanas (2026-07)
+    · KPI "Clases" → ventana "Clases dadas": sumatorio del mes de
+      TODA la academia (navegable ‹ ›): total, de 1h y de 1h30
+      arriba, y una fila por entrenador con su desglose y total.
+      Sin más detalle. Aplica la atribución de sustituciones: al
+      titular se le apartan y al que cubre se le suman; los
+      EXTERNOS salen como fila propia (avatar 🔁).
+    · KPI "Entrenadores" → ventana "Entrenadores": las tarjetas de
+      entrenadores (antes al pie del panel) + el catálogo de
+      "Sustitutos externos", que desaparece del panel principal.
+    · El panel principal queda: KPIs, planning semanal y
+      sustituciones del mes.
   v0.66.1 — Sustitución en un toque + franja destacada (2026-07)
     · Desplegable de cada día (panel del gestor): tercer botón
       "🔁 Sustitución" junto a "↩ Recuperación" y "＋ Añadir
@@ -2211,6 +2223,30 @@
     </div>
   </div>
 
+  <!-- ══ GESTOR — CLASES DADAS DEL MES (ACADEMIA) ══ (v0.67) -->
+  <div id="pantalla-gestor-clases" class="pantalla">
+    <div class="cabecera">
+      <button class="btn-volver" onclick="irA('pantalla-gestor')">‹ Panel</button>
+      <div class="cab-titulo">Clases dadas</div>
+      <div class="cab-sub" id="gcl-sub">—</div>
+    </div>
+    <div class="contenido">
+      <div id="gcl-contenido"></div>
+    </div>
+  </div>
+
+  <!-- ══ GESTOR — ENTRENADORES Y SUSTITUTOS ══════ (v0.67) -->
+  <div id="pantalla-gestor-entrenadores" class="pantalla">
+    <div class="cabecera">
+      <button class="btn-volver" onclick="irA('pantalla-gestor')">‹ Panel</button>
+      <div class="cab-titulo">Entrenadores</div>
+      <div class="cab-sub" id="gent-sub">—</div>
+    </div>
+    <div class="contenido">
+      <div id="gent-contenido"></div>
+    </div>
+  </div>
+
   <!-- ══ GESTOR/EN3 — ALUMNOS DE UN ENTRENADOR ════ -->
   <div id="pantalla-gestor-alumnos" class="pantalla">
     <div class="cabecera">
@@ -2933,7 +2969,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.66.1';
+    var APP_VERSION = '0.67.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -3940,8 +3976,8 @@
       var totClases = 0, totAlumnos = 0;
       uids.forEach(function(u){ var s = _gestorStats(by[u]); totClases += s.nClases; totAlumnos += s.nAlumnos; });
       var h = '<div class="gestor-resumen">' +
-        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + uids.length + '</div><div class="gestor-kpi-lbl">Entrenadores</div></div>' +
-        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + totClases + '</div><div class="gestor-kpi-lbl">Clases</div></div>' +
+        '<div class="gestor-kpi gestor-kpi-btn" onclick="abrirGestorEntrenadores()"><div class="gestor-kpi-num">' + uids.length + '</div><div class="gestor-kpi-lbl">Entrenadores</div><div class="gestor-kpi-sub">Ver entrenadores ›</div></div>' +
+        '<div class="gestor-kpi gestor-kpi-btn" onclick="abrirGestorClasesMes()"><div class="gestor-kpi-num">' + totClases + '</div><div class="gestor-kpi-lbl">Clases</div><div class="gestor-kpi-sub">Dadas por mes ›</div></div>' +
         '<div class="gestor-kpi gestor-kpi-btn" onclick="abrirGestorTodosAlumnos()"><div class="gestor-kpi-num">' + totAlumnos + '</div><div class="gestor-kpi-lbl">Alumnos</div><div class="gestor-kpi-sub">Ver por alumno ›</div></div>' +
         '</div>';
       if (!uids.length) {
@@ -3949,26 +3985,8 @@
         h += '<p class="ajustes-desc" style="text-align:center;">Versión ' + APP_VERSION + '</p>';
         cont.innerHTML = h; return;
       }
-      // Ordena por nombre. Las tarjetas de entrenadores se montan aparte
-      // y se pintan DESPUÉS del planning (v0.64.2, orden pedido).
-      uids.sort(function(a, b){ return _gestorNombre(by[a]).localeCompare(_gestorNombre(by[b])); });
-      var cards = '';
-      uids.forEach(function(u){
-        var d = by[u], s = _gestorStats(d), nom = _gestorNombre(d);
-        var pct = s.pct == null ? '—' : s.pct + '%';
-        cards += '<div class="gestor-card" onclick="abrirGestorDetalle(\'' + u + '\')">' +
-          '<div class="gestor-card-ava">' + _gEsc(nom.charAt(0).toUpperCase()) + '</div>' +
-          '<div class="gestor-card-body">' +
-            '<div class="gestor-card-nom">' + _gEsc(nom) + '</div>' +
-            '<div class="gestor-card-meta">' + s.nClases + ' clase' + (s.nClases !== 1 ? 's' : '') +
-              ' · ' + s.nAlumnos + ' alumno' + (s.nAlumnos !== 1 ? 's' : '') +
-              ' · ' + s.nDias + ' día' + (s.nDias !== 1 ? 's' : '') + ' pasados' +
-            '</div>' +
-          '</div>' +
-          '<div class="gestor-card-pct">' + pct + '</div>' +
-          '<div class="gestor-card-arr">›</div>' +
-        '</div>';
-      });
+      // v0.67: las tarjetas de entrenadores y el catálogo de sustitutos
+      // externos viven ahora en su propia ventana (KPI "Entrenadores").
 
       // ── PLANNING SEMANAL de la academia (v0.62) ──────────────────
       // Esquema L–V (+ finde si hay clases) por franja horaria con el
@@ -4059,27 +4077,6 @@
         });
       }
 
-      // ── Catálogo de sustitutos EXTERNOS (v0.66) ─────────────────
-      // Los entrenadores del club no se apuntan aquí: salen de perfiles.
-      h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Sustitutos externos</div>';
-      h += '<p class="ajustes-desc" style="margin:0 0 0.5rem;">Personas ajenas al club que cubren clases puntualmente. Aparecen en el desplegable "Impartida por" al pasar lista.</p>';
-      var susts = _gestorData.sustitutos || [];
-      if (susts.length) {
-        h += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:0.6rem;">';
-        susts.forEach(function(s){
-          h += '<span class="ghd-al" style="display:inline-flex;align-items:center;gap:5px;">' + _gEsc(s.nombre) +
-               '<button type="button" class="asist-chip-quitar" onclick="gestorSustDel(\'' + s.id + '\')">✕</button></span>';
-        });
-        h += '</div>';
-      } else {
-        h += '<p class="ajustes-desc" style="margin:0 0 0.5rem;">Sin sustitutos externos todavía.</p>';
-      }
-      h += '<button class="btn btn-sec btn-sm" style="margin:0;" onclick="gestorSustNuevo()">＋ Añadir sustituto externo</button>';
-
-      // ── Entrenadores (después del planning, v0.64.2) ──
-      h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Entrenadores</div>';
-      h += cards;
-
       h += '<p class="ajustes-desc" style="text-align:center;margin-top:1.1rem;">Versión ' + APP_VERSION + '</p>';
       cont.innerHTML = h;
       var sub = document.getElementById('gestor-sub');
@@ -4114,6 +4111,139 @@
     }
     function gestorPanelMes(m) { _gPanelMes = m; renderGestor(); }
 
+    // ── VENTANA "CLASES DADAS" DE LA ACADEMIA (v0.67) ────────────
+    // Solo el sumatorio del mes por entrenador: N×1h, M×1h30 y total.
+    // Con la atribución de sustituciones: al titular se le apartan y
+    // al que cubre (entrenador o externo) se le suman.
+    var _gClasesMesOff = 0;
+    function abrirGestorClasesMes() { _gClasesMesOff = _gPanelMesOffset(); irA('pantalla-gestor-clases'); }
+    function gestorClasesMesNav(d) { _gClasesMesOff += d; renderGestorClases(); }
+    function renderGestorClases() {
+      var cont = document.getElementById('gcl-contenido');
+      if (!cont) return;
+      if (!_gestorData) { cont.innerHTML = '<p class="ajustes-desc">Sin datos. Vuelve al panel para cargarlos.</p>'; return; }
+      var mesISO   = getMesISO_A(_gClasesMesOff);
+      var mesLabel = getMesLabelA(_gClasesMesOff);
+      var cursoMes = cursoDeFecha(mesISO);
+      document.getElementById('gcl-sub').textContent = 'Sumatorio de la academia por mes';
+      var by = _gestorAgrupar();
+      var filas = [], tot = { m60:0, m90:0, otras:0, total:0 };
+      function _sumaTxt(s) {
+        var t = [];
+        if (s.m60)   t.push(s.m60 + '×1h');
+        if (s.m90)   t.push(s.m90 + '×1h30');
+        if (s.otras) t.push(s.otras + ' otras');
+        return t.length ? t.join(' · ') : '—';
+      }
+      // Entrenadores: sus clases del mes (sin las sustituidas) + cubiertas
+      Object.keys(by).forEach(function(u){
+        var d = by[u];
+        var clases  = _gestorClasesLocal(d).filter(function(c){ return _claseCurso(c) === cursoMes; });
+        var regsMes = _gestorRegsLocal(d).filter(function(r){ return r.fecha && r.fecha.slice(0,7) === mesISO; });
+        var suma = _gestorSumaMes(clases, regsMes, mesISO);
+        var cub  = _gestorCubiertasMes(u, mesISO);
+        suma.m60 += cub.m60; suma.m90 += cub.m90; suma.otras += cub.otras; suma.total += cub.total;
+        if (!suma.total) return;
+        filas.push({ nom: _gestorNombre(d), suma: suma, ext: false });
+      });
+      // Externos: clases que cubrieron ese mes (no son de ningún entrenador)
+      var clasePor = {};
+      (_gestorData.clases || []).forEach(function(c){ clasePor[c.user_id + '|' + c.id] = c.franja || ''; });
+      var exts = {};
+      (_gestorData.registros || []).forEach(function(r){
+        if (!r.impartida_por || r.impartida_por.uid) return;
+        if (!r.fecha || r.fecha.slice(0,7) !== mesISO || !_regPasada(r)) return;
+        var nom = r.impartida_por.nombre || '¿?';
+        var e = (exts[nom] = exts[nom] || { m60:0, m90:0, otras:0, total:0 });
+        var dur = _duracionFranja(clasePor[r.user_id + '|' + r.clase_id] || '');
+        if (dur === 60) e.m60++; else if (dur === 90) e.m90++; else e.otras++;
+        e.total++;
+      });
+      Object.keys(exts).sort().forEach(function(nom){
+        filas.push({ nom: nom, suma: exts[nom], ext: true });
+      });
+      filas.forEach(function(f){
+        tot.m60 += f.suma.m60; tot.m90 += f.suma.m90; tot.otras += f.suma.otras; tot.total += f.suma.total;
+      });
+      filas.sort(function(a,b){ return b.suma.total - a.suma.total || a.nom.localeCompare(b.nom); });
+
+      var h = '<div class="gestor-mes-nav">' +
+        '<button class="gestor-mes-btn" onclick="gestorClasesMesNav(-1)">‹</button>' +
+        '<span class="gestor-mes-lbl">' + _gEsc(mesLabel) + '</span>' +
+        '<button class="gestor-mes-btn" onclick="gestorClasesMesNav(1)">›</button>' +
+      '</div>';
+      h += '<div class="gestor-resumen">' +
+        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + tot.total + '</div><div class="gestor-kpi-lbl">Total</div></div>' +
+        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + tot.m60 + '</div><div class="gestor-kpi-lbl">De 1h</div></div>' +
+        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + tot.m90 + '</div><div class="gestor-kpi-lbl">De 1h30</div></div>' +
+      '</div>';
+      if (tot.otras) h += '<p class="ajustes-desc" style="margin:-4px 0 0.6rem;">Incluye ' + tot.otras + ' clase' + (tot.otras!==1?'s':'') + ' de otra duración.</p>';
+      if (!filas.length) {
+        h += '<p class="ajustes-desc" style="text-align:center;padding:1rem 0;">Sin clases dadas en ' + _gEsc(mesLabel) + '.</p>';
+      } else {
+        filas.forEach(function(f){
+          h += '<div class="gestor-card" style="cursor:default;">' +
+            '<div class="gestor-card-ava"' + (f.ext ? ' style="background:#fef3c7;color:#92400e;"' : '') + '>' +
+              (f.ext ? '🔁' : _gEsc(f.nom.charAt(0).toUpperCase())) + '</div>' +
+            '<div class="gestor-card-body">' +
+              '<div class="gestor-card-nom">' + _gEsc(f.nom) + (f.ext ? ' <span style="font-size:10px;font-weight:700;color:#92400e;">EXTERNO</span>' : '') + '</div>' +
+              '<div class="gestor-card-meta">' + _sumaTxt(f.suma) + '</div>' +
+            '</div>' +
+            '<div class="gestor-card-pct">' + f.suma.total + '</div>' +
+          '</div>';
+        });
+      }
+      cont.innerHTML = h;
+    }
+
+    // ── VENTANA "ENTRENADORES" + sustitutos externos (v0.67) ─────
+    function abrirGestorEntrenadores() { irA('pantalla-gestor-entrenadores'); }
+    function renderGestorEntrenadores() {
+      var cont = document.getElementById('gent-contenido');
+      if (!cont) return;
+      if (!_gestorData) { cont.innerHTML = '<p class="ajustes-desc">Sin datos. Vuelve al panel para cargarlos.</p>'; return; }
+      var by = _gestorAgrupar();
+      var uids = Object.keys(by).filter(function(u){ return by[u].clases.length || by[u].regs.length; });
+      uids.sort(function(a, b){ return _gestorNombre(by[a]).localeCompare(_gestorNombre(by[b])); });
+      var sub = document.getElementById('gent-sub');
+      if (sub) sub.textContent = uids.length + ' entrenador' + (uids.length !== 1 ? 'es' : '') + ' con datos';
+      var h = '';
+      uids.forEach(function(u){
+        var d = by[u], s = _gestorStats(d), nom = _gestorNombre(d);
+        var pct = s.pct == null ? '—' : s.pct + '%';
+        h += '<div class="gestor-card" onclick="abrirGestorDetalle(\'' + u + '\')">' +
+          '<div class="gestor-card-ava">' + _gEsc(nom.charAt(0).toUpperCase()) + '</div>' +
+          '<div class="gestor-card-body">' +
+            '<div class="gestor-card-nom">' + _gEsc(nom) + '</div>' +
+            '<div class="gestor-card-meta">' + s.nClases + ' clase' + (s.nClases !== 1 ? 's' : '') +
+              ' · ' + s.nAlumnos + ' alumno' + (s.nAlumnos !== 1 ? 's' : '') +
+              ' · ' + s.nDias + ' día' + (s.nDias !== 1 ? 's' : '') + ' pasados' +
+            '</div>' +
+          '</div>' +
+          '<div class="gestor-card-pct">' + pct + '</div>' +
+          '<div class="gestor-card-arr">›</div>' +
+        '</div>';
+      });
+      if (!uids.length) h += '<p class="ajustes-desc" style="text-align:center;padding:1rem 0;">Aún no hay entrenadores con datos.</p>';
+
+      // Catálogo de sustitutos EXTERNOS (antes en el panel principal)
+      h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Sustitutos externos</div>';
+      h += '<p class="ajustes-desc" style="margin:0 0 0.5rem;">Personas ajenas al club que cubren clases puntualmente. Aparecen en el desplegable "Impartida por".</p>';
+      var susts = _gestorData.sustitutos || [];
+      if (susts.length) {
+        h += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:0.6rem;">';
+        susts.forEach(function(s){
+          h += '<span class="ghd-al" style="display:inline-flex;align-items:center;gap:5px;">' + _gEsc(s.nombre) +
+               '<button type="button" class="asist-chip-quitar" onclick="gestorSustDel(\'' + s.id + '\')">✕</button></span>';
+        });
+        h += '</div>';
+      } else {
+        h += '<p class="ajustes-desc" style="margin:0 0 0.5rem;">Sin sustitutos externos todavía.</p>';
+      }
+      h += '<button class="btn btn-sec btn-sm" style="margin:0;" onclick="gestorSustNuevo()">＋ Añadir sustituto externo</button>';
+      cont.innerHTML = h;
+    }
+
     // ── SUSTITUTOS (v0.66) ───────────────────────────────────────
     // Catálogo de sustitutos EXTERNOS (tabla sustitutos, solo nombre).
     // Los internos salen de perfiles. El registro del día guarda
@@ -4136,7 +4266,7 @@
     }
     function gestorSustNuevo() {
       var n = prompt('Nombre del sustituto externo:');
-      if (n && n.trim()) gestorSustAdd(n, renderGestor);
+      if (n && n.trim()) gestorSustAdd(n, renderGestorEntrenadores);
     }
     function gestorSustDel(id) {
       if (!_sb || !confirm('¿Quitar este sustituto del catálogo?\nLas clases que ya cubrió no se tocan.')) return;
@@ -4145,7 +4275,7 @@
         if (_gestorData) {
           _gestorData.sustitutos = (_gestorData.sustitutos || []).filter(function(s){ return s.id !== id; });
         }
-        renderGestor();
+        renderGestorEntrenadores();
       });
     }
     // Nombre corto de un perfil (para el desplegable y el registro)
@@ -6868,6 +6998,7 @@
       'pantalla-asistencia-resumen','pantalla-asistencia-alumno'];
     var GESTOR_PANTALLAS = ['pantalla-gestor','pantalla-gestor-detalle',
       'pantalla-gestor-planning',
+      'pantalla-gestor-clases','pantalla-gestor-entrenadores',
       'pantalla-gestor-alumnos','pantalla-gestor-alumno',
       'pantalla-gestor-todos-alumnos','pantalla-gestor-todos-alumno'];
 
@@ -6908,6 +7039,8 @@
       if (id === 'pantalla-gestor')                 cargarDatosGestor();
       if (id === 'pantalla-gestor-detalle')         renderGestorDetalle();
       if (id === 'pantalla-gestor-planning')        renderGestorPlanning();
+      if (id === 'pantalla-gestor-clases')          renderGestorClases();
+      if (id === 'pantalla-gestor-entrenadores')    renderGestorEntrenadores();
       if (id === 'pantalla-gestor-alumnos')         renderGestorAlumnos();
       if (id === 'pantalla-gestor-alumno')          renderGestorAlumno();
       if (id === 'pantalla-gestor-todos-alumnos')   renderGestorTodosAlumnos();
