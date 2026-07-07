@@ -39,6 +39,10 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.65.1 — Fecha de los días de la semana en negrita (2026-07)
+    · En las tarjetas bajo el calendario de Asistencia, la fecha del
+      día ("· 8 jul") pasa a negrita y color de texto para verse
+      mejor junto al nombre del día.
   v0.65.0 — Asistencia con calendario mensual (2026-07)
     · La pantalla Asistencia cambia: fuera los KPIs (Alumnos/Listas/
       Presencias — ya viven en el Resumen) y la barra de semana con
@@ -1586,7 +1590,7 @@
     .asist-dia-card.es-hoy { border-color:var(--lila-claro); background:#faf5ff; }
     .asist-dia-header { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
     .asist-dia-etiq { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.1em; color:var(--lila); }
-    .asist-dia-fecha-txt { font-size:12px; color:var(--gris); }
+    .asist-dia-fecha-txt { font-size:13px; font-weight:800; color:var(--texto); }   /* v0.65.1: fecha del día bien visible */
     .asist-hoy-badge { font-size:10px; font-weight:700; background:var(--lila); color:var(--blanco); border-radius:12px; padding:2px 8px; margin-left:auto; }
 
     /* Clase row en día card */
@@ -2889,7 +2893,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.65.0';
+    var APP_VERSION = '0.65.1';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
