@@ -39,6 +39,37 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.64.1 — Cuadro de alumnos sombreado en modo gestión (2026-07)
+    · Cuando el GESTOR edita la clase de un entrenador, el cuadro de
+      alumnos del formulario va sombreado en azul claro (tarjetas
+      blancas dentro): más atractivo y deja claro el modo gestión.
+    · Nota: el panel de quitar alumno con motivo (📉 baja / 🔀 cambio
+      de grupo / 🗑 error, v0.63) ya es compartido: EN3, EN2 y EN1 lo
+      tienen al editar sus propias clases; no necesitó cambios.
+  v0.64.0 — Meses del curso en el panel del gestor (2026-07)
+    · Fila con TODOS los meses del curso (sep–jun) sobre el planning
+      semanal: el mes en curso va sombreado en azul claro y el mes
+      SELECCIONADO en verde (en julio/agosto se preselecciona junio).
+    · Al elegir un mes, el planning muestra cuántas clases se dieron
+      ese mes junto a cada entrenador (chip verde "N✓") y TODOS los
+      accesos del panel se abren ya posicionados en ese mes: tocar
+      un día o una franja abre el planning en ese mes, y tocar un
+      entrenador (en el grid o en su tarjeta) abre su detalle en ese
+      mes directamente — sin tener que navegar con ‹ › después.
+  v0.63.0 — Quitar alumno con motivo + memoria de periodos (2026-07)
+    · Al quitar un alumno de un grupo (✕ del formulario) sale una
+      VENTANA con el motivo: 📉 BAJA (se guarda la fecha elegida,
+      hoy por defecto), 🔀 CAMBIO de grupo (baja aquí conservando
+      su historial + recordatorio al guardar de darlo de alta en la
+      clase nueva) o 🗑 eliminar del todo (solo errores, con aviso).
+    · Si un alumno VUELVE al mismo grupo (alta rápida o formulario)
+      se ofrece reincorporarlo: el periodo cerrado pasa a hist[] y
+      se abre uno nuevo desde esa fecha. alActivo mira TODOS los
+      periodos → el hueco entre baja y reincorporación no cuenta
+      como faltas y el historial continúa donde estaba.
+    · Los periodos anteriores se ven en el formulario de la clase y
+      en la ficha del alumno ("antes: 01/10/25–15/01/26").
+    · Sin migración de Supabase (hist viaja dentro del jsonb).
   v0.62.0 — Planning semanal de la academia (2026-07)
     · Panel del gestor: bajo los entrenadores, esquema semanal L–V
       (+ finde si hay clases) del curso actual con cada franja
@@ -1007,6 +1038,15 @@
     .gplan-ent { font-size:10px; font-weight:700; color:#1e40af; background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:3px 2px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; -webkit-tap-highlight-color:transparent; }
     .gplan-ent:active { transform:scale(0.97); }
     .gplan-vacio { text-align:center; color:#d1d5db; font-weight:700; padding:6px 0; }
+    .alquitar-panel { background:var(--arena); border:1.5px solid var(--borde); border-radius:10px; padding:0.7rem 0.75rem; margin-top:8px; }
+    /* Meses del curso en el panel del gestor (v0.64) */
+    .gpmes-row { display:flex; gap:4px; flex-wrap:wrap; margin:0 0 4px; }
+    .gpmes-chip { flex:1; min-width:44px; font-size:11px; font-weight:700; color:var(--gris); background:var(--blanco); border:1.5px solid var(--borde); border-radius:8px; padding:5px 2px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .gpmes-chip:active { transform:scale(0.96); }
+    .gpmes-chip.hoy { color:#1e40af; background:#eff6ff; border-color:#bfdbfe; }   /* mes en curso: azul claro */
+    .gpmes-chip.sel { color:var(--blanco); background:var(--verde); border-color:var(--verde); }
+    .gpmes-chip.hoy.sel { color:#fff; background:#1e40af; border-color:#1e40af; }
+    .gplan-dadas { font-size:9px; font-weight:800; color:#166534; background:#dcfce7; border-radius:6px; padding:0 4px; }
     .ghd-ent-chip { font-size:11px; font-weight:800; color:#1e40af; background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:20px; padding:3px 9px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
     .ghd-ent-chip:active { transform:scale(0.96); }
     .ghd-al { font-size:11px; font-weight:700; color:#1e40af; background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:20px; padding:3px 9px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
@@ -1544,6 +1584,10 @@
     .asist-form-add-alumno input { flex:1; }
     /* Alumno con fechas desde/hasta */
     .asist-al-fila { background:var(--arena); border:1px solid var(--borde); border-radius:12px; padding:8px 10px; margin-bottom:6px; }
+    /* Modo gestión (gestor editando la clase de un entrenador): cuadro de
+       alumnos sombreado en azul claro (v0.64.1) */
+    .asist-form-alumnos-lista.gestion { background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:12px; padding:8px; }
+    .asist-form-alumnos-lista.gestion .asist-al-fila { background:var(--blanco); border-color:#bfdbfe; }
     .asist-al-fila-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
     .asist-al-fila-nombre { font-size:13px; font-weight:700; color:var(--texto); }
     .asist-al-fila-fechas { display:flex; gap:8px; margin-top:6px; }
@@ -2802,7 +2846,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.62.0';
+    var APP_VERSION = '0.64.1';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -3833,26 +3877,44 @@
       });
 
       // ── PLANNING SEMANAL de la academia (v0.62) ──────────────────
-      // Esquema L–V (+ finde si hay clases) con todas las clases del
-      // curso actual por franja horaria y el entrenador que la da.
-      // Día → todas las clases de ese día; franja → esa franja; nombre
-      // del entrenador → su detalle.
+      // Esquema L–V (+ finde si hay clases) por franja horaria con el
+      // entrenador que la da. Desde v0.64 hay una fila con los MESES del
+      // curso (sep–jun, el mes en curso sombreado en azul): al elegir un
+      // mes, el planning muestra las clases dadas de ese mes y todos los
+      // accesos (día, franja, entrenador) se abren YA en ese mes.
       var cursoAct = cursoDeFecha(hoyLocal());
-      var slots = {};   // dia → franja → [{uid, ent}]
+      var mesesCurso = _gPanelMesesCurso();
+      if (!_gPanelMes || mesesCurso.indexOf(_gPanelMes) < 0) _gPanelMes = _gPanelMesDefecto(mesesCurso);
+      var mesHoy = hoyLocal().slice(0, 7);
+
+      h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Planning semanal · curso ' + cursoAct + '</div>';
+      h += '<div class="gpmes-row">' + mesesCurso.map(function(m){
+        var cls = 'gpmes-chip' + (m === mesHoy ? ' hoy' : '') + (m === _gPanelMes ? ' sel' : '');
+        return '<button type="button" class="' + cls + '" onclick="gestorPanelMes(\'' + m + '\')">' +
+               MESES_NOMBRES_A[+m.slice(5,7)-1].slice(0,3) + '</button>';
+      }).join('') + '</div>';
+      h += '<p class="ajustes-desc" style="margin:2px 0 0.6rem;">Viendo <b>' +
+        MESES_NOMBRES_A[+_gPanelMes.slice(5,7)-1] + ' ' + _gPanelMes.slice(0,4) +
+        '</b> · toca un día, una franja o un entrenador y se abre ya en ese mes. ✓ = clases dadas ese mes.</p>';
+
+      var slots = {};   // dia → franja → [{uid, ent, dadas}]
       uids.forEach(function(u){
         var d2 = by[u];
         var ent = _gestorNombre(d2).split(' ')[0];   // nombre de pila
+        var regsU = _gestorRegsLocal(d2);
         _gestorClasesLocal(d2).forEach(function(c){
           if (_claseCurso(c) !== cursoAct || c.diaSemana < 0) return;
+          // Clases dadas de esa clase en el MES seleccionado
+          var dadasMes = regsU.filter(function(r){
+            return r.claseId === c.id && r.fecha && r.fecha.slice(0,7) === _gPanelMes && _regPasada(r);
+          }).length;
           var dd = (slots[c.diaSemana] = slots[c.diaSemana] || {});
-          (dd[c.franja || '—'] = dd[c.franja || '—'] || []).push({ uid: u, ent: ent });
+          (dd[c.franja || '—'] = dd[c.franja || '—'] || []).push({ uid: u, ent: ent, dadas: dadasMes });
         });
       });
       var diasPlan = [1,2,3,4,5];
       if (slots[6]) diasPlan.push(6);
       if (slots[0]) diasPlan.push(0);
-      h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Planning semanal · curso ' + cursoAct + '</div>';
-      h += '<p class="ajustes-desc" style="margin:-2px 0 0.6rem;">Toca un día para ver todas sus clases, una franja para ir a esa hora, o un entrenador para abrir sus clases.</p>';
       h += '<div class="gplan-grid">';
       diasPlan.forEach(function(dia){
         h += '<div class="gplan-col">';
@@ -3865,7 +3927,8 @@
             h += '<div class="gplan-slot">';
             h += '<button type="button" class="gplan-hora" onclick="gestorPlanAbrir(' + dia + ',\'' + _gEsc(fr).replace(/'/g,"\\'") + '\')">' + _gEsc(fr) + '</button>';
             slots[dia][fr].forEach(function(e){
-              h += '<button type="button" class="gplan-ent" onclick="abrirGestorDetalle(\'' + e.uid + '\')">' + _gEsc(e.ent) + '</button>';
+              h += '<button type="button" class="gplan-ent" onclick="abrirGestorDetalle(\'' + e.uid + '\')">' + _gEsc(e.ent) +
+                   (e.dadas ? ' <span class="gplan-dadas">' + e.dadas + '✓</span>' : '') + '</button>';
             });
             h += '</div>';
           });
@@ -3880,14 +3943,42 @@
       if (sub) sub.textContent = uids.length + ' entrenador' + (uids.length !== 1 ? 'es' : '') + ' con datos';
     }
 
-    function abrirGestorDetalle(uid) { _gestorUid = uid; _gestorMesOff = 0; _gHist = null; _gCierreOpen = false; _gResumenOpen = false; irA('pantalla-gestor-detalle'); }
+    // ── Mes seleccionado en el panel principal (v0.64) ──────────────
+    // Fila de meses del curso (sep–jun): todas las vistas que se abren
+    // desde el panel (detalle del entrenador, planning de día/franja)
+    // arrancan YA posicionadas en ese mes.
+    var _gPanelMes = null;   // 'YYYY-MM' seleccionado en el panel
+    function _gPanelMesesCurso() {
+      var y0 = parseInt(cursoDeFecha(hoyLocal()).slice(0,4), 10);
+      var out = [];
+      [9,10,11,12].forEach(function(m){ out.push(y0 + '-' + ('0'+m).slice(-2)); });
+      [1,2,3,4,5,6].forEach(function(m){ out.push((y0+1) + '-0' + m); });
+      return out;
+    }
+    function _gPanelMesDefecto(meses) {
+      var hoy = hoyLocal().slice(0,7);
+      if (meses.indexOf(hoy) >= 0) return hoy;
+      // fuera de curso (jul/ago): el último mes del curso ya pasado
+      var ant = meses.filter(function(m){ return m <= hoy; });
+      return ant.length ? ant[ant.length-1] : meses[0];
+    }
+    // Offset en meses desde HOY hasta el mes seleccionado (para getMesISO_A)
+    function _gPanelMesOffset() {
+      if (!_gPanelMes) return 0;
+      var hoy = new Date();
+      return (parseInt(_gPanelMes.slice(0,4),10) - hoy.getFullYear()) * 12 +
+             (parseInt(_gPanelMes.slice(5,7),10) - (hoy.getMonth() + 1));
+    }
+    function gestorPanelMes(m) { _gPanelMes = m; renderGestor(); }
+
+    function abrirGestorDetalle(uid) { _gestorUid = uid; _gestorMesOff = _gPanelMesOffset(); _gHist = null; _gCierreOpen = false; _gResumenOpen = false; irA('pantalla-gestor-detalle'); }
     function gestorMesNav(delta) { _gestorMesOff += delta; _gCierreOpen = false; _gResumenOpen = false; renderGestorDetalle(); }
 
     // ── PLANNING SEMANAL — vista de un día (o una franja) de toda la
     // academia (v0.62): mismas tarjetas y acciones que el detalle.
     var _gPlanDia = null, _gPlanFranja = null, _gPlanMesOff = 0;
     function gestorPlanAbrir(dia, franja) {
-      _gPlanDia = dia; _gPlanFranja = franja || null; _gPlanMesOff = 0;
+      _gPlanDia = dia; _gPlanFranja = franja || null; _gPlanMesOff = _gPanelMesOffset();
       irA('pantalla-gestor-planning');
     }
     function gestorPlanMesNav(delta) { _gPlanMesOff += delta; renderGestorPlanning(); }
@@ -4749,7 +4840,8 @@
             enAlguna = true;
             return { nombre: nom, apellidos: ape, telefono: tel,
                      alta: elA ? (elA.value || '') : alAlta(a),
-                     baja: elB ? (elB.value || '') : alBaja(a) };
+                     baja: elB ? (elB.value || '') : alBaja(a),
+                     hist: alHist(a).slice() };
           });
         });
         if (enAlguna) escribirAsistConfig(cfg);
@@ -4945,7 +5037,7 @@
         (cl.alumnos || []).forEach(function(a){
           if (alNom(a) !== _gestorAlumno) return;
           clasesAl.push({ id: cl.id, dia: _GDIAS[cl.diaSemana] || '¿?', franja: cl.franja || '—',
-                          alta: alAlta(a), baja: alBaja(a) });
+                          alta: alAlta(a), baja: alBaja(a), hist: alHist(a) });
         });
       });
       clasesAl.sort(function(a,b){
@@ -4968,7 +5060,10 @@
         clasesAl.forEach(function(x){
           h += '<div class="gal-altas-row">' +
             '<span class="gal-altas-clase">' + _gEsc(x.dia + ' · ' + x.franja) + '</span>' +
-            '<span class="gal-altas-fechas">Alta: ' + (x.alta ? _gFecha(x.alta) : 'inicio') + '</span>' +
+            '<span class="gal-altas-fechas">Alta: ' + (x.alta ? _gFecha(x.alta) : 'inicio') +
+              ((x.hist || []).length ? ' · antes: ' + x.hist.map(function(p){
+                return (p.alta ? _gFecha(p.alta) : 'inicio') + '–' + (p.baja ? _gFecha(p.baja) : '¿?');
+              }).join(', ') : '') + '</span>' +
             (x.baja ? '<span class="gal-dia no">✗ Baja: ' + _gFecha(x.baja) + '</span>'
                     : '<span class="gal-dia si">De alta</span>') +
           '</div>';
@@ -9230,12 +9325,24 @@
       var ini = ap.split(/\s+/).filter(Boolean).map(function(w){ return w.charAt(0).toUpperCase() + '.'; }).join('');
       return n + (ini ? ' ' + ini : '');
     }
-    function alActivo(a, fecha) {           // activo en esa fecha (alta<=fecha<=baja)
+    // Periodos ANTERIORES de alta/baja del alumno en la clase (v0.63):
+    // cuando se reincorpora al mismo grupo, el periodo cerrado se guarda
+    // aquí y alta/baja pasan a ser el periodo actual. Así las fechas del
+    // hueco no cuentan como faltas y el historial nunca se pierde.
+    function alHist(a) { return (a && typeof a === 'object' && a.hist) || []; }
+    function alActivo(a, fecha) {           // activo en esa fecha (algún periodo)
       if (!fecha) return true;
-      var alta = alAlta(a), baja = alBaja(a);
-      if (alta && fecha < alta) return false;
-      if (baja && fecha > baja) return false;
-      return true;
+      function dentro(alta, baja) {
+        if (alta && fecha < alta) return false;
+        if (baja && fecha > baja) return false;
+        return true;
+      }
+      if (dentro(alAlta(a), alBaja(a))) return true;
+      var hs = alHist(a);
+      for (var i = 0; i < hs.length; i++) {
+        if (dentro(hs[i].alta || '', hs[i].baja || '')) return true;
+      }
+      return false;
     }
     // ¿La lista de este registro está realmente PASADA? Un registro que
     // solo contiene recuperaciones previstas (v0.60) NO cuenta como lista
@@ -9619,11 +9726,22 @@
       var cfg = leerAsistConfig();
       var clase = (cfg.clases||[]).filter(function(c){ return c.id===asistClaseActivaId; })[0];
       if (!clase) return;
-      if ((clase.alumnos||[]).some(function(a){ return alNom(a) === nombre; })) {
-        alert('"' + nombre + '" ya está en esta clase (revisa sus fechas de alta/baja).'); return;
+      var idxYa = -1;
+      (clase.alumnos||[]).forEach(function(a, i){ if (alNom(a) === nombre) idxYa = i; });
+      if (idxYa >= 0) {
+        var ya = clase.alumnos[idxYa];
+        if (!alBaja(ya)) { alert('"' + nombre + '" ya está de alta en esta clase.'); return; }
+        // v0.63: reincorporación — continúa su historial en el mismo grupo
+        if (!confirm('"' + nombre + '" ya estuvo en esta clase (baja el ' + _gFecha(alBaja(ya)) + ').\n\n¿Darlo de ALTA otra vez desde el ' + _gFecha(asistFechaActiva) + '? Su historial anterior se conserva y continúa.')) return;
+        // entradas antiguas como texto plano → convertir a objeto
+        if (typeof ya !== 'object') ya = clase.alumnos[idxYa] = { nombre: nombre, alta: '', baja: '' };
+        _alReactivar(ya, asistFechaActiva);
+        if (!ya.apellidos && ape.trim()) ya.apellidos = ape.trim();
+        if (!ya.telefono  && tel.trim()) ya.telefono  = tel.trim();
+      } else {
+        clase.alumnos = (clase.alumnos||[]).concat([{ nombre:nombre, apellidos:ape.trim(), telefono:tel.trim(),
+                                                      alta:asistFechaActiva, baja:'' }]);
       }
-      clase.alumnos = (clase.alumnos||[]).concat([{ nombre:nombre, apellidos:ape.trim(), telefono:tel.trim(),
-                                                    alta:asistFechaActiva, baja:'' }]);
       escribirAsistConfig(cfg);
       asistAltaPanelOn = false;
       renderizarPasarLista();   // el alumno aparece ya en la lista del día
@@ -9840,7 +9958,8 @@
         document.getElementById('asist-form-franja').value = clase.franja || '';
         document.getElementById('asist-form-nombre').value = clase.nombre || '';
         asistAlumnosForm = (clase.alumnos||[]).map(function(a){
-          return { nombre: alNom(a), apellidos: alApe(a), telefono: alTel(a), alta: alAlta(a), baja: alBaja(a) };
+          return { nombre: alNom(a), apellidos: alApe(a), telefono: alTel(a),
+                   alta: alAlta(a), baja: alBaja(a), hist: alHist(a).slice() };
         });
       } else {
         document.getElementById('asist-form-dia').value    = '1';
@@ -9853,21 +9972,24 @@
       document.getElementById('asist-form-nuevo-apellidos').value = '';
       document.getElementById('asist-form-nuevo-telefono').value  = '';
       document.getElementById('asist-form-franja').classList.remove('form-error');
+      _alQuitarIdx = null; _avisoCambioGrupo = null;
       _dlAlumnosFill();   // autocompletado con la base de alumnos (v0.60)
       renderAlumnosForm();
     }
 
     function renderAlumnosForm() {
       var cont = document.getElementById('asist-form-alumnos');
+      // v0.64.1: en modo gestión (gestor) el cuadro de alumnos va sombreado
+      cont.classList.toggle('gestion', !!_gEditUid);
       if (asistAlumnosForm.length === 0) {
         cont.innerHTML = '<span style="font-size:12px;color:var(--gris);">Sin alumnos aún</span>';
         return;
       }
       cont.innerHTML = asistAlumnosForm.map(function(a, i) {
-        return '<div class="asist-al-fila">' +
+        var s = '<div class="asist-al-fila">' +
           '<div class="asist-al-fila-top">' +
             '<span class="asist-al-fila-nombre">' + _gEsc(alNom(a)) + '</span>' +
-            '<button class="asist-chip-quitar" onclick="asistQuitarAlumnoForm(' + i + ')">✕</button>' +
+            '<button class="asist-chip-quitar" onclick="asistQuitarMenu(' + i + ')">✕</button>' +
           '</div>' +
           '<div class="asist-al-fila-fechas">' +
             '<label>Apellidos<input type="text" value="' + _gEsc(a.apellidos||'') + '" placeholder="Apellidos" onchange="asistSetAlumnoFecha(' + i + ',\'apellidos\',this.value)"></label>' +
@@ -9876,9 +9998,54 @@
           '<div class="asist-al-fila-fechas">' +
             '<label>Desde<input type="date" value="' + (a.alta||'') + '" onclick="if(this.showPicker)this.showPicker()" onchange="asistSetAlumnoFecha(' + i + ',\'alta\',this.value)"></label>' +
             '<label>Hasta<input type="date" value="' + (a.baja||'') + '" onclick="if(this.showPicker)this.showPicker()" onchange="asistSetAlumnoFecha(' + i + ',\'baja\',this.value)"></label>' +
-          '</div>' +
-        '</div>';
+          '</div>';
+        // Periodos anteriores (reincorporaciones): solo informativo
+        var hs = alHist(a);
+        if (hs.length) {
+          s += '<div style="font-size:10.5px;color:var(--gris);margin-top:4px;">Periodos anteriores: ' +
+            hs.map(function(p){ return (p.alta ? _gFecha(p.alta) : 'inicio') + ' – ' + (p.baja ? _gFecha(p.baja) : '¿?'); }).join(' · ') +
+          '</div>';
+        }
+        // ── Ventana de motivo al quitar (v0.63): baja / cambio / error ──
+        if (_alQuitarIdx === i) {
+          s += '<div class="alquitar-panel">' +
+            '<div class="gcierre-tit">¿Por qué quitas a ' + _gEsc(alNom(a)) + '?</div>' +
+            '<label style="display:block;font-size:11px;font-weight:700;color:var(--gris);margin-bottom:6px;">Fecha ' +
+              '<input type="date" id="alq-fecha" value="' + hoyLocal() + '" onclick="if(this.showPicker)this.showPicker()" style="display:block;width:100%;margin-top:2px;font-family:inherit;font-size:13px;padding:5px 8px;border:1.5px solid var(--borde);border-radius:8px;"></label>' +
+            '<button type="button" class="gcierre-opt" onclick="asistQuitarAplicar(' + i + ',\'baja\')">📉 Se da de BAJA (deja de venir) — se guarda la fecha</button>' +
+            '<button type="button" class="gcierre-opt" onclick="asistQuitarAplicar(' + i + ',\'cambio\')">🔀 CAMBIA de grupo — su historial aquí queda guardado</button>' +
+            '<button type="button" class="gcierre-opt todas" onclick="asistQuitarAplicar(' + i + ',\'borrar\')">🗑 Eliminar del todo (solo si fue un error)</button>' +
+            '<button type="button" class="gcierre-opt cancel" onclick="asistQuitarMenu(null)">Cancelar</button>' +
+          '</div>';
+        }
+        s += '</div>';
+        return s;
       }).join('');
+    }
+
+    // Abre/cierra la ventana de motivo al quitar un alumno del grupo
+    var _alQuitarIdx = null;
+    var _avisoCambioGrupo = null;   // nombre del alumno que cambia de grupo
+    function asistQuitarMenu(idx) {
+      _alQuitarIdx = (idx === null || _alQuitarIdx === idx) ? null : idx;
+      renderAlumnosForm();
+    }
+    function asistQuitarAplicar(idx, tipo) {
+      var a = asistAlumnosForm[idx];
+      if (!a) return;
+      var fEl = document.getElementById('alq-fecha');
+      var f = (fEl && fEl.value) || hoyLocal();
+      if (tipo === 'borrar') {
+        if (!confirm('🗑 Eliminar del todo a "' + alNom(a) + '" de esta clase.\n\nSolo para ERRORES (se apuntó por equivocación): si tiene listas pasadas, su rastro quedaría descolgado del cupo.\n\nSi deja de venir o cambia de grupo, usa las otras opciones.\n\n¿Eliminar?')) return;
+        asistAlumnosForm.splice(idx, 1);
+      } else {
+        // baja o cambio de grupo: en ambos casos se cierra el periodo aquí
+        // con la fecha elegida; el historial de sus listas se conserva.
+        a.baja = f;
+        if (tipo === 'cambio') _avisoCambioGrupo = alNom(a);
+      }
+      _alQuitarIdx = null;
+      renderAlumnosForm();
     }
 
     function asistSetAlumnoFecha(idx, campo, val) {
@@ -9904,7 +10071,20 @@
       var inpTel = document.getElementById('asist-form-nuevo-telefono');
       var nombre = input.value.trim();
       if (!nombre) return;
-      if (asistAlumnosForm.some(function(a){ return alNom(a) === nombre; })) { input.value=''; return; }
+      var ya = asistAlumnosForm.filter(function(a){ return alNom(a) === nombre; })[0];
+      if (ya) {
+        // v0.63: si vuelve al mismo grupo, se CONTINÚA su historial — el
+        // periodo cerrado pasa a hist y se abre uno nuevo desde hoy.
+        if (alBaja(ya)) {
+          if (confirm('"' + nombre + '" ya estuvo en esta clase (baja el ' + _gFecha(alBaja(ya)) + ').\n\n¿Darlo de ALTA otra vez desde hoy? Su historial anterior se conserva y continúa.')) {
+            _alReactivar(ya, hoyLocal());
+            renderAlumnosForm();
+          }
+        } else {
+          alert('"' + nombre + '" ya está de alta en esta clase.');
+        }
+        input.value = ''; return;
+      }
       asistAutoRellenar(nombre);
       asistAlumnosForm.push({ nombre: nombre, apellidos: inpApe.value.trim(), telefono: inpTel.value.trim(), alta: '', baja: '' });
       input.value = ''; inpApe.value = ''; inpTel.value = '';
@@ -9912,9 +10092,14 @@
       input.focus();
     }
 
-    function asistQuitarAlumnoForm(idx) {
-      asistAlumnosForm.splice(idx, 1);
-      renderAlumnosForm();
+    // Reincorpora a un alumno: guarda el periodo cerrado en hist[] y abre
+    // un periodo nuevo desde la fecha dada (v0.63). El hueco entre baja y
+    // reincorporación NO cuenta como faltas (alActivo mira los periodos).
+    function _alReactivar(a, fecha) {
+      a.hist = alHist(a).slice();
+      a.hist.push({ alta: alAlta(a) || '', baja: alBaja(a) || '' });
+      a.alta = fecha;
+      a.baja = '';
     }
 
     function asistGuardarClase() {
@@ -9947,6 +10132,11 @@
 
       escribirAsistConfig(cfg);
       asistClaseEditId = null;
+      // v0.63: si el alumno se quitó por CAMBIO de grupo, guiar el alta
+      if (_avisoCambioGrupo) {
+        alert('✔ Historial de "' + _avisoCambioGrupo + '" guardado en esta clase.\n\nAhora añádelo a su clase NUEVA (✏ Editar la clase → escribir su nombre, se autocompleta; o "＋ Añadir alumno" desde la lista de un día). Ahí empezará su nuevo historial.');
+        _avisoCambioGrupo = null;
+      }
       _asistFormSalida();
     }
 
