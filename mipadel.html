@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.68.0
+  TU APP DE PÁDEL — v0.45.0
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,15 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.68.1 — Sustitución tras un botón (menos ruido) (2026-07)
+    · El selector "Impartida por" deja de estar siempre visible en
+      la pantalla de pasar lista. En su lugar, un botón "🔁
+      Sustitución de clase" en la fila de acciones, tras "＋ Añadir
+      alumno". Solo al pulsarlo se despliega el selector para elegir
+      quién dio la clase.
+    · Si ya hay un sustituto anotado, el botón se muestra en ÁMBAR
+      con su nombre (🔁 Nombre), así el cambio de titular se ve de un
+      vistazo sin abrir el panel. Aplica también al gestor/EN3.
   v0.68.0 — El entrenador anota su propia sustitución (2026-07)
     · Al pasar (o corregir) SU lista, cualquier entrenador ve el
       desplegable "Impartida por 🔁" que antes era exclusivo del
@@ -2781,7 +2790,6 @@
           <label class="form-label">Fecha de la clase</label>
           <input id="asist-lista-fecha" class="form-input" type="date" onchange="asistCambiarFechaLista(this.value)">
         </div>
-        <div id="asist-lista-sust"></div><!-- v0.66: selector "Impartida por" (solo gestor/EN3) -->
       </div>
       <div id="asist-lista-alumnos"></div>
       <div id="asist-recup-zona"></div>
@@ -2995,7 +3003,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.68.0';
+    var APP_VERSION = '0.68.1';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -9812,6 +9820,7 @@
     var asistRecups        = [];   // nombres de recuperaciones (invitados) ese día
     var asistRecupPanelOn  = false;
     var asistAltaPanelOn   = false;   // panel de alta rápida (v0.60)
+    var asistSustPanelOn   = false;   // panel de sustitución "Impartida por" (v0.68.1)
     var _abrirPanelRecup   = false;   // abrir Pasar lista con el panel de recup ya abierto
     var _abrirPanelAlta    = false;   // ídem con el panel de alta rápida
     var asistMesOffset     = 0;    // meses desde el actual
@@ -10226,9 +10235,9 @@
       if (regExiste) (regExiste.justificadas||[]).forEach(function(n){ asistJustifs[n] = true; });
 
       // v0.66: quién imparte la clase ese día (se conserva al corregir la
-      // lista, aunque el selector solo lo vea el gestor/EN3)
+      // lista). v0.68.1: el selector ya no vive aquí; se despliega desde el
+      // botón "🔁 Sustitución de clase" para no meter ruido en la pantalla.
       asistImpartida = (regExiste && regExiste.impartidaPor) || null;
-      renderSustSelector();
 
       // Recuperaciones = previstas guardadas (recups, v0.60) + presentes
       // guardados que NO son del cupo activo. Una recuperación prevista
@@ -10249,6 +10258,7 @@
       }
       asistRecupPanelOn = _abrirPanelRecup; _abrirPanelRecup = false;
       asistAltaPanelOn  = _abrirPanelAlta;  _abrirPanelAlta  = false;
+      asistSustPanelOn  = false;   // el panel de sustitución arranca cerrado
       renderToggleAlumnos(clase);
     }
 
@@ -10306,12 +10316,37 @@
       if (!zona) return;
       _dlAlumnosFill();   // autocompletado con la base de alumnos de la academia
       var html = '';
-      if (!asistRecupPanelOn && !asistAltaPanelOn) {
+      if (!asistRecupPanelOn && !asistAltaPanelOn && !asistSustPanelOn) {
+        // Botón de sustitución (v0.68.1): solo con sesión Supabase (necesita
+        // el catálogo de entrenadores). Si ya hay sustituto, se muestra en
+        // ámbar con su nombre para no perder el dato aunque el panel esté
+        // cerrado; así "Impartida por" solo aparece al cambiar el titular.
+        var sustBtn = '';
+        if (_sb && _sbUser) {
+          var sustOn = !!asistImpartida;
+          sustBtn =
+            '<button class="btn btn-sec btn-sm" style="flex:1;min-width:130px;border-color:#fde68a;color:#92400e;' +
+              (sustOn ? 'background:#fffbeb;font-weight:700;' : '') + '" onclick="asistToggleSustPanel()">🔁 ' +
+              (sustOn ? _gEsc(asistImpartida.nombre) : 'Sustitución de clase') + '</button>';
+        }
         zona.innerHTML =
           '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
             '<button class="btn btn-sec btn-sm" style="flex:1;min-width:130px;border-color:var(--lila-claro);color:var(--lila);" onclick="asistToggleRecupPanel()">↩ Recuperación</button>' +
             '<button class="btn btn-sec btn-sm" style="flex:1;min-width:130px;border-color:#bbf7d0;color:#166534;" onclick="asistToggleAltaPanel()">＋ Añadir alumno</button>' +
+            sustBtn +
           '</div>';
+        return;
+      }
+      if (asistSustPanelOn) {
+        // Panel de sustitución: el selector "Impartida por" vive aquí ahora,
+        // oculto hasta que el usuario decide cambiar el titular de la clase.
+        zona.innerHTML =
+          '<div class="asist-recup-panel">' +
+            '<div style="font-size:12px;font-weight:700;color:var(--texto);margin-bottom:4px;">🔁 ¿Quién dio esta clase?</div>' +
+            '<div id="asist-lista-sust"></div>' +
+            '<button class="btn btn-sec btn-sm" style="margin-top:8px;" onclick="asistToggleSustPanel()">Cerrar</button>' +
+          '</div>';
+        renderSustSelector();
         return;
       }
       if (asistAltaPanelOn) {
@@ -10356,12 +10391,17 @@
 
     function asistToggleRecupPanel() {
       asistRecupPanelOn = !asistRecupPanelOn;
-      if (asistRecupPanelOn) asistAltaPanelOn = false;
+      if (asistRecupPanelOn) { asistAltaPanelOn = false; asistSustPanelOn = false; }
       renderToggleAlumnos(null);
     }
     function asistToggleAltaPanel() {
       asistAltaPanelOn = !asistAltaPanelOn;
-      if (asistAltaPanelOn) asistRecupPanelOn = false;
+      if (asistAltaPanelOn) { asistRecupPanelOn = false; asistSustPanelOn = false; }
+      renderToggleAlumnos(null);
+    }
+    function asistToggleSustPanel() {
+      asistSustPanelOn = !asistSustPanelOn;
+      if (asistSustPanelOn) { asistRecupPanelOn = false; asistAltaPanelOn = false; }
       renderToggleAlumnos(null);
     }
     function asistAltaAutoRellenar(v) {
