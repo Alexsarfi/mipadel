@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.67.1
+  TU APP DE PÁDEL — v0.68.0
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,20 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.68.0 — El entrenador anota su propia sustitución (2026-07)
+    · Al pasar (o corregir) SU lista, cualquier entrenador ve el
+      desplegable "Impartida por 🔁" que antes era exclusivo del
+      gestor: elige al compañero del club o al externo del catálogo
+      que dio la clase por él ese día. Se guarda en su registro
+      (impartida_por) y la clase cuenta al sustituto, no a él.
+    · El catálogo (perfiles del grupo + externos) se carga bajo
+      demanda en la cuenta del entrenador la primera vez que abre
+      una lista. Añadir externos NUEVOS sigue siendo solo de
+      gestor/EN3; el resto elige entre los ya existentes.
+    · REQUIERE la migración v0.68 de supabase_schema.sql: policies
+      SELECT para que un entrenador lea los perfiles de su mismo
+      grupo y el catálogo de sustitutos. Escribir su propia
+      sustitución ya lo permitía own_asistencia_registros.
   v0.67.1 — Ventana "Clases dadas" en HORAS por entrenador (2026-07)
     · La ventana habla en horas, que es su función. SIN recuadros
       de totales de la academia arriba (sobraban): solo la
@@ -2981,7 +2995,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.67.1';
+    var APP_VERSION = '0.68.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -4309,6 +4323,31 @@
       return nom || p.email || ('Entrenador ' + (p.user_id || '').slice(0,6));
     }
 
+    // ── v0.68: el propio entrenador anota su sustitución ──────────
+    // Solo gestor/EN3 pueden AÑADIR o quitar externos del catálogo.
+    // El resto de entrenadores pueden elegir entre los ya existentes.
+    function _puedeGestionarExternos() {
+      return !!(_esGestor || (_sbGrupo && _sbGrupo.rol === 'nivel3'));
+    }
+    // Catálogo ligero (perfiles del grupo + externos) para poblar el
+    // selector "Impartida por" en cuentas de entrenador que NO son gestor
+    // (el gestor ya lo carga entero en cargarDatosGestor). Se guarda en
+    // _gestorData porque es de donde leen _sustOptionsHTML/_sustDesdeVal.
+    var _sustCatLoading = false, _sustCatListo = false;
+    function _cargarSustCat(done) {
+      if (!_sb || !_sbUser) { if (done) done(); return; }
+      Promise.all([
+        _sb.from('perfiles').select('*'),
+        _sb.from('sustitutos').select('*').order('nombre')
+      ]).then(function(res) {
+        _gestorData = _gestorData || {};
+        _gestorData.perfiles   = (res[0] && !res[0].error && res[0].data) || _gestorData.perfiles   || [];
+        _gestorData.sustitutos = (res[1] && !res[1].error && res[1].data) || _gestorData.sustitutos || [];
+        _sustCatListo = true;
+        if (done) done();
+      }).catch(function() { if (done) done(); });
+    }
+
     // ── Selector "Impartida por" en la pantalla de pasar lista ──
     // Solo visible cuando se llega desde el panel del gestor
     // (_gEditVolverA). asistImpartida guarda el valor del día y se
@@ -4338,7 +4377,9 @@
         extOps += '<option value="' + _gEsc(sel) + '" selected>' + _gEsc(imp.nombre) + '</option>';
       }
       if (extOps) ops += '<optgroup label="Externos">' + extOps + '</optgroup>';
-      ops += '<option value="__add">＋ Añadir externo…</option>';
+      // Añadir un externo nuevo solo lo puede hacer gestor/EN3 (RLS de
+      // escritura en la tabla sustitutos). El resto elige entre existentes.
+      if (_puedeGestionarExternos()) ops += '<option value="__add">＋ Añadir externo…</option>';
       return ops;
     }
     // Convierte el value del desplegable en {uid, nombre} | null
@@ -4355,18 +4396,33 @@
     function renderSustSelector() {
       var zona = document.getElementById('asist-lista-sust');
       if (!zona) return;
-      // Titular sin panel del gestor: solo aviso de que la dio otro (v0.66.1)
-      if (!_gEditVolverA || !_gestorData) {
+      // Sin sesión de Supabase no hay sustituciones: como mucho, aviso.
+      if (!_sb || !_sbUser) {
         zona.innerHTML = asistImpartida
-          ? '<p class="ajustes-desc" style="margin:0.5rem 0 0;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:6px 10px;">🔁 Esta clase la imparte <b>' + _gEsc(asistImpartida.nombre) + '</b> (lo anotó el gestor).</p>'
+          ? '<p class="ajustes-desc" style="margin:0.5rem 0 0;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:6px 10px;">🔁 Esta clase la imparte <b>' + _gEsc(asistImpartida.nombre) + '</b>.</p>'
           : '';
+        return;
+      }
+      // El catálogo (perfiles del grupo + externos) lo carga entero el
+      // gestor; el resto de entrenadores lo cargan aquí bajo demanda
+      // (v0.68) para poder anotar ellos mismos quién les sustituyó.
+      if (!_gestorData || !_gestorData.perfiles) {
+        if (!_sustCatLoading) {
+          _sustCatLoading = true;
+          _cargarSustCat(function() { _sustCatLoading = false; renderSustSelector(); });
+        }
+        zona.innerHTML = '<div class="form-grupo" style="margin-top:0.75rem;">' +
+          '<label class="form-label">Impartida por 🔁</label>' +
+          '<p class="ajustes-desc" style="margin:2px 0 0;">Cargando entrenadores…</p></div>';
         return;
       }
       var titularUid = _gEditUid || (_sbUser && _sbUser.id) || null;
       zona.innerHTML = '<div class="form-grupo" style="margin-top:0.75rem;">' +
         '<label class="form-label">Impartida por 🔁</label>' +
         '<select class="form-input" onchange="asistSetImpartida(this.value)">' + _sustOptionsHTML(asistImpartida, titularUid) + '</select>' +
-        (asistImpartida ? '<p class="ajustes-desc" style="margin:4px 0 0;">Esta clase contará al sustituto, no al titular.</p>' : '') +
+        (asistImpartida
+          ? '<p class="ajustes-desc" style="margin:4px 0 0;">Esta clase contará al sustituto, no a ti.</p>'
+          : '<p class="ajustes-desc" style="margin:4px 0 0;">Si otro entrenador dio esta clase por ti, elígelo aquí.</p>') +
         '</div>';
     }
     // ── Sustitución directa desde el desplegable del día (v0.66.1) ──
