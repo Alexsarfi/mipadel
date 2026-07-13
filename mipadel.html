@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.70.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.71.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,17 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.71.0 — Sustitución de un día completo en una acción (2026-07)
+    · En el panel "🔁 Sustitución" del día (detalle del entrenador y
+      planning), si el entrenador tiene 2+ clases esa misma fecha
+      aparece un segundo desplegable "…o que cubra las N clases de
+      ese día". Al elegir sustituto, se aplica a TODAS sus franjas
+      de esa fecha de una sola vez (gestorSustSetDiaTodo), con un
+      upsert por lote a asistencia_registros.
+    · Las clases que caen ese día se detectan con la misma lógica de
+      calendario del resto de la app (fechasClaseEnMes), respetando
+      día de la semana y curso. El desplegable por-clase de siempre
+      se mantiene para ajustes individuales.
   v0.69.0 — Barra por rol (nivel3) + ejercicios por golpe (2026-07)
     · Barra inferior dinámica según el rol. Para las cuentas nivel3
       (EN3) pasa a Inicio · Partido · Sesiones · Ejercicios: se quita
@@ -3026,7 +3037,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.70.0';
+    var APP_VERSION = '0.71.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -4496,6 +4507,57 @@
       });
       _gSustRerender(volverA);
     }
+    // ── Sustitución de TODO un día (v0.71): un sustituto cubre todas las
+    // franjas/clases de un entrenador en una fecha concreta, de una sola
+    // acción. Reutiliza el mismo upsert que gestorSustSetDia, por lote.
+    function gestorSustSetDiaTodo(uid, fecha, val, volverA) {
+      if (!_gestorData || !_sb) return;
+      if (val === '__add') {
+        var n = prompt('Nombre del sustituto externo:');
+        n = n ? n.trim() : '';
+        if (!n) { _gSustRerender(volverA); return; }
+        gestorSustAdd(n, function(){ gestorSustSetDiaTodo(uid, fecha, 'x:' + n, volverA); });
+        return;
+      }
+      var d = _gestorAgrupar()[uid];
+      if (!d) { _gSustRerender(volverA); return; }
+      var imp   = _sustDesdeVal(val);
+      var mes   = fecha.slice(0, 7);
+      var curso = cursoDeFecha(fecha);
+      // Clases del entrenador que caen ESE día (misma lógica de calendario
+      // que usa el resto de la app, así respeta el día de la semana y curso)
+      var clasesDia = _gestorClasesLocal(d).filter(function(c){
+        return _claseCurso(c) === curso && fechasClaseEnMes(c, mes).indexOf(fecha) > -1;
+      });
+      if (!clasesDia.length) { _gSustRerender(volverA); return; }
+      var regs = _gestorData.registros || [];
+      var payload = [];
+      clasesDia.forEach(function(c){
+        var reg = regs.filter(function(r){ return r.user_id === uid && r.clase_id === c.id && r.fecha === fecha; })[0];
+        if (!reg) {
+          if (!imp) return;   // sin registro previo y se vuelve al titular → nada que anotar
+          var maxId = 0;
+          regs.forEach(function(r){ if (r.user_id === uid && (r.id || 0) > maxId) maxId = r.id; });
+          reg = { id:maxId+1, user_id:uid, clase_id:c.id, fecha:fecha, presentes:[], ausentes:[],
+                  justificadas:[], recups:[], impartida_por:null, sin_clase:false };
+          regs.push(reg);
+        }
+        reg.impartida_por = imp;
+        payload.push({
+          id:reg.id, user_id:uid, clase_id:c.id, fecha:fecha,
+          presentes:reg.presentes||[], ausentes:reg.ausentes||[],
+          justificadas:reg.justificadas||[], recups:reg.recups||[],
+          impartida_por:imp, sin_clase:!!reg.sin_clase
+        });
+      });
+      _gestorData.registros = regs;
+      if (payload.length) {
+        _sb.from('asistencia_registros').upsert(payload, { onConflict:'user_id,id' }).then(function(r){
+          if (r.error) { alert('⚠️ No se pudo guardar la sustitución del día: ' + r.error.message + '\n¿Está ejecutada la migración v0.66 en Supabase?'); }
+        });
+      }
+      _gSustRerender(volverA);
+    }
     function asistSetImpartida(val) {
       if (val === '__add') {
         var n = prompt('Nombre del sustituto externo:');
@@ -4936,6 +4998,24 @@
       // v0.66.1: botón "🔁 Sustitución" junto a Recuperación y Añadir
       // alumno: despliega el selector y guarda al momento, sin pasar lista
       var pid = opts.idPref + '-sp-' + uid + '-' + clase.id + '-' + f;
+      // v0.71: si el entrenador tiene 2+ clases ese mismo día, ofrecer aplicar
+      // el sustituto a TODAS sus franjas de esa fecha de una sola acción.
+      var diaTodoSel = '';
+      if (!hist) {
+        var _dTodo = _gestorAgrupar()[uid];
+        if (_dTodo) {
+          var _mesTodo = f.slice(0, 7), _cursoTodo = cursoDeFecha(f);
+          var _hermanas = _gestorClasesLocal(_dTodo).filter(function(cc){
+            return _claseCurso(cc) === _cursoTodo && fechasClaseEnMes(cc, _mesTodo).indexOf(f) > -1;
+          });
+          if (_hermanas.length > 1) {
+            diaTodoSel =
+              '<label class="form-label" style="display:block;margin:9px 0 3px;">…o que cubra las ' + _hermanas.length + ' clases de ese día</label>' +
+              '<select class="form-input" onchange="gestorSustSetDiaTodo(\'' + uid + '\',\'' + f + '\',this.value,\'' + vol + '\')">' +
+              _sustOptionsHTML(reg && reg.impartidaPor, uid) + '</select>';
+          }
+        }
+      }
       var btnsExtra = hist ? '' :
         '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;">' +
           '<button type="button" class="ghd-edit-btn" onclick="gestorListaPanelU(\'' + uid + '\',' + clase.id + ',\'' + f + '\',\'recup\',\'' + vol + '\')">↩ Recuperación</button>' +
@@ -4946,6 +5026,7 @@
           '<label class="form-label" style="display:block;margin-bottom:3px;">¿Quién imparte esta clase el ' + parseInt(f.split('-')[2],10) + '/' + f.slice(5,7) + '?</label>' +
           '<select class="form-input" onchange="gestorSustSetDia(\'' + uid + '\',' + clase.id + ',\'' + f + '\',this.value,\'' + vol + '\')">' +
           _sustOptionsHTML(reg && reg.impartidaPor, uid) + '</select>' +
+          diaTodoSel +
         '</div>';
       // Chip ámbar con el sustituto (visible en cualquier estado del día)
       var sustChip = (reg && reg.impartidaPor)
