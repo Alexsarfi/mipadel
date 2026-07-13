@@ -39,6 +39,18 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.69.0 — Barra por rol (nivel3) + ejercicios por golpe (2026-07)
+    · Barra inferior dinámica según el rol. Para las cuentas nivel3
+      (EN3) pasa a Inicio · Partido · Sesiones · Ejercicios: se quita
+      "Plan" y se añade "Ejercicios". El resto de cuentas mantienen
+      Inicio · Plan · Partido · Sesiones. Se reconstruye al conocer
+      el rol tras el login (renderBottomNav / NAV_ORDEN_NIVEL3).
+    · La pantalla de Ejercicios se agrupa ahora por GOLPE en acordeón
+      (antes por tipo), en orden por fases del punto: Saque/Resto →
+      Fondo → Pared → Globo → Volea → Bandeja → Víbora → Remate →
+      Combinada. Dentro de cada golpe, mejor valorados primero. Los
+      chips de filtro (tipo, golpe, situación, zona, valoración) se
+      mantienen. Acordeón con clave "g:<golpe>".
   v0.68.1 — Sustitución tras un botón (menos ruido) (2026-07)
     · El selector "Impartida por" deja de estar siempre visible en
       la pantalla de pasar lista. En su lugar, un botón "🔁
@@ -3003,7 +3015,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.68.1';
+    var APP_VERSION = '0.69.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -3151,6 +3163,7 @@
           _sbGrupo = (rol && rol !== 'en1' && rol !== 'gestor')
                        ? { id: r.data.grupo_id, rol: rol } : null;
           _authActualizarBadge();
+          renderBottomNav();   // v0.69: barra según rol (nivel3 lleva Ejercicios)
           // El perfil (correo/nombre) se guarda en Supabase para que un gestor
           // pueda identificar a cada entrenador. El gestor no aporta datos.
           if (!_esGestor) { _subirPerfil(); }
@@ -7067,7 +7080,36 @@
       partido:    ['pantalla-partido','pantalla-marcador','pantalla-actas','pantalla-stats-jugador'],
       clases:     ['pantalla-clases-niveles','pantalla-clases','pantalla-clases-grupo']
     };
+    // ── Botones de la barra (por clave) y orden según rol (v0.69) ──
+    // La barra es dinámica: para el rol nivel3 (EN3) se sustituye "Plan"
+    // por "Ejercicios" y el orden queda Inicio·Partido·Sesiones·Ejercicios.
+    // El resto de cuentas mantienen Inicio·Plan·Partido·Sesiones.
+    var NAV_BTN_HTML = {
+      inicio:     '<button class="appnav-btn" data-nav="inicio" onclick="irA(\'pantalla-inicio\')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg></span><span>Inicio</span></button>',
+      plan:       '<button class="appnav-btn" data-nav="plan" onclick="irA(\'pantalla-planificacion\')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 3v3M16 3v3"/></svg></span><span>Plan</span></button>',
+      partido:    '<button class="appnav-btn" data-nav="partido" onclick="irA(\'pantalla-partido\')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M4.5 6.5c3.5 2.5 3.5 8.5 0 11M19.5 6.5c-3.5 2.5-3.5 8.5 0 11"/></svg></span><span>Partido</span></button>',
+      clases:     '<button class="appnav-btn" data-nav="clases" onclick="irA(\'pantalla-clases-niveles\')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><path d="M16.5 5.3a2.8 2.8 0 0 1 0 5.4M18 14.4c2 .5 3.5 2.2 3.5 5.1"/></svg></span><span>Sesiones</span></button>',
+      ejercicios: '<button class="appnav-btn" data-nav="ejercicios" onclick="irA(\'pantalla-ejercicios\')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none"/></svg></span><span>Ejercicios</span></button>'
+    };
+    var NAV_ORDEN_DEFECTO = ['inicio','plan','partido','clases'];
+    var NAV_ORDEN_NIVEL3  = ['inicio','partido','clases','ejercicios'];
+    function _navOrden(){
+      var esN3 = false;
+      try { esN3 = !!(_sbGrupo && _sbGrupo.rol === 'nivel3'); } catch(e){}
+      return esN3 ? NAV_ORDEN_NIVEL3 : NAV_ORDEN_DEFECTO;
+    }
+    var _navOrdenActual = null;
+    function renderBottomNav(force){
+      var nav = document.getElementById('appnav');
+      if (!nav) return;
+      var orden = _navOrden();
+      var clave = orden.join(',');
+      if (!force && clave === _navOrdenActual) return;   // solo reconstruye si cambia el rol
+      _navOrdenActual = clave;
+      nav.innerHTML = orden.map(function(k){ return NAV_BTN_HTML[k]; }).join('');
+    }
     function updateBottomNav(id){
+      renderBottomNav();   // asegura los botones correctos según el rol actual
       var nav = document.getElementById('appnav');
       if (!nav) return;
       var restringido = false;
@@ -7426,6 +7468,10 @@
     ];
     var GOLPE_LABEL = {}, GOLPE_ICONO = {};
     GOLPE_CANON.forEach(function(g){ GOLPE_LABEL[g.key] = g.label; GOLPE_ICONO[g.key] = g.icono; });
+    // Orden de los golpes en la lista de ejercicios (v0.69): sigue la
+    // secuencia del punto + progresión defensa→ataque, que es como se
+    // construye una clase (no alfabético).
+    var GOLPE_ORDEN_EJ = ['saque','fondo','pared','globo','volea','bandeja','vibora','remate','mixto'];
 
     // Normaliza cualquier texto de golpe (incluido texto libre del vault) a una
     // clave canónica. Si aparecen 2+ golpes distintos → 'mixto'.
@@ -7686,46 +7732,36 @@
         return;
       }
 
-      // Tipos presentes en el resultado, en orden fijo (+ Otros)
-      var tiposPresentes = {};
-      ejs.forEach(function(e){ tiposPresentes[ejTipo(e)] = true; });
-      var tipos = TIPO_ORDEN.filter(function(t){ return tiposPresentes[t]; });
-      if (tiposPresentes['Otros']) tipos.push('Otros');
+      // ── Agrupación por GOLPE (v0.69) en orden por fases del punto ──
+      var golpesPresentes = {};
+      ejs.forEach(function(e){ golpesPresentes[ejGolpe(e) || '_'] = true; });
+      var golpes = GOLPE_ORDEN_EJ.filter(function(g){ return golpesPresentes[g]; });
+      if (golpesPresentes['_']) golpes.push('_');   // ejercicios sin golpe → al final
 
-      // Con búsqueda o filtro de tipo activos, expandir para ver resultados
-      var forzarAbierto = !!filtroEjTexto || filtroEjTipo !== null;
+      // Con búsqueda o filtro de golpe activos, expandir para ver resultados
+      var forzarAbierto = !!filtroEjTexto || filtroEjGolpe !== null;
 
-      var subTitStyle = 'font-size:11px;font-weight:700;color:var(--gris);text-transform:uppercase;letter-spacing:.5px;padding:8px 2px 2px;';
       var html = '';
+      golpes.forEach(function(g) {
+        var grupoG = ejs.filter(function(e){ return (ejGolpe(e) || '_') === g; });
+        if (!grupoG.length) return;
 
-      tipos.forEach(function(tipo) {
-        var grupoTipo = ejs.filter(function(e){ return ejTipo(e) === tipo; });
-        if (!grupoTipo.length) return;
+        // Dentro de cada golpe: mejor valorados primero, luego alfabético.
+        grupoG.sort(function(a, b) {
+          var d = (b.valoracion || 0) - (a.valoracion || 0);
+          return d !== 0 ? d : (a.nombre || '').localeCompare(b.nombre || '');
+        });
 
-        var abierto = forzarAbierto || acordeonAbierto(tipo);
+        var etiqueta = g === '_' ? '❓ Sin golpe' : (GOLPE_ICONO[g] + ' ' + GOLPE_LABEL[g]);
+        var clave = 'g:' + g;   // prefijo para no chocar con el acordeón antiguo por tipo
+        var abierto = forzarAbierto || acordeonAbierto(clave);
         html += '<div class="grupo">';
-        html += '<div class="grupo-titulo" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onclick="toggleAcordeon(\'' + tipo + '\')">' +
-                  '<span>' + (abierto ? '▾' : '▸') + ' ' + tipo + '</span>' +
-                  '<span style="font-size:12px;color:var(--gris);font-weight:600;">' + grupoTipo.length + '</span>' +
+        html += '<div class="grupo-titulo" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onclick="toggleAcordeon(\'' + clave + '\')">' +
+                  '<span>' + (abierto ? '▾' : '▸') + ' ' + etiqueta + '</span>' +
+                  '<span style="font-size:12px;color:var(--gris);font-weight:600;">' + grupoG.length + '</span>' +
                 '</div>';
-
         if (abierto) {
-          // ¿Mostrar subcabeceras por categoría? Solo si hay más de una categoría en el tipo.
-          var catsEnTipo = {};
-          grupoTipo.forEach(function(e){ catsEnTipo[e.categoriaId || '_'] = true; });
-          var mostrarSub = Object.keys(catsEnTipo).length > 1;
-
-          cats.forEach(function(cat) {
-            var sub = grupoTipo.filter(function(e){ return e.categoriaId === cat.id; });
-            if (!sub.length) return;
-            if (mostrarSub) html += '<div style="' + subTitStyle + '">' + cat.nombre + '</div>';
-            sub.forEach(function(ej){ html += itemEjercicioHTML(ej, 'ejercicios'); });
-          });
-          var sinCat = grupoTipo.filter(function(e){ return !e.categoriaId; });
-          if (sinCat.length) {
-            if (mostrarSub) html += '<div style="' + subTitStyle + '">Sin categoría</div>';
-            sinCat.forEach(function(ej){ html += itemEjercicioHTML(ej, 'ejercicios'); });
-          }
+          grupoG.forEach(function(ej){ html += itemEjercicioHTML(ej, 'ejercicios'); });
         }
         html += '</div>';
       });
