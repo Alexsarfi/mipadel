@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.74.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.74.1   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,9 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.74.1 — Orden de KPIs del panel (2026-07)
+    · En el panel "Mi academia" los KPIs pasan a Entrenadores ·
+      Alumnos · Clases (Clases va al final, Alumnos al centro).
   v0.74.0 — Franja del planning abre el día enfocado (2026-07)
     · Al pulsar un entrenador en una franja del planning semanal, su
       detalle se abre con SOLO ese día desplegado y el resto de días
@@ -3075,7 +3078,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.74.0';
+    var APP_VERSION = '0.74.1';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -4084,8 +4087,8 @@
       uids.forEach(function(u){ var s = _gestorStats(by[u]); totClases += s.nClases; totAlumnos += s.nAlumnos; });
       var h = '<div class="gestor-resumen">' +
         '<div class="gestor-kpi gestor-kpi-btn" onclick="abrirGestorEntrenadoresDirecto()"><div class="gestor-kpi-num">' + uids.length + '</div><div class="gestor-kpi-lbl">Entrenadores</div><div class="gestor-kpi-sub">Abrir entrenadores ›</div></div>' +
-        '<div class="gestor-kpi gestor-kpi-btn" onclick="abrirGestorClasesMes()"><div class="gestor-kpi-num">' + totClases + '</div><div class="gestor-kpi-lbl">Clases</div><div class="gestor-kpi-sub">Dadas por mes ›</div></div>' +
         '<div class="gestor-kpi gestor-kpi-btn" onclick="abrirGestorTodosAlumnos()"><div class="gestor-kpi-num">' + totAlumnos + '</div><div class="gestor-kpi-lbl">Alumnos</div><div class="gestor-kpi-sub">Ver por alumno ›</div></div>' +
+        '<div class="gestor-kpi gestor-kpi-btn" onclick="abrirGestorClasesMes()"><div class="gestor-kpi-num">' + totClases + '</div><div class="gestor-kpi-lbl">Clases</div><div class="gestor-kpi-sub">Dadas por mes ›</div></div>' +
         '</div>';
       if (!uids.length) {
         h += '<p class="ajustes-desc" style="text-align:center;padding:1rem 0;">Aún no hay datos de asistencia de ningún entrenador.</p>';
