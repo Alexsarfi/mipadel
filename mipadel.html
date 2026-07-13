@@ -9612,7 +9612,7 @@
 
     function extraerIdYoutube(url) {
       if (!url) return null;
-      var res = [/youtube\.com\/watch\?v=([^&]+)/, /youtu\.be\/([^?]+)/, /youtube\.com\/embed\/([^?]+)/];
+      var res = [/youtube\.com\/watch\?v=([^&]+)/, /youtu\.be\/([^?]+)/, /youtube\.com\/embed\/([^?]+)/, /youtube\.com\/shorts\/([^?&/]+)/];
       for (var i=0; i<res.length; i++) { var m=url.match(res[i]); if (m) return m[1]; }
       return null;
     }
