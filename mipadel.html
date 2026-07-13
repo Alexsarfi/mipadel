@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.71.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.72.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,17 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.72.0 — Navegación más fluida en el detalle del gestor (2026-07)
+    · Selector de entrenadores: arriba del detalle aparece una fila
+      de chips con todos los entrenadores del club (nombre de pila).
+      Al pinchar uno, el detalle salta a ese entrenador y sus clases
+      sin volver al panel, conservando el mes que se estaba viendo
+      (gestorCambiarEntrenador). El activo se resalta en verde.
+    · Días contraíbles: cada tarjeta de día de "Clases dadas" se
+      puede cerrar/abrir pinchando su cabecera (caret ▾/▸), para
+      centrarse en un día y ocultar el resto. El estado se guarda
+      por día durante la sesión, así no se pierde al cambiar de mes
+      o de entrenador (gestorToggleDiaCard).
   v0.71.0 — Sustitución de un día completo en una acción (2026-07)
     · En el panel "🔁 Sustitución" del día (detalle del entrenador y
       planning), si el entrenador tiene 2+ clases esa misma fecha
@@ -1241,9 +1252,17 @@
     .gdd-det.sust { background:#fffbeb; border-color:#fde68a; }
     /* Tarjeta por día de la semana (el nombre del día, una sola vez) */
     .ghd-diacard { background:var(--blanco); border:1.5px solid var(--borde); border-radius:13px; margin-bottom:10px; overflow:hidden; }
-    .ghd-diacard-hdr { display:flex; align-items:center; justify-content:space-between; gap:8px; background:var(--verde-suave); padding:0.55rem 0.85rem; font-size:13.5px; font-weight:800; color:var(--verde); }
+    .ghd-diacard-hdr { display:flex; align-items:center; justify-content:space-between; gap:8px; background:var(--verde-suave); padding:0.55rem 0.85rem; font-size:13.5px; font-weight:800; color:var(--verde); cursor:pointer; -webkit-tap-highlight-color:transparent; user-select:none; }
+    .ghd-diacard-hdr:active { filter:brightness(0.97); }
+    .ghd-diacard-car { display:inline-block; width:13px; font-size:11px; color:var(--verde); transition:transform .12s; }
+    .ghd-diacard.colapsada .ghd-diacard-tot { color:var(--verde); }
     .ghd-diacard-tot { font-size:11.5px; font-weight:700; color:var(--gris); }
     .ghd-diacard-body { padding:0.25rem 0.85rem 0.55rem; }
+    /* v0.72: selector de entrenadores en el detalle */
+    .gdet-ent-row { display:flex; gap:6px; overflow-x:auto; padding:2px 0 8px; margin-bottom:2px; -webkit-overflow-scrolling:touch; }
+    .gdet-ent-chip { flex:0 0 auto; font-size:12.5px; font-weight:700; color:var(--gris); background:var(--blanco); border:1.5px solid var(--borde); border-radius:999px; padding:5px 12px; cursor:pointer; white-space:nowrap; -webkit-tap-highlight-color:transparent; }
+    .gdet-ent-chip:active { transform:scale(0.97); }
+    .gdet-ent-chip.sel { color:var(--blanco); background:var(--verde); border-color:var(--verde); }
     .ghd-tramo { padding:0.55rem 0; border-bottom:1px solid var(--borde); }
     .ghd-tramo:last-child { border-bottom:none; }
     /* Desplegable de asistencia bajo el tramo */
@@ -3037,7 +3056,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.71.0';
+    var APP_VERSION = '0.72.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -4575,6 +4594,27 @@
 
     function abrirGestorDetalle(uid) { _gestorUid = uid; _gestorMesOff = _gPanelMesOffset(); _gHist = null; _gCierreOpen = false; _gResumenOpen = false; irA('pantalla-gestor-detalle'); }
     function gestorMesNav(delta) { _gestorMesOff += delta; _gCierreOpen = false; _gResumenOpen = false; renderGestorDetalle(); }
+    // v0.72: cambiar de entrenador sin salir del detalle (chips de arriba)
+    function gestorCambiarEntrenador(uid) {
+      if (!uid || uid === _gestorUid) return;
+      _gestorUid = uid; _gHist = null; _gCierreOpen = false; _gResumenOpen = false;
+      renderGestorDetalle();
+      var sc = document.getElementById('gestor-det-contenido');
+      if (sc) { var p = sc.closest('.contenido'); if (p) p.scrollTop = 0; }
+    }
+    // v0.72: contraer/expandir una tarjeta de día en "Clases dadas".
+    // El estado se guarda por día (persistente en la sesión) para no
+    // perderlo al cambiar de mes o de entrenador.
+    var _gDiaColapsado = {};   // día ('0'..'6','x') → true si está contraído
+    function gestorToggleDiaCard(k, hdr) {
+      var col = !_gDiaColapsado[k];
+      _gDiaColapsado[k] = col;
+      var body = hdr.nextElementSibling;
+      if (body) body.style.display = col ? 'none' : '';
+      var car = hdr.querySelector('.ghd-diacard-car');
+      if (car) car.textContent = col ? '▸' : '▾';
+      if (hdr.parentNode) hdr.parentNode.classList.toggle('colapsada', col);
+    }
 
     // ── PLANNING SEMANAL — vista de un día (o una franja) de toda la
     // academia (v0.62): mismas tarjetas y acciones que el detalle.
@@ -4707,6 +4747,17 @@
       var regsMes  = regsAll.filter(function(r){ return r.fecha && r.fecha.startsWith(mesISO); });
 
       var h = '';
+      // ── Selector de entrenadores (v0.72): chips con todos los del club;
+      // al pinchar uno, el detalle salta a ese entrenador sin volver al panel.
+      var _by = _gestorAgrupar();
+      var _uidsSel = Object.keys(_by).filter(function(u){ return _by[u].clases.length || _by[u].regs.length; });
+      _uidsSel.sort(function(a,b){ return _gestorNombre(_by[a]).localeCompare(_gestorNombre(_by[b])); });
+      if (_uidsSel.length > 1) {
+        h += '<div class="gdet-ent-row">' + _uidsSel.map(function(u){
+          return '<button type="button" class="gdet-ent-chip' + (u === _gestorUid ? ' sel' : '') +
+            '" onclick="gestorCambiarEntrenador(\'' + u + '\')">' + _gEsc(_gestorNombre(_by[u]).split(' ')[0]) + '</button>';
+        }).join('') + '</div>';
+      }
       // ── Años anteriores (cursos archivados de este entrenador) ──
       if (hist) {
         h += '<div class="ghd-hist-banner">📚 Curso ' + _gEsc(hist.curso) + ' · archivado' +
@@ -4833,10 +4884,12 @@
             bloques += t.html;
             totDia  += t.dadas;
           });
-          h += '<div class="ghd-diacard">' +
-            '<div class="ghd-diacard-hdr"><span>' + _gEsc(dn) + '</span>' +
+          var _col = !!_gDiaColapsado[k];
+          h += '<div class="ghd-diacard' + (_col ? ' colapsada' : '') + '">' +
+            '<div class="ghd-diacard-hdr" onclick="gestorToggleDiaCard(\'' + k + '\',this)">' +
+            '<span><span class="ghd-diacard-car">' + (_col ? '▸' : '▾') + '</span> ' + _gEsc(dn) + '</span>' +
             '<span class="ghd-diacard-tot">' + clasesDia.length + ' tramo' + (clasesDia.length!==1?'s':'') + ' · ' + totDia + ' dada' + (totDia!==1?'s':'') + '</span></div>' +
-            '<div class="ghd-diacard-body">' + bloques + '</div></div>';
+            '<div class="ghd-diacard-body"' + (_col ? ' style="display:none;"' : '') + '>' + bloques + '</div></div>';
         });
         // (El sumatorio 1h/1h30 vive en el KPI "Clases dadas" de arriba)
         h += '<div class="asist-matriz-leyenda" style="margin-top:0.5rem;">' +
