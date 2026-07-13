@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.72.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.74.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,24 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.74.0 — Franja del planning abre el día enfocado (2026-07)
+    · Al pulsar un entrenador en una franja del planning semanal, su
+      detalle se abre con SOLO ese día desplegado y el resto de días
+      contraídos (abrirGestorDetalleDia), para centrarse justo en la
+      clase señalada. Se pueden abrir los demás pinchando su cabecera.
+    · El KPI "Entrenadores" del panel sigue abriendo la vista completa
+      (todos los días desplegados): resetea el estado de contraído.
+  v0.73.0 — Acceso directo a entrenadores + añadir clase al pie (2026-07)
+    · El KPI "Entrenadores" del panel abre YA el detalle del primer
+      entrenador (con los chips arriba para saltar a cualquiera), el
+      mismo acceso fluido que al pulsar un entrenador en el planning
+      (abrirGestorEntrenadoresDirecto). El resumen de todos (tarjetas
+      con % + catálogo de sustitutos externos) sigue accesible desde
+      el chip "Todos ›" al final de la fila de entrenadores.
+    · "＋ Añadir clase" baja al pie del detalle, en la misma fila que
+      "Resumen" y "Cerrar curso" y con su mismo tamaño (conserva el
+      verde). Al ser de uso puntual, deja de ocupar la parte alta de
+      la pantalla todo el año.
   v0.72.0 — Navegación más fluida en el detalle del gestor (2026-07)
     · Selector de entrenadores: arriba del detalle aparece una fila
       de chips con todos los entrenadores del club (nombre de pila).
@@ -1263,6 +1281,7 @@
     .gdet-ent-chip { flex:0 0 auto; font-size:12.5px; font-weight:700; color:var(--gris); background:var(--blanco); border:1.5px solid var(--borde); border-radius:999px; padding:5px 12px; cursor:pointer; white-space:nowrap; -webkit-tap-highlight-color:transparent; }
     .gdet-ent-chip:active { transform:scale(0.97); }
     .gdet-ent-chip.sel { color:var(--blanco); background:var(--verde); border-color:var(--verde); }
+    .gdet-ent-chip.todos { color:var(--verde); border-color:var(--verde); border-style:dashed; }
     .ghd-tramo { padding:0.55rem 0; border-bottom:1px solid var(--borde); }
     .ghd-tramo:last-child { border-bottom:none; }
     /* Desplegable de asistencia bajo el tramo */
@@ -3056,7 +3075,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.72.0';
+    var APP_VERSION = '0.74.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -4064,7 +4083,7 @@
       var totClases = 0, totAlumnos = 0;
       uids.forEach(function(u){ var s = _gestorStats(by[u]); totClases += s.nClases; totAlumnos += s.nAlumnos; });
       var h = '<div class="gestor-resumen">' +
-        '<div class="gestor-kpi gestor-kpi-btn" onclick="abrirGestorEntrenadores()"><div class="gestor-kpi-num">' + uids.length + '</div><div class="gestor-kpi-lbl">Entrenadores</div><div class="gestor-kpi-sub">Ver entrenadores ›</div></div>' +
+        '<div class="gestor-kpi gestor-kpi-btn" onclick="abrirGestorEntrenadoresDirecto()"><div class="gestor-kpi-num">' + uids.length + '</div><div class="gestor-kpi-lbl">Entrenadores</div><div class="gestor-kpi-sub">Abrir entrenadores ›</div></div>' +
         '<div class="gestor-kpi gestor-kpi-btn" onclick="abrirGestorClasesMes()"><div class="gestor-kpi-num">' + totClases + '</div><div class="gestor-kpi-lbl">Clases</div><div class="gestor-kpi-sub">Dadas por mes ›</div></div>' +
         '<div class="gestor-kpi gestor-kpi-btn" onclick="abrirGestorTodosAlumnos()"><div class="gestor-kpi-num">' + totAlumnos + '</div><div class="gestor-kpi-lbl">Alumnos</div><div class="gestor-kpi-sub">Ver por alumno ›</div></div>' +
         '</div>';
@@ -4127,7 +4146,7 @@
             h += '<div class="gplan-slot">';
             h += '<button type="button" class="gplan-hora" onclick="gestorPlanAbrir(' + dia + ',\'' + _gEsc(fr).replace(/'/g,"\\'") + '\')">' + _gEsc(fr) + '</button>';
             slots[dia][fr].forEach(function(e){
-              h += '<button type="button" class="gplan-ent" onclick="abrirGestorDetalle(\'' + e.uid + '\')">' + _gEsc(e.ent) +
+              h += '<button type="button" class="gplan-ent" onclick="abrirGestorDetalleDia(\'' + e.uid + '\',' + dia + ')">' + _gEsc(e.ent) +
                    (e.dadas ? ' <span class="gplan-dadas">' + e.dadas + '✓</span>' : '') + '</button>';
             });
             h += '</div>';
@@ -4299,6 +4318,18 @@
 
     // ── VENTANA "ENTRENADORES" + sustitutos externos (v0.67) ─────
     function abrirGestorEntrenadores() { irA('pantalla-gestor-entrenadores'); }
+    // v0.73: el KPI "Entrenadores" del panel abre YA el detalle del primer
+    // entrenador (con los chips arriba para saltar a cualquiera), el mismo
+    // acceso fluido que al pulsar un entrenador en el planning semanal.
+    function abrirGestorEntrenadoresDirecto() {
+      if (!_gestorData) { irA('pantalla-gestor-entrenadores'); return; }
+      var by = _gestorAgrupar();
+      var uids = Object.keys(by).filter(function(u){ return by[u].clases.length || by[u].regs.length; });
+      uids.sort(function(a, b){ return _gestorNombre(by[a]).localeCompare(_gestorNombre(by[b])); });
+      _gDiaColapsado = {};   // vista completa: todos los días desplegados
+      if (uids.length) abrirGestorDetalle(uids[0]);
+      else irA('pantalla-gestor-entrenadores');
+    }
     function renderGestorEntrenadores() {
       var cont = document.getElementById('gent-contenido');
       if (!cont) return;
@@ -4593,6 +4624,15 @@
     }
 
     function abrirGestorDetalle(uid) { _gestorUid = uid; _gestorMesOff = _gPanelMesOffset(); _gHist = null; _gCierreOpen = false; _gResumenOpen = false; irA('pantalla-gestor-detalle'); }
+    // v0.74: abrir el detalle de un entrenador con SOLO un día desplegado y
+    // el resto contraídos (al pulsar su franja en el planning semanal).
+    function abrirGestorDetalleDia(uid, dia) {
+      _gDiaColapsado = {};
+      ['0','1','2','3','4','5','6','x'].forEach(function(k){ _gDiaColapsado[k] = true; });
+      var key = (dia == null) ? null : (dia < 0 ? 'x' : String(dia));
+      if (key !== null) _gDiaColapsado[key] = false;
+      abrirGestorDetalle(uid);
+    }
     function gestorMesNav(delta) { _gestorMesOff += delta; _gCierreOpen = false; _gResumenOpen = false; renderGestorDetalle(); }
     // v0.72: cambiar de entrenador sin salir del detalle (chips de arriba)
     function gestorCambiarEntrenador(uid) {
@@ -4752,11 +4792,14 @@
       var _by = _gestorAgrupar();
       var _uidsSel = Object.keys(_by).filter(function(u){ return _by[u].clases.length || _by[u].regs.length; });
       _uidsSel.sort(function(a,b){ return _gestorNombre(_by[a]).localeCompare(_gestorNombre(_by[b])); });
-      if (_uidsSel.length > 1) {
-        h += '<div class="gdet-ent-row">' + _uidsSel.map(function(u){
+      if (_uidsSel.length) {
+        var _chipsEnt = _uidsSel.map(function(u){
           return '<button type="button" class="gdet-ent-chip' + (u === _gestorUid ? ' sel' : '') +
             '" onclick="gestorCambiarEntrenador(\'' + u + '\')">' + _gEsc(_gestorNombre(_by[u]).split(' ')[0]) + '</button>';
-        }).join('') + '</div>';
+        }).join('');
+        // Acceso al resumen de todos (tarjetas con % + catálogo de externos)
+        _chipsEnt += '<button type="button" class="gdet-ent-chip todos" onclick="abrirGestorEntrenadores()">Todos ›</button>';
+        h += '<div class="gdet-ent-row">' + _chipsEnt + '</div>';
       }
       // ── Años anteriores (cursos archivados de este entrenador) ──
       if (hist) {
@@ -4833,14 +4876,8 @@
         '<div class="gestor-kpi"><div class="gestor-kpi-num">' + (pctMes==null?'—':pctMes+'%') + '</div><div class="gestor-kpi-lbl">Asistencia</div><div class="gestor-kpi-sub">' + fechasCols.length + ' día' + (fechasCols.length!==1?'s':'') + ' clase</div></div>' +
       '</div>';
 
-      // ── Acciones del curso: añadir clase (con el curso del mes visto) y
-      // cerrar curso (todas las clases o solo una franja). El antiguo botón
-      // "Gestionar clases y listas" sobra: cada tramo tiene su ✏ Editar.
-      // (Ocultas al consultar un curso archivado: es solo lectura.)
-      if (!hist) {
-        var esCursoFuturo = cursoMes !== cursoDeFecha(hoyLocal());
-        h += '<button class="btn btn-verde" style="margin:0 0 1.1rem;" onclick="gestorNuevaClase(\'' + cursoMes + '\')">＋ Añadir clase' + (esCursoFuturo ? ' · curso ' + cursoMes : '') + '</button>';
-      }
+      // (v0.73: "＋ Añadir clase" se movió al pie, junto a Resumen y Cerrar
+      // curso, para no ocupar la parte alta todo el año siendo de uso puntual.)
 
       // ── Clases dadas del mes, agrupadas por DÍA de la semana ──
       // El nombre del día aparece UNA vez (cabecera sombreada) y debajo sus
@@ -4899,9 +4936,13 @@
           '<span style="color:#9ca3af;font-weight:700">—</span> sin lista</div>';
       }
 
-      // ── Acciones al pie (v0.60): resumen exportable + cierre de curso ──
+      // ── Acciones al pie (v0.60): añadir clase + resumen + cierre de curso.
+      // v0.73: "＋ Añadir clase" (uso puntual) baja aquí, con el mismo tamaño
+      // que Resumen y Cerrar curso; conserva el verde para distinguirse.
       if (!hist) {
+        var esCursoFuturo = cursoMes !== cursoDeFecha(hoyLocal());
         h += '<div style="display:flex;gap:8px;margin-top:1.2rem;flex-wrap:wrap;">' +
+          '<button class="btn btn-verde" style="margin:0;flex:1;min-width:150px;" onclick="gestorNuevaClase(\'' + cursoMes + '\')">＋ Añadir clase' + (esCursoFuturo ? ' · ' + cursoMes : '') + '</button>' +
           '<button class="btn btn-sec" style="margin:0;flex:1;min-width:150px;" onclick="gestorToggleResumen()">📄 Resumen…</button>' +
           (clases.length ? '<button class="btn btn-sec" style="margin:0;flex:1;min-width:150px;" onclick="gestorToggleCierre()">📦 Cerrar curso…</button>' : '') +
         '</div>';
