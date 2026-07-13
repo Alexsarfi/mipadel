@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.45.0
+  TU APP DE PÁDEL — v0.70.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -2088,7 +2088,7 @@
   <div id="pantalla-inicio" class="pantalla activa">
     <div class="cabecera">
       <button id="cab-perfil-btn" class="cab-perfil-btn" onclick="irA('pantalla-ajustes')" title="Perfil" aria-label="Perfil">👤</button>
-      <div class="cab-etiqueta">🎾 Mi aplicación</div>
+      <div class="cab-etiqueta">🎾 Mi aplicación · <span id="cab-version"></span></div>
       <div class="cab-titulo">Club de Pádel</div>
       <div class="cab-sub" id="inicio-fecha">—</div>
     </div>
@@ -2400,9 +2400,6 @@
              style="width:100%;box-sizing:border-box;border:1px solid var(--borde,#d8d8d2);border-radius:10px;padding:9px 12px;font-size:14px;font-family:inherit;background:#fff;color:var(--tinta);outline:none;margin-bottom:2px;">
       <div class="filtros" id="filtros-tipo-ej"></div>
       <div class="filtros" id="filtros-golpe-ej"></div>
-      <div class="filtros" id="filtros-situacion-ej"></div>
-      <div class="filtros" id="filtros-pzona-ej"></div>
-      <div class="filtros" id="filtros-val-ej"></div>
     </div>
     <div class="contenido">
       <div id="lista-ejercicios"></div>
@@ -7430,8 +7427,7 @@
       var tipos = TIPO_ORDEN.filter(function(t){ return presentes[t]; });
       if (presentes['Otros']) tipos.push('Otros');
       if (!tipos.length) { cont.innerHTML = ''; return; }
-      var html = '<div class="fpill' + (filtroEjTipo === null ? ' activo' : '') +
-                 '" onclick="aplicarFiltroTipo(null)">Todos</div>';
+      var html = '';
       tipos.forEach(function(t) {
         html += '<div class="fpill' + (filtroEjTipo === t ? ' activo' : '') +
                 '" onclick="aplicarFiltroTipo(\'' + t + '\')">' + t + '</div>';
@@ -7620,7 +7616,7 @@
     }
 
     function aplicarFiltroTipo(tipo) {
-      filtroEjTipo = tipo;
+      filtroEjTipo = (filtroEjTipo === tipo) ? null : tipo; // toca el activo → deselecciona
       renderFiltrosTipoEj();
       renderListaEjercicios();
     }
@@ -7644,8 +7640,7 @@
       leerEjercicios().forEach(function(e){ var g = ejGolpe(e); if (g) presentes[g] = true; });
       var golpes = GOLPE_CANON.filter(function(g){ return presentes[g.key]; });
       if (!golpes.length) { cont.innerHTML = ''; return; }
-      var html = '<div class="fpill' + (filtroEjGolpe === null ? ' activo' : '') +
-                 '" onclick="aplicarFiltroGolpe(null)">Todos los golpes</div>';
+      var html = '';
       golpes.forEach(function(g) {
         html += '<div class="fpill' + (filtroEjGolpe === g.key ? ' activo' : '') +
                 '" onclick="aplicarFiltroGolpe(\'' + g.key + '\')">' + g.icono + ' ' + g.label + '</div>';
@@ -7654,7 +7649,7 @@
     }
 
     function aplicarFiltroGolpe(golpe) {
-      filtroEjGolpe = golpe;
+      filtroEjGolpe = (filtroEjGolpe === golpe) ? null : golpe; // toca el activo → deselecciona
       renderFiltrosGolpeEj();
       renderListaEjercicios();
     }
@@ -7709,9 +7704,6 @@
       if (inp) inp.value = filtroEjTexto;
       renderFiltrosTipoEj();
       renderFiltrosGolpeEj();
-      renderFiltrosSituacionEj();
-      renderFiltrosZonaEj();
-      renderFiltrosValEj();
       renderListaEjercicios();
     }
 
@@ -11360,6 +11352,8 @@
     // ══════════════════════════════════════════
     var _iv = document.getElementById('inicio-version');
     if (_iv) _iv.textContent = 'Versión ' + APP_VERSION + ' · Solo para mí';
+    var _cv = document.getElementById('cab-version');
+    if (_cv) _cv.textContent = 'v' + APP_VERSION;
     _migrarStorage(); // comprime datos viejos en localStorage (una sola vez)
     _marcRestaurar(); // recupera un partido en curso tras recarga/cierre
     actualizarInicio();
