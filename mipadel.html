@@ -1319,6 +1319,20 @@
     .grupo { margin-bottom:1.25rem; }
     .grupo-titulo { font-size:11px; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:0.08em; padding:0.25rem 0 0.5rem; border-bottom:1px solid var(--borde); margin-bottom:8px; }
 
+    /* ── CUADRÍCULA DE EJERCICIOS (v0.70) — miniatura de vídeo ── */
+    .grid-ejercicios { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .ejcard { background:var(--blanco); border-radius:14px; overflow:hidden; border:1.5px solid transparent; cursor:pointer; transition:all 0.18s ease; box-shadow:0 1px 3px rgba(0,0,0,0.06); }
+    .ejcard:active { transform:scale(0.98); }
+    .ejcard-thumb { position:relative; width:100%; aspect-ratio:16/9; background:linear-gradient(135deg,var(--verde-suave),#e4e4de); overflow:hidden; }
+    .ejcard-img { width:100%; height:100%; object-fit:cover; display:block; }
+    .ejcard-play { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:38px; height:38px; background:rgba(255,0,0,0.85); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:15px; padding-left:2px; pointer-events:none; box-shadow:0 2px 8px rgba(0,0,0,0.25); }
+    .ejcard-body { padding:8px 10px 10px; }
+    .ejcard-titulo { font-size:13px; font-weight:600; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .ejcard-meta { margin-top:6px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+    .ejcard-cod { font-family:ui-monospace,Menlo,monospace; font-size:9px; font-weight:700; color:var(--verde); background:var(--verde-suave); padding:1px 6px; border-radius:5px; }
+    .ejcard-val { font-size:11px; color:var(--dorado); }
+    @media (min-width:480px) { .grid-ejercicios { grid-template-columns:1fr 1fr 1fr; } }
+
     /* ── VACÍO ── */
     .vacio { text-align:center; padding:2.5rem 1rem; color:var(--gris); }
     .vacio-icono { font-size:42px; opacity:0.35; margin-bottom:0.75rem; }
@@ -3015,7 +3029,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.69.0';
+    var APP_VERSION = '0.70.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -7702,7 +7716,9 @@
     }
 
     function renderListaEjercicios() {
-      var todosEjs = leerEjercicios();
+      // v0.70: solo se muestran ejercicios con vídeo (cualquier enlace) —
+      // el resto sigue guardado (local/Supabase) pero no aparece aquí.
+      var todosEjs = leerEjercicios().filter(function(e){ return !!e.video; });
       var cats     = leerCategorias();
       var cont     = document.getElementById('lista-ejercicios');
 
@@ -7722,13 +7738,15 @@
       // Subtítulo dinámico
       var total = todosEjs.length;
       var visibles = ejs.length;
-      var subTxt = total + ' ejercicio' + (total !== 1 ? 's' : '');
+      var subTxt = total + ' con vídeo';
       if (visibles < total) subTxt += ' · ' + visibles + ' filtrados';
       document.getElementById('sub-ejercicios').textContent = subTxt;
 
       if (!ejs.length) {
-        var msg = total === 0 ? 'Aún no tienes ejercicios.' : 'Ningún ejercicio cumple los filtros.';
-        cont.innerHTML = '<div class="vacio"><div class="vacio-icono">🏃</div><p>' + msg + '</p></div>';
+        var msg = total === 0
+          ? 'Aún no tienes ejercicios con vídeo. Añade el enlace en Obsidian y sincroniza.'
+          : 'Ningún ejercicio con vídeo cumple los filtros.';
+        cont.innerHTML = '<div class="vacio"><div class="vacio-icono">🎬</div><p>' + msg + '</p></div>';
         return;
       }
 
@@ -7761,36 +7779,37 @@
                   '<span style="font-size:12px;color:var(--gris);font-weight:600;">' + grupoG.length + '</span>' +
                 '</div>';
         if (abierto) {
-          grupoG.forEach(function(ej){ html += itemEjercicioHTML(ej, 'ejercicios'); });
+          html += '<div class="grid-ejercicios">';
+          grupoG.forEach(function(ej){ html += ejercicioCardHTML(ej, 'ejercicios'); });
+          html += '</div>';
         }
         html += '</div>';
       });
       cont.innerHTML = html;
     }
 
-    function itemEjercicioHTML(ej, origen) {
-      var iconoHTML = ej.imagen
-        ? '<img src="' + ej.imagen + '" style="width:38px;height:38px;border-radius:10px;object-fit:cover;flex-shrink:0;" onerror="this.style.display=\'none\'">'
-        : '<div class="item-icono" style="background:var(--verde-suave);color:var(--verde);font-size:18px;">🏃</div>';
-      var mejoras = ej.mejoras ? ej.mejoras.length : 0;
-      var val     = ej.valoracion || 0;
-      // Mini estrella: solo mostrar si hay valoración
-      var valStr  = val > 0 ? '<span style="color:var(--dorado);font-size:12px;">★' + val + '</span>' : '';
-      var metaParts = [];
+    // v0.70: tarjeta de cuadrícula con miniatura del vídeo (sustituye a la
+    // fila de lista itemEjercicioHTML, retirada porque ahora TODO ejercicio
+    // visible aquí tiene vídeo).
+    function ejercicioCardHTML(ej, origen) {
+      var ytId = extraerIdYoutube(ej.video);
+      var thumb = ytId ? ('https://img.youtube.com/vi/' + ytId + '/mqdefault.jpg') : (ej.imagen || null);
+      var thumbHTML = thumb
+        ? '<img src="' + thumb + '" class="ejcard-img" alt="" loading="lazy" onerror="this.style.display=\'none\';this.parentNode.classList.add(\'sin-img\')">'
+        : '';
+      var val = ej.valoracion || 0;
       var cod = ejCodigo(ej);
-      if (cod) metaParts.push('<span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;font-weight:700;color:var(--verde);background:var(--verde-suave);padding:1px 6px;border-radius:5px;">' + cod + '</span>');
-      if (ej.video)  metaParts.push('▶');
-      if (ej.imagen) metaParts.push('🖼');
-      if (mejoras)   metaParts.push('✦ ' + mejoras + ' mejora' + (mejoras !== 1 ? 's' : ''));
-      if (valStr)    metaParts.push(valStr);
+      var badges = '';
+      if (cod) badges += '<span class="ejcard-cod">' + cod + '</span>';
+      if (val > 0) badges += '<span class="ejcard-val">★' + val + '</span>';
 
-      return '<div class="item" onclick="verEjercicio(' + ej.id + ',\'' + origen + '\')">' +
-        iconoHTML +
-        '<div class="item-info">' +
-          '<div class="item-titulo">' + ej.nombre + '</div>' +
-          '<div class="item-meta">' + metaParts.join(' · ') + '</div>' +
+      return '<div class="ejcard" onclick="verEjercicio(' + ej.id + ',\'' + origen + '\')">' +
+        '<div class="ejcard-thumb">' + thumbHTML + '<div class="ejcard-play">▶</div></div>' +
+        '<div class="ejcard-body">' +
+          '<div class="ejcard-titulo">' + ej.nombre + '</div>' +
+          (badges ? '<div class="ejcard-meta">' + badges + '</div>' : '') +
         '</div>' +
-        '<div class="item-flecha">›</div></div>';
+      '</div>';
     }
 
     function prepararFormEjercicio(editId) {
