@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.77.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.78.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,18 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.78.0 — Abecedario horizontal para saltar por inicial (2026-07)
+    · Alumnos del club: bajo el buscador y los chips de entrenador
+      aparece una barra A–Z horizontal. Al pulsar una letra, la lista
+      muestra solo los alumnos con esa inicial; "Todos" vuelve a la
+      lista completa. Las letras sin alumnos salen apagadas. El
+      abecedario se recalcula según el entrenador filtrado.
+    · Misma barra A–Z en la pantalla de alumnos de cada entrenador
+      (se recalcula según la clase/tramo filtrado).
+    · Buscar por texto desactiva la letra y viceversa; cambiar de
+      entrenador o de clase reinicia el abecedario.
+    · Helpers compartidos _letraDe (inicial normalizada, acentos y ñ)
+      y _abcBar (barra reutilizable) para ambas pantallas.
   v0.77.0 — Guardar asistencia visible + menos ruido (2026-07)
     · Pasar lista: el botón "💾 Guardar asistencia" sube a debajo de
       la fecha de la clase, siempre a la vista (antes solo al final).
@@ -1219,6 +1231,16 @@
               padding:6px 4px 3px; margin-top:4px; border-bottom:1px solid var(--borde); }
     .gestor-card-con { font-size:11.5px; color:var(--gris); margin-top:2px;
                        white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    /* Abecedario horizontal para saltar/filtrar por inicial */
+    .abc-bar { display:flex; flex-wrap:wrap; gap:4px; margin:0.15rem 0 0.6rem; }
+    .abc-let { flex:0 0 auto; min-width:27px; height:27px; padding:0 5px; border:1.5px solid var(--borde);
+               background:var(--blanco); color:var(--verde); font-family:inherit; font-size:12px; font-weight:800;
+               border-radius:7px; cursor:pointer; -webkit-tap-highlight-color:transparent;
+               display:flex; align-items:center; justify-content:center; }
+    .abc-let.activo { background:var(--verde); border-color:var(--verde); color:#fff; }
+    .abc-let.abc-off { color:var(--borde); opacity:0.55; cursor:default; }
+    .abc-let.abc-all { width:auto; padding:0 11px; }
+    .abc-let:not(.abc-off):active { transform:scale(0.92); }
     /* Asistencia por días: tramos horarios dentro de cada día */
     .gad-tramo { padding:0.55rem 0; border-bottom:1px solid var(--borde); }
     .gad-tramo:last-child { border-bottom:none; }
@@ -3171,7 +3193,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.77.0';
+    var APP_VERSION = '0.78.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -5700,18 +5722,28 @@
 
     var _gAlsFiltroTxt   = '';     // texto del buscador de alumnos
     var _gAlsFiltroClase = null;   // id de clase seleccionada en los chips (null = todas)
+    var _gAlsLetra       = null;   // inicial seleccionada en el abecedario (null = todas)
 
-    function abrirGestorAlumnos() { _gAlsFiltroTxt = ''; _gAlsFiltroClase = null; irA('pantalla-gestor-alumnos'); }
+    function abrirGestorAlumnos() { _gAlsFiltroTxt = ''; _gAlsFiltroClase = null; _gAlsLetra = null; irA('pantalla-gestor-alumnos'); }
     // Normaliza para buscar: minúsculas y sin acentos
     function _galsNorm(s) {
       s = String(s || '').toLowerCase();
       try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch(e) {}
       return s;
     }
-    function galsFiltrar(v) { _gAlsFiltroTxt = v || ''; _galsRenderLista(); }
+    function galsFiltrar(v) { _gAlsFiltroTxt = v || ''; if (v) _gAlsLetra = null; _galsRenderLista(); }
     function galsFiltroClase(id) {
       _gAlsFiltroClase = (_gAlsFiltroClase === id) ? null : id;
+      _gAlsLetra = null;   // al cambiar de clase se reinicia el abecedario
       _galsRenderChips(); _galsRenderLista();
+    }
+    // Selección de inicial en el abecedario del entrenador (activa → Todos)
+    function galsLetra(L) {
+      _gAlsLetra = (_gAlsLetra === L) ? null : L;
+      var inp = document.getElementById('gals-input');
+      if (inp) inp.value = '';
+      _gAlsFiltroTxt = '';
+      _galsRenderLista();
     }
     var _gAlVolver = 'pantalla-gestor-alumnos';   // a dónde vuelve el historial del alumno
     function abrirGestorAlumno(nombre) { _gestorAlumno = nombre; _gAlMesOff = 0; _gAlVolver = 'pantalla-gestor-alumnos'; _gAlEditOpen = false; irA('pantalla-gestor-alumno'); }
@@ -5850,7 +5882,7 @@
       _gestorRegsLocal(d).forEach(function(r){
         (r.presentes||[]).concat(r.ausentes||[]).forEach(function(n){ if(n) nombres[n]=true; });
       });
-      var lista = Object.keys(nombres).sort();
+      var lista = Object.keys(nombres).sort(_gtaCmp);
       if (!lista.length) { cont.innerHTML = '<p class="ajustes-desc">Este entrenador aún no tiene alumnos.</p>'; return; }
       _galsCache = { alumnos: lista, clasesAl: clasesAl, clases: clases };
 
@@ -5860,6 +5892,7 @@
         '<input id="gals-input" class="form-input" type="search" placeholder="🔍 Buscar alumno…" ' +
           'autocomplete="off" oninput="galsFiltrar(this.value)" style="margin-bottom:0.6rem;">' +
         '<div class="gals-chips" id="gals-chips"></div>' +
+        '<div id="gals-abc"></div>' +
         '<p class="ajustes-desc" id="gals-count" style="margin:0.15rem 0 0.6rem;"></p>' +
         '<div id="gals-lista"></div>';
       _galsRenderChips();
@@ -5890,21 +5923,35 @@
       if (!el || !_galsCache) return;
       var txt = _galsNorm(_gAlsFiltroTxt);
       var cursoAct = _cursoActual();
-      var visibles = _galsCache.alumnos.filter(function(n){
+      // Base = todos los alumnos del entrenador, acotado solo por la clase
+      // seleccionada (para calcular el abecedario y aplicar texto+letra encima).
+      var base = _galsCache.alumnos.filter(function(n){
+        return _gAlsFiltroClase == null ||
+               (_galsCache.clasesAl[n] && _galsCache.clasesAl[n][_gAlsFiltroClase]);
+      });
+
+      // Abecedario: iniciales con al menos un alumno en la base
+      var dispon = {};
+      base.forEach(function(n){ dispon[_letraDe(n)] = true; });
+      var abcEl = document.getElementById('gals-abc');
+      if (abcEl) abcEl.innerHTML = _abcBar(dispon, _gAlsLetra, 'galsLetra');
+
+      var visibles = base.filter(function(n){
         if (txt && _galsNorm(n).indexOf(txt) < 0) return false;
-        if (_gAlsFiltroClase != null &&
-            !(_galsCache.clasesAl[n] && _galsCache.clasesAl[n][_gAlsFiltroClase])) return false;
+        if (_gAlsLetra && _letraDe(n) !== _gAlsLetra) return false;
         return true;
       });
       if (cnt) cnt.textContent = (visibles.length === _galsCache.alumnos.length)
         ? _galsCache.alumnos.length + ' alumno' + (_galsCache.alumnos.length!==1?'s':'') + ' · toca uno para ver su historial'
-        : visibles.length + ' de ' + _galsCache.alumnos.length + ' alumnos';
+        : visibles.length + ' de ' + _galsCache.alumnos.length + ' alumnos' + (_gAlsLetra ? ' · letra ' + _gAlsLetra : '');
       if (!visibles.length) {
         el.innerHTML = '<p class="ajustes-desc" style="text-align:center;padding:0.8rem 0;">Ningún alumno coincide con el filtro.</p>';
         return;
       }
-      var h = '';
+      var h = '', letraPrev = '';
       visibles.forEach(function(n){
+        var _L = _letraDe(n);
+        if (_L !== letraPrev) { h += '<div class="gta-az">' + _L + '</div>'; letraPrev = _L; }
         var hist = _gestorHistAlumno(n);
         var histCurso = hist.filter(function(x){ return _cursoDe(x.fecha) === cursoAct; });
         var s = _histStats(histCurso);
@@ -6113,11 +6160,12 @@
     // ══════════════════════════════════════════
     var _gtaFiltroTxt = '';   // texto del buscador global
     var _gtaFiltroEnt = null; // filtro opcional por entrenador (null = todo el club)
+    var _gtaLetra     = null; // inicial seleccionada en el abecedario (null = todas)
     var _gtaAlumno    = null; // alumno abierto en el detalle global
     var _gtaMesOff    = 0;    // navegación por meses en el detalle
     var _gtaCache     = null; // índice { al:{nombre:{sesiones:[]}}, ents:[{nombre, alumnos:[]}] }
 
-    function abrirGestorTodosAlumnos() { _gtaFiltroTxt = ''; _gtaFiltroEnt = null; irA('pantalla-gestor-todos-alumnos'); }
+    function abrirGestorTodosAlumnos() { _gtaFiltroTxt = ''; _gtaFiltroEnt = null; _gtaLetra = null; irA('pantalla-gestor-todos-alumnos'); }
     // v0.64.3: al tocar un alumno en la lista global de la academia se
     // abre la MISMA ficha que entrando por entrenador (editar datos,
     // alta/baja, mes navegable e historial por curso). Si el alumno tiene
@@ -6145,11 +6193,20 @@
       gestorAlumnoU(mejor, n, 'pantalla-gestor-todos-alumnos');
     }
     function gtaMesNav(delta) { _gtaMesOff += delta; renderGestorTodosAlumno(); }
-    function gtaFiltrar(v) { _gtaFiltroTxt = v || ''; _gtaRenderLista(); }
+    function gtaFiltrar(v) { _gtaFiltroTxt = v || ''; if (v) _gtaLetra = null; _gtaRenderLista(); }
     // Filtro opcional por entrenador (toca dos veces el mismo chip → quitar)
     function gtaFiltroEnt(ent) {
       _gtaFiltroEnt = (_gtaFiltroEnt === ent) ? null : ent;
+      _gtaLetra = null;   // al cambiar de entrenador se reinicia el abecedario
       _gtaRenderChips(); _gtaRenderLista();
+    }
+    // Selección de inicial en el abecedario (toca la activa → Todos)
+    function gtaLetra(L) {
+      _gtaLetra = (_gtaLetra === L) ? null : L;
+      var inp = document.getElementById('gta-input');
+      if (inp) inp.value = '';
+      _gtaFiltroTxt = '';
+      _gtaRenderLista();
     }
     // Reverse index: alumno → conjunto de entrenadores con los que entrena
     function _gtaEntsDe(n) {
@@ -6233,6 +6290,7 @@
         '<input id="gta-input" class="form-input" type="search" placeholder="🔍 Buscar alumno…" ' +
           'autocomplete="off" oninput="gtaFiltrar(this.value)" style="margin-bottom:0.6rem;">' +
         '<div class="gals-chips" id="gta-chips"></div>' +
+        '<div id="gta-abc"></div>' +
         '<p class="ajustes-desc" id="gta-count" style="margin:0.15rem 0 0.6rem;"></p>' +
         '<div id="gta-lista"></div>';
       _gtaRenderChips();
@@ -6241,6 +6299,31 @@
 
     // Orden alfabético en español (respeta acentos y ñ)
     function _gtaCmp(a, b) { return String(a).localeCompare(String(b), 'es', { sensitivity:'base' }); }
+
+    // Letra inicial normalizada de un nombre (acentos y ñ → A–Z; otros → '#')
+    function _letraDe(n) {
+      var c = _galsNorm(n).charAt(0).toUpperCase();
+      return /[A-Z]/.test(c) ? c : '#';
+    }
+    // Barra de abecedario horizontal. `dispon` = mapa de letras con alumnos;
+    // `activa` = letra seleccionada (o null = Todos); `fn` = nombre de la
+    // función a invocar al pulsar. Las letras sin alumnos salen apagadas.
+    function _abcBar(dispon, activa, fn) {
+      var h = '<div class="abc-bar">' +
+        '<button type="button" class="abc-let abc-all' + (activa==null?' activo':'') +
+        '" onclick="' + fn + '(null)">Todos</button>';
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach(function(L){
+        var has = !!dispon[L];
+        h += '<button type="button" class="abc-let' + (activa===L?' activo':'') + (has?'':' abc-off') + '" ' +
+             (has ? 'onclick="' + fn + '(\'' + L + '\')"' : 'disabled') + '>' + L + '</button>';
+      });
+      if (dispon['#']) {
+        h += '<button type="button" class="abc-let' + (activa==='#'?' activo':'') +
+             '" onclick="' + fn + '(\'#\')">#</button>';
+      }
+      h += '</div>';
+      return h;
+    }
 
     // Chips de filtro opcionales por entrenador ("Todo el club" + uno por
     // entrenador). Es opt-in: por defecto se ve toda la academia, nunca
@@ -6303,18 +6386,31 @@
       var txt   = _galsNorm(_gtaFiltroTxt);
       var todos = Object.keys(_gtaCache.al).sort(_gtaCmp);
 
-      // Enfoque club: SIEMPRE una lista única alfabética con índice A–Z.
-      // El entrenador nunca es la estructura; es un filtro opcional (chips)
-      // y un dato secundario en cada tarjeta.
-      var visibles = todos.filter(function(n){
+      // Enfoque club: SIEMPRE una lista única alfabética. El entrenador es un
+      // filtro opcional (chips) y dato secundario. El abecedario horizontal
+      // permite saltar a una inicial concreta.
+      // Base = todos, acotado solo por el entrenador (para calcular el
+      // abecedario disponible y para aplicar luego texto + letra encima).
+      var base = todos.filter(function(n){
+        return _gtaFiltroEnt == null || _gtaEntsDe(n)[_gtaFiltroEnt];
+      });
+
+      // Abecedario: letras con al menos un alumno en la base actual
+      var dispon = {};
+      base.forEach(function(n){ dispon[_letraDe(n)] = true; });
+      var abcEl = document.getElementById('gta-abc');
+      if (abcEl) abcEl.innerHTML = _abcBar(dispon, _gtaLetra, 'gtaLetra');
+
+      var visibles = base.filter(function(n){
         if (txt && _galsNorm(n).indexOf(txt) < 0) return false;
-        if (_gtaFiltroEnt != null && !_gtaEntsDe(n)[_gtaFiltroEnt]) return false;
+        if (_gtaLetra && _letraDe(n) !== _gtaLetra) return false;
         return true;
       });
 
       // Contador contextual
       if (cnt) {
-        var ambito = _gtaFiltroEnt != null ? (' · ' + _gEsc(_gtaFiltroEnt)) : '';
+        var ambito = (_gtaFiltroEnt != null ? (' · ' + _gEsc(_gtaFiltroEnt)) : '') +
+                     (_gtaLetra ? ' · letra ' + _gtaLetra : '');
         cnt.textContent = (visibles.length === todos.length)
           ? todos.length + ' alumno' + (todos.length!==1?'s':'') + ' del club · toca uno para ver su ficha'
           : visibles.length + ' de ' + todos.length + ' alumnos' + ambito;
