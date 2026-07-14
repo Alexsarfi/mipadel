@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.75.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.77.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,36 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.77.0 — Guardar asistencia visible + menos ruido (2026-07)
+    · Pasar lista: el botón "💾 Guardar asistencia" sube a debajo de
+      la fecha de la clase, siempre a la vista (antes solo al final).
+    · Aviso al salir: si hay cambios sin guardar en la lista y se pulsa
+      "‹ Volver", aparece una ventana flotante que pregunta si guardar,
+      con "Guardar y salir", "Salir sin guardar" y "Cancelar". Detecta
+      cambios comparando el estado actual con el de carga (asistencia,
+      faltas J/IJ, sustituto del día y recuperaciones); las recups y el
+      "sin clase", que ya se guardan solos, no disparan el aviso.
+    · Panel del gestor: el bloque "Sustituciones · mes" pasa a ser un
+      desplegable por sustituto. La tarjeta resumen (quién cubrió, a
+      quién y cuántas) se mantiene, y al abrir muestra el detalle de
+      CUÁNDO fue cada sustitución (fecha + clase + titular).
+    · Ficha del alumno: "✏ Editar datos" se mueve al cabecero (arriba
+      a la derecha) y el recuadro de clases/curso deja de ocupar la
+      vista normal: ahora solo aparece dentro del desplegable de editar.
+  v0.76.0 — Alumnos = del club, no de los entrenadores (2026-07)
+    · El botón "Alumnos" (KPI del panel "Mi academia") deja de
+      agrupar por entrenador. Ahora es una LISTA ÚNICA de todos los
+      alumnos del club, alfabética, con índice A–Z (cabeceras por
+      letra) y cada alumno una sola vez, aunque entrene con varios
+      entrenadores (renderGestorTodosAlumnos / _gtaRenderLista).
+    · Fila de chips de filtro OPCIONAL: "Todo el club" + un chip por
+      entrenador. Por defecto se ve todo el club; el chip solo acota
+      la lista, nunca la agrupa (gtaFiltroEnt / _gtaRenderChips).
+    · En cada tarjeta, los entrenadores del alumno (hasta 3 nombres
+      de pila, "👤 Ana · Luis · Marta") pasan a ser dato SECUNDARIO,
+      no la estructura. Reverse index alumno→entrenadores (_gtaEntsDe).
+    · Orden alfabético español real (acentos y ñ) con _gtaCmp; el
+      índice normaliza acentos para las cabeceras.
   v0.75.0 — Menos ruido visual en el detalle del gestor (2026-07)
     · Al entrar en un entrenador (chips, KPI o tarjeta) los días
       aparecen CONTRAÍDOS por defecto. La única excepción es abrir
@@ -1118,6 +1148,13 @@
     .cab-perfil-btn { position:absolute; top:1.5rem; right:1.5rem; z-index:2; width:42px; height:42px; border-radius:50%; background:rgba(255,255,255,0.14); border:none; color:#fff; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent; }
     .cab-perfil-btn:hover { background:rgba(255,255,255,0.24); }
     .cab-perfil-btn:active { transform:scale(0.94); }
+    /* Botón de acción de texto en el encabezado (arriba a la derecha) */
+    .cab-accion-btn { position:absolute; top:1.5rem; right:1.5rem; z-index:2; border:none;
+                      background:rgba(255,255,255,0.16); color:#fff; font-family:inherit; font-size:12.5px;
+                      font-weight:700; border-radius:20px; padding:7px 14px; cursor:pointer;
+                      -webkit-tap-highlight-color:transparent; }
+    .cab-accion-btn:hover { background:rgba(255,255,255,0.26); }
+    .cab-accion-btn:active { transform:scale(0.95); }
     /* ── Panel del gestor ── */
     .gestor-resumen { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:0.4rem 0 1.2rem; }
     .gestor-kpi { background:var(--blanco); border:1.5px solid var(--borde); border-radius:13px; padding:0.8rem 0.5rem; text-align:center; }
@@ -1125,6 +1162,18 @@
     .gestor-kpi-lbl { font-size:10.5px; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:0.04em; margin-top:5px; }
     .gestor-card { display:flex; align-items:center; gap:12px; background:var(--blanco); border:1.5px solid var(--borde); border-radius:14px; padding:0.9rem 1rem; margin-bottom:9px; cursor:pointer; transition:all .15s; }
     .gestor-card:active { border-color:var(--lila-claro); background:var(--lila-suave); }
+    /* Desplegable de sustituciones del mes (panel del gestor) */
+    .gsust-det { background:var(--blanco); border:1.5px solid var(--borde); border-radius:14px; margin-bottom:9px; overflow:hidden; }
+    .gsust-det[open] { border-color:var(--lila-claro); }
+    .gsust-sum { display:flex; align-items:center; gap:12px; padding:0.9rem 1rem; cursor:pointer; list-style:none; -webkit-tap-highlight-color:transparent; }
+    .gsust-sum::-webkit-details-marker { display:none; }
+    .gsust-chev { flex-shrink:0; color:var(--gris); font-size:13px; transition:transform .18s; }
+    .gsust-det[open] .gsust-chev { transform:rotate(180deg); }
+    .gsust-body { padding:0.2rem 1rem 0.7rem; border-top:1px solid var(--borde); }
+    .gsust-item { display:flex; align-items:baseline; gap:10px; padding:6px 0; border-bottom:1px solid var(--borde); }
+    .gsust-item:last-child { border-bottom:none; }
+    .gsust-fecha { flex-shrink:0; font-size:12.5px; font-weight:700; color:var(--verde); min-width:80px; }
+    .gsust-clase { font-size:12.5px; color:var(--gris); }
     .gestor-card-ava { width:40px; height:40px; flex-shrink:0; border-radius:50%; background:var(--verde-suave); color:var(--verde); display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:800; }
     .gestor-card-body { flex:1; min-width:0; }
     .gestor-card-nom { font-size:14.5px; font-weight:700; color:var(--texto); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -1164,6 +1213,12 @@
                  padding:4px 11px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
     .gals-chip.activo { background:var(--verde); border-color:var(--verde); color:#fff; }
     .gals-chip:active { transform:scale(0.95); }
+    /* Índice A–Z de la lista de alumnos del club */
+    .gta-az { position:sticky; top:0; z-index:2; background:var(--arena);
+              font-size:12px; font-weight:800; color:var(--verde); letter-spacing:0.5px;
+              padding:6px 4px 3px; margin-top:4px; border-bottom:1px solid var(--borde); }
+    .gestor-card-con { font-size:11.5px; color:var(--gris); margin-top:2px;
+                       white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     /* Asistencia por días: tramos horarios dentro de cada día */
     .gad-tramo { padding:0.55rem 0; border-bottom:1px solid var(--borde); }
     .gad-tramo:last-child { border-bottom:none; }
@@ -2039,6 +2094,18 @@
     .plan-confirm.show .plan-confirm-card { transform:scale(1); }
     .plan-confirm-ic { width:54px; height:54px; margin:0 auto 10px; border-radius:50%; background:var(--verde); color:#fff; font-size:30px; font-weight:800; display:flex; align-items:center; justify-content:center; }
     .plan-confirm-txt { font-size:14px; color:var(--texto); line-height:1.5; }
+    /* Aviso flotante de asistencia sin guardar */
+    .asist-salir-ov { position:fixed; inset:0; z-index:10002; display:flex; align-items:center;
+                      justify-content:center; padding:22px; background:rgba(0,0,0,.45); }
+    .asist-salir-card { background:var(--blanco); border-radius:18px; padding:22px 22px 18px;
+                        box-shadow:0 14px 44px rgba(0,0,0,.28); text-align:center; width:100%; max-width:340px; }
+    .asist-salir-ic { width:52px; height:52px; margin:0 auto 10px; border-radius:50%; background:var(--verde-suave);
+                      color:var(--verde); font-size:26px; display:flex; align-items:center; justify-content:center; }
+    .asist-salir-tit { font-size:17px; font-weight:800; color:var(--texto); margin-bottom:4px; }
+    .asist-salir-txt { font-size:13px; color:var(--gris); line-height:1.5; margin-bottom:16px; }
+    .asist-salir-acts { display:flex; flex-direction:column; gap:8px; }
+    .asist-salir-acts .btn { width:100%; }
+    .asist-salir-cancel { color:var(--gris); }
     /* Tarjetas de sesiones enlazadas a un bloque */
     .plan-ses-intro { font-size:12.5px; color:var(--gris); margin-bottom:12px; }
     .plan-ses-card { display:flex; align-items:center; gap:10px; background:var(--blanco); border:1.5px solid var(--borde); border-radius:13px; padding:0.9rem 1.1rem; margin-bottom:9px; cursor:pointer; transition:all .15s; }
@@ -2387,6 +2454,7 @@
   <div id="pantalla-gestor-alumno" class="pantalla">
     <div class="cabecera">
       <button class="btn-volver" id="gestor-al-volver-btn" onclick="gestorAlVolver()">‹ Alumnos</button>
+      <button class="cab-accion-btn" id="gestor-al-edit-btn" onclick="gestorAlToggleEdit()">✏ Editar datos</button>
       <div class="cab-titulo" id="gestor-al-nombre">Alumno</div>
       <div class="cab-sub" id="gestor-al-sub">—</div>
     </div>
@@ -2877,6 +2945,7 @@
           <input id="asist-lista-fecha" class="form-input" type="date" onchange="asistCambiarFechaLista(this.value)">
         </div>
       </div>
+      <button class="btn btn-verde" style="margin-bottom:0.5rem;" onclick="asistGuardarLista()">💾 Guardar asistencia</button>
       <div id="asist-lista-alumnos"></div>
       <div id="asist-recup-zona"></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -2884,7 +2953,20 @@
         <button class="btn btn-sec btn-sm" onclick="asistMarcarTodos(false)">✗ Todos ausentes</button>
         <button class="btn btn-sec btn-sm" style="border-color:#e2e8f0;color:#64748b;" onclick="asistSinClase()">🚫 Sin clase</button>
       </div>
-      <button class="btn btn-verde" onclick="asistGuardarLista()">💾 Guardar asistencia</button>
+    </div>
+  </div>
+
+  <!-- Aviso flotante: cambios de asistencia sin guardar -->
+  <div id="asist-salir-modal" class="asist-salir-ov" style="display:none;">
+    <div class="asist-salir-card">
+      <div class="asist-salir-ic">💾</div>
+      <div class="asist-salir-tit">¿Guardar la asistencia?</div>
+      <div class="asist-salir-txt">Has hecho cambios en la lista que aún no se han guardado.</div>
+      <div class="asist-salir-acts">
+        <button class="btn btn-verde" onclick="_asistSalirGuardando()">💾 Guardar y salir</button>
+        <button class="btn btn-sec" onclick="_asistSalirDescartando()">Salir sin guardar</button>
+        <button class="btn btn-sec asist-salir-cancel" onclick="_asistOcultarGuardar()">Cancelar</button>
+      </div>
     </div>
   </div>
 
@@ -3089,7 +3171,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.75.0';
+    var APP_VERSION = '0.77.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -4181,25 +4263,48 @@
         return r.impartida_por && r.fecha && r.fecha.slice(0,7) === _gPanelMes && _regPasada(r);
       });
       if (sustMes.length) {
-        var porSust = {};   // nombre → {n, titulares:{}}
+        var porSust = {};   // nombre → {n, tits:{}, items:[]}
         sustMes.forEach(function(r){
           var nom = r.impartida_por.nombre || '¿?';
-          var e = (porSust[nom] = porSust[nom] || { n:0, tits:{} });
+          var e = (porSust[nom] = porSust[nom] || { n:0, tits:{}, items:[] });
           e.n++;
-          e.tits[_gestorNombre(by[r.user_id] || { uid:r.user_id })] = true;
+          var titD   = by[r.user_id] || { uid:r.user_id };
+          var titNom = _gestorNombre(titD);
+          e.tits[titNom] = true;
+          // Nombre de la clase cubierta (día + franja) para el detalle
+          var clase = (_gestorClasesLocal(titD) || []).filter(function(c){ return c.id === r.claseId; })[0];
+          var clNom = clase
+            ? ((clase.diaSemana >= 0 ? _GDIAS[clase.diaSemana] + ' ' : '') + (clase.franja || clase.nombre || '')).trim()
+            : '';
+          e.items.push({ fecha: r.fecha, titular: titNom, clase: clNom });
         });
         h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Sustituciones · ' +
              MESES_NOMBRES_A[+_gPanelMes.slice(5,7)-1] + '</div>';
+        // Desplegable por sustituto: el resumen conserva la tarjeta de antes
+        // y, al abrir, muestra cuándo (fecha) fue cada sustitución y qué clase.
         Object.keys(porSust).sort().forEach(function(nom){
           var e = porSust[nom];
-          h += '<div class="gestor-card" style="cursor:default;">' +
-            '<div class="gestor-card-ava" style="background:#fef3c7;color:#92400e;">🔁</div>' +
-            '<div class="gestor-card-body">' +
-              '<div class="gestor-card-nom">' + _gEsc(nom) + '</div>' +
-              '<div class="gestor-card-meta">cubrió a ' + _gEsc(Object.keys(e.tits).join(', ')) + '</div>' +
+          e.items.sort(function(a,b){ return (b.fecha||'').localeCompare(a.fecha||''); });
+          h += '<details class="gsust-det">' +
+            '<summary class="gsust-sum">' +
+              '<div class="gestor-card-ava" style="background:#fef3c7;color:#92400e;">🔁</div>' +
+              '<div class="gestor-card-body">' +
+                '<div class="gestor-card-nom">' + _gEsc(nom) + '</div>' +
+                '<div class="gestor-card-meta">cubrió a ' + _gEsc(Object.keys(e.tits).join(', ')) + '</div>' +
+              '</div>' +
+              '<div class="gestor-card-pct">' + e.n + '</div>' +
+              '<div class="gsust-chev">▾</div>' +
+            '</summary>' +
+            '<div class="gsust-body">' +
+              e.items.map(function(it){
+                return '<div class="gsust-item">' +
+                  '<span class="gsust-fecha">' + _gEsc(formatFechaCorta(it.fecha)) + '</span>' +
+                  '<span class="gsust-clase">' + _gEsc(it.clase || 'Clase') +
+                    (it.titular ? ' · a ' + _gEsc(it.titular) : '') + '</span>' +
+                '</div>';
+              }).join('') +
             '</div>' +
-            '<div class="gestor-card-pct">' + e.n + '</div>' +
-          '</div>';
+          '</details>';
         });
       }
 
@@ -5296,10 +5401,39 @@
       if (_gEditVolverA) { var v = _gEditVolverA; _gEditVolverA = null; irA(v); return; }
       irA('pantalla-asistencia-config');
     }
-    // Salida de la pantalla de pasar lista (volver / guardar / sin clase)
-    function _asistListaSalida() {
+    // ── Detección de cambios sin guardar en pasar lista ──────────
+    // Instantánea del estado editable de la lista (asistencia, faltas J/IJ,
+    // sustituto del día y recuperaciones). Las recuperaciones se guardan al
+    // momento, así que refrescamos la instantánea tras persistirlas.
+    var _asistListaSnap = '';
+    function _asistSnap() {
+      return JSON.stringify({
+        e: asistEstadoLista || {},
+        j: asistJustifs || {},
+        i: asistImpartida || null,
+        r: (asistRecups || []).slice().sort()
+      });
+    }
+    function _asistListaDirty() { return _asistSnap() !== _asistListaSnap; }
+    function _asistMostrarGuardar(show) {
+      var m = document.getElementById('asist-salir-modal');
+      if (m) m.style.display = show ? 'flex' : 'none';
+    }
+    function _asistOcultarGuardar() { _asistMostrarGuardar(false); }
+    // Navega de vuelta sin más comprobaciones
+    function _asistSalirForzar() {
+      _asistOcultarGuardar();
       if (_gEditVolverA) { var v = _gEditVolverA; _gEditVolverA = null; irA(v); return; }
       irA('pantalla-asistencia');
+    }
+    function _asistSalirGuardando()   { _asistOcultarGuardar(); asistGuardarLista(); }
+    function _asistSalirDescartando() { _asistListaSnap = _asistSnap(); _asistSalirForzar(); }
+
+    // Salida de la pantalla de pasar lista (volver / guardar / sin clase).
+    // Si hay cambios sin guardar, avisa antes de salir.
+    function _asistListaSalida() {
+      if (_asistListaDirty()) { _asistMostrarGuardar(true); return; }
+      _asistSalirForzar();
     }
 
     // Panel de cierre del detalle: elegir si se cierra TODO el curso o
@@ -5834,29 +5968,35 @@
       var hist     = _gestorHistAlumno(_gestorAlumno);
       var cursoAct = _cursoActual();
       var sc       = _histStats(hist.filter(function(x){ return _cursoDe(x.fecha) === cursoAct; }));
+      // Recuadro resumen (clases con alta/baja + curso en curso). v0.77: el
+      // botón "Editar datos" vive ahora en el cabecero y este recuadro ya no
+      // se muestra suelto en la ficha; solo aparece DENTRO del desplegable de
+      // edición, para quitar ruido de la vista normal del alumno.
+      var resumenHTML = '<div class="gal-altas-card">';
+      clasesAl.forEach(function(x){
+        resumenHTML += '<div class="gal-altas-row">' +
+          '<span class="gal-altas-clase">' + _gEsc(x.dia + ' · ' + x.franja) + '</span>' +
+          '<span class="gal-altas-fechas">Alta: ' + (x.alta ? _gFecha(x.alta) : 'inicio') +
+            ((x.hist || []).length ? ' · antes: ' + x.hist.map(function(p){
+              return (p.alta ? _gFecha(p.alta) : 'inicio') + '–' + (p.baja ? _gFecha(p.baja) : '¿?');
+            }).join(', ') : '') + '</span>' +
+          (x.baja ? '<span class="gal-dia no">✗ Baja: ' + _gFecha(x.baja) + '</span>'
+                  : '<span class="gal-dia si">De alta</span>') +
+        '</div>';
+      });
+      resumenHTML += '<div class="gal-altas-row"><span class="gal-altas-clase">Curso ' + cursoAct + '</span>' +
+        '<span class="gal-altas-fechas">' + sc.pres + ' presencias de ' + sc.tot + ' clases' +
+        ((sc.fJ || sc.fIJ) ? ' · faltas: ' + sc.fJ + ' J · ' + sc.fIJ + ' IJ' : '') +
+        (sc.recups ? ' · ' + sc.recups + ' recuperación' + (sc.recups!==1?'es':'') : '') + '</span></div>';
+      resumenHTML += '</div>';
+
       var h = '';
-      if (!_gAlEditOpen) {
-        h += '<button class="btn btn-sec btn-sm" style="margin:0 0 10px;" onclick="gestorAlToggleEdit()">✏ Editar datos del alumno</button>';
-        // Un único bloque (v0.60): clases con alta/baja + resumen del
-        // curso en curso SIN porcentaje ni barra.
-        h += '<div class="gal-altas-card">';
-        clasesAl.forEach(function(x){
-          h += '<div class="gal-altas-row">' +
-            '<span class="gal-altas-clase">' + _gEsc(x.dia + ' · ' + x.franja) + '</span>' +
-            '<span class="gal-altas-fechas">Alta: ' + (x.alta ? _gFecha(x.alta) : 'inicio') +
-              ((x.hist || []).length ? ' · antes: ' + x.hist.map(function(p){
-                return (p.alta ? _gFecha(p.alta) : 'inicio') + '–' + (p.baja ? _gFecha(p.baja) : '¿?');
-              }).join(', ') : '') + '</span>' +
-            (x.baja ? '<span class="gal-dia no">✗ Baja: ' + _gFecha(x.baja) + '</span>'
-                    : '<span class="gal-dia si">De alta</span>') +
-          '</div>';
-        });
-        h += '<div class="gal-altas-row"><span class="gal-altas-clase">Curso ' + cursoAct + '</span>' +
-          '<span class="gal-altas-fechas">' + sc.pres + ' presencias de ' + sc.tot + ' clases' +
-          ((sc.fJ || sc.fIJ) ? ' · faltas: ' + sc.fJ + ' J · ' + sc.fIJ + ' IJ' : '') +
-          (sc.recups ? ' · ' + sc.recups + ' recuperación' + (sc.recups!==1?'es':'') : '') + '</span></div>';
-        h += '</div>';
-      } else {
+      // Sincroniza el botón del cabecero con el estado de edición
+      var _editBtn = document.getElementById('gestor-al-edit-btn');
+      if (_editBtn) _editBtn.textContent = _gAlEditOpen ? '✕ Cerrar edición' : '✏ Editar datos';
+
+      if (_gAlEditOpen) {
+        h += resumenHTML;   // el recuadro pasa a vivir dentro del desplegable
         h += '<div class="form-card" style="margin-bottom:10px;gap:0.6rem;">' +
           '<div class="form-grupo"><label class="form-label">Nombre *</label>' +
             '<input id="gal-edit-nombre" class="form-input" type="text" value="' + _gEsc(_gestorAlumno) + '"></div>' +
@@ -5972,11 +6112,12 @@
     //  cada alumno → sus clases, con qué entrenador, y recups)
     // ══════════════════════════════════════════
     var _gtaFiltroTxt = '';   // texto del buscador global
+    var _gtaFiltroEnt = null; // filtro opcional por entrenador (null = todo el club)
     var _gtaAlumno    = null; // alumno abierto en el detalle global
     var _gtaMesOff    = 0;    // navegación por meses en el detalle
     var _gtaCache     = null; // índice { al:{nombre:{sesiones:[]}}, ents:[{nombre, alumnos:[]}] }
 
-    function abrirGestorTodosAlumnos() { _gtaFiltroTxt = ''; irA('pantalla-gestor-todos-alumnos'); }
+    function abrirGestorTodosAlumnos() { _gtaFiltroTxt = ''; _gtaFiltroEnt = null; irA('pantalla-gestor-todos-alumnos'); }
     // v0.64.3: al tocar un alumno en la lista global de la academia se
     // abre la MISMA ficha que entrando por entrenador (editar datos,
     // alta/baja, mes navegable e historial por curso). Si el alumno tiene
@@ -6005,6 +6146,20 @@
     }
     function gtaMesNav(delta) { _gtaMesOff += delta; renderGestorTodosAlumno(); }
     function gtaFiltrar(v) { _gtaFiltroTxt = v || ''; _gtaRenderLista(); }
+    // Filtro opcional por entrenador (toca dos veces el mismo chip → quitar)
+    function gtaFiltroEnt(ent) {
+      _gtaFiltroEnt = (_gtaFiltroEnt === ent) ? null : ent;
+      _gtaRenderChips(); _gtaRenderLista();
+    }
+    // Reverse index: alumno → conjunto de entrenadores con los que entrena
+    function _gtaEntsDe(n) {
+      if (!_gtaCache) return {};
+      var set = {};
+      _gtaCache.ents.forEach(function(e){
+        if (e.alumnos.indexOf(n) !== -1) set[e.nombre] = true;
+      });
+      return set;
+    }
 
     // Índice global: por alumno, todas sus sesiones de TODOS los
     // entrenadores. Cada sesión lleva el entrenador y la clase.
@@ -6065,39 +6220,76 @@
       if (!cont) return;
       if (!_gestorData) { cont.innerHTML = '<p class="ajustes-desc">Sin datos.</p>'; return; }
       _gtaCache = _gtaIndex();
-      var lista = Object.keys(_gtaCache.al).sort();
+      var lista = Object.keys(_gtaCache.al).sort(_gtaCmp);
       document.getElementById('gta-sub').textContent =
-        lista.length + ' alumno' + (lista.length!==1?'s':'') + ' · todos los entrenadores';
+        lista.length + ' alumno' + (lista.length!==1?'s':'') + ' del club';
       if (!lista.length) {
         cont.innerHTML = '<p class="ajustes-desc" style="text-align:center;padding:1rem 0;">Aún no hay alumnos con datos.</p>';
         return;
       }
-      // Barra fija (buscador + contador); la lista se pinta aparte para
-      // que el input no pierda el foco al filtrar (mismo motor que "Alumnos").
+      // Barra fija (buscador + chips de filtro + contador); la lista se pinta
+      // aparte para que el input no pierda el foco al filtrar.
       cont.innerHTML =
         '<input id="gta-input" class="form-input" type="search" placeholder="🔍 Buscar alumno…" ' +
           'autocomplete="off" oninput="gtaFiltrar(this.value)" style="margin-bottom:0.6rem;">' +
+        '<div class="gals-chips" id="gta-chips"></div>' +
         '<p class="ajustes-desc" id="gta-count" style="margin:0.15rem 0 0.6rem;"></p>' +
         '<div id="gta-lista"></div>';
+      _gtaRenderChips();
       _gtaRenderLista();
     }
 
-    // Tarjeta de un alumno (compartida por la lista plana y los grupos)
+    // Orden alfabético en español (respeta acentos y ñ)
+    function _gtaCmp(a, b) { return String(a).localeCompare(String(b), 'es', { sensitivity:'base' }); }
+
+    // Chips de filtro opcionales por entrenador ("Todo el club" + uno por
+    // entrenador). Es opt-in: por defecto se ve toda la academia, nunca
+    // agrupada. Un alumno puede aparecer bajo varios entrenadores.
+    function _gtaRenderChips() {
+      var el = document.getElementById('gta-chips');
+      if (!el || !_gtaCache) return;
+      var h = '<button type="button" class="gals-chip' + (_gtaFiltroEnt==null?' activo':'') +
+              '" onclick="gtaFiltroEnt(null)">Todo el club</button>';
+      _gtaCache.ents.forEach(function(e){
+        if (!e.alumnos.length) return;
+        h += '<button type="button" class="gals-chip' + (_gtaFiltroEnt===e.nombre?' activo':'') +
+             '" onclick="gtaFiltroEnt(\'' + _gEsc(e.nombre).replace(/'/g,"\\'") + '\')">' +
+             _gEsc(e.nombre) + '</button>';
+      });
+      el.innerHTML = h;
+    }
+
+    function _primerNombre(s) { return String(s||'').trim().split(/\s+/)[0]; }
+
+    // Tarjeta de un alumno (enfoque club: nombre, asistencia y con qué
+    // entrenadores entrena como dato secundario)
     function _gtaCard(n) {
       var cursoAct = _cursoActual();
       var sesCurso = _gtaCache.al[n].sesiones.filter(function(x){ return _cursoDe(x.fecha) === cursoAct; });
       var s = _histStats(sesCurso);
-      var conQuien = _gtaConQuien(sesCurso);
       var meta = s.tot ? (s.pres + '/' + s.tot + ' este curso' +
-                           (s.recups ? ' · +' + s.recups + ' recup' : '') +
-                           (conQuien ? ' · ' + conQuien : ''))
+                           (s.recups ? ' · +' + s.recups + ' recup' : ''))
                        : (_gtaCache.al[n].sesiones.length ? 'sin clases este curso' : 'sin registros');
+      // Entrenadores del alumno: presencias del curso o, si aún no las hay,
+      // los del cupo (reverse index). Hasta 3 nombres de pila.
+      var entsFrec = [];
+      var cnt = {};
+      sesCurso.forEach(function(x){ if (x.presente) cnt[x.entrenador] = (cnt[x.entrenador]||0)+1; });
+      entsFrec = Object.keys(cnt).sort(function(a,b){ return cnt[b]-cnt[a]; });
+      if (!entsFrec.length) entsFrec = Object.keys(_gtaEntsDe(n)).sort(_gtaCmp);
+      var conTxt = '';
+      if (entsFrec.length) {
+        var nombres = entsFrec.map(_primerNombre);
+        var extra = nombres.length > 3 ? ' +' + (nombres.length-3) : '';
+        conTxt = '👤 ' + nombres.slice(0,3).join(' · ') + extra;
+      }
       var pctTxt = s.pct == null ? '—' : s.pct + '%';
       return '<div class="gestor-card" onclick="abrirGestorTodosAlumno(\'' + _gEsc(n).replace(/'/g,"\\'") + '\')">' +
         '<div class="gestor-card-ava">' + _gEsc(n.charAt(0).toUpperCase()) + '</div>' +
         '<div class="gestor-card-body">' +
           '<div class="gestor-card-nom">' + _gEsc(n) + '</div>' +
           '<div class="gestor-card-meta">' + _gEsc(meta) + '</div>' +
+          (conTxt ? '<div class="gestor-card-con">' + _gEsc(conTxt) + '</div>' : '') +
         '</div>' +
         '<div class="gestor-card-pct" style="color:' + _pctColor(s.pct) + '">' + pctTxt + '</div>' +
         '<div class="gestor-card-arr">›</div>' +
@@ -6109,30 +6301,37 @@
       var cnt = document.getElementById('gta-count');
       if (!el || !_gtaCache) return;
       var txt   = _galsNorm(_gtaFiltroTxt);
-      var todos = Object.keys(_gtaCache.al).sort();
+      var todos = Object.keys(_gtaCache.al).sort(_gtaCmp);
 
-      // Buscando: lista plana con las coincidencias de TODA la academia
-      if (txt) {
-        var visibles = todos.filter(function(n){ return _galsNorm(n).indexOf(txt) >= 0; });
-        if (cnt) cnt.textContent = visibles.length + ' de ' + todos.length + ' alumnos';
-        el.innerHTML = visibles.length
-          ? visibles.map(_gtaCard).join('')
-          : '<p class="ajustes-desc" style="text-align:center;padding:0.8rem 0;">Ningún alumno coincide con el filtro.</p>';
+      // Enfoque club: SIEMPRE una lista única alfabética con índice A–Z.
+      // El entrenador nunca es la estructura; es un filtro opcional (chips)
+      // y un dato secundario en cada tarjeta.
+      var visibles = todos.filter(function(n){
+        if (txt && _galsNorm(n).indexOf(txt) < 0) return false;
+        if (_gtaFiltroEnt != null && !_gtaEntsDe(n)[_gtaFiltroEnt]) return false;
+        return true;
+      });
+
+      // Contador contextual
+      if (cnt) {
+        var ambito = _gtaFiltroEnt != null ? (' · ' + _gEsc(_gtaFiltroEnt)) : '';
+        cnt.textContent = (visibles.length === todos.length)
+          ? todos.length + ' alumno' + (todos.length!==1?'s':'') + ' del club · toca uno para ver su ficha'
+          : visibles.length + ' de ' + todos.length + ' alumnos' + ambito;
+      }
+
+      if (!visibles.length) {
+        el.innerHTML = '<p class="ajustes-desc" style="text-align:center;padding:0.8rem 0;">Ningún alumno coincide con el filtro.</p>';
         return;
       }
 
-      // Sin búsqueda: agrupados por entrenador (desplegables plegados).
-      // Un alumno con dos entrenadores aparece en ambos grupos.
-      if (cnt) cnt.textContent = todos.length + ' alumno' + (todos.length!==1?'s':'') + ' · agrupados por entrenador';
-      var h = '';
-      _gtaCache.ents.forEach(function(ent){
-        if (!ent.alumnos.length) return;
-        h += '<details class="gas-clase"><summary class="gas-sum">' +
-          '<span class="gas-dia">' + _gEsc(ent.nombre) + '</span>' +
-          '<span class="gas-meta">' + ent.alumnos.length + ' alumno' + (ent.alumnos.length!==1?'s':'') + '</span>' +
-          '<span class="gas-chev">▾</span></summary><div class="gas-body">' +
-          ent.alumnos.map(_gtaCard).join('') +
-          '</div></details>';
+      // Lista con cabeceras por letra inicial (acentos y ñ normalizados)
+      var h = '', letraPrev = '';
+      visibles.forEach(function(n){
+        var c = _galsNorm(n).charAt(0).toUpperCase();
+        if (!/[A-ZÑ]/.test(c)) c = '#';
+        if (c !== letraPrev) { h += '<div class="gta-az">' + c + '</div>'; letraPrev = c; }
+        h += _gtaCard(n);
       });
       el.innerHTML = h;
     }
@@ -10501,6 +10700,7 @@
       asistAltaPanelOn  = _abrirPanelAlta;  _abrirPanelAlta  = false;
       asistSustPanelOn  = false;   // el panel de sustitución arranca cerrado
       renderToggleAlumnos(clase);
+      _asistListaSnap = _asistSnap();   // estado de referencia para detectar cambios
     }
 
     // Cambiar la fecha desde la propia pantalla de pasar lista
@@ -10743,6 +10943,7 @@
         regs.push(nuevo);
         escribirAsistRegistros(regs, false, [nuevo]);
       }
+      _asistListaSnap = _asistSnap();   // las recups ya quedaron guardadas
     }
 
     function asistToggleAlumno(nombre) {
@@ -10782,6 +10983,7 @@
       };
       if (idx>=0) { regs[idx]=nuevoReg; } else { regs.push(nuevoReg); }
       escribirAsistRegistros(regs, false, [nuevoReg]);
+      _asistListaSnap = _asistSnap();   // "sin clase" guardado: sin cambios pendientes
       _asistListaSalida();
     }
 
@@ -10815,6 +11017,7 @@
 
       if (idx>=0) { regs[idx]=nuevoReg; } else { regs.push(nuevoReg); }
       escribirAsistRegistros(regs, false, [nuevoReg]);
+      _asistListaSnap = _asistSnap();   // recién guardado: sin cambios pendientes
       _asistListaSalida();
     }
 
