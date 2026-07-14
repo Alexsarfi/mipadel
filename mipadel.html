@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.79.1   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.79.2   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,13 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.79.2 — Días sin clase: scope de club único (2026-07)
+    · Corrige la sincronización: el gestor y los entrenadores están en
+      grupos distintos, así que el grupo no servía como scope común y
+      los entrenadores no veían los días. Ahora todos usan un scope de
+      club FIJO compartido. Requiere actualizar el RLS (ver el archivo
+      migracion_dias_sin_clase.sql). El gestor migra sus días locales
+      al nuevo scope automáticamente al abrir el calendario.
   v0.79.1 — Días sin clase también en el calendario del entrenador (2026-07)
     · Los días marcados como "sin clase" por el gestor se pintan ahora
       en el calendario de asistencia de cada entrenador: número en rojo
@@ -3287,7 +3294,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.79.1';
+    var APP_VERSION = '0.79.2';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -4307,9 +4314,13 @@
     var _dscMesIdx = 0;      // índice del mes dentro del curso (sep–jul)
     var _dscCargadoSb = false;
     var _DSC_LS = 'padel-dias-sin-clase';
+    // v0.79.2: gestor y entrenadores están en grupos distintos, así que el
+    // grupo NO sirve como scope común. Al ser un único club, se usa un
+    // scope FIJO compartido por todos (gestor + entrenadores).
+    var _DSC_CLUB = '00000000-0000-4000-8000-000000000001';
 
     function _pad2(n){ return (n<10?'0':'') + n; }
-    function _dscScope(){ return _sbGrupoId || (_sbUser && _sbUser.id) || 'local'; }
+    function _dscScope(){ return _DSC_CLUB; }
     function _dscPuedeEditar(){
       try { return !!(_esGestor || (_sbGrupo && _sbGrupo.rol === 'nivel3')); } catch(e){ return !!_esGestor; }
     }
@@ -4357,6 +4368,10 @@
             (r.data.fechas || []).forEach(function(f){ if (f) serv[f] = true; });
             _dscSet = serv;                  // el servidor manda
             _dscGuardarLocal();
+          } else if (_dscPuedeEditar() && Object.keys(_dscSet).length) {
+            // No hay fila aún (p. ej. tras cambiar de scope): el gestor
+            // migra sus días locales al nuevo scope compartido.
+            _dscUpsertSb();
           }
           _dscRefrescarVista();
         }).catch(function(){ _dscCargadoSb = true; });
