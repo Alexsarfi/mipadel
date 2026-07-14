@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.78.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.79.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,22 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.79.0 — Ficha del alumno con chips + calendario de días sin clase (2026-07)
+    · Ficha del alumno: la vista del mes deja de ser una lista y pasa a
+      chips GRANDES por día, agrupados por clase (franja · duración),
+      al estilo "Clases dadas". Verde presente · rojo falta IJ · ámbar
+      falta J · azul recuperación. Aplica a la ficha por entrenador y a
+      la global del club (esta añade el entrenador en la cabecera).
+    · NUEVO (solo gestor): botón "📅 Días sin clase" en el panel. Abre
+      un calendario del club L–V de sep a jul, con vista Mes (por
+      defecto) y vista Año. El gestor toca los días para marcarlos como
+      sin clase (festivos, vacaciones, cierres). Es informativo: no
+      toca la asistencia ni las clases dadas de nadie.
+    · Sincronización: se guarda en local (funciona ya) y, si ejecutas
+      la migración 'migracion_dias_sin_clase.sql', en una tabla
+      compartida de Supabase (dias_sin_clase por grupo) que se
+      sincroniza con todos los entrenadores. Sin la migración funciona
+      igual en local, sin errores.
   v0.78.0 — Abecedario horizontal para saltar por inicial (2026-07)
     · Alumnos del club: bajo el buscador y los chips de entrenador
       aparece una barra A–Z horizontal. Al pulsar una letra, la lista
@@ -1218,6 +1234,41 @@
     .gestor-kpi-btn { cursor:pointer; border-color:var(--lila-claro); }
     .gestor-kpi-btn:active { background:var(--lila-suave); }
     .gestor-kpi-btn .gestor-kpi-sub { color:var(--lila); }
+    /* Botón "Días sin clase" del panel del gestor */
+    .gcal-btn { display:flex; align-items:center; gap:12px; width:100%; margin:0 0 0.4rem; text-align:left;
+                background:var(--blanco); border:1.5px solid var(--lila-claro); border-radius:14px;
+                padding:0.85rem 1rem; cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent; }
+    .gcal-btn:active { background:var(--lila-suave); }
+    .gcal-btn-ic { font-size:22px; flex-shrink:0; }
+    .gcal-btn-txt { display:flex; flex-direction:column; gap:2px; }
+    .gcal-btn-txt b { font-size:14.5px; color:var(--texto); }
+    .gcal-btn-txt span { font-size:11px; color:var(--lila); }
+    /* Calendario de días sin clase */
+    .dsc-vista { display:flex; gap:6px; margin-bottom:0.7rem; }
+    .dsc-vbtn { flex:1; border:1.5px solid var(--borde); background:var(--blanco); color:var(--gris);
+                font-family:inherit; font-size:13px; font-weight:700; border-radius:10px; padding:8px 0;
+                cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .dsc-vbtn.activo { background:var(--verde); border-color:var(--verde); color:#fff; }
+    .dsc-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-top:0.5rem; }
+    .dsc-wd { text-align:center; font-size:11px; font-weight:800; color:var(--gris); padding-bottom:2px; }
+    .dsc-cell { display:flex; align-items:center; justify-content:center; height:44px; border-radius:10px;
+                border:1.5px solid var(--borde); background:var(--blanco); color:var(--texto);
+                font-family:inherit; font-size:15px; font-weight:700; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    button.dsc-cell:active { transform:scale(0.94); }
+    .dsc-cell.empty { border:none; background:transparent; cursor:default; }
+    .dsc-cell.hoy { border-color:var(--verde); }
+    .dsc-cell.off { background:#fee2e2; border-color:#fecaca; color:#991b1b; }
+    .dsc-cell.off::after { content:'✕'; font-size:11px; margin-left:1px; }
+    /* Vista año: mini-meses */
+    .dsc-anio { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+    .dsc-anio-mes { background:var(--blanco); border:1.5px solid var(--borde); border-radius:12px; padding:0.6rem 0.6rem 0.7rem; }
+    .dsc-anio-hdr { display:flex; align-items:center; justify-content:space-between; font-size:12.5px; font-weight:800; color:var(--texto); margin-bottom:4px; }
+    .dsc-anio-n { background:#fee2e2; color:#991b1b; font-size:10px; font-weight:800; border-radius:20px; padding:1px 7px; }
+    .dsc-grid.mini { gap:3px; margin-top:2px; }
+    .dsc-grid.mini .dsc-wd { font-size:8.5px; }
+    .dsc-grid.mini .dsc-cell { height:24px; font-size:11px; font-weight:700; border-radius:6px; border-width:1px; }
+    .dsc-grid.mini .dsc-cell.off::after { content:''; margin:0; }
+    @media (max-width:360px){ .dsc-anio { grid-template-columns:1fr; } }
     /* Buscador y filtro por clase en Alumnos (gestor) */
     .gals-chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:0.35rem; }
     .gals-chip { border:1.5px solid var(--borde); background:var(--blanco); color:var(--gris);
@@ -1241,6 +1292,29 @@
     .abc-let.abc-off { color:var(--borde); opacity:0.55; cursor:default; }
     .abc-let.abc-all { width:auto; padding:0 11px; }
     .abc-let:not(.abc-off):active { transform:scale(0.92); }
+    /* Vista del mes del alumno: chips grandes por día (estilo clases dadas) */
+    .galm-clase { background:var(--blanco); border:1.5px solid var(--borde); border-radius:14px; padding:0.8rem 0.9rem; margin-bottom:10px; }
+    .galm-clase-hdr { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:11px; }
+    .galm-fr { font-size:15.5px; font-weight:800; color:var(--texto); }
+    .galm-nom { font-size:12.5px; color:var(--gris); }
+    .galm-dur { font-size:11px; font-weight:700; color:var(--verde); background:var(--verde-suave); border-radius:20px; padding:2px 9px; }
+    .galm-ent { font-size:11px; font-weight:700; color:var(--lila); background:var(--lila-suave); border-radius:20px; padding:2px 9px; }
+    .galm-dias { display:flex; flex-wrap:wrap; gap:8px; }
+    .galm-chip { min-width:48px; height:54px; padding:0 6px; border-radius:12px; display:flex; flex-direction:column;
+                 align-items:center; justify-content:center; gap:2px; }
+    .galm-chip-dia { font-size:10px; font-weight:800; letter-spacing:0.04em; opacity:0.75; }
+    .galm-chip-num { font-size:20px; font-weight:800; line-height:1; }
+    .galm-chip.pres   { background:#dcfce7; color:#166534; }
+    .galm-chip.falta  { background:#fee2e2; color:#991b1b; }
+    .galm-chip.faltaj { background:#fef3c7; color:#92400e; }
+    .galm-chip.recup  { background:#dbeafe; color:#1e40af; }
+    .galm-leyenda { display:flex; flex-wrap:wrap; align-items:center; gap:5px 10px; margin:2px 0 10px; font-size:11px; }
+    .galm-lg { display:inline-flex; align-items:center; justify-content:center; min-width:24px; height:22px; padding:0 5px;
+               border-radius:7px; font-size:11px; font-weight:800; vertical-align:middle; }
+    .galm-lg.pres   { background:#dcfce7; color:#166534; }
+    .galm-lg.falta  { background:#fee2e2; color:#991b1b; }
+    .galm-lg.faltaj { background:#fef3c7; color:#92400e; }
+    .galm-lg.recup  { background:#dbeafe; color:#1e40af; }
     /* Asistencia por días: tramos horarios dentro de cada día */
     .gad-tramo { padding:0.55rem 0; border-bottom:1px solid var(--borde); }
     .gad-tramo:last-child { border-bottom:none; }
@@ -2509,6 +2583,18 @@
     </div>
   </div>
 
+  <!-- ══ GESTOR — CALENDARIO DE DÍAS SIN CLASE ════ -->
+  <div id="pantalla-gestor-calendario" class="pantalla">
+    <div class="cabecera">
+      <button class="btn-volver" onclick="irA('pantalla-gestor')">‹ Panel</button>
+      <div class="cab-titulo">Días sin clase</div>
+      <div class="cab-sub" id="gestor-cal-sub">—</div>
+    </div>
+    <div class="contenido">
+      <div id="gestor-cal-contenido"></div>
+    </div>
+  </div>
+
   <!-- ══ CATEGORÍAS ══════════════════════════════ -->
   <div id="pantalla-categorias" class="pantalla">
     <div class="cabecera">
@@ -3193,7 +3279,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.78.0';
+    var APP_VERSION = '0.79.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -3207,6 +3293,7 @@
     var _sb     = null;   // cliente Supabase
     var _sbUser = null;   // usuario actual { id, email }
     var _sbGrupo = null;  // { id: uuid, rol: 'nivel2'|'nivel3' } | null
+    var _sbGrupoId = null; // grupo_id del usuario para CUALQUIER rol (incl. gestor), para datos compartidos del club
     var _esEN1 = false; // true si la cuenta tiene rol 'en1' (antes 'monitor'; acceso solo a Asistencia)
     var _esGestor  = false; // true si la cuenta tiene rol 'gestor' (panel de asistencia global, solo lectura)
 
@@ -3225,7 +3312,7 @@
         _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         _sb.auth.onAuthStateChange(function(event, session) {
           _sbUser = session ? { id: session.user.id, email: session.user.email } : null;
-          if (!_sbUser) { _sbGrupo = null; _esEN1 = false; _esGestor = false; _planSyncOK = false; }
+          if (!_sbUser) { _sbGrupo = null; _sbGrupoId = null; _esEN1 = false; _esGestor = false; _planSyncOK = false; }
           if (event === 'SIGNED_IN') {
             _authActualizarBadge();
             _fetchGrupo(_sbUser.id).then(function() {
@@ -3337,6 +3424,8 @@
           var rol = r.data ? r.data.rol : null;
           _esEN1 = (rol === 'en1');
           _esGestor  = (rol === 'gestor');
+          // grupo_id disponible para todos los roles (club) → datos compartidos
+          _sbGrupoId = r.data ? (r.data.grupo_id || null) : null;
           // EN1 y gestor trabajan en solitario (no se unen al sync de grupo).
           _sbGrupo = (rol && rol !== 'en1' && rol !== 'gestor')
                        ? { id: r.data.grupo_id, rol: rol } : null;
@@ -4196,6 +4285,191 @@
     // leyendas) solo se muestran en septiembre, el arranque del curso.
     // El resto del año se ocultan para reducir ruido visual. m='YYYY-MM'.
     function _gEsSeptiembre(m) { return (m || '').slice(5, 7) === '09'; }
+
+    // ══════════════════════════════════════════
+    // GESTOR — Calendario de DÍAS SIN CLASE del club (v0.79)
+    // Calendario informativo (festivos/vacaciones/cierres) L–V, sep–jul.
+    // Lo gestiona el gestor y se comparte con todos los entrenadores del
+    // club. Persistencia: localStorage (siempre) + tabla compartida en
+    // Supabase 'dias_sin_clase' por grupo (si existe la migración; si no,
+    // funciona igual en local sin romper nada).
+    // ══════════════════════════════════════════
+    var _dscSet    = null;   // { 'YYYY-MM-DD': true }
+    var _dscVista  = 'mes';  // 'mes' | 'anio'
+    var _dscMesIdx = 0;      // índice del mes dentro del curso (sep–jul)
+    var _dscCargadoSb = false;
+    var _DSC_LS = 'padel-dias-sin-clase';
+
+    function _pad2(n){ return (n<10?'0':'') + n; }
+    function _dscScope(){ return _sbGrupoId || (_sbUser && _sbUser.id) || 'local'; }
+    function _dscPuedeEditar(){
+      try { return !!(_esGestor || (_sbGrupo && _sbGrupo.rol === 'nivel3')); } catch(e){ return !!_esGestor; }
+    }
+    // Meses del curso en curso: sep→jul (año de inicio + siguiente)
+    function _dscMesesCurso(){
+      var y0 = parseInt(cursoDeFecha(hoyLocal()).slice(0,4), 10);
+      var out = [];
+      [9,10,11,12].forEach(function(m){ out.push(y0 + '-' + _pad2(m)); });
+      [1,2,3,4,5,6,7].forEach(function(m){ out.push((y0+1) + '-' + _pad2(m)); });
+      return out;
+    }
+    // ── Persistencia local ──
+    function _dscLeerLocal(){
+      try { return JSON.parse(localStorage.getItem(_DSC_LS) || '[]'); } catch(e){ return []; }
+    }
+    function _dscGuardarLocal(){
+      var arr = Object.keys(_dscSet || {});
+      try { localStorage.setItem(_DSC_LS, JSON.stringify(arr)); } catch(e){}
+    }
+    function _dscInit(){
+      if (_dscSet) return;
+      _dscSet = {};
+      _dscLeerLocal().forEach(function(f){ if (f) _dscSet[f] = true; });
+    }
+    // ── Sincronización con Supabase (best-effort) ──
+    function _dscCargarSb(){
+      _dscInit();
+      if (!_sb || !_sbUser) return;
+      _sb.from('dias_sin_clase').select('fechas').eq('scope_id', _dscScope()).maybeSingle()
+        .then(function(r){
+          if (r.error || !r.data) return;   // tabla ausente o sin fila → se ignora
+          var serv = {};
+          (r.data.fechas || []).forEach(function(f){ if (f) serv[f] = true; });
+          _dscSet = serv;                    // el servidor manda
+          _dscGuardarLocal();
+          _dscCargadoSb = true;
+          if (document.getElementById('pantalla-gestor-calendario').classList.contains('activa')) renderGestorCalendario();
+        }).catch(function(){});
+    }
+    function _dscUpsertSb(){
+      if (!_sb || !_sbUser || !_dscPuedeEditar()) return;
+      var row = {
+        scope_id:   _dscScope(),
+        fechas:     Object.keys(_dscSet || {}).sort(),
+        updated_by: _sbUser.id,
+        updated_at: new Date().toISOString()
+      };
+      _sb.from('dias_sin_clase').upsert(row, { onConflict: 'scope_id' })
+        .then(function(r){ if (r.error) console.warn('sync dias_sin_clase', r.error && r.error.message); })
+        .catch(function(){});
+    }
+    function _dscEsSinClase(iso){ _dscInit(); return !!_dscSet[iso]; }
+
+    function abrirGestorCalendario(){
+      _dscInit();
+      _dscVista = 'mes';
+      // Posicionar en el mes en curso si cae dentro del curso
+      var meses = _dscMesesCurso();
+      var hoyM  = hoyLocal().slice(0,7);
+      var idx   = meses.indexOf(hoyM);
+      _dscMesIdx = idx >= 0 ? idx : 0;
+      irA('pantalla-gestor-calendario');
+      _dscCargarSb();   // refresca desde el servidor si está disponible
+    }
+    function dscVista(v){ _dscVista = v; renderGestorCalendario(); }
+    function dscMesNav(delta){
+      var meses = _dscMesesCurso();
+      _dscMesIdx = Math.max(0, Math.min(meses.length-1, _dscMesIdx + delta));
+      renderGestorCalendario();
+    }
+    function dscToggle(iso){
+      if (!_dscPuedeEditar()) return;
+      _dscInit();
+      if (_dscSet[iso]) delete _dscSet[iso]; else _dscSet[iso] = true;
+      _dscGuardarLocal();
+      _dscUpsertSb();
+      renderGestorCalendario();
+    }
+
+    // Rejilla de un mes (L–V). `mini` = versión compacta para la vista de año.
+    function _dscMesGridHTML(iso, mini){
+      var y = +iso.slice(0,4), m = +iso.slice(5,7);
+      var nd = new Date(y, m, 0).getDate();
+      var cells = [];
+      for (var d = 1; d <= nd; d++){
+        var mb = (new Date(y, m-1, d).getDay() + 6) % 7;   // Lun=0 … Dom=6
+        if (mb > 4) continue;                              // solo L–V
+        cells.push({ d:d, mb:mb });
+      }
+      var rows = [], row = [null,null,null,null,null];
+      var vacia = function(rw){ return rw.every(function(x){ return x === null; }); };
+      cells.forEach(function(c){
+        if (c.mb === 0 && !vacia(row)) { rows.push(row); row = [null,null,null,null,null]; }
+        row[c.mb] = c.d;
+      });
+      if (!vacia(row)) rows.push(row);
+
+      var editable = _dscPuedeEditar();
+      var cls = mini ? 'dsc-grid mini' : 'dsc-grid';
+      var h = '<div class="' + cls + '">';
+      ['L','M','X','J','V'].forEach(function(w){ h += '<div class="dsc-wd">' + w + '</div>'; });
+      rows.forEach(function(rw){
+        rw.forEach(function(d){
+          if (d === null) { h += '<div class="dsc-cell empty"></div>'; return; }
+          var fiso = y + '-' + _pad2(m) + '-' + _pad2(d);
+          var off  = _dscSet[fiso] ? ' off' : '';
+          var hoy  = (fiso === hoyLocal()) ? ' hoy' : '';
+          if (editable) {
+            h += '<button type="button" class="dsc-cell' + off + hoy + '" onclick="dscToggle(\'' + fiso + '\')">' + d + '</button>';
+          } else {
+            h += '<div class="dsc-cell' + off + hoy + '">' + d + '</div>';
+          }
+        });
+      });
+      h += '</div>';
+      return h;
+    }
+
+    function renderGestorCalendario(){
+      var cont = document.getElementById('gestor-cal-contenido');
+      if (!cont) return;
+      _dscInit();
+      var meses = _dscMesesCurso();
+      var cursoLbl = cursoDeFecha(hoyLocal());
+      var totCurso = meses.reduce(function(acc, iso){
+        return acc + Object.keys(_dscSet).filter(function(f){ return f.slice(0,7) === iso; }).length;
+      }, 0);
+      var sub = document.getElementById('gestor-cal-sub');
+      if (sub) sub.textContent = 'Curso ' + cursoLbl + ' · ' + totCurso + ' día' + (totCurso!==1?'s':'') + ' sin clase';
+
+      var editable = _dscPuedeEditar();
+      var h = '';
+      // Selector de vista Mes / Año
+      h += '<div class="dsc-vista">' +
+        '<button type="button" class="dsc-vbtn' + (_dscVista==='mes'?' activo':'') + '" onclick="dscVista(\'mes\')">Mes</button>' +
+        '<button type="button" class="dsc-vbtn' + (_dscVista==='anio'?' activo':'') + '" onclick="dscVista(\'anio\')">Año</button>' +
+      '</div>';
+      h += '<p class="ajustes-desc" style="margin:0 0 0.7rem;">' +
+        (editable ? 'Toca un día para marcarlo o desmarcarlo como <b>sin clase</b> (festivos, vacaciones, cierres). Se comparte con todos los entrenadores del club.'
+                  : 'Días sin clase del club (festivos, vacaciones, cierres). Solo el gestor puede editarlos.') + '</p>';
+
+      if (_dscVista === 'mes') {
+        var iso = meses[_dscMesIdx] || meses[0];
+        var lbl = MESES_NOMBRES_A[+iso.slice(5,7)-1] + ' ' + iso.slice(0,4);
+        var nMes = Object.keys(_dscSet).filter(function(f){ return f.slice(0,7) === iso; }).length;
+        h += '<div class="gestor-mes-nav" style="margin-top:0;">' +
+          '<button class="gestor-mes-btn" onclick="dscMesNav(-1)"' + (_dscMesIdx<=0?' disabled':'') + '>‹</button>' +
+          '<span class="gestor-mes-lbl">' + _gEsc(lbl) + '</span>' +
+          '<button class="gestor-mes-btn" onclick="dscMesNav(1)"' + (_dscMesIdx>=meses.length-1?' disabled':'') + '>›</button>' +
+        '</div>';
+        h += _dscMesGridHTML(iso, false);
+        h += '<p class="ajustes-desc" style="text-align:center;margin-top:0.5rem;">' +
+             (nMes ? nMes + ' día' + (nMes!==1?'s':'') + ' sin clase este mes' : 'Ningún día marcado este mes') + '</p>';
+      } else {
+        h += '<div class="dsc-anio">';
+        meses.forEach(function(iso){
+          var nMes = Object.keys(_dscSet).filter(function(f){ return f.slice(0,7) === iso; }).length;
+          h += '<div class="dsc-anio-mes">' +
+            '<div class="dsc-anio-hdr"><span>' + _gEsc(MESES_NOMBRES_A[+iso.slice(5,7)-1]) + '</span>' +
+              (nMes ? '<span class="dsc-anio-n">' + nMes + '</span>' : '') + '</div>' +
+            _dscMesGridHTML(iso, true) +
+          '</div>';
+        });
+        h += '</div>';
+      }
+      cont.innerHTML = h;
+    }
+
     function renderGestor() {
       var cont = document.getElementById('gestor-contenido');
       if (!cont || !_gestorData) return;
@@ -4209,6 +4483,11 @@
         '<div class="gestor-kpi gestor-kpi-btn" onclick="abrirGestorTodosAlumnos()"><div class="gestor-kpi-num">' + totAlumnos + '</div><div class="gestor-kpi-lbl">Alumnos</div><div class="gestor-kpi-sub">Ver por alumno ›</div></div>' +
         '<div class="gestor-kpi gestor-kpi-btn" onclick="abrirGestorClasesMes()"><div class="gestor-kpi-num">' + totClases + '</div><div class="gestor-kpi-lbl">Clases</div><div class="gestor-kpi-sub">Dadas por mes ›</div></div>' +
         '</div>';
+      // v0.79: acceso al calendario de días sin clase del club (solo gestor)
+      h += '<button type="button" class="gcal-btn" onclick="abrirGestorCalendario()">' +
+        '<span class="gcal-btn-ic">📅</span>' +
+        '<span class="gcal-btn-txt"><b>Días sin clase</b><span>Calendario del club · sep–jul · se sincroniza con todos ›</span></span>' +
+      '</button>';
       if (!uids.length) {
         h += '<p class="ajustes-desc" style="text-align:center;padding:1rem 0;">Aún no hay datos de asistencia de ningún entrenador.</p>';
         h += '<p class="ajustes-desc" style="text-align:center;">Versión ' + APP_VERSION + '</p>';
@@ -5857,6 +6136,58 @@
     }
     function _pctColor(p) { return p==null ? '#9ca3af' : (p>=80 ? '#166534' : (p>=60 ? '#b45309' : '#991b1b')); }
 
+    // ── Vista del mes en la ficha del alumno: chips GRANDES por día,
+    //    agrupados por clase (franja), al estilo "Clases dadas" pero con
+    //    el estado del alumno. Verde presente · rojo falta IJ · ámbar falta
+    //    J · azul recuperación. `opts.conEntrenador` añade el entrenador a
+    //    la cabecera (vista global del club). ──
+    function _alMesChipsHTML(itemsMes, opts) {
+      opts = opts || {};
+      var grupos = {}, orden = [];
+      itemsMes.forEach(function(x){
+        var ent = opts.conEntrenador ? (x.entrenador || '') : '';
+        var key = ent + '|' + (x.franja || '') + '|' + (x.claseNombre || '');
+        if (!grupos[key]) { grupos[key] = { ent:ent, franja:x.franja||'', nombre:x.claseNombre||'', items:[] }; orden.push(key); }
+        grupos[key].items.push(x);
+      });
+      orden.sort(function(a,b){
+        return (grupos[a].franja||'').localeCompare(grupos[b].franja||'') || a.localeCompare(b);
+      });
+      var h = '';
+      orden.forEach(function(k){
+        var g = grupos[k];
+        g.items.sort(function(a,b){ return a.fecha.localeCompare(b.fecha); });
+        var dur = _duracionFranja(g.franja);
+        var chips = g.items.map(function(x){
+          var p  = x.fecha.split('-');
+          var wd = _GALLETRAS[new Date(+p[0], +p[1]-1, +p[2]).getDay()];
+          var cls = x.recup ? 'recup' : (x.presente ? 'pres' : (x.justif ? 'faltaj' : 'falta'));
+          return '<div class="galm-chip ' + cls + '">' +
+                   '<span class="galm-chip-dia">' + wd + '</span>' +
+                   '<span class="galm-chip-num">' + (x.recup ? '↩' : '') + parseInt(p[2],10) + '</span>' +
+                 '</div>';
+        }).join('');
+        h += '<div class="galm-clase">' +
+          '<div class="galm-clase-hdr">' +
+            '<span class="galm-fr">' + _gEsc(g.franja || 'Clase') + '</span>' +
+            (g.nombre ? '<span class="galm-nom">' + _gEsc(g.nombre) + '</span>' : '') +
+            (_durLabel(dur) ? '<span class="galm-dur">' + _durLabel(dur) + '</span>' : '') +
+            (opts.conEntrenador && g.ent ? '<span class="galm-ent">👤 ' + _gEsc(_primerNombre(g.ent)) + '</span>' : '') +
+          '</div>' +
+          '<div class="galm-dias">' + chips + '</div>' +
+        '</div>';
+      });
+      return h;
+    }
+    // Leyenda de colores para la vista de chips del alumno
+    function _alMesLeyenda() {
+      return '<p class="ajustes-desc galm-leyenda">' +
+        '<span class="galm-lg pres">15</span> presente &nbsp;' +
+        '<span class="galm-lg falta">15</span> falta IJ &nbsp;' +
+        '<span class="galm-lg faltaj">15</span> falta J &nbsp;' +
+        '<span class="galm-lg recup">↩</span> recuperación</p>';
+    }
+
     // ── Listado de alumnos del entrenador (con buscador y filtro por clase) ──
     // Cache de la pantalla: lista completa + a qué clases va cada alumno
     var _galsCache = null;   // { alumnos:[nombre], clasesAl:{nombre:{claseId:true}}, clases:[...] }
@@ -6084,20 +6415,8 @@
       if (!itemsMes.length) {
         h += '<p class="ajustes-desc" style="text-align:center;">Sin registros este mes.</p>';
       } else {
-        itemsMes.forEach(function(x){
-          var clasNom = x.claseNombre || x.franja || '';
-          h += '<div class="asist-hist-item">' +
-            '<div class="asist-hist-fecha">' + formatFechaCorta(x.fecha) + '</div>' +
-            '<div class="asist-hist-clase">' +
-              '<div class="asist-hist-clase-nombre">' + _gEsc(clasNom) + '</div>' +
-              '<div class="asist-hist-clase-franja">' + _gEsc(x.franja) + '</div>' +
-            '</div>' +
-            (x.recup ? '<span class="asist-hist-presente">✓ Recup.</span>'
-                     : (x.presente ? '<span class="asist-hist-presente">✓ Presente</span>'
-                                   : (x.justif ? '<span class="asist-hist-j">✗ Falta J</span>'
-                                               : '<span class="asist-hist-ausente">✗ Falta IJ</span>'))) +
-          '</div>';
-        });
+        h += _alMesLeyenda();
+        h += _alMesChipsHTML(itemsMes, {});
       }
 
       // ── Cursos (sep–jun): el actual desplegado, los anteriores plegados ──
@@ -6484,22 +6803,8 @@
       if (!itemsMes.length) {
         h += '<p class="ajustes-desc" style="text-align:center;">Sin registros este mes.</p>';
       } else {
-        itemsMes.forEach(function(x){
-          var linea2 = x.recup
-            ? '↩ Recuperación con ' + x.entrenador
-            : 'con ' + x.entrenador + (x.franja ? ' · ' + x.franja : '');
-          h += '<div class="asist-hist-item">' +
-            '<div class="asist-hist-fecha">' + formatFechaCorta(x.fecha) + '</div>' +
-            '<div class="asist-hist-clase">' +
-              '<div class="asist-hist-clase-nombre">' + _gEsc(x.claseNombre) + '</div>' +
-              '<div class="asist-hist-clase-franja">' + _gEsc(linea2) + '</div>' +
-            '</div>' +
-            (x.recup ? '<span class="asist-hist-presente">↩ Recup.</span>'
-                     : (x.presente ? '<span class="asist-hist-presente">✓ Presente</span>'
-                                   : (x.justif ? '<span class="asist-hist-j">✗ Falta J</span>'
-                                               : '<span class="asist-hist-ausente">✗ Falta IJ</span>'))) +
-          '</div>';
-        });
+        h += _alMesLeyenda();
+        h += _alMesChipsHTML(itemsMes, { conEntrenador:true });
       }
 
       // ── Cursos anteriores (sep–jun), plegados; solo si tuvieron clases ──
@@ -7631,7 +7936,8 @@
       'pantalla-gestor-planning',
       'pantalla-gestor-clases','pantalla-gestor-entrenadores',
       'pantalla-gestor-alumnos','pantalla-gestor-alumno',
-      'pantalla-gestor-todos-alumnos','pantalla-gestor-todos-alumno'];
+      'pantalla-gestor-todos-alumnos','pantalla-gestor-todos-alumno',
+      'pantalla-gestor-calendario'];
 
     function irA(id) {
       // Salir de las pantallas de asistencia/panel apaga el modo gestión
@@ -7676,6 +7982,7 @@
       if (id === 'pantalla-gestor-alumno')          renderGestorAlumno();
       if (id === 'pantalla-gestor-todos-alumnos')   renderGestorTodosAlumnos();
       if (id === 'pantalla-gestor-todos-alumno')    renderGestorTodosAlumno();
+      if (id === 'pantalla-gestor-calendario')      renderGestorCalendario();
 
       if (id === 'pantalla-asistencia')             mostrarAsistencia();
       if (id === 'pantalla-asistencia-config')      mostrarAsistenciaConfig();
