@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.80.1   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.81.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,15 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.81.0 — "Recuperaciones del mes" visibles para el entrenador (2026-07)
+    · En Asistencia, bajo "↩ Recuperar una clase", aparece la lista
+      "↩ Recuperaciones · <mes>" con las sesiones de recuperación de ese
+      mes (incluidas las de fin de semana, que antes no se veían en el
+      calendario). Cada fila muestra fecha, clase y nº de presentes y,
+      al tocarla, abre su lista para verla o corregirla.
+    · La lista sigue el mes del calendario (cambia con las flechas ‹ ›).
+    · Recordatorio: esas recuperaciones ya cuentan como clase dada en su
+      mes y el gestor las ve en "Clases dadas" como extra (chip "+").
   v0.80.1 — Pasar lista más limpio + fix recuperar clase (2026-07)
     · Pasar lista: fuera "✓ Todos presentes" y "✗ Todos ausentes" para
       quitar ruido. Quedan 4 acciones en una fila: ↩ Recuperación ·
@@ -1428,6 +1437,15 @@
     /* Panel "Recuperar una clase" */
     .recup-panel { background:var(--blanco); border:1.5px solid var(--lila-claro); border-radius:12px; padding:12px; margin:8px 0; }
     .recup-tit { font-size:14px; font-weight:800; color:var(--texto); margin-bottom:4px; }
+    /* Lista "Recuperaciones del mes" en Asistencia */
+    .asist-recups-box { background:var(--blanco); border:1.5px solid var(--lila-claro); border-radius:12px; padding:8px 10px; margin:8px 0; }
+    .asist-recups-tit { font-size:12px; font-weight:800; color:var(--lila); margin:2px 2px 6px; }
+    .asist-recup-row { display:flex; align-items:center; gap:10px; padding:8px 6px; border-top:1px solid var(--borde); cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .asist-recup-row:first-of-type { border-top:none; }
+    .asist-recup-row:active { background:var(--lila-suave); border-radius:8px; }
+    .asist-recup-fecha { flex-shrink:0; font-size:12.5px; font-weight:800; color:#1e40af; min-width:72px; }
+    .asist-recup-nom { flex:1; min-width:0; font-size:13px; color:var(--texto); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .asist-recup-cnt { flex-shrink:0; font-size:12px; font-weight:800; color:#166534; }
     .acal-ley { display:flex; gap:9px; flex-wrap:wrap; align-items:center; font-size:10px; color:var(--gris); margin-top:7px; padding-top:6px; border-top:1px solid var(--borde); }
     .acal-ley span { display:inline-flex; align-items:center; gap:3px; }
     /* Meses del curso en el panel del gestor (v0.64) */
@@ -3078,6 +3096,7 @@
       <div id="asist-dias-lista"></div>
       <button class="btn btn-sec" onclick="recupClaseToggle()">↩ Recuperar una clase</button>
       <div id="asist-recup-clase-panel"></div>
+      <div id="asist-recups-mes"></div>
       <button class="btn btn-sec" onclick="irA('pantalla-asistencia-resumen')">📊 Resumen del mes</button>
     </div>
   </div>
@@ -3317,7 +3336,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.80.1';
+    var APP_VERSION = '0.81.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -6173,6 +6192,15 @@
       var p = String(fecha).split('-');
       if (p.length < 3) return false;
       return new Date(+p[0], +p[1]-1, +p[2]).getDay() !== clase.diaSemana;
+    }
+    // ¿Este registro es una recuperación de clase? Lo es si la fecha no es
+    // el día habitual (finde/otro día) o si se creó desde el panel (todos
+    // los presentes quedaron anotados como recups).
+    function _esRegRecup(clase, r){
+      if (!r || r.sinClase || !_regPasada(r)) return false;
+      if (_esDiaExtraClase(clase, r.fecha)) return true;
+      var pres = r.presentes || [], rec = r.recups || [];
+      return pres.length > 0 && rec.length > 0 && pres.every(function(n){ return rec.indexOf(n) !== -1; });
     }
     function _gestorHistAlumno(nombre) {
       var d = _gestorAgrupar()[_gestorUid];
@@ -11117,6 +11145,36 @@
       }
 
       document.getElementById('asist-dias-lista').innerHTML = html;
+
+      // ── Recuperaciones del mes visible (v0.81) ──
+      // Sesiones de recuperación (finde u otro día) del mes del calendario,
+      // para que el entrenador las vea y pueda reabrirlas. Cuentan como
+      // clase dada ese mes y el gestor las ve en "Clases dadas" (extras).
+      var recEl = document.getElementById('asist-recups-mes');
+      if (recEl) {
+        var recups = [];
+        regs.forEach(function(r){
+          if (!r.fecha || r.fecha.slice(0,7) !== mesISO) return;
+          var cl = clases.filter(function(c){ return c.id === r.claseId; })[0];
+          if (cl && _esRegRecup(cl, r)) recups.push({ r:r, clase:cl });
+        });
+        recups.sort(function(a,b){ return a.r.fecha.localeCompare(b.r.fecha); });
+        if (recups.length) {
+          var rh = '<div class="asist-recups-box"><div class="asist-recups-tit">↩ Recuperaciones · ' + _gEsc(mesLabel) + '</div>';
+          recups.forEach(function(x){
+            var nom = x.clase.nombre || ((x.clase.diaSemana>=0 ? DIAS_NOMBRES_A[x.clase.diaSemana] + ' · ' : '') + (x.clase.franja||'Clase'));
+            rh += '<div class="asist-recup-row" onclick="asistAbrirRecup(' + x.clase.id + ',\'' + x.r.fecha + '\')">' +
+              '<span class="asist-recup-fecha">' + _gEsc(formatFechaCorta(x.r.fecha)) + '</span>' +
+              '<span class="asist-recup-nom">' + _gEsc(nom) + (x.clase.franja ? ' · ' + _gEsc(x.clase.franja) : '') + '</span>' +
+              '<span class="asist-recup-cnt">✓ ' + (x.r.presentes||[]).length + '</span>' +
+            '</div>';
+          });
+          rh += '</div>';
+          recEl.innerHTML = rh;
+        } else {
+          recEl.innerHTML = '';
+        }
+      }
     }
 
     // ══════════════════════════════════════════
@@ -11126,6 +11184,11 @@
       asistClaseActivaId = claseId;
       asistFechaActiva   = fecha;
       irA('pantalla-asistencia-lista');
+    }
+    // Abre una sesión de recuperación desde la lista "Recuperaciones del mes"
+    function asistAbrirRecup(claseId, fecha) {
+      _asistRecupModo = true;
+      asistAbrirLista(claseId, fecha);
     }
 
     // ── Recuperar una clase (v0.80) ──────────────────────────────
