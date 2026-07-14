@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.82.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.83.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,14 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.83.0 — Resumen del mes: clases dadas por duración (2026-07)
+    · En "Resumen del mes" del entrenador se retira la matriz con todos
+      los alumnos (queda en el PDF exportado). En su lugar, encima de
+      "Exportar PDF", aparece un cuadro con las clases DADAS ese mes por
+      duración: de 1 h, de 1 h 30 y total. Solo cuentan listas pasadas,
+      así que en el mes en curso es "hasta hoy".
+    · Si hubo clases cubiertas por un sustituto, se indican aparte (no
+      cuentan en el total del titular).
   v0.82.0 — Recuperación de clase con marca explícita (2026-07)
     · Antes el cuadro "Recuperaciones del mes" usaba una heurística (día
       no habitual) que marcaba de más. Ahora una sesión es recuperación
@@ -1457,6 +1465,14 @@
     .asist-recup-fecha { flex-shrink:0; font-size:12.5px; font-weight:800; color:#1e40af; min-width:72px; }
     .asist-recup-nom { flex:1; min-width:0; font-size:13px; color:var(--texto); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .asist-recup-cnt { flex-shrink:0; font-size:12px; font-weight:800; color:#166534; }
+    /* Resumen "Clases dadas por duración" (Resumen del mes) */
+    .asist-suma-card { background:var(--blanco); border:1.5px solid var(--borde); border-radius:14px; padding:0.9rem 1rem; margin-bottom:0.85rem; }
+    .asist-suma-tit { font-size:13px; font-weight:800; color:var(--texto); margin-bottom:10px; }
+    .asist-suma-row { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+    .asist-suma-kpi { background:var(--arena); border:1.5px solid var(--borde); border-radius:12px; padding:0.7rem 0.4rem; text-align:center; }
+    .asist-suma-kpi.total { background:var(--verde-suave); border-color:var(--verde-suave); }
+    .asist-suma-n { font-size:24px; font-weight:800; color:var(--verde); line-height:1; }
+    .asist-suma-l { font-size:10.5px; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:0.03em; margin-top:5px; }
     .acal-ley { display:flex; gap:9px; flex-wrap:wrap; align-items:center; font-size:10px; color:var(--gris); margin-top:7px; padding-top:6px; border-top:1px solid var(--borde); }
     .acal-ley span { display:inline-flex; align-items:center; gap:3px; }
     /* Meses del curso en el panel del gestor (v0.64) */
@@ -3226,6 +3242,7 @@
         <span class="asist-mes-label" id="asist-mes-label">—</span>
         <button class="btn-semana" onclick="asistCambiarMes(1)">›</button>
       </div>
+      <div id="asist-res-suma"></div>
       <button class="btn btn-sec" style="border-color:var(--lila-claro);color:var(--lila);margin-bottom:.85rem;" onclick="asistExportarPDF()">📄 Exportar PDF</button>
       <div id="asist-res-contenido"></div>
     </div>
@@ -3347,7 +3364,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.82.0';
+    var APP_VERSION = '0.83.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -12014,51 +12031,33 @@
       document.getElementById('asist-res-sub').textContent =
         alumnos.length + ' alumno' + (alumnos.length!==1?'s':'') + ' · ' + regs.length + ' lista' + (regs.length!==1?'s':'') + ' registradas';
 
-      if (alumnos.length === 0 || fechasCols.length === 0) {
-        document.getElementById('asist-res-contenido').innerHTML =
-          '<div class="vacio"><div class="vacio-icono">📊</div><p>Sin datos para ' + mesLabel + '.</p></div>';
-        return;
+      // ── Clases dadas hasta la fecha por duración (v0.83) ──
+      // Sustituye a la matriz de alumnos: encima de "Exportar PDF" se muestra
+      // el nº de clases de 1 h y de 1 h 30 dadas ese mes (solo listas pasadas,
+      // así que en el mes en curso es "hasta hoy"). El detalle por alumno
+      // sigue estando en el PDF.
+      var suma   = _gestorSumaMes(clases, regs, mesISO);
+      var sumaEl = document.getElementById('asist-res-suma');
+      if (sumaEl) {
+        if (!suma.total && !suma.sust) {
+          sumaEl.innerHTML = '<div class="asist-suma-card"><div class="asist-suma-tit">Clases dadas · ' + _gEsc(mesLabel) + '</div>' +
+            '<p class="ajustes-desc" style="margin:6px 2px 0;">Aún no hay clases dadas este mes.</p></div>';
+        } else {
+          sumaEl.innerHTML =
+            '<div class="asist-suma-card">' +
+              '<div class="asist-suma-tit">Clases dadas · ' + _gEsc(mesLabel) + '</div>' +
+              '<div class="asist-suma-row">' +
+                '<div class="asist-suma-kpi"><div class="asist-suma-n">' + suma.m60 + '</div><div class="asist-suma-l">de 1 h</div></div>' +
+                '<div class="asist-suma-kpi"><div class="asist-suma-n">' + suma.m90 + '</div><div class="asist-suma-l">de 1 h 30</div></div>' +
+                '<div class="asist-suma-kpi total"><div class="asist-suma-n">' + suma.total + '</div><div class="asist-suma-l">total</div></div>' +
+              '</div>' +
+              (suma.otras ? '<p class="ajustes-desc" style="margin:6px 2px 0;">+ ' + suma.otras + ' de otra duración</p>' : '') +
+              (suma.sust ? '<p class="ajustes-desc" style="margin:2px 2px 0;">🔁 ' + suma.sust + ' cubierta' + (suma.sust!==1?'s':'') + ' por sustituto (no cuentan aquí)</p>' : '') +
+            '</div>';
+        }
       }
-
-      // ── Cuadrícula de asistencia por días del mes (sin porcentajes) ──
-      var CEL = {
-        pres:   { txt:'✓', col:'#166534' },
-        falta:  { txt:'✗', col:'#991b1b' },
-        faltaJ: { txt:'J', col:'#b45309' },
-        recup:  { txt:'↩', col:'#16264f' },
-        nolist: { txt:'—', col:'#9ca3af' }
-      };
-
-      var html = '';
-      html += '<div class="asist-matriz-leyenda">';
-      html += '<span style="color:#166534;font-weight:700">✓</span> asistió &nbsp; ';
-      html += '<span style="color:#991b1b;font-weight:700">✗</span> falta injustif. &nbsp; ';
-      html += '<span style="color:#b45309;font-weight:700">J</span> falta justif. &nbsp; ';
-      html += '<span style="color:#16264f;font-weight:700">↩</span> recup &nbsp; ';
-      html += '<span style="color:#9ca3af;font-weight:700">—</span> sin lista &nbsp; ';
-      html += '<span style="color:#d1d5db;font-weight:700">·</span> no aplica';
-      html += '</div>';
-
-      html += '<div class="asist-matriz-wrap"><table class="asist-matriz">';
-      html += '<thead><tr><th class="am-nom">Alumno</th>';
-      fechasCols.forEach(function(f){ html += '<th>' + formatFechaCorta(f) + '</th>'; });
-      html += '<th class="am-tot">Tot</th></tr></thead><tbody>';
-
-      alumnos.forEach(function(alumno) {
-        var dat = alumnosMap[alumno];
-        html += '<tr onclick="asistVerAlumno(\'' + alumno.replace(/'/g,"\\'") + '\')">';
-        html += '<td class="am-nom">' + _gEsc(alumno) + (dat.recups ? ' <span class="am-recup">↩+' + dat.recups + '</span>' : '') + '</td>';
-        fechasCols.forEach(function(f){
-          var st = dat.cells[f];
-          if (!st) { html += '<td style="color:#d1d5db">·</td>'; }
-          else { var c = CEL[st]; html += '<td style="color:' + c.col + ';font-weight:700">' + c.txt + '</td>'; }
-        });
-        html += '<td class="am-tot">' + dat.presencias + '/' + dat.totalClases + '</td>';
-        html += '</tr>';
-      });
-      html += '</tbody></table></div>';
-
-      document.getElementById('asist-res-contenido').innerHTML = html;
+      // La matriz de alumnos se retira de la pantalla (queda en el PDF)
+      document.getElementById('asist-res-contenido').innerHTML = '';
     }
 
     function asistCambiarMes(delta) {
