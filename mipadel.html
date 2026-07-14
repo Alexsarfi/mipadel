@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.79.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.79.1   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,12 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.79.1 — Días sin clase también en el calendario del entrenador (2026-07)
+    · Los días marcados como "sin clase" por el gestor se pintan ahora
+      en el calendario de asistencia de cada entrenador: número en rojo
+      y una ✕, con su entrada en la leyenda. Cada entrenador los lee de
+      Supabase (tabla compartida por grupo) al abrir Asistencia; si no
+      hay migración o red, no pasa nada (sigue en local).
   v0.79.0 — Ficha del alumno con chips + calendario de días sin clase (2026-07)
     · Ficha del alumno: la vista del mes deja de ser una lista y pasa a
       chips GRANDES por día, agrupados por clase (franja · duración),
@@ -1387,6 +1393,8 @@
     .acal-dot.sc   { background:#9ca3af; }
     .acal-dot.fut  { background:#d5dbe5; }
     .acal-rec { font-size:9px; font-weight:800; color:#16264f; line-height:1; }
+    .acal-cell.cerrado .acal-num { background:#fee2e2; color:#991b1b; }
+    .acal-cerr { font-size:10px; font-weight:800; color:#dc2626; line-height:1; }
     .acal-ley { display:flex; gap:9px; flex-wrap:wrap; align-items:center; font-size:10px; color:var(--gris); margin-top:7px; padding-top:6px; border-top:1px solid var(--borde); }
     .acal-ley span { display:inline-flex; align-items:center; gap:3px; }
     /* Meses del curso en el panel del gestor (v0.64) */
@@ -3279,7 +3287,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.79.0';
+    var APP_VERSION = '0.79.1';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -4326,20 +4334,32 @@
       _dscSet = {};
       _dscLeerLocal().forEach(function(f){ if (f) _dscSet[f] = true; });
     }
+    // Repinta la vista que esté activa y dependa de los días sin clase
+    function _dscRefrescarVista(){
+      var g = document.getElementById('pantalla-gestor-calendario');
+      var a = document.getElementById('pantalla-asistencia');
+      if (g && g.classList.contains('activa')) renderGestorCalendario();
+      else if (a && a.classList.contains('activa') && typeof mostrarAsistencia === 'function') mostrarAsistencia();
+    }
     // ── Sincronización con Supabase (best-effort) ──
-    function _dscCargarSb(){
+    // La usan el gestor (edita) y los entrenadores (solo leen, para pintar
+    // los días sin clase en su calendario de asistencia).
+    function _dscCargarSb(force){
       _dscInit();
       if (!_sb || !_sbUser) return;
+      if (_dscCargadoSb && !force) return;   // una vez por sesión, salvo forzado
       _sb.from('dias_sin_clase').select('fechas').eq('scope_id', _dscScope()).maybeSingle()
         .then(function(r){
-          if (r.error || !r.data) return;   // tabla ausente o sin fila → se ignora
-          var serv = {};
-          (r.data.fechas || []).forEach(function(f){ if (f) serv[f] = true; });
-          _dscSet = serv;                    // el servidor manda
-          _dscGuardarLocal();
-          _dscCargadoSb = true;
-          if (document.getElementById('pantalla-gestor-calendario').classList.contains('activa')) renderGestorCalendario();
-        }).catch(function(){});
+          _dscCargadoSb = true;              // evita reintentos en bucle
+          if (r.error) return;               // tabla ausente → sigue lo local
+          if (r.data) {
+            var serv = {};
+            (r.data.fechas || []).forEach(function(f){ if (f) serv[f] = true; });
+            _dscSet = serv;                  // el servidor manda
+            _dscGuardarLocal();
+          }
+          _dscRefrescarVista();
+        }).catch(function(){ _dscCargadoSb = true; });
     }
     function _dscUpsertSb(){
       if (!_sb || !_sbUser || !_dscPuedeEditar()) return;
@@ -4364,7 +4384,7 @@
       var idx   = meses.indexOf(hoyM);
       _dscMesIdx = idx >= 0 ? idx : 0;
       irA('pantalla-gestor-calendario');
-      _dscCargarSb();   // refresca desde el servidor si está disponible
+      _dscCargarSb(true);   // refresca desde el servidor si está disponible
     }
     function dscVista(v){ _dscVista = v; renderGestorCalendario(); }
     function dscMesNav(delta){
@@ -10865,6 +10885,7 @@
 
     function mostrarAsistencia() {
       if (!_sb || !_sbUser) _asistStampCurso();   // uso solo-local: migración v0.55
+      _dscCargarSb();   // v0.79.1: trae los días sin clase del club para pintarlos
       var cfg    = leerAsistConfig();
       var clases = cfg.clases || [];
       var regs   = leerAsistRegistros();
@@ -10949,12 +10970,14 @@
           var off = (d === 0) ? 6 : d - 1;
           var f = addDiasISO(lunISO, off);
           var fuera = f.slice(0,7) !== mesISO;
+          var cerrado = _dscEsSinClase(f);   // día sin clase del club (festivo/cierre)
           var e = _estadoDia(f);
-          cal += '<div class="acal-cell' + (fuera ? ' fuera' : '') + (f === hoy ? ' hoy' : '') + '">' +
+          cal += '<div class="acal-cell' + (fuera ? ' fuera' : '') + (f === hoy ? ' hoy' : '') + (cerrado ? ' cerrado' : '') + '">' +
             '<span class="acal-num">' + parseInt(f.slice(8,10),10) + '</span>' +
             '<span class="acal-marks">' +
-              (e ? '<span class="acal-dot ' + e.st + '"></span>' + (e.rec ? '<span class="acal-rec">↩</span>' : '') +
-                   (e.sust ? '<span class="acal-rec" style="color:#b45309;">🔁</span>' : '') : '') +
+              (cerrado ? '<span class="acal-cerr">✕</span>'
+                       : (e ? '<span class="acal-dot ' + e.st + '"></span>' + (e.rec ? '<span class="acal-rec">↩</span>' : '') +
+                              (e.sust ? '<span class="acal-rec" style="color:#b45309;">🔁</span>' : '') : '')) +
             '</span></div>';
         });
         cal += '</div>';
@@ -10967,6 +10990,7 @@
         '<span><span class="acal-dot fut"></span> próxima</span>' +
         '<span><span class="acal-rec">↩</span> recup prevista</span>' +
         '<span><span class="acal-rec" style="color:#b45309;">🔁</span> sustitución</span>' +
+        '<span><span class="acal-cerr">✕</span> sin clase (club)</span>' +
       '</div>';
       cal += '</div>';
       document.getElementById('asist-calendario').innerHTML = cal;
