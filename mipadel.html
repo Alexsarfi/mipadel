@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.89.1   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.90.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,13 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.90.0 — El curso llega hasta julio (sep–jul) (2026-07)
+    · La fila de meses del panel del gestor incluía sep–jun; ahora es
+      sep–jul (_gPanelMesesCurso). Así JULIO aparece en la pantalla
+      principal y, estando en julio, queda seleccionado por defecto.
+    · El resto ya era coherente: cursoDeFecha usa el límite 1 de sep
+      (julio pertenece al curso que empezó en septiembre), y el
+      calendario de días sin clase ya iba sep–jul. Revisado sin errores.
   v0.89.1 — Detalle del entrenador: primer día desplegado (2026-07)
     · Al entrar en un entrenador desde el panel, "Clases dadas" abre ya
       desplegado el primer día con clases. Se puede plegar pulsando su
@@ -3476,7 +3483,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.89.1';
+    var APP_VERSION = '0.90.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -4871,7 +4878,7 @@
     }
 
     // ── Mes seleccionado en el panel principal (v0.64) ──────────────
-    // Fila de meses del curso (sep–jun): todas las vistas que se abren
+    // Fila de meses del curso (sep–jul): todas las vistas que se abren
     // desde el panel (detalle del entrenador, planning de día/franja)
     // arrancan YA posicionadas en ese mes.
     var _gPanelMes = null;   // 'YYYY-MM' seleccionado en el panel
@@ -4879,7 +4886,7 @@
       var y0 = parseInt(cursoDeFecha(hoyLocal()).slice(0,4), 10);
       var out = [];
       [9,10,11,12].forEach(function(m){ out.push(y0 + '-' + ('0'+m).slice(-2)); });
-      [1,2,3,4,5,6].forEach(function(m){ out.push((y0+1) + '-0' + m); });
+      [1,2,3,4,5,6,7].forEach(function(m){ out.push((y0+1) + '-0' + m); });   // v0.90: incluye julio
       return out;
     }
     function _gPanelMesDefecto(meses) {
