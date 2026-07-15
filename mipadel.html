@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.84.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.84.1   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,10 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.84.1 — EN1: plan de solo lectura (2026-07)
+    · Para el EN1 se ocultan los botones "✏️ Editar plan" y "✏️ Añadir /
+      quitar sesiones": ve la planificación de Iniciación pero no la
+      puede modificar.
   v0.84.0 — Vista limitada del rol EN1 (2026-07)
     · El EN1 (monitor) pasa a ver en Inicio SOLO: Asistencia,
       Entrenamiento de Iniciación (planificación + sesiones) y el
@@ -3380,7 +3384,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.84.0';
+    var APP_VERSION = '0.84.1';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -7743,7 +7747,7 @@
         if (it.f) h += '<div class="plan-item-foco" style="margin:0 0 0.7rem;">' + it.f + '</div>';
       }
 
-      h += '<button class="plan-edit-toggle' + (edit ? ' on' : '') + '" onclick="planSesToggleEdit()">' +
+      if (!esEN1Cuenta()) h += '<button class="plan-edit-toggle' + (edit ? ' on' : '') + '" onclick="planSesToggleEdit()">' +
            (edit ? '✓ Terminar' : '✏️ Añadir / quitar sesiones') + '</button>';
 
       if (edit) {
@@ -7945,8 +7949,8 @@
       });
       h += '</div>';
 
-      // Botón editar
-      h += '<button class="plan-edit-toggle' + (edit ? ' on' : '') + '" onclick="planToggleEdit()">' +
+      // Botón editar (oculto para EN1: el plan es de solo lectura)
+      if (!esEN1Cuenta()) h += '<button class="plan-edit-toggle' + (edit ? ' on' : '') + '" onclick="planToggleEdit()">' +
            (edit ? '✓ Terminar de editar' : '✏️ Editar plan') + '</button>';
 
       var esComp = (nivel === 'competicion');
