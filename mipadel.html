@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.83.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.84.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,20 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.84.0 — Vista limitada del rol EN1 (2026-07)
+    · El EN1 (monitor) pasa a ver en Inicio SOLO: Asistencia,
+      Entrenamiento de Iniciación (planificación + sesiones) y el
+      apartado Competición (enlaces FAP/FEP/FIP). Se ocultan Avanzado,
+      el plan de Competición, Partido y Ajustes.
+    · Del entrenamiento, el EN1 solo ve el nivel Iniciación (vía
+      nivelPermitido); las pestañas de Avanzado/Competición no le
+      aparecen ni en Planificación ni en Sesiones.
+    · Como el EN1 no tiene barra inferior, se le añade en Inicio un
+      acceso directo "🎾 Sesiones de Iniciación". La Planificación de
+      Iniciación y las Sesiones se desbloquean para su rol
+      (EN1_PANTALLAS_OK), sin afectar al modo monitor local (PIN).
+    · Nota: si un EN1 sigue viendo todo, su cuenta no se reconoce como
+      'en1' (revisar que la fila en grupo_miembros tenga rol='en1').
   v0.83.0 — Resumen del mes: clases dadas por duración (2026-07)
     · En "Resumen del mes" del entrenador se retira la matriz con todos
       los alumnos (queda en el PDF exportado). En su lugar, encima de
@@ -2444,10 +2458,12 @@
         <div class="home-niveles-lbl">Planificación · por nivel</div>
         <div class="home-plan-grid">
           <button class="home-plan-btn niv-ini"  onclick="irPlanNivel('iniciacion')"><span class="ico">🌱</span><span class="lbl">Iniciación</span></button>
-          <button class="home-plan-btn niv-avz"  onclick="irPlanNivel('avanzado')"><span class="ico">🔥</span><span class="lbl">Avanzado</span></button>
+          <button class="home-plan-btn niv-avz"  id="home-plan-avz"  onclick="irPlanNivel('avanzado')"><span class="ico">🔥</span><span class="lbl">Avanzado</span></button>
           <button class="home-plan-btn niv-comp" id="home-plan-comp" onclick="irPlanNivel('competicion')"><span class="ico">🏆</span><span class="lbl">Competición</span></button>
         </div>
-        <!-- (Sesiones movido a la pestaña "Sesiones" de la barra inferior) -->
+        <!-- (Sesiones vive en la pestaña "Sesiones" de la barra inferior;
+             para EN1, que no tiene barra, se ofrece aquí este acceso) -->
+        <button class="btn btn-sec" id="home-en1-sesiones" style="display:none;width:100%;margin-top:10px;" onclick="irA('pantalla-clases-niveles')">🎾 Sesiones de Iniciación</button>
       </div>
 
       <!-- (Partido movido a su propia pantalla, accesible desde la pelota de la barra inferior) -->
@@ -3364,7 +3380,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.83.0';
+    var APP_VERSION = '0.84.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -4242,7 +4258,12 @@
     // (ni Competición ni Equipo/Individual/Técnica), también en Sesiones.
     function esEN2Cuenta() { return !!(_sbGrupo && _sbGrupo.rol === 'nivel2'); }
     var NIVELES_EN2 = ['iniciacion','avanzado'];
-    function nivelPermitido(key) { return !esEN2Cuenta() || NIVELES_EN2.indexOf(key) >= 0; }
+    var NIVELES_EN1 = ['iniciacion'];   // EN1: del entrenamiento solo Iniciación
+    function nivelPermitido(key) {
+      if (esEN1Cuenta()) return NIVELES_EN1.indexOf(key) >= 0;
+      if (esEN2Cuenta()) return NIVELES_EN2.indexOf(key) >= 0;
+      return true;
+    }
     function _monitorGuardar(m) { _lzSet('padel-monitor', JSON.stringify(m)); }
 
 
@@ -8000,10 +8021,15 @@
     // NAVEGACIÓN
     // ══════════════════════════════════════════
 
-    // Pantallas permitidas cuando el modo monitor está activo
+    // Pantallas permitidas cuando el modo monitor LOCAL (PIN) está activo
     var MONITOR_PANTALLAS_OK = ['pantalla-inicio','pantalla-asistencia','pantalla-asistencia-config',
       'pantalla-asistencia-nueva-clase','pantalla-asistencia-lista','pantalla-asistencia-resumen',
       'pantalla-asistencia-alumno'];
+    // v0.84: el EN1 además puede abrir la Planificación y las Sesiones
+    // (limitadas a Iniciación por nivelPermitido)
+    var EN1_PANTALLAS_OK = MONITOR_PANTALLAS_OK.concat(['pantalla-planificacion',
+      'pantalla-plan-sesiones','pantalla-nueva-sesion',
+      'pantalla-clases-niveles','pantalla-clases','pantalla-clases-grupo']);
 
     // ── Barra de navegación inferior (rediseño) ──
     var NAV_GROUPS = {
@@ -8076,7 +8102,9 @@
         var okGestor = GESTOR_PANTALLAS.indexOf(id) >= 0 ||
                        (_gEditUid && GESTION_ASIST_OK.indexOf(id) >= 0);
         if (!okGestor) { id = 'pantalla-gestor'; }
-      } else if ((monitorActivo() || esEN1Cuenta()) && MONITOR_PANTALLAS_OK.indexOf(id) < 0) {
+      } else if (esEN1Cuenta() && EN1_PANTALLAS_OK.indexOf(id) < 0) {
+        id = 'pantalla-inicio';
+      } else if (monitorActivo() && MONITOR_PANTALLAS_OK.indexOf(id) < 0) {
         id = 'pantalla-inicio';
       } else if (GESTOR_PANTALLAS.indexOf(id) >= 0) {
         // v0.50: el panel de la academia es exclusivo del rol gestor
@@ -8132,19 +8160,33 @@
     // ══════════════════════════════════════════
 
     function actualizarInicio() {
-      // ── Modo monitor: ocultar todo salvo Asistencia + mostrar banner ──
       var monCuenta = esEN1Cuenta();
-      var mon = monitorActivo() || monCuenta;
-      ['home-sec-entreno','home-sec-partido','home-sec-comp','home-sec-ajustes'].forEach(function(id){
+      var monLocal  = monitorActivo();
+      var mon = monLocal || monCuenta;
+      // v0.84: el EN1 ve Asistencia + Entrenamiento (solo Iniciación) +
+      // apartado Competición. El monitor LOCAL (PIN) sigue viendo solo
+      // Asistencia. Partido y Ajustes ocultos para ambos.
+      var ocultarSec = {
+        'home-sec-entreno': mon && !monCuenta,   // EN1 sí ve Entrenamiento
+        'home-sec-partido': mon,
+        'home-sec-comp':    mon && !monCuenta,   // EN1 sí ve el apartado Competición
+        'home-sec-ajustes': mon
+      };
+      Object.keys(ocultarSec).forEach(function(id){
         var el = document.getElementById(id);
-        if (el) el.style.display = mon ? 'none' : '';
+        if (el) el.style.display = ocultarSec[id] ? 'none' : '';
       });
-      // El botón Perfil del encabezado tampoco está disponible para EN1
+      // El botón Perfil del encabezado no está disponible para monitores/EN1
       var perfBtn = document.getElementById('cab-perfil-btn');
       if (perfBtn) perfBtn.style.display = mon ? 'none' : 'flex';
-      // EN2: sin botón de plan de Competición
+      // Botones de plan por nivel: se ocultan los no permitidos por el rol
+      var avzBtn = document.getElementById('home-plan-avz');
+      if (avzBtn) avzBtn.style.display = nivelPermitido('avanzado') ? '' : 'none';
       var compBtn = document.getElementById('home-plan-comp');
       if (compBtn) compBtn.style.display = nivelPermitido('competicion') ? '' : 'none';
+      // Acceso a Sesiones para EN1 (no tiene barra inferior)
+      var en1Ses = document.getElementById('home-en1-sesiones');
+      if (en1Ses) en1Ses.style.display = monCuenta ? 'block' : 'none';
       var pie = document.getElementById('inicio-pie');
       if (pie) pie.style.display = mon ? 'none' : 'flex';
 
