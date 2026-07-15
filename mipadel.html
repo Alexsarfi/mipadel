@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.89.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.89.1   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,10 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.89.1 — Detalle del entrenador: primer día desplegado (2026-07)
+    · Al entrar en un entrenador desde el panel, "Clases dadas" abre ya
+      desplegado el primer día con clases. Se puede plegar pulsando su
+      chip (o abrir otro día).
   v0.89.0 — Cuenta del gestor en un botón de perfil (2026-07)
     · La barra del cuerpo (correo · ↻ Actualizar · Salir) se sustituye
       por un botón 👤 de perfil arriba a la derecha de la cabecera. Al
@@ -3472,7 +3476,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.89.0';
+    var APP_VERSION = '0.89.1';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -5309,7 +5313,7 @@
     // v0.75: entrar en un entrenador muestra los días CONTRAÍDOS por defecto
     // (menos ruido visual). Solo desde el planning (abrirGestorDetalleDia) se
     // deja abierto el día de la franja pinchada.
-    function abrirGestorDetalle(uid) { _gestorUid = uid; _gestorMesOff = _gPanelMesOffset(); _gHist = null; _gCierreOpen = false; _gResumenOpen = false; _gColapsarDias(null); irA('pantalla-gestor-detalle'); }
+    function abrirGestorDetalle(uid) { _gestorUid = uid; _gestorMesOff = _gPanelMesOffset(); _gHist = null; _gCierreOpen = false; _gResumenOpen = false; _gColapsarDias(null); _gDiaSel = '__auto__'; irA('pantalla-gestor-detalle'); }
     function abrirGestorDetalleDia(uid, dia) { _gestorUid = uid; _gestorMesOff = _gPanelMesOffset(); _gHist = null; _gCierreOpen = false; _gResumenOpen = false; _gColapsarDias(dia); irA('pantalla-gestor-detalle'); }
     function gestorMesNav(delta) { _gestorMesOff += delta; _gCierreOpen = false; _gResumenOpen = false; renderGestorDetalle(); }
     // v0.72: cambiar de entrenador sin salir del detalle (chips de arriba)
@@ -5634,6 +5638,9 @@
           });
           diasData[k] = { bloques: bloques, tot: totDia, n: porDiaSem[k].length };
         });
+        // v0.90: al entrar en el entrenador se despliega el primer día con
+        // clases (valor '__auto__'); el usuario puede plegarlo pulsándolo.
+        if (_gDiaSel === '__auto__') _gDiaSel = ordenDias[0] || null;
         if (_gDiaSel && !diasData[_gDiaSel]) _gDiaSel = null;   // ese día ya no tiene clases
 
         h += '<div class="ghd-diarow">';
