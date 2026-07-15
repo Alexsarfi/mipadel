@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.86.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.87.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,13 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.87.0 — Planning del panel: flujo día → entrenador → franja (2026-07)
+    · El "Planning semanal" del panel del gestor deja de mostrar toda la
+      rejilla a la vez. Ahora es una fila de días (mismo formato verde de
+      siempre); al tocar un día se despliega debajo la lista de sus
+      entrenadores, y al tocar un entrenador se abren sus franjas de ese
+      día (con las fechas y su desplegable de asistencia, editar y pasar
+      lista). Vuelve a tocar para cerrar. Flujo más ágil.
   v0.86.0 — Clases dadas: días de la semana en horizontal (2026-07)
     · En el detalle del entrenador (gestor), "Clases dadas" deja de
       apilar los días de la semana en tarjetas verticales. Ahora hay una
@@ -1458,6 +1465,21 @@
     .gplan-ent { font-size:10px; font-weight:700; color:#1e40af; background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:3px 2px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; -webkit-tap-highlight-color:transparent; }
     .gplan-ent:active { transform:scale(0.97); }
     .gplan-vacio { text-align:center; color:#d1d5db; font-weight:700; padding:6px 0; }
+    /* v0.87: drill-down del planning (día → entrenadores → franjas) */
+    .gpplan-diarow { display:flex; gap:6px; margin:0.3rem 0 0.6rem; }
+    .gpplan-diarow .gplan-day { flex:1; min-width:0; padding:9px 2px; font-size:13px; }
+    .gplan-day.sel { box-shadow:0 0 0 2.5px var(--verde-suave), 0 0 0 4px var(--verde); }
+    .gpplan-panel { background:var(--blanco); border:1.5px solid var(--verde-suave); border-radius:13px; padding:0.4rem 0.7rem 0.6rem; margin-bottom:10px; }
+    .gpplan-panel-hdr { font-size:12.5px; font-weight:800; color:var(--verde); padding:0.45rem 2px 0.4rem; border-bottom:1px solid var(--borde); margin-bottom:0.35rem; }
+    .gpplan-ent { display:flex; align-items:center; gap:8px; width:100%; text-align:left; background:var(--arena);
+                  border:1.5px solid var(--borde); border-radius:10px; padding:0.6rem 0.7rem; margin-bottom:6px;
+                  font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .gpplan-ent.sel { background:var(--verde-suave); border-color:var(--verde); }
+    .gpplan-ent:active { transform:scale(0.99); }
+    .gpplan-ent-nom { flex:1; min-width:0; font-size:13.5px; font-weight:800; color:var(--texto); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .gpplan-ent-meta { flex-shrink:0; font-size:11px; font-weight:700; color:var(--gris); }
+    .gpplan-ent-arr { flex-shrink:0; color:var(--gris); font-size:12px; }
+    .gpplan-franjas { padding:0 0.2rem 0.4rem; }
     .alquitar-panel { background:var(--arena); border:1.5px solid var(--borde); border-radius:10px; padding:0.7rem 0.75rem; margin-top:8px; }
     /* Botón pequeño en la cabecera (⚙ Clases, v0.65) */
     .cab-mini-btn { position:absolute; top:2.05rem; right:1.5rem; background:rgba(255,255,255,0.12); border:none; color:rgba(255,255,255,0.92); font-size:13px; font-weight:700; font-family:'Outfit',sans-serif; cursor:pointer; padding:8px 13px; border-radius:12px; -webkit-tap-highlight-color:transparent; z-index:2; }
@@ -3409,7 +3431,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.86.0';
+    var APP_VERSION = '0.87.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -4693,27 +4715,60 @@
       var diasPlan = [1,2,3,4,5];
       if (slots[6]) diasPlan.push(6);
       if (slots[0]) diasPlan.push(0);
-      h += '<div class="gplan-grid">';
+      if (_gpSelDia != null && diasPlan.indexOf(_gpSelDia) < 0) { _gpSelDia = null; _gpSelEnt = null; }
+
+      // v0.87: fila horizontal de días (mismo formato de siempre) + drill-down
+      h += '<div class="gpplan-diarow">';
       diasPlan.forEach(function(dia){
-        h += '<div class="gplan-col">';
-        h += '<button type="button" class="gplan-day" onclick="gestorPlanAbrir(' + dia + ', null)">' + _GDIAS[dia] + '</button>';
-        var franjas = Object.keys(slots[dia] || {}).sort();
-        if (!franjas.length) {
-          h += '<div class="gplan-vacio">—</div>';
+        h += '<button type="button" class="gplan-day' + (_gpSelDia === dia ? ' sel' : '') +
+             '" onclick="gpSelDia(' + dia + ')">' + _GDIAS[dia] + '</button>';
+      });
+      h += '</div>';
+
+      if (_gpSelDia == null) {
+        h += '<p class="ajustes-desc" style="text-align:center;margin:0.2rem 0 0.4rem;">Toca un día para ver sus entrenadores.</p>';
+      } else {
+        // Entrenadores de ese día (únicos), con sus franjas
+        var diaSlots = slots[_gpSelDia] || {};
+        var entsDia = {};   // uid → {ent, nFranjas, dadas}
+        Object.keys(diaSlots).forEach(function(fr){
+          diaSlots[fr].forEach(function(e){
+            var x = entsDia[e.uid] = entsDia[e.uid] || { uid:e.uid, ent:e.ent, nFranjas:0, dadas:0 };
+            x.nFranjas++; x.dadas += e.dadas;
+          });
+        });
+        var uidsDia = Object.keys(entsDia).sort(function(a,b){ return entsDia[a].ent.localeCompare(entsDia[b].ent); });
+        if (_gpSelEnt && !entsDia[_gpSelEnt]) _gpSelEnt = null;
+
+        h += '<div class="gpplan-panel">';
+        h += '<div class="gpplan-panel-hdr">' + _gEsc(_GDIASL[_gpSelDia]) + '</div>';
+        if (!uidsDia.length) {
+          h += '<p class="ajustes-desc" style="margin:0.3rem 2px;">Ningún entrenador da clase este día.</p>';
         } else {
-          franjas.forEach(function(fr){
-            h += '<div class="gplan-slot">';
-            h += '<button type="button" class="gplan-hora" onclick="gestorPlanAbrir(' + dia + ',\'' + _gEsc(fr).replace(/'/g,"\\'") + '\')">' + _gEsc(fr) + '</button>';
-            slots[dia][fr].forEach(function(e){
-              h += '<button type="button" class="gplan-ent" onclick="abrirGestorDetalleDia(\'' + e.uid + '\',' + dia + ')">' + _gEsc(e.ent) +
-                   (e.dadas ? ' <span class="gplan-dadas">' + e.dadas + '✓</span>' : '') + '</button>';
-            });
-            h += '</div>';
+          uidsDia.forEach(function(u){
+            var e = entsDia[u];
+            var abierto = (_gpSelEnt === u);
+            h += '<button type="button" class="gpplan-ent' + (abierto ? ' sel' : '') + '" onclick="gpSelEnt(\'' + u + '\')">' +
+              '<span class="gpplan-ent-nom">👤 ' + _gEsc(e.ent) + '</span>' +
+              '<span class="gpplan-ent-meta">' + e.nFranjas + ' franja' + (e.nFranjas!==1?'s':'') + (e.dadas ? ' · ' + e.dadas + '✓' : '') + '</span>' +
+              '<span class="gpplan-ent-arr">' + (abierto ? '▾' : '▸') + '</span>' +
+            '</button>';
+            if (abierto) {
+              var d3 = by[u];
+              var clasesDia = _gestorClasesLocal(d3).filter(function(c){ return _claseCurso(c) === cursoAct && c.diaSemana === _gpSelDia; })
+                .sort(function(a,b){ return (a.franja||'').localeCompare(b.franja||''); });
+              var regsAll3 = _gestorRegsLocal(d3);
+              var bloques = '';
+              clasesDia.forEach(function(c){
+                bloques += _gTramoHTML(c, regsAll3, _gPanelMes,
+                  { hist:null, uid:u, idPref:'gpp', entLabel:null, volverA:'pantalla-gestor' }).html;
+              });
+              h += '<div class="gpplan-franjas">' + (bloques || '<p class="ajustes-desc" style="margin:0.3rem 2px;">Sin franjas este mes.</p>') + '</div>';
+            }
           });
         }
         h += '</div>';
-      });
-      h += '</div>';
+      }
 
       // ── SUSTITUCIONES del mes seleccionado (v0.66) ──────────────
       // Clases con impartida_por: quién las cubrió y a qué titular.
@@ -5245,6 +5300,20 @@
     function gestorSelDia(k) {
       _gDiaSel = (_gDiaSel === k) ? null : k;
       renderGestorDetalle();
+    }
+
+    // v0.87: drill-down del Planning semanal del panel (Inicio del gestor).
+    // Tocar un día → lista de entrenadores; tocar un entrenador → sus
+    // franjas de ese día. Todo en línea, sin cambiar de pantalla.
+    var _gpSelDia = null, _gpSelEnt = null;
+    function gpSelDia(dia) {
+      _gpSelDia = (_gpSelDia === dia) ? null : dia;
+      _gpSelEnt = null;   // al cambiar de día se cierra el entrenador abierto
+      renderGestor();
+    }
+    function gpSelEnt(uid) {
+      _gpSelEnt = (_gpSelEnt === uid) ? null : uid;
+      renderGestor();
     }
 
     // ── PLANNING SEMANAL — vista de un día (o una franja) de toda la
