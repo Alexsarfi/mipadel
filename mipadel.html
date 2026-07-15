@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.93.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.94.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,11 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.94.0 — Eliminar alumno desde "Editar datos" (2026-07)
+    · En la ficha del alumno, dentro de "✏ Editar datos", nuevo botón
+      rojo "🗑 Eliminar alumno y todos sus datos". Pide confirmación y
+      borra al alumno del cupo de sus clases y de todas sus listas de
+      asistencia con ese entrenador. Acción no reversible.
   v0.93.0 — Alumnos por nombre + apellido (dos "Daniela" separadas) (2026-07)
     · Lista de Alumnos del club: la identidad pasa a ser NOMBRE + APELLIDO.
       Dos alumnas "Daniela" con apellidos distintos dejan de fusionarse y
@@ -3511,7 +3516,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.93.0';
+    var APP_VERSION = '0.94.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -6473,6 +6478,43 @@
       _gAlEditOpen = false;
       renderGestorAlumno();
     }
+    // v0.94: eliminar al alumno y TODOS sus datos con este entrenador
+    // (cupo de sus clases + su nombre en todas las listas de asistencia).
+    function gestorAlEliminar() {
+      var viejo = _gestorAlumno;
+      var apeEl = document.getElementById('gal-edit-apellidos');
+      var ape   = apeEl ? apeEl.value.trim() : '';
+      var disp  = viejo + (ape ? ' ' + ape : '');
+      if (!confirm('⚠️ ¿Eliminar a "' + disp + '" y TODOS sus datos?\n\n' +
+                   'Se borrará del cupo de sus clases y de todas sus listas de asistencia con este entrenador. ' +
+                   'Esta acción NO se puede deshacer.')) return;
+      _gEditUid = (_sbUser && _gestorUid === _sbUser.id) ? null : _gestorUid;
+      try {
+        var cfg = leerAsistConfig(), tocCfg = false;
+        (cfg.clases || []).forEach(function(c){
+          var antes = (c.alumnos || []).length;
+          c.alumnos = (c.alumnos || []).filter(function(a){ return alNom(a) !== viejo; });
+          if (c.alumnos.length !== antes) tocCfg = true;
+        });
+        if (tocCfg) escribirAsistConfig(cfg);
+        var regs = leerAsistRegistros(), cambiados = [];
+        regs.forEach(function(r){
+          var tocado = false;
+          ['presentes','ausentes','justificadas','recups'].forEach(function(k){
+            var arr = r[k] || [];
+            var arr2 = arr.filter(function(n){ return n !== viejo; });
+            if (arr2.length !== arr.length) { r[k] = arr2; tocado = true; }
+          });
+          if (tocado) cambiados.push(r);
+        });
+        if (cambiados.length) escribirAsistRegistros(regs, false, cambiados);
+      } finally {
+        _gEditUid = null;
+      }
+      _gAlEditOpen = false;
+      if (typeof planToast === 'function') planToast('🗑 Alumno eliminado');
+      irA(_gAlVolver);
+    }
     function gestorAlMesNav(delta) { _gAlMesOff += delta; renderGestorAlumno(); }
 
     // Curso escolar de una fecha (sep–jun): "2025-2026"
@@ -6791,6 +6833,7 @@
             '<button class="btn btn-sec btn-sm" style="flex:1;" onclick="gestorAlToggleEdit()">Cancelar</button>' +
           '</div>' +
           '<p class="form-hint" style="margin:0;">Sin fecha de alta = desde el principio. Sin fecha de baja = sigue de alta. Si cambias el nombre, se actualiza también en todas sus listas de asistencia.</p>' +
+          '<button class="btn btn-sm" style="width:100%;margin-top:10px;background:#fef2f2;border:1.5px solid #fecaca;color:#991b1b;" onclick="gestorAlEliminar()">🗑 Eliminar alumno y todos sus datos</button>' +
         '</div>';
       }
 
