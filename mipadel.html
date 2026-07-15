@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.90.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.93.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,31 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.93.0 — Alumnos por nombre + apellido (dos "Daniela" separadas) (2026-07)
+    · Lista de Alumnos del club: la identidad pasa a ser NOMBRE + APELLIDO.
+      Dos alumnas "Daniela" con apellidos distintos dejan de fusionarse y
+      aparecen como fichas separadas ("Daniela Jurado", "Daniela Pérez").
+      El apellido de cada sesión se resuelve por el cupo de su clase, y al
+      abrir la ficha se casa por el nombre de pila dentro de ese entrenador
+      (que es como se guardan los registros). Se busca también por apellido.
+    · Lista de Alumnos por entrenador: se muestra y busca por nombre +
+      apellido (la identidad interna sigue siendo el nombre de pila).
+    · Límite: si dos personas comparten nombre Y apellido con el mismo
+      entrenador, siguen sin poder distinguirse (la asistencia se guarda
+      por nombre). Para separarlas basta con darles apellidos distintos.
+  v0.92.0 — Color por entrenador en el planning del panel (2026-07)
+    · Al navegar por los días en el panel, cada entrenador tiene un
+      color propio y estable (barra lateral + tinte en la franja del
+      nombre) para identificarlo de un vistazo. El color se asigna por
+      orden del plantel del club (paleta de 10) y se mantiene mientras
+      no cambie el conjunto de entrenadores.
+  v0.91.0 — EN1: botón claro de "Editar mi perfil" (nombre al gestor) (2026-07)
+    · En el Inicio del EN1 aparece un botón "👤 Editar mi perfil". Si aún
+      no tiene nombre, se resalta en verde ("Pon tu nombre…"). Al
+      guardarlo, el nombre sube a Supabase (perfiles) y el gestor lo
+      muestra en vez del correo (ya lo hacía _gestorNombre; el gestor
+      solo tiene que pulsar ↻ Actualizar). El botón 👤 de la cabecera
+      sigue disponible.
   v0.90.0 — El curso llega hasta julio (sep–jul) (2026-07)
     · La fila de meses del panel del gestor incluía sep–jun; ahora es
       sep–jul (_gPanelMesesCurso). Así JULIO aparece en la pantalla
@@ -2545,6 +2570,9 @@
           </div>
           <div class="menu-flecha">›</div>
         </div>
+        <!-- v0.91: acceso claro a "Editar mi perfil" para el EN1 (para que
+             ponga su nombre y el gestor lo vea en vez del correo) -->
+        <button class="btn btn-sec" id="home-en1-perfil" style="display:none;width:100%;margin-top:10px;" onclick="irA('pantalla-ajustes')">👤 Editar mi perfil</button>
         <!-- (v0.50: la tarjeta "Mi academia" desapareció de Inicio; el panel
              de gestión es exclusivo del rol gestor, que entra directo a él) -->
       </div>
@@ -3483,7 +3511,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.90.0';
+    var APP_VERSION = '0.93.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -4468,6 +4496,32 @@
       return by;
     }
 
+    // v0.92: color estable por entrenador para identificarlo de un vistazo.
+    // Se asigna por el orden alfabético de los uids del club (distinto para
+    // cada uno) y se mantiene mientras no cambie el conjunto de entrenadores.
+    var _ENT_PAL = [
+      { bg:'#eff6ff', bar:'#3b82f6', tx:'#1e40af' },  // azul
+      { bg:'#f0fdf4', bar:'#22c55e', tx:'#166534' },  // verde
+      { bg:'#fff7ed', bar:'#f97316', tx:'#9a3412' },  // naranja
+      { bg:'#faf5ff', bar:'#a855f7', tx:'#6b21a8' },  // morado
+      { bg:'#fdf2f8', bar:'#ec4899', tx:'#9d174d' },  // rosa
+      { bg:'#ecfeff', bar:'#06b6d4', tx:'#155e75' },  // cian
+      { bg:'#fffbeb', bar:'#eab308', tx:'#854d0e' },  // ámbar
+      { bg:'#f7fee7', bar:'#84cc16', tx:'#3f6212' },  // lima
+      { bg:'#fef2f2', bar:'#ef4444', tx:'#991b1b' },  // rojo
+      { bg:'#f5f3ff', bar:'#6366f1', tx:'#3730a3' }   // índigo
+    ];
+    var _entColorCache = null;
+    function _entColorReset() {
+      var uids = _gestorData ? Object.keys(_gestorAgrupar()).sort() : [];
+      _entColorCache = {};
+      uids.forEach(function(u, i){ _entColorCache[u] = _ENT_PAL[i % _ENT_PAL.length]; });
+    }
+    function _entColor(uid) {
+      if (!_entColorCache) _entColorReset();
+      return _entColorCache[uid] || _ENT_PAL[0];
+    }
+
     function _gestorNombre(d) {
       var p = d.perfil;
       if (p) {
@@ -4704,6 +4758,7 @@
     function renderGestor() {
       var cont = document.getElementById('gestor-contenido');
       if (!cont || !_gestorData) return;
+      _entColorReset();   // v0.92: color estable por entrenador (según plantel actual)
       var by = _gestorAgrupar();
       var uids = Object.keys(by).filter(function(u){ return by[u].clases.length || by[u].regs.length; });
       // Resumen global
@@ -4808,9 +4863,10 @@
               bloques += _gTramoHTML(c, regsAll3, _gPanelMes,
                 { hist:null, uid:u, idPref:'gpp', entLabel:null, volverA:'pantalla-gestor' }).html;
             });
-            h += '<div class="gpplan-entblock">' +
-              '<div class="gpplan-ent-hdr">' +
-                '<span class="gpplan-ent-nom">👤 ' + _gEsc(e.ent) + '</span>' +
+            var col = _entColor(u);
+            h += '<div class="gpplan-entblock" style="border-left:4px solid ' + col.bar + ';">' +
+              '<div class="gpplan-ent-hdr" style="background:' + col.bg + ';">' +
+                '<span class="gpplan-ent-nom" style="color:' + col.tx + ';">👤 ' + _gEsc(e.ent) + '</span>' +
                 '<span class="gpplan-ent-meta">' + e.nFranjas + ' franja' + (e.nFranjas!==1?'s':'') + (e.dadas ? ' · ' + e.dadas + '✓' : '') + '</span>' +
               '</div>' +
               '<div class="gpplan-franjas">' + (bloques || '<p class="ajustes-desc" style="margin:0.3rem 2px;">Sin franjas este mes.</p>') + '</div>' +
@@ -6540,11 +6596,12 @@
 
       var clases = _gestorClasesLocal(d);
       // Todos los alumnos: los de las clases + los que aparecen en registros
-      var nombres = {}, clasesAl = {};
+      var nombres = {}, clasesAl = {}, apeDe = {};   // v0.93: apellido por nombre
       clases.forEach(function(c){
         (c.alumnos||[]).forEach(function(a){
           var n = alNom(a); if (!n) return;
           nombres[n] = true;
+          if (!apeDe[n] && alApe(a)) apeDe[n] = alApe(a);
           (clasesAl[n] = clasesAl[n] || {})[c.id] = true;
         });
       });
@@ -6553,7 +6610,7 @@
       });
       var lista = Object.keys(nombres).sort(_gtaCmp);
       if (!lista.length) { cont.innerHTML = '<p class="ajustes-desc">Este entrenador aún no tiene alumnos.</p>'; return; }
-      _galsCache = { alumnos: lista, clasesAl: clasesAl, clases: clases };
+      _galsCache = { alumnos: lista, clasesAl: clasesAl, clases: clases, apeDe: apeDe };
 
       // Barra fija (buscador + chips + contador); la lista se pinta aparte
       // para que el input no pierda el foco al filtrar.
@@ -6605,8 +6662,9 @@
       var abcEl = document.getElementById('gals-abc');
       if (abcEl) abcEl.innerHTML = _abcBar(dispon, _gAlsLetra, 'galsLetra');
 
+      var _disp = function(n){ var a = _galsCache.apeDe[n]; return a ? (n + ' ' + a) : n; };
       var visibles = base.filter(function(n){
-        if (txt && _galsNorm(n).indexOf(txt) < 0) return false;
+        if (txt && _galsNorm(_disp(n)).indexOf(txt) < 0) return false;
         if (_gAlsLetra && _letraDe(n) !== _gAlsLetra) return false;
         return true;
       });
@@ -6632,7 +6690,7 @@
         h += '<div class="gestor-card" onclick="abrirGestorAlumno(\'' + _gEsc(n).replace(/'/g,"\\'") + '\')">' +
           '<div class="gestor-card-ava">' + _gEsc(n.charAt(0).toUpperCase()) + '</div>' +
           '<div class="gestor-card-body">' +
-            '<div class="gestor-card-nom">' + _gEsc(n) + '</div>' +
+            '<div class="gestor-card-nom">' + _gEsc(_disp(n)) + '</div>' +
             '<div class="gestor-card-meta">' + meta + '</div>' +
           '</div>' +
           '<div class="gestor-card-pct" style="color:' + _pctColor(s.pct) + '">' + pctTxt + '</div>' +
@@ -6828,26 +6886,36 @@
     // alta/baja, mes navegable e historial por curso). Si el alumno tiene
     // datos con varios entrenadores, se abre con su entrenador principal:
     // cupo activo > cupo con baja > más sesiones registradas.
-    function abrirGestorTodosAlumno(n) {
+    // key = nombre completo (nombre + apellidos). Se abre la ficha del
+    // entrenador cuyo cupo tenga a esa persona con ESE apellido, casando los
+    // registros por el nombre de pila (que es como se guardan).
+    function abrirGestorTodosAlumno(key) {
+      var info   = _gtaCache && _gtaCache.al[key];
+      var nombre = info ? info.nombre : key;
+      var ape    = info ? info.apellidos : '';
       var by = _gestorAgrupar();
       var mejor = null, mejorPts = -1;
       Object.keys(by).forEach(function(uid){
         var d = by[uid];
         if (!d.clases.length && !d.regs.length) return;
-        var pts = 0;
+        var pts = 0, tieneFull = false;
         _gestorClasesLocal(d).forEach(function(c){
-          var entry = alumnoEnClase(c, n);
+          var entry = alumnoEnClase(c, nombre);
           if (!entry) return;
+          if ((alApe(entry) || '') !== (ape || '')) return;   // debe coincidir el apellido
+          tieneFull = true;
           pts += alBaja(entry) ? 1000 : 10000;   // activo pesa más que de baja
         });
         _gestorRegsLocal(d).forEach(function(r){
           if (r.sinClase) return;
-          if ((r.presentes||[]).indexOf(n) !== -1 || (r.ausentes||[]).indexOf(n) !== -1) pts++;
+          if ((r.presentes||[]).indexOf(nombre) !== -1 || (r.ausentes||[]).indexOf(nombre) !== -1) {
+            if (tieneFull || !ape) pts++;   // sin apellido = respaldo (visitante)
+          }
         });
         if (pts > mejorPts) { mejorPts = pts; mejor = uid; }
       });
       if (!mejor || mejorPts <= 0) return;
-      gestorAlumnoU(mejor, n, 'pantalla-gestor-todos-alumnos');
+      gestorAlumnoU(mejor, nombre, 'pantalla-gestor-todos-alumnos');
     }
     function gtaMesNav(delta) { _gtaMesOff += delta; renderGestorTodosAlumno(); }
     function gtaFiltrar(v) { _gtaFiltroTxt = v || ''; if (v) _gtaLetra = null; _gtaRenderLista(); }
@@ -6877,11 +6945,18 @@
 
     // Índice global: por alumno, todas sus sesiones de TODOS los
     // entrenadores. Cada sesión lleva el entrenador y la clase.
+    // v0.93: la identidad del alumno en la vista del club pasa a ser
+    // NOMBRE + APELLIDOS (así dos "Daniela" distintas no se fusionan). El
+    // apellido de cada sesión se resuelve desde el cupo de su clase. La
+    // clave (map/ents.alumnos) es el nombre completo; cada entrada guarda
+    // aparte el nombre de pila para casar con los registros (que van por
+    // nombre) al abrir la ficha.
+    function _gtaFullKey(nombre, ape){ return ape ? (nombre + ' ' + ape) : nombre; }
     function _gtaIndex() {
       var by  = _gestorAgrupar();
       var map = {};
       var porEnt = {};   // entrenador → conjunto de sus alumnos (cupo + registros)
-      function ensA(n){ if(!map[n]) map[n]={ sesiones:[] }; return map[n]; }
+      function ensA(key, nombre, ape){ if(!map[key]) map[key]={ sesiones:[], nombre:nombre, apellidos:ape||'' }; return map[key]; }
       Object.keys(by).forEach(function(uid){
         var d = by[uid];
         if (!d.clases.length && !d.regs.length) return;
@@ -6890,7 +6965,11 @@
         var clases = _gestorClasesLocal(d);
         var regs   = _gestorRegsLocal(d);
         // Alumnos de cupo (aparecen aunque aún no tengan registros)
-        clases.forEach(function(c){ (c.alumnos||[]).forEach(function(a){ var n=alNom(a); if(n){ ensA(n); entAl[n]=true; } }); });
+        clases.forEach(function(c){ (c.alumnos||[]).forEach(function(a){
+          var nombre = alNom(a); if(!nombre) return;
+          var ape = alApe(a), key = _gtaFullKey(nombre, ape);
+          ensA(key, nombre, ape); entAl[key] = true;
+        }); });
         regs.forEach(function(r){
           if (r.sinClase) return;
           var clase = clases.filter(function(c){ return c.id===r.claseId; })[0];
@@ -6898,10 +6977,12 @@
           var clNom = clase.nombre ||
                       (((clase.diaSemana>=0 ? DIAS_NOMBRES_A[clase.diaSemana] : '') + ' ' + (clase.franja||'')).trim() || 'Clase');
           function push(n, presente){
-            entAl[n] = true;
-            var entry   = alumnoEnClase(clase, n);
+            var entry = alumnoEnClase(clase, n);
+            var ape   = alApe(entry);           // apellido del cupo de ESA clase
+            var key   = _gtaFullKey(n, ape);
+            entAl[key] = true;
             var esRecup = presente && (r.recupClase || !entry || !alActivo(entry, r.fecha));
-            ensA(n).sesiones.push({
+            ensA(key, n, ape).sesiones.push({
               fecha:r.fecha, claseNombre:clNom, franja:clase.franja||'',
               entrenador:entrenador, presente:presente, recup:esRecup,
               justif: !presente && (r.justificadas||[]).indexOf(n)!==-1
@@ -6911,8 +6992,8 @@
           (r.ausentes ||[]).forEach(function(n){ if(n) push(n, false); });
         });
       });
-      Object.keys(map).forEach(function(n){
-        map[n].sesiones.sort(function(a,b){ return b.fecha.localeCompare(a.fecha); });
+      Object.keys(map).forEach(function(key){
+        map[key].sesiones.sort(function(a,b){ return b.fecha.localeCompare(a.fecha); });
       });
       var ents = Object.keys(porEnt).sort().map(function(e){
         return { nombre:e, alumnos:Object.keys(porEnt[e]).sort() };
@@ -8378,6 +8459,19 @@
       // Acceso a Sesiones para EN1 (no tiene barra inferior)
       var en1Ses = document.getElementById('home-en1-sesiones');
       if (en1Ses) en1Ses.style.display = monCuenta ? 'block' : 'none';
+      // Acceso claro a "Editar mi perfil" para el EN1. Si aún no tiene
+      // nombre, el botón se resalta invitando a ponerlo (así el gestor lo
+      // ve en vez del correo).
+      var en1Perfil = document.getElementById('home-en1-perfil');
+      if (en1Perfil) {
+        en1Perfil.style.display = monCuenta ? 'block' : 'none';
+        if (monCuenta) {
+          var _pn = (leerPerfil().nombre || '').trim();
+          en1Perfil.textContent = _pn ? ('👤 Editar mi perfil · ' + _pn)
+                                       : '👤 Pon tu nombre para que te identifique el gestor';
+          en1Perfil.className = _pn ? 'btn btn-sec' : 'btn btn-verde';
+        }
+      }
       var pie = document.getElementById('inicio-pie');
       if (pie) pie.style.display = mon ? 'none' : 'flex';
 
