@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.88.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.89.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,11 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.89.0 — Cuenta del gestor en un botón de perfil (2026-07)
+    · La barra del cuerpo (correo · ↻ Actualizar · Salir) se sustituye
+      por un botón 👤 de perfil arriba a la derecha de la cabecera. Al
+      pulsarlo se abre un menú con el correo, "↻ Actualizar datos" y
+      "Salir". El cuerpo del panel queda aún más limpio.
   v0.88.0 — Accesos del gestor en la cabecera (pills glassy) (2026-07)
     · Entrenadores · Alumnos · Clases · Días sin clase pasan del cuerpo
       a la cabecera verde del panel, como pills semitransparentes con
@@ -1294,6 +1299,23 @@
     .cab-accion-btn:hover { background:rgba(255,255,255,0.26); }
     .cab-accion-btn:active { transform:scale(0.95); }
     /* ── Panel del gestor ── */
+    /* v0.89: botón de cuenta/perfil en la cabecera del gestor + menú */
+    .gest-hdr-perfil { position:absolute; top:1.5rem; right:1.5rem; z-index:3; width:42px; height:42px; border-radius:50%;
+                       background:rgba(255,255,255,0.16); border:1px solid rgba(255,255,255,0.25); color:#fff; font-size:18px;
+                       cursor:pointer; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent;
+                       backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); }
+    .gest-hdr-perfil:hover { background:rgba(255,255,255,0.26); }
+    .gest-hdr-perfil:active { transform:scale(0.94); }
+    .ghm-backdrop { position:fixed; inset:0; z-index:40; background:transparent; }
+    .gest-hdr-menu { position:fixed; top:4.3rem; right:1rem; z-index:41; background:#fff; border:1px solid var(--borde);
+                     border-radius:14px; box-shadow:0 12px 34px rgba(0,0,0,.24); padding:9px; min-width:220px; max-width:82vw; }
+    .ghm-email { display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700; color:var(--texto);
+                 padding:6px 8px 10px; border-bottom:1px solid var(--borde); margin-bottom:8px; word-break:break-all; }
+    .ghm-item { display:block; width:100%; text-align:left; background:var(--arena); border:1.5px solid var(--borde);
+                border-radius:10px; padding:10px 12px; font-family:'Outfit',sans-serif; font-size:13.5px; font-weight:700;
+                color:var(--texto); cursor:pointer; margin-top:7px; -webkit-tap-highlight-color:transparent; }
+    .ghm-item.salir { color:#991b1b; border-color:#fecaca; background:#fef2f2; }
+    .ghm-item:active { transform:scale(0.98); }
     /* v0.88: accesos del gestor en la cabecera (pills glassy sobre el verde) */
     .gest-hdr-acts { display:flex; flex-wrap:wrap; gap:7px; margin-top:15px; position:relative; z-index:2; }
     .gest-hdr-btn { display:inline-flex; align-items:center; gap:6px; background:rgba(255,255,255,0.13);
@@ -2641,18 +2663,19 @@
   <div id="pantalla-gestor" class="pantalla">
     <div class="cabecera">
       <button class="btn-volver" id="gestor-volver-btn" style="display:none;" onclick="irA('pantalla-inicio')">‹ Inicio</button>
+      <button class="gest-hdr-perfil" id="gest-hdr-perfil-btn" onclick="gestorPerfilMenu()" aria-label="Perfil" title="Cuenta">👤</button>
       <div class="cab-etiqueta">📊 Gestión</div>
       <div class="cab-titulo">Mi academia</div>
       <div class="cab-sub" id="gestor-sub">Todos los entrenadores</div>
       <div class="gest-hdr-acts" id="gest-hdr-acts"></div>
     </div>
+    <div class="ghm-backdrop" id="gest-hdr-menu-bd" style="display:none;" onclick="gestorSetPerfil(false)"></div>
+    <div class="gest-hdr-menu" id="gest-hdr-menu" style="display:none;">
+      <div class="ghm-email"><span>👤</span><span id="gestor-email">—</span></div>
+      <button class="ghm-item" onclick="gestorSetPerfil(false);cargarDatosGestor();">↻ Actualizar datos</button>
+      <button class="ghm-item salir" onclick="gestorSetPerfil(false);authLogout();">Salir</button>
+    </div>
     <div class="contenido">
-      <div class="auth-usuario-badge" id="gestor-badge" style="display:flex;">
-        <span>👤</span>
-        <span class="auth-usuario-email" id="gestor-email">—</span>
-        <button class="auth-sync-btn" onclick="cargarDatosGestor()">↻ Actualizar</button>
-        <button class="auth-logout-btn" onclick="authLogout()">Salir</button>
-      </div>
       <div id="gestor-contenido"></div>
     </div>
   </div>
@@ -3449,7 +3472,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.88.0';
+    var APP_VERSION = '0.89.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -5330,6 +5353,19 @@
     function gpSelEnt(uid) {
       _gpSelEnt = (_gpSelEnt === uid) ? null : uid;
       renderGestor();
+    }
+
+    // v0.89: menú de cuenta (correo · actualizar · salir) desde el botón
+    // de perfil de la cabecera del panel del gestor.
+    function gestorSetPerfil(open) {
+      var m = document.getElementById('gest-hdr-menu');
+      var b = document.getElementById('gest-hdr-menu-bd');
+      if (m) m.style.display = open ? 'block' : 'none';
+      if (b) b.style.display = open ? 'block' : 'none';
+    }
+    function gestorPerfilMenu() {
+      var m = document.getElementById('gest-hdr-menu');
+      gestorSetPerfil(!m || m.style.display !== 'block');
     }
 
     // ── PLANNING SEMANAL — vista de un día (o una franja) de toda la
