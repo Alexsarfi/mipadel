@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.84.1   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.86.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,18 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.86.0 — Clases dadas: días de la semana en horizontal (2026-07)
+    · En el detalle del entrenador (gestor), "Clases dadas" deja de
+      apilar los días de la semana en tarjetas verticales. Ahora hay una
+      fila horizontal de chips (Lun, Mar, Mié… con su nº de dadas ✓) y,
+      al pulsar uno, se despliega debajo el contenido de ese día (sus
+      franjas y las fechas con su desplegable de asistencia). Toca el
+      mismo chip para cerrarlo. Más limpieza visual.
+  v0.85.0 — EN1: acceso a "Perfil" (editar sus datos) (2026-07)
+    · El EN1 vuelve a ver el botón 👤 Perfil del encabezado de Inicio y
+      puede editar sus datos (nombre, apellidos, club), igual que el
+      resto de entrenadores. Se desbloquea pantalla-ajustes para su rol.
+      El modo monitor LOCAL (PIN) sigue sin ese botón.
   v0.84.1 — EN1: plan de solo lectura (2026-07)
     · Para el EN1 se ocultan los botones "✏️ Editar plan" y "✏️ Añadir /
       quitar sesiones": ve la planificación de Iniciación pero no la
@@ -1538,6 +1550,19 @@
     .ghd-day.sust { background:#fde68a; color:#92400e; }
     .gdd-det.sust { background:#fffbeb; border-color:#fde68a; }
     /* Tarjeta por día de la semana (el nombre del día, una sola vez) */
+    /* v0.86: fila horizontal de días en "Clases dadas" */
+    .ghd-diarow { display:flex; flex-wrap:wrap; gap:6px; margin:0.3rem 0 0.7rem; }
+    .ghd-diachip { display:flex; flex-direction:column; align-items:center; gap:2px; min-width:50px; padding:6px 10px;
+                   border:1.5px solid var(--borde); background:var(--blanco); color:var(--texto); font-family:inherit;
+                   border-radius:11px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .ghd-diachip.sel { background:var(--verde-suave); border-color:var(--verde); }
+    .ghd-diachip:active { transform:scale(0.95); }
+    .ghd-diachip-dia { font-size:13px; font-weight:800; }
+    .ghd-diachip.sel .ghd-diachip-dia { color:var(--verde); }
+    .ghd-diachip-n { font-size:11px; font-weight:700; color:var(--gris); }
+    .ghd-diachip.sel .ghd-diachip-n { color:var(--verde); }
+    .ghd-diapanel { background:var(--blanco); border:1.5px solid var(--verde-suave); border-radius:13px; padding:0.35rem 0.85rem 0.55rem; margin-bottom:10px; }
+    .ghd-diapanel-hdr { font-size:12.5px; font-weight:800; color:var(--verde); padding:0.45rem 0 0.35rem; border-bottom:1px solid var(--borde); margin-bottom:0.15rem; }
     .ghd-diacard { background:var(--blanco); border:1.5px solid var(--borde); border-radius:13px; margin-bottom:10px; overflow:hidden; }
     .ghd-diacard-hdr { display:flex; align-items:center; justify-content:space-between; gap:8px; background:var(--verde-suave); padding:0.55rem 0.85rem; font-size:13.5px; font-weight:800; color:var(--verde); cursor:pointer; -webkit-tap-highlight-color:transparent; user-select:none; }
     .ghd-diacard-hdr:active { filter:brightness(0.97); }
@@ -3384,7 +3409,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.84.1';
+    var APP_VERSION = '0.86.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -5184,6 +5209,8 @@
       _gDiaColapsado = {};
       ['0','1','2','3','4','5','6','x'].forEach(function(k){ _gDiaColapsado[k] = true; });
       if (exceptoDia != null) { _gDiaColapsado[exceptoDia < 0 ? 'x' : String(exceptoDia)] = false; }
+      // v0.86: día seleccionado en la fila horizontal de "Clases dadas"
+      _gDiaSel = (exceptoDia != null) ? (exceptoDia < 0 ? 'x' : String(exceptoDia)) : null;
     }
     // v0.75: entrar en un entrenador muestra los días CONTRAÍDOS por defecto
     // (menos ruido visual). Solo desde el planning (abrirGestorDetalleDia) se
@@ -5211,6 +5238,13 @@
       var car = hdr.querySelector('.ghd-diacard-car');
       if (car) car.textContent = col ? '▸' : '▾';
       if (hdr.parentNode) hdr.parentNode.classList.toggle('colapsada', col);
+    }
+    // v0.86: día seleccionado en la fila horizontal de "Clases dadas".
+    // Al pulsar el mismo chip se cierra (queda limpio).
+    var _gDiaSel = null;
+    function gestorSelDia(k) {
+      _gDiaSel = (_gDiaSel === k) ? null : k;
+      renderGestorDetalle();
     }
 
     // ── PLANNING SEMANAL — vista de un día (o una franja) de toda la
@@ -5466,25 +5500,41 @@
         });
         var ordenDias = ['1','2','3','4','5','6','0','x'].filter(function(k){ return !!porDiaSem[k]; });
 
+        // v0.86: los días de la semana en una FILA HORIZONTAL de chips; al
+        // pulsar uno se despliega debajo su contenido (más limpieza visual).
+        var diasData = {};
         ordenDias.forEach(function(k){
-          var dn = (k === 'x') ? '(sin día)' : _GDIASL[+k];
-          var clasesDia = porDiaSem[k];
-          // Total dadas del día (todas sus franjas) para la cabecera
-          var totDia = 0;
-          var bloques = '';
-          clasesDia.forEach(function(c){
+          var totDia = 0, bloques = '';
+          porDiaSem[k].forEach(function(c){
             var t = _gTramoHTML(c, regsAll, mesISO,
               { hist: hist, uid: _gestorUid, idPref: 'gdd', entLabel: null, volverA: 'pantalla-gestor-detalle' });
             bloques += t.html;
             totDia  += t.dadas;
           });
-          var _col = !!_gDiaColapsado[k];
-          h += '<div class="ghd-diacard' + (_col ? ' colapsada' : '') + '">' +
-            '<div class="ghd-diacard-hdr" onclick="gestorToggleDiaCard(\'' + k + '\',this)">' +
-            '<span><span class="ghd-diacard-car">' + (_col ? '▸' : '▾') + '</span> ' + _gEsc(dn) + '</span>' +
-            '<span class="ghd-diacard-tot">' + clasesDia.length + ' tramo' + (clasesDia.length!==1?'s':'') + ' · ' + totDia + ' dada' + (totDia!==1?'s':'') + '</span></div>' +
-            '<div class="ghd-diacard-body"' + (_col ? ' style="display:none;"' : '') + '>' + bloques + '</div></div>';
+          diasData[k] = { bloques: bloques, tot: totDia, n: porDiaSem[k].length };
         });
+        if (_gDiaSel && !diasData[_gDiaSel]) _gDiaSel = null;   // ese día ya no tiene clases
+
+        h += '<div class="ghd-diarow">';
+        ordenDias.forEach(function(k){
+          var dn = (k === 'x') ? 'S/D' : _GDIAS[+k];
+          h += '<button type="button" class="ghd-diachip' + (_gDiaSel === k ? ' sel' : '') + '" onclick="gestorSelDia(\'' + k + '\')">' +
+            '<span class="ghd-diachip-dia">' + _gEsc(dn) + '</span>' +
+            '<span class="ghd-diachip-n">' + diasData[k].tot + '✓</span>' +
+          '</button>';
+        });
+        h += '</div>';
+
+        if (_gDiaSel && diasData[_gDiaSel]) {
+          var d0 = diasData[_gDiaSel];
+          var dnFull = (_gDiaSel === 'x') ? '(sin día)' : _GDIASL[+_gDiaSel];
+          h += '<div class="ghd-diapanel">' +
+            '<div class="ghd-diapanel-hdr">' + _gEsc(dnFull) + ' · ' + d0.n + ' tramo' + (d0.n!==1?'s':'') + ' · ' + d0.tot + ' dada' + (d0.tot!==1?'s':'') + '</div>' +
+            d0.bloques +
+          '</div>';
+        } else {
+          h += '<p class="ajustes-desc" style="text-align:center;margin:0.2rem 0 0.4rem;">Toca un día para ver sus clases.</p>';
+        }
         // (El sumatorio 1h/1h30 vive en el KPI "Clases dadas" de arriba)
         if (_gEsSeptiembre(mesISO)) h += '<div class="asist-matriz-leyenda" style="margin-top:0.5rem;">' +
           '<span style="color:#166534;font-weight:700">✓</span> asistió &nbsp; ' +
@@ -8033,7 +8083,8 @@
     // (limitadas a Iniciación por nivelPermitido)
     var EN1_PANTALLAS_OK = MONITOR_PANTALLAS_OK.concat(['pantalla-planificacion',
       'pantalla-plan-sesiones','pantalla-nueva-sesion',
-      'pantalla-clases-niveles','pantalla-clases','pantalla-clases-grupo']);
+      'pantalla-clases-niveles','pantalla-clases','pantalla-clases-grupo',
+      'pantalla-ajustes']);   // v0.85: el EN1 puede editar sus datos (Perfil)
 
     // ── Barra de navegación inferior (rediseño) ──
     var NAV_GROUPS = {
@@ -8180,9 +8231,10 @@
         var el = document.getElementById(id);
         if (el) el.style.display = ocultarSec[id] ? 'none' : '';
       });
-      // El botón Perfil del encabezado no está disponible para monitores/EN1
+      // El botón Perfil (editar sus datos) lo ve el EN1 igual que los demás
+      // entrenadores; solo se oculta para el modo monitor LOCAL (PIN).
       var perfBtn = document.getElementById('cab-perfil-btn');
-      if (perfBtn) perfBtn.style.display = mon ? 'none' : 'flex';
+      if (perfBtn) perfBtn.style.display = (monLocal && !monCuenta) ? 'none' : 'flex';
       // Botones de plan por nivel: se ocultan los no permitidos por el rol
       var avzBtn = document.getElementById('home-plan-avz');
       if (avzBtn) avzBtn.style.display = nivelPermitido('avanzado') ? '' : 'none';
