@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.99.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.101.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,29 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.101.0 — Detalle del entrenador: todos los días en paralelo en web (2026-07)
+    · Al entrar en un entrenador (p.ej. desde el botón "Entrenadores" de la
+      cabecera), en pantalla ancha (web, ≥760px) se muestran TODOS los días
+      que da clase desplegados en columnas paralelas, con sus tramos, para
+      verlo todo de un vistazo. En móvil se mantiene igual: fila de chips y
+      solo el día elegido desplegado (limpio).
+    · Implementación: cada día es una .ghd-diacol; la rejilla en paralelo
+      solo se activa en la media query min-width:760px. Los chips siguen
+      funcionando para elegir el día en móvil.
+
+  v0.100.0 — Alta rápida de clase desde el día (Inicio del gestor) (2026-07)
+    · Al abrir un día en el planning de Inicio ahora se puede crear una
+      clase sin entrar al detalle de cada entrenador. Dos accesos:
+      1) Un "＋" en la cabecera de cada columna de entrenador: abre el
+         formulario "Nueva clase" con el ENTRENADOR y el DÍA ya fijados;
+         solo hay que poner franja, nombre y alumnos.
+      2) Un botón "＋ Añadir clase este día" al pie del día: abre el mismo
+         formulario con el día fijado y un SELECTOR de entrenador, para
+         añadir a cualquiera (incluidos los que no dan clase ese día).
+    · Reutiliza el formulario y el guardado existentes (leerAsistConfig /
+      escribirAsistConfig con _gEditUid). Franja en texto libre, como antes.
+    · Al guardar/volver se regresa al día abierto en Inicio.
 
   v0.99.0 — Planning del panel: entrenadores en paralelo en web (2026-07)
     · En Inicio del gestor, al tocar un día, los entrenadores se apilaban
@@ -1620,6 +1643,11 @@
       .gpplan-cols { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:10px; align-items:start; }
       .gpplan-cols .gpplan-entblock { margin-bottom:0; }
     }
+    /* v0.99: atajos de alta rápida de clase desde el día abierto en Inicio */
+    .gpplan-add-ent { flex-shrink:0; width:26px; height:26px; border:none; border-radius:8px; background:var(--verde); color:#fff; font-size:16px; font-weight:800; line-height:1; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0; }
+    .gpplan-add-ent:active { opacity:.8; }
+    .gpplan-add-dia { display:block; width:100%; margin-top:8px; padding:0.6rem; border:1.5px dashed var(--verde); border-radius:11px; background:var(--verde-suave); color:var(--verde); font-size:13px; font-weight:800; cursor:pointer; font-family:inherit; }
+    .gpplan-add-dia:active { opacity:.85; }
     .alquitar-panel { background:var(--arena); border:1.5px solid var(--borde); border-radius:10px; padding:0.7rem 0.75rem; margin-top:8px; }
     /* Botón pequeño en la cabecera (⚙ Clases, v0.65) */
     .cab-mini-btn { position:absolute; top:2.05rem; right:1.5rem; background:rgba(255,255,255,0.12); border:none; color:rgba(255,255,255,0.92); font-size:13px; font-weight:700; font-family:'Outfit',sans-serif; cursor:pointer; padding:8px 13px; border-radius:12px; -webkit-tap-highlight-color:transparent; z-index:2; }
@@ -1733,6 +1761,15 @@
     .ghd-diachip.sel .ghd-diachip-n { color:var(--verde); }
     .ghd-diapanel { background:var(--blanco); border:1.5px solid var(--verde-suave); border-radius:13px; padding:0.35rem 0.85rem 0.55rem; margin-bottom:10px; }
     .ghd-diapanel-hdr { font-size:12.5px; font-weight:800; color:var(--verde); padding:0.45rem 0 0.35rem; border-bottom:1px solid var(--borde); margin-bottom:0.15rem; }
+    /* v0.100: días del entrenador en paralelo. Móvil: solo el día del chip.
+       Web (≥760px): todos los días desplegados en columnas para mejor visual. */
+    .ghd-diacol { display:none; }
+    .ghd-diacol.sel { display:block; }
+    @media (min-width:760px){
+      .ghd-diacols { display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:10px; align-items:start; }
+      .ghd-diacols .ghd-diacol { display:block; margin-bottom:0; }
+      .ghd-diahint { display:none; }
+    }
     .ghd-diacard { background:var(--blanco); border:1.5px solid var(--borde); border-radius:13px; margin-bottom:10px; overflow:hidden; }
     .ghd-diacard-hdr { display:flex; align-items:center; justify-content:space-between; gap:8px; background:var(--verde-suave); padding:0.55rem 0.85rem; font-size:13.5px; font-weight:800; color:var(--verde); cursor:pointer; -webkit-tap-highlight-color:transparent; user-select:none; }
     .ghd-diacard-hdr:active { filter:brightness(0.97); }
@@ -3405,6 +3442,11 @@
     </div>
     <div class="contenido">
       <div class="form-card">
+        <div class="form-grupo" id="asist-form-ent-grupo" style="display:none;">
+          <label class="form-label">Entrenador *</label>
+          <select id="asist-form-ent" class="form-select" onchange="gpFormEntChange(this.value)"></select>
+          <p class="form-hint">La clase se creará para este entrenador</p>
+        </div>
         <div class="form-grupo">
           <label class="form-label">Día de la semana *</label>
           <select id="asist-form-dia" class="form-select">
@@ -3584,7 +3626,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.99.0';
+    var APP_VERSION = '0.101.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -4947,12 +4989,16 @@
               '<div class="gpplan-ent-hdr" style="background:' + col.bg + ';">' +
                 '<span class="gpplan-ent-nom" style="color:' + col.tx + ';">👤 ' + _gEsc(e.ent) + '</span>' +
                 '<span class="gpplan-ent-meta">' + e.nFranjas + ' franja' + (e.nFranjas!==1?'s':'') + (e.dadas ? ' · ' + e.dadas + '✓' : '') + '</span>' +
+                '<button type="button" class="gpplan-add-ent" title="Añadir clase a ' + _gEsc(e.ent) + ' este día" onclick="gpAddClaseEnt(\'' + u + '\',' + _gpSelDia + ')">＋</button>' +
               '</div>' +
               '<div class="gpplan-franjas">' + (bloques || '<p class="ajustes-desc" style="margin:0.3rem 2px;">Sin franjas este mes.</p>') + '</div>' +
             '</div>';
           });
           h += '</div>';
         }
+        // v0.99: botón general para añadir clase a CUALQUIER entrenador ese
+        // día (incluidos los que aún no aparecen porque no dan clase ese día)
+        h += '<button type="button" class="gpplan-add-dia" onclick="gpAddClaseDia(' + _gpSelDia + ')">＋ Añadir clase este día</button>';
         h += '</div>';
       }
 
@@ -5502,6 +5548,38 @@
       renderGestor();
     }
 
+    // v0.99: alta rápida de clase desde el día abierto en Inicio. Reutiliza
+    // el formulario "Nueva clase" ya existente, prerrellenando el DÍA y
+    // fijando el ENTRENADOR, para no tener que entrar al detalle de cada uno.
+    var _gPrefillDia = null;        // día a prerrellenar (0–6) o null
+    var _gPrefillEntPick = false;   // mostrar selector de entrenador en el form
+    function _gpAbrirFormClase(uid, dia, pedirEnt) {
+      _gestorUid      = uid;
+      _gEditUid       = (_sbUser && uid === _sbUser.id) ? null : uid;
+      _gEditVolverA   = 'pantalla-gestor';   // al crear/volver se regresa a Inicio
+      _cursoNuevoCtx  = null;                // se estampa el curso de hoy
+      asistClaseEditId = null;
+      asistAlumnosForm = [];
+      _gPrefillDia     = dia;
+      _gPrefillEntPick = !!pedirEnt;
+      irA('pantalla-asistencia-nueva-clase');
+    }
+    // ＋ de una columna: entrenador y día ya conocidos (mínimos pasos)
+    function gpAddClaseEnt(uid, dia) { _gpAbrirFormClase(uid, dia, false); }
+    // ＋ general del día: se elige el entrenador en el formulario
+    function gpAddClaseDia(dia) {
+      var by = _gestorAgrupar();
+      var uids = Object.keys(by).filter(function(u){ return by[u].clases.length || by[u].regs.length; });
+      uids.sort(function(a,b){ return _gestorNombre(by[a]).localeCompare(_gestorNombre(by[b])); });
+      if (!uids.length) { alert('Aún no hay entrenadores en la academia.'); return; }
+      _gpAbrirFormClase(uids[0], dia, true);
+    }
+    // Cambio de entrenador en el selector del formulario (＋ general)
+    function gpFormEntChange(uid) {
+      _gestorUid = uid;
+      _gEditUid  = (_sbUser && uid === _sbUser.id) ? null : uid;
+    }
+
     // v0.89: menú de cuenta (correo · actualizar · salir) desde el botón
     // de perfil de la cabecera del panel del gestor.
     function gestorSetPerfil(open) {
@@ -5796,15 +5874,23 @@
         });
         h += '</div>';
 
-        if (_gDiaSel && diasData[_gDiaSel]) {
-          var d0 = diasData[_gDiaSel];
-          var dnFull = (_gDiaSel === 'x') ? '(sin día)' : _GDIASL[+_gDiaSel];
-          h += '<div class="ghd-diapanel">' +
-            '<div class="ghd-diapanel-hdr">' + _gEsc(dnFull) + ' · ' + d0.n + ' tramo' + (d0.n!==1?'s':'') + ' · ' + d0.tot + ' dada' + (d0.tot!==1?'s':'') + '</div>' +
-            d0.bloques +
+        // v0.100: TODOS los días que da clase como columnas. En móvil solo se
+        // ve el día elegido con los chips (limpio); en web (≥760px) se
+        // muestran todos en paralelo, desplegados, para verlo de un vistazo.
+        h += '<div class="ghd-diacols">';
+        ordenDias.forEach(function(k){
+          var dd = diasData[k];
+          var dnFull = (k === 'x') ? '(sin día)' : _GDIASL[+k];
+          h += '<div class="ghd-diapanel ghd-diacol' + (_gDiaSel === k ? ' sel' : '') + '">' +
+            '<div class="ghd-diapanel-hdr">' + _gEsc(dnFull) + ' · ' + dd.n + ' tramo' + (dd.n!==1?'s':'') + ' · ' + dd.tot + ' dada' + (dd.tot!==1?'s':'') + '</div>' +
+            dd.bloques +
           '</div>';
-        } else {
-          h += '<p class="ajustes-desc" style="text-align:center;margin:0.2rem 0 0.4rem;">Toca un día para ver sus clases.</p>';
+        });
+        h += '</div>';
+        // El aviso "toca un día" solo tiene sentido en móvil (en web se ven
+        // todos); se oculta por CSS en pantalla ancha.
+        if (!_gDiaSel || !diasData[_gDiaSel]) {
+          h += '<p class="ajustes-desc ghd-diahint" style="text-align:center;margin:0.2rem 0 0.4rem;">Toca un día para ver sus clases.</p>';
         }
         // (El sumatorio 1h/1h30 vive en el KPI "Clases dadas" de arriba)
         if (_gEsSeptiembre(mesISO)) h += '<div class="asist-matriz-leyenda" style="margin-top:0.5rem;">' +
@@ -12372,11 +12458,33 @@
                    alta: alAlta(a), baja: alBaja(a), hist: alHist(a).slice() };
         });
       } else {
-        document.getElementById('asist-form-dia').value    = '1';
+        document.getElementById('asist-form-dia').value    = (_gPrefillDia != null) ? String(_gPrefillDia) : '1';
         document.getElementById('asist-form-franja').value = '';
         document.getElementById('asist-form-nombre').value = '';
         asistAlumnosForm = [];
       }
+
+      // v0.99: selector de entrenador (solo en el ＋ general desde Inicio).
+      // En cualquier otro caso (edición o alta normal) queda oculto.
+      var _entGrupo = document.getElementById('asist-form-ent-grupo');
+      if (_entGrupo) {
+        if (_gPrefillEntPick && !clase) {
+          var _by = _gestorAgrupar();
+          var _uids = Object.keys(_by).filter(function(u){ return _by[u].clases.length || _by[u].regs.length; });
+          _uids.sort(function(a,b){ return _gestorNombre(_by[a]).localeCompare(_gestorNombre(_by[b])); });
+          var _selEnt = document.getElementById('asist-form-ent');
+          _selEnt.innerHTML = _uids.map(function(u){
+            return '<option value="' + u + '">' + _gEsc(_gestorNombre(_by[u])) + '</option>';
+          }).join('');
+          _selEnt.value = _gestorUid || (_uids[0] || '');
+          _entGrupo.style.display = 'block';
+        } else {
+          _entGrupo.style.display = 'none';
+        }
+      }
+      // Consumidos: no deben arrastrarse a la siguiente apertura del form
+      _gPrefillDia = null;
+      _gPrefillEntPick = false;
 
       document.getElementById('asist-form-nuevo-alumno').value    = '';
       document.getElementById('asist-form-nuevo-apellidos').value = '';
@@ -12513,6 +12621,12 @@
     }
 
     function asistGuardarClase() {
+      // v0.99: si el selector de entrenador está visible (＋ general desde
+      // Inicio), asegurar que se guarda en el entrenador elegido.
+      var _entG = document.getElementById('asist-form-ent-grupo');
+      var _entS = document.getElementById('asist-form-ent');
+      if (_entG && _entG.style.display !== 'none' && _entS && _entS.value) gpFormEntChange(_entS.value);
+
       var dia    = parseInt(document.getElementById('asist-form-dia').value);
       var franja = document.getElementById('asist-form-franja').value.trim();
       var nombre = document.getElementById('asist-form-nombre').value.trim();
