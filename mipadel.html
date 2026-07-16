@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.98.1   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.99.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,15 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.99.0 — Planning del panel: entrenadores en paralelo en web (2026-07)
+    · En Inicio del gestor, al tocar un día, los entrenadores se apilaban
+      uno debajo de otro. Ahora, SOLO en pantalla ancha (web/escritorio,
+      ≥760px), se colocan en columnas paralelas (rejilla auto-fit) para
+      ver todas las franjas horarias del día de un vistazo y tener visión
+      global. En móvil siguen apilados igual que antes.
+    · Implementación: los .gpplan-entblock se envuelven en .gpplan-cols;
+      la rejilla solo se activa en la media query min-width:760px.
   ─────────────────────────────────────────────────────
   v0.98.1 — Fix: recuperación por alumno respeta los desmarcados (2026-07)
     · Al pasar lista de una recuperación por alumno aparecían todos los
@@ -1604,6 +1613,13 @@
     .gpplan-ent-nom { flex:1; min-width:0; font-size:13.5px; font-weight:800; color:var(--texto); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .gpplan-ent-meta { flex-shrink:0; font-size:11px; font-weight:700; color:var(--gris); }
     .gpplan-franjas { padding:0.15rem 0.6rem 0.35rem; }
+    /* v0.99: en móvil los entrenadores van apilados (bloque normal). En
+       pantalla ancha (web) se colocan en columnas paralelas para ver todas
+       las franjas horarias del día de un vistazo, con visión global. */
+    @media (min-width:760px){
+      .gpplan-cols { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:10px; align-items:start; }
+      .gpplan-cols .gpplan-entblock { margin-bottom:0; }
+    }
     .alquitar-panel { background:var(--arena); border:1.5px solid var(--borde); border-radius:10px; padding:0.7rem 0.75rem; margin-top:8px; }
     /* Botón pequeño en la cabecera (⚙ Clases, v0.65) */
     .cab-mini-btn { position:absolute; top:2.05rem; right:1.5rem; background:rgba(255,255,255,0.12); border:none; color:rgba(255,255,255,0.92); font-size:13px; font-weight:700; font-family:'Outfit',sans-serif; cursor:pointer; padding:8px 13px; border-radius:12px; -webkit-tap-highlight-color:transparent; z-index:2; }
@@ -3568,7 +3584,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.98.1';
+    var APP_VERSION = '0.99.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -4911,6 +4927,10 @@
         } else {
           // v0.87.1: cada entrenador con TODAS sus franjas de ese día ya
           // expandidas (sin clic extra), para verlo todo de un vistazo.
+          // v0.99: en pantalla ancha (web) los entrenadores se colocan en
+          // columnas paralelas (.gpplan-cols) para ver todas las franjas
+          // horarias de un vistazo; en móvil siguen apilados.
+          h += '<div class="gpplan-cols">';
           uidsDia.forEach(function(u){
             var e = entsDia[u];
             var d3 = by[u];
@@ -4931,6 +4951,7 @@
               '<div class="gpplan-franjas">' + (bloques || '<p class="ajustes-desc" style="margin:0.3rem 2px;">Sin franjas este mes.</p>') + '</div>' +
             '</div>';
           });
+          h += '</div>';
         }
         h += '</div>';
       }
