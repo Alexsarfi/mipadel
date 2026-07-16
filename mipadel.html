@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.95.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.96.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,17 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.96.0 — Recuperar clase: crear y pasar lista separados (2026-07)
+    · El panel "Recuperar una clase" tiene ahora DOS botones: "✚ Crear
+      recuperación" (la deja agendada) y "✏ Pasar lista".
+    · No se puede pasar lista de una recuperación hasta el día de la clase
+      (o después): si la fecha es futura, avisa y no deja. Aplica también
+      al tocarla en "Recuperaciones del mes".
+    · Las recuperaciones creadas aparecen en "Recuperaciones del mes":
+      "📅 pendiente" si es futura, "✏ pasar lista" si ya toca, y "✓ N"
+      cuando ya se pasó lista. Solo cuentan como clase dada al pasar lista.
+    · Al pasar lista de una recuperación recién agendada, abre con todos
+      los alumnos presentes por defecto.
   v0.95.0 — Eliminar alumno de TODA la academia (solo gestor) (2026-07)
     · El botón de eliminar (en "✏ Editar datos") ahora borra al alumno de
       TODA la academia: de todos los entrenadores que lo tengan en su
@@ -1604,6 +1615,7 @@
     .asist-recup-fecha { flex-shrink:0; font-size:12.5px; font-weight:800; color:#1e40af; min-width:72px; }
     .asist-recup-nom { flex:1; min-width:0; font-size:13px; color:var(--texto); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .asist-recup-cnt { flex-shrink:0; font-size:12px; font-weight:800; color:#166534; }
+    .asist-recup-cnt.pend { color:#92400e; background:#fef3c7; border-radius:20px; padding:2px 8px; }
     /* Resumen "Clases dadas por duración" (Resumen del mes) */
     .asist-suma-card { background:var(--blanco); border:1.5px solid var(--borde); border-radius:14px; padding:0.9rem 1rem; margin-bottom:0.85rem; }
     .asist-suma-tit { font-size:13px; font-weight:800; color:var(--texto); margin-bottom:10px; }
@@ -3523,7 +3535,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.95.0';
+    var APP_VERSION = '0.96.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -6556,7 +6568,8 @@
     // ¿Este registro es una recuperación de clase? SOLO si se marcó
     // explícitamente como tal desde el flujo "Recuperar una clase" (v0.82).
     function _esRegRecup(clase, r){
-      return !!(r && r.recupClase && _regPasada(r));
+      // v0.96: incluye las recuperaciones AGENDADAS (aún sin pasar lista)
+      return !!(r && r.recupClase);
     }
     function _gestorHistAlumno(nombre) {
       var d = _gestorAgrupar()[_gestorUid];
@@ -11586,10 +11599,13 @@
       var h = '<div class="asist-recups-box"><div class="asist-recups-tit">↩ Recuperaciones · ' + _gEsc(mesLabel) + '</div>';
       recups.forEach(function(x){
         var nom = x.clase.nombre || ((x.clase.diaSemana>=0 ? DIAS_NOMBRES_A[x.clase.diaSemana] + ' · ' : '') + (x.clase.franja||'Clase'));
+        var estado = _regPasada(x.r)
+          ? '<span class="asist-recup-cnt">✓ ' + (x.r.presentes||[]).length + '</span>'
+          : '<span class="asist-recup-cnt pend">' + (x.r.fecha > hoyLocal() ? '📅 pendiente' : '✏ pasar lista') + '</span>';
         h += '<div class="asist-recup-row" onclick="' + onclickFn(x.clase.id, x.r.fecha) + '">' +
           '<span class="asist-recup-fecha">' + _gEsc(formatFechaCorta(x.r.fecha)) + '</span>' +
           '<span class="asist-recup-nom">' + _gEsc(nom) + (x.clase.franja ? ' · ' + _gEsc(x.clase.franja) : '') + '</span>' +
-          '<span class="asist-recup-cnt">✓ ' + (x.r.presentes||[]).length + '</span>' +
+          estado +
         '</div>';
       });
       h += '</div>';
@@ -11604,13 +11620,24 @@
       asistFechaActiva   = fecha;
       irA('pantalla-asistencia-lista');
     }
+    // v0.96: no se puede pasar lista de una recuperación hasta el día de la
+    // clase (o después). Antes solo devuelve el mensaje si es futura.
+    function _recupFuturaAviso(fecha) {
+      if (fecha > hoyLocal()) {
+        alert('Aún no puedes pasar lista de esta recuperación.\nPodrás hacerlo el ' + formatFechaCorta(fecha) + ' (el mismo día) o después.');
+        return true;
+      }
+      return false;
+    }
     // Abre una sesión de recuperación desde la lista "Recuperaciones del mes"
     function asistAbrirRecup(claseId, fecha) {
+      if (_recupFuturaAviso(fecha)) return;
       _asistRecupModo = true;
       asistAbrirLista(claseId, fecha);
     }
     // Igual, pero desde el detalle del gestor (modo gestión del entrenador)
     function gestorAbrirRecup(uid, claseId, fecha) {
+      if (_recupFuturaAviso(fecha)) return;
       _asistRecupModo = true;
       gestorEditarListaU(uid, claseId, fecha, 'pantalla-gestor-detalle');
     }
@@ -11619,7 +11646,7 @@
     // Panel para dar una clase en una fecha nueva (finde u otro mes):
     // cuenta como clase dada ese mes y el alumno la ve como recuperada.
     var _recupClasePanelOn = false;
-    function _recupClasePanelHTML(clases, fnConfirmar) {
+    function _recupClasePanelHTML(clases, fnCrear, fnPasar) {
       var cursoAct = cursoDeFecha(hoyLocal());
       var ordDia = function(ds){ return ds<0 ? 8 : (ds===0 ? 7 : ds); };
       var cls = clases.filter(function(c){ return _claseCurso(c) === cursoAct; })
@@ -11631,30 +11658,22 @@
       }).join('');
       return '<div class="recup-panel">' +
         '<div class="recup-tit">↩ Recuperar una clase</div>' +
-        '<p class="ajustes-desc" style="margin:0 0 8px;">Elige la clase y la nueva fecha (puede ser fin de semana u otro mes). Contará como clase dada ese mes y a los alumnos les aparecerá como recuperada.</p>' +
+        '<p class="ajustes-desc" style="margin:0 0 8px;">Elige la clase y la fecha. <b>Crear</b> la deja agendada (aparece en "Recuperaciones del mes"); solo podrás <b>pasar lista</b> el día de la clase o después. Cuenta como clase dada ese mes y al alumno le aparece como recuperada.</p>' +
         '<label class="form-label">Clase</label>' +
         '<select id="recup-clase-sel" class="form-input" style="margin-bottom:8px;">' + opts + '</select>' +
         '<label class="form-label">Fecha de la recuperación</label>' +
         '<input id="recup-clase-fecha" class="form-input" type="date" value="' + hoyLocal() + '" style="margin-bottom:10px;" onclick="if(this.showPicker)this.showPicker()">' +
         '<div style="display:flex;gap:8px;">' +
-          '<button class="btn btn-verde btn-sm" style="flex:1;" onclick="' + fnConfirmar + '">↩ Crear y pasar lista</button>' +
-          '<button class="btn btn-sec btn-sm" style="flex:1;" onclick="asistCerrarRecupPanel()">Cancelar</button>' +
+          '<button class="btn btn-verde btn-sm" style="flex:1;" onclick="' + fnCrear + '">✚ Crear recuperación</button>' +
+          '<button class="btn btn-sec btn-sm" style="flex:1;" onclick="' + fnPasar + '">✏ Pasar lista</button>' +
         '</div>' +
+        '<button class="btn btn-sec btn-sm" style="width:100%;margin-top:8px;color:var(--gris);" onclick="asistCerrarRecupPanel()">Cancelar</button>' +
       '</div>';
     }
     function asistCerrarRecupPanel() {
       _recupClasePanelOn = false;
       var el = document.getElementById('asist-recup-clase-panel'); if (el) el.innerHTML = '';
       var elG = document.getElementById('gdet-recup-panel'); if (elG) elG.innerHTML = '';
-    }
-    // Contexto ENTRENADOR (pantalla Asistencia)
-    function recupClaseToggle() {
-      _recupClasePanelOn = !_recupClasePanelOn;
-      var el = document.getElementById('asist-recup-clase-panel');
-      if (!el) return;
-      el.innerHTML = _recupClasePanelOn
-        ? _recupClasePanelHTML((leerAsistConfig().clases||[]), 'asistRecupConfirmar()')
-        : '';
     }
     function _recupLeerCampos() {
       var sel = document.getElementById('recup-clase-sel');
@@ -11665,11 +11684,44 @@
       if (!fecha) { alert('Elige la fecha de la recuperación'); return null; }
       return { claseId: claseId, fecha: fecha };
     }
-    function asistRecupConfirmar() {
+    // Agenda una recuperación (sin pasar lista): registro marcado recupClase
+    // y vacío. Aparece en "Recuperaciones del mes" para pasar lista su día.
+    function _recupCrearScheduled(claseId, fecha) {
+      var regs = leerAsistRegistros();
+      var idx  = -1;
+      regs.forEach(function(r,i){ if (r.claseId===claseId && r.fecha===fecha) idx=i; });
+      if (idx >= 0) {
+        regs[idx].recupClase = true;
+        escribirAsistRegistros(regs, false, [regs[idx]]);
+      } else {
+        var newId = regs.length>0 ? Math.max.apply(null,regs.map(function(r){return r.id||0;}))+1 : 1;
+        var nuevo = { id:newId, claseId:claseId, fecha:fecha, presentes:[], ausentes:[],
+                      justificadas:[], recups:[], impartidaPor:null, sinClase:false, recupClase:true };
+        regs.push(nuevo);
+        escribirAsistRegistros(regs, false, [nuevo]);
+      }
+    }
+    // Contexto ENTRENADOR (pantalla Asistencia)
+    function recupClaseToggle() {
+      _recupClasePanelOn = !_recupClasePanelOn;
+      var el = document.getElementById('asist-recup-clase-panel');
+      if (!el) return;
+      el.innerHTML = _recupClasePanelOn
+        ? _recupClasePanelHTML((leerAsistConfig().clases||[]), 'asistRecupCrear()', 'asistRecupPasar()')
+        : '';
+    }
+    function asistRecupCrear() {
       var d = _recupLeerCampos(); if (!d) return;
+      _recupCrearScheduled(d.claseId, d.fecha);
       asistCerrarRecupPanel();
-      _asistRecupModo = true;
-      asistAbrirLista(d.claseId, d.fecha);
+      if (typeof planToast === 'function') planToast('✓ Recuperación creada');
+      mostrarAsistencia();
+    }
+    function asistRecupPasar() {
+      var d = _recupLeerCampos(); if (!d) return;
+      if (_recupFuturaAviso(d.fecha)) return;
+      asistCerrarRecupPanel();
+      asistAbrirRecup(d.claseId, d.fecha);
     }
     // Contexto GESTOR (detalle de un entrenador)
     function gestorToggleRecupPanel() {
@@ -11679,13 +11731,21 @@
       if (!_recupClasePanelOn) { el.innerHTML = ''; return; }
       var d = _gestorAgrupar()[_gestorUid];
       var clases = d ? _gestorClasesLocal(d) : [];
-      el.innerHTML = _recupClasePanelHTML(clases, 'gestorRecupConfirmar()');
+      el.innerHTML = _recupClasePanelHTML(clases, 'gestorRecupCrear()', 'gestorRecupPasar()');
     }
-    function gestorRecupConfirmar() {
+    function gestorRecupCrear() {
       var d = _recupLeerCampos(); if (!d) return;
+      _gEditUid = (_sbUser && _gestorUid === _sbUser.id) ? null : _gestorUid;
+      try { _recupCrearScheduled(d.claseId, d.fecha); } finally { _gEditUid = null; }
       asistCerrarRecupPanel();
-      _asistRecupModo = true;
-      gestorEditarListaU(_gestorUid, d.claseId, d.fecha, 'pantalla-gestor-detalle');
+      if (typeof planToast === 'function') planToast('✓ Recuperación creada');
+      renderGestorDetalle();
+    }
+    function gestorRecupPasar() {
+      var d = _recupLeerCampos(); if (!d) return;
+      if (_recupFuturaAviso(d.fecha)) return;
+      asistCerrarRecupPanel();
+      gestorAbrirRecup(_gestorUid, d.claseId, d.fecha);
     }
 
     function renderizarPasarLista() {
@@ -11705,11 +11765,14 @@
       document.getElementById('asist-lista-volver-btn').textContent = _gEditVolverA ? '‹ Volver' : '‹ Asistencia';
       document.getElementById('asist-lista-fecha').value        = asistFechaActiva || hoyLocal();
 
-      // Solo alumnos ACTIVOS en esa fecha
-      var activos = alumnosActivos(clase, asistFechaActiva);
+      // Solo alumnos ACTIVOS en esa fecha. v0.96: si el registro existe pero
+      // aún NO se ha pasado la lista (p. ej. una recuperación recién agendada,
+      // sin presentes ni ausentes), se abre con todos PRESENTES por defecto.
+      var activos   = alumnosActivos(clase, asistFechaActiva);
+      var yaPasada  = regExiste && (((regExiste.presentes||[]).length) || ((regExiste.ausentes||[]).length));
       asistEstadoLista = {};
       activos.forEach(function(n) {
-        asistEstadoLista[n] = regExiste ? (regExiste.presentes||[]).indexOf(n) !== -1 : true;
+        asistEstadoLista[n] = yaPasada ? (regExiste.presentes||[]).indexOf(n) !== -1 : true;
       });
 
       // Justificaciones guardadas (J); toda ausencia sin marca cuenta como IJ
