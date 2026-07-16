@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.98.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.98.1   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -39,6 +39,11 @@
 
   HISTORIAL DE VERSIONES
   ─────────────────────────────────────────────────────
+  v0.98.1 — Fix: recuperación por alumno respeta los desmarcados (2026-07)
+    · Al pasar lista de una recuperación por alumno aparecían todos los
+      alumnos, ignorando a los que se habían desmarcado al crearla.
+      renderToggleAlumnos no aplicaba el filtro; ahora los alumnos no
+      asignados NO se muestran (variable _asistRecupAls compartida).
   v0.98.0 — Hora de la recuperación (2026-07)
     · Al recuperar una clase, además del día se elige la HORA (campo
       "Hora de la recuperación", prerrellenado con la franja de la clase
@@ -3563,7 +3568,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.98.0';
+    var APP_VERSION = '0.98.1';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -6159,6 +6164,7 @@
     function _asistSalirForzar() {
       _asistOcultarGuardar();
       _asistRecupModo = false;   // se cancela el modo recuperación al salir
+      _asistRecupAls  = null;
       if (_gEditVolverA) { var v = _gEditVolverA; _gEditVolverA = null; irA(v); return; }
       irA('pantalla-asistencia');
     }
@@ -11219,6 +11225,7 @@
     var asistClaseActivaId = null; // clase activa en pasar lista
     var asistFechaActiva   = null; // fecha activa en pasar lista
     var _asistRecupModo    = false; // true si la sesión abierta es una recuperación de clase
+    var _asistRecupAls     = null;  // v0.98.1: alumnos asignados a la recuperación por alumno (null = todos)
     var asistAlumnosForm   = [];   // alumnos en el formulario
     var asistEstadoLista   = {};   // { nombre: true/false } durante pase
     var asistJustifs       = {};   // { nombre: true } ausencia justificada (J); sin marca = IJ
@@ -11874,10 +11881,12 @@
       // sin presentes ni ausentes), se abre con todos PRESENTES por defecto.
       var activos   = alumnosActivos(clase, asistFechaActiva);
       // v0.97: recuperación POR ALUMNO → mostrar solo los alumnos asignados
-      // (guardados en recups del registro de recuperación).
+      // (guardados en recups del registro de recuperación). v0.98.1: se guarda
+      // en _asistRecupAls para que renderToggleAlumnos aplique el mismo filtro.
+      _asistRecupAls = null;
       if (esRecupSesion && regExiste && regExiste.recupClase && (regExiste.recups||[]).length) {
-        var _asig = regExiste.recups;
-        activos = activos.filter(function(n){ return _asig.indexOf(n) !== -1; });
+        _asistRecupAls = regExiste.recups.slice();
+        activos = activos.filter(function(n){ return _asistRecupAls.indexOf(n) !== -1; });
       }
       var yaPasada  = regExiste && (((regExiste.presentes||[]).length) || ((regExiste.ausentes||[]).length));
       asistEstadoLista = {};
@@ -11931,6 +11940,8 @@
         clase = (cfg.clases||[]).filter(function(c){ return c.id===asistClaseActivaId; })[0];
       }
       var activos = clase ? alumnosActivos(clase, asistFechaActiva) : [];
+      // v0.98.1: recuperación por alumno → solo los asignados
+      if (_asistRecupAls) activos = activos.filter(function(n){ return _asistRecupAls.indexOf(n) !== -1; });
 
       function fila(nombre, esRecup) {
         var presente = asistEstadoLista[nombre] !== false;
