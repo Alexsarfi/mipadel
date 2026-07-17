@@ -39,6 +39,19 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.104.0 — Ficha del alumno: mes planificado también en meses anteriores (2026-07)
+    · La vista planificada del mes (v0.103) se aplica ahora TAMBIÉN a los
+      meses pasados donde el alumno tuvo al menos una clase: además de las
+      clases del curso del mes con el alumno en el cupo, se incluyen las
+      clases donde el alumno tiene algún registro ese mes (cursos
+      anteriores o cupos de los que ya salió).
+    · En esas clases "recuperadas por registro" se pintan todas las fechas
+      del mes según su día de la semana: las dadas con su asistencia, las
+      no registradas en gris "sin lista" y los días sin clase en rojo ✗.
+    · La vista clásica de solo-registros queda como último recurso (meses
+      cuya clase ya no existe en los datos).
+    · Sin cambios en Supabase.
+
   v0.103.0 — Ficha del alumno: mes planificado con días pendientes (2026-07)
     · Al pinchar en un alumno, la vista del mes ya no enseña solo los días
       con registro: pinta TODOS los días en que sus clases tocan ese mes
@@ -3705,7 +3718,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.103.0';
+    var APP_VERSION = '0.104.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -7041,9 +7054,21 @@
       var regsLoc   = _gestorRegsLocal(d);
       var bloques = '', totPrev = 0, totQuedan = 0, hayClases = false;
 
+      // v0.104: además de las clases del curso del mes con el alumno en el
+      // cupo, se incluyen las clases donde el alumno tiene ALGÚN registro
+      // ese mes (cursos anteriores o cupos de los que ya salió). Así los
+      // meses pasados con al menos una clase dada también pintan el mes
+      // completo planificado, no solo los días con registro.
+      var regClaseIds = {};
+      regsLoc.forEach(function(r){
+        if (!r.fecha || r.fecha.slice(0,7) !== mesISO || r.sinClase) return;
+        if ((r.presentes||[]).indexOf(nombre) === -1 && (r.ausentes||[]).indexOf(nombre) === -1) return;
+        regClaseIds[r.claseId] = true;
+      });
       clasesLoc.filter(function(c){
-        return _claseCurso(c) === cursoMes && c.diaSemana >= 0 &&
-               _claseVisibleEnMes(c, mesISO) && alumnoEnClase(c, nombre);
+        if (c.diaSemana < 0) return false;
+        var delCurso = _claseCurso(c) === cursoMes && _claseVisibleEnMes(c, mesISO) && alumnoEnClase(c, nombre);
+        return delCurso || regClaseIds[c.id];
       }).sort(function(a,b){ return (a.franja||'').localeCompare(b.franja||''); })
       .forEach(function(c){
         var entry = alumnoEnClase(c, nombre);
@@ -7053,7 +7078,9 @@
         });
         var chips = '', quedan = 0, nPrev = 0;
         fechasClaseEnMes(c, mesISO).forEach(function(f){
-          if (!alActivo(entry, f)) return;   // fuera de su periodo de alta
+          // v0.104: si el alumno ya no está en el cupo (entry null, clase
+          // recuperada por sus registros), se pintan todas las fechas
+          if (entry && !alActivo(entry, f)) return;   // fuera de su periodo de alta
           var p = f.split('-');
           var wd = _GALLETRAS[new Date(+p[0], +p[1]-1, +p[2]).getDay()];
           var reg = regPF[f], cls, pref = '';
