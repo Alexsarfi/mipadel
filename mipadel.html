@@ -39,6 +39,19 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.103.0 — Ficha del alumno: mes planificado con días pendientes (2026-07)
+    · Al pinchar en un alumno, la vista del mes ya no enseña solo los días
+      con registro: pinta TODOS los días en que sus clases tocan ese mes
+      (por franja horaria), con un contador "quedan N" por clase y un
+      resumen arriba (X previstas · quedan N).
+    · Estados de cada día: verde presente · rojo falta IJ · ámbar falta J
+      · azul ↩ recuperación · gris punteado PENDIENTE (aún por dar) ·
+      rojo punteado con ✗ SIN CLASE (festivo del club o clase anulada).
+    · Si el alumno no tiene clases en el curso de ese mes (meses de cursos
+      pasados), se mantiene la vista clásica de registros. La vista del
+      mes aparece ahora aunque el alumno no tenga aún ningún registro.
+    · Sin cambios en Supabase.
+
   v0.102.0 — Franjas más limpias en móvil + quitar franja (−) + alta en panel (2026-07)
     · ⚠️ REQUIERE la migración 'migracion_fin_clase.sql' (columnas fin y
       fin_motivo en asistencia_clases). Ejecútala ANTES de usar la v0.102
@@ -1593,6 +1606,12 @@
     .galm-chip.falta  { background:#fee2e2; color:#991b1b; }
     .galm-chip.faltaj { background:#fef3c7; color:#92400e; }
     .galm-chip.recup  { background:#dbeafe; color:#1e40af; }
+    /* v0.103: vista planificada del mes en la ficha del alumno */
+    .galm-chip.pend     { background:#f8fafc; color:#475569; border:1.5px dashed #cbd5e1; }   /* día previsto, aún por dar */
+    .galm-chip.sinlista { background:#f3f4f6; color:#9ca3af; }                                /* pasado sin lista */
+    .galm-chip.sc       { background:#fee2e2; color:#b91c1c; border:1.5px dashed #fca5a5; }   /* ✗ sin clase */
+    .galm-quedan { margin-left:auto; font-size:11px; font-weight:800; color:#166534; background:#dcfce7; border-radius:20px; padding:2px 9px; white-space:nowrap; }
+    .galm-quedan.cero { color:#9ca3af; background:#f3f4f6; }
     .galm-leyenda { display:flex; flex-wrap:wrap; align-items:center; gap:5px 10px; margin:2px 0 10px; font-size:11px; }
     .galm-lg { display:inline-flex; align-items:center; justify-content:center; min-width:24px; height:22px; padding:0 5px;
                border-radius:7px; font-size:11px; font-weight:800; vertical-align:middle; }
@@ -1600,6 +1619,8 @@
     .galm-lg.falta  { background:#fee2e2; color:#991b1b; }
     .galm-lg.faltaj { background:#fef3c7; color:#92400e; }
     .galm-lg.recup  { background:#dbeafe; color:#1e40af; }
+    .galm-lg.pend   { background:#f8fafc; color:#475569; border:1.5px dashed #cbd5e1; }
+    .galm-lg.sc     { background:#fee2e2; color:#b91c1c; border:1.5px dashed #fca5a5; }
     /* Asistencia por días: tramos horarios dentro de cada día */
     .gad-tramo { padding:0.55rem 0; border-bottom:1px solid var(--borde); }
     .gad-tramo:last-child { border-bottom:none; }
@@ -3684,7 +3705,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.102.0';
+    var APP_VERSION = '0.103.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -6996,6 +7017,96 @@
         '<span class="galm-lg recup">↩</span> recuperación</p>';
     }
 
+    // ── v0.103: vista PLANIFICADA del mes en la ficha del alumno ──────
+    // En lugar de enseñar solo los días con registro, se pintan TODOS los
+    // días en que sus clases tocan ese mes (por franja): pasados con su
+    // asistencia, pendientes en gris punteado (con contador "quedan N"),
+    // y los días SIN CLASE (festivo del club o clase anulada) en rojo ✗.
+    function _alMesPlanLeyenda() {
+      return '<p class="ajustes-desc galm-leyenda">' +
+        '<span class="galm-lg pres">15</span> presente &nbsp;' +
+        '<span class="galm-lg falta">15</span> falta IJ &nbsp;' +
+        '<span class="galm-lg faltaj">15</span> falta J &nbsp;' +
+        '<span class="galm-lg recup">↩</span> recup &nbsp;' +
+        '<span class="galm-lg pend">15</span> pendiente &nbsp;' +
+        '<span class="galm-lg sc">✗</span> sin clase</p>';
+    }
+    // Devuelve { html, prev, quedan } o null si el alumno no tiene clases
+    // en el curso de ese mes (se usa entonces la vista clásica de registros).
+    function _alMesPlanHTML(d, nombre, mesISO, itemsMes) {
+      _dscInit();
+      var hoy      = hoyLocal();
+      var cursoMes = cursoDeFecha(mesISO);
+      var clasesLoc = _gestorClasesLocal(d);
+      var regsLoc   = _gestorRegsLocal(d);
+      var bloques = '', totPrev = 0, totQuedan = 0, hayClases = false;
+
+      clasesLoc.filter(function(c){
+        return _claseCurso(c) === cursoMes && c.diaSemana >= 0 &&
+               _claseVisibleEnMes(c, mesISO) && alumnoEnClase(c, nombre);
+      }).sort(function(a,b){ return (a.franja||'').localeCompare(b.franja||''); })
+      .forEach(function(c){
+        var entry = alumnoEnClase(c, nombre);
+        var regPF = {};
+        regsLoc.forEach(function(r){
+          if (r.claseId === c.id && r.fecha && r.fecha.slice(0,7) === mesISO) regPF[r.fecha] = r;
+        });
+        var chips = '', quedan = 0, nPrev = 0;
+        fechasClaseEnMes(c, mesISO).forEach(function(f){
+          if (!alActivo(entry, f)) return;   // fuera de su periodo de alta
+          var p = f.split('-');
+          var wd = _GALLETRAS[new Date(+p[0], +p[1]-1, +p[2]).getDay()];
+          var reg = regPF[f], cls, pref = '';
+          if ((reg && reg.sinClase) || _dscEsSinClase(f)) { cls = 'sc'; pref = '✗'; }
+          else if (_regPasada(reg)) {
+            var pres = (reg.presentes||[]).indexOf(nombre) !== -1;
+            var aus  = (reg.ausentes ||[]).indexOf(nombre) !== -1;
+            if (pres)      cls = 'pres';
+            else if (aus)  cls = (reg.justificadas||[]).indexOf(nombre) !== -1 ? 'faltaj' : 'falta';
+            else           cls = 'sinlista';   // lista pasada sin este alumno
+          }
+          else if (f >= hoy) { cls = 'pend'; quedan++; }
+          else cls = 'sinlista';               // pasado sin lista
+          nPrev++;
+          chips += '<div class="galm-chip ' + cls + '">' +
+                     '<span class="galm-chip-dia">' + wd + '</span>' +
+                     '<span class="galm-chip-num">' + pref + parseInt(p[2],10) + '</span>' +
+                   '</div>';
+        });
+        if (!nPrev) return;
+        hayClases = true; totPrev += nPrev; totQuedan += quedan;
+        bloques += '<div class="galm-clase">' +
+          '<div class="galm-clase-hdr">' +
+            '<span class="galm-fr">' + _gEsc(c.franja || 'Clase') + '</span>' +
+            (c.nombre && c.nombre !== 'Clase' ? '<span class="galm-nom">' + _gEsc(c.nombre) + '</span>' : '') +
+            '<span class="galm-quedan' + (quedan ? '' : ' cero') + '">' +
+              (quedan ? 'quedan ' + quedan : 'sin días pendientes') + '</span>' +
+          '</div>' +
+          '<div class="galm-dias">' + chips + '</div>' +
+        '</div>';
+      });
+      if (!hayClases) return null;
+
+      // Recuperaciones del alumno ese mes (en cualquier clase), en bloque aparte
+      var recups = (itemsMes || []).filter(function(x){ return x.recup; })
+        .sort(function(a,b){ return a.fecha.localeCompare(b.fecha); });
+      if (recups.length) {
+        var chipsR = recups.map(function(x){
+          var p = x.fecha.split('-');
+          var wd = _GALLETRAS[new Date(+p[0], +p[1]-1, +p[2]).getDay()];
+          return '<div class="galm-chip recup">' +
+                   '<span class="galm-chip-dia">' + wd + '</span>' +
+                   '<span class="galm-chip-num">↩' + parseInt(p[2],10) + '</span>' +
+                 '</div>';
+        }).join('');
+        bloques += '<div class="galm-clase">' +
+          '<div class="galm-clase-hdr"><span class="galm-fr">↩ Recuperaciones</span></div>' +
+          '<div class="galm-dias">' + chipsR + '</div>' +
+        '</div>';
+      }
+      return { html: bloques, prev: totPrev, quedan: totQuedan };
+    }
+
     // ── Listado de alumnos del entrenador (con buscador y filtro por clase) ──
     // Cache de la pantalla: lista completa + a qué clases va cada alumno
     var _galsCache = null;   // { alumnos:[nombre], clasesAl:{nombre:{claseId:true}}, clases:[...] }
@@ -7209,12 +7320,10 @@
         '</div>';
       }
 
-      if (!hist.length) {
-        cont.innerHTML = h + '<div class="vacio"><div class="vacio-icono">📅</div><p>Sin registros de asistencia para este alumno.</p></div>';
-        return;
-      }
-
-      // ── Mes seleccionado (con navegación) ──
+      // ── Mes seleccionado (con navegación) ── v0.103: siempre visible.
+      // Muestra el mes PLANIFICADO: todos los días que tocan clase en sus
+      // franjas (pasados con asistencia, pendientes con contador, y los
+      // días sin clase en rojo ✗), aunque aún no haya registros.
       var mesISO   = getMesISO_A(_gAlMesOff);
       var mesLabel = getMesLabelA(_gAlMesOff);
       h += '<div class="gestor-mes-nav" style="margin-top:0.4rem;">' +
@@ -7223,11 +7332,23 @@
         '<button class="gestor-mes-btn" onclick="gestorAlMesNav(1)">›</button>' +
       '</div>';
       var itemsMes = hist.filter(function(x){ return x.fecha.startsWith(mesISO); });
-      if (!itemsMes.length) {
-        h += '<p class="ajustes-desc" style="text-align:center;">Sin registros este mes.</p>';
-      } else {
+      var plan = d ? _alMesPlanHTML(d, _gestorAlumno, mesISO, itemsMes) : null;
+      if (plan) {
+        h += '<p class="ajustes-desc" style="text-align:center;margin:-2px 0 0.4rem;">' +
+          plan.prev + ' clase' + (plan.prev !== 1 ? 's' : '') + ' prevista' + (plan.prev !== 1 ? 's' : '') + ' este mes · ' +
+          (plan.quedan ? '<b>quedan ' + plan.quedan + '</b>' : 'ninguna pendiente') + '</p>';
+        h += _alMesPlanLeyenda();
+        h += plan.html;
+      } else if (itemsMes.length) {
         h += _alMesLeyenda();
         h += _alMesChipsHTML(itemsMes, {});
+      } else {
+        h += '<p class="ajustes-desc" style="text-align:center;">Sin clases ni registros este mes.</p>';
+      }
+
+      if (!hist.length) {
+        cont.innerHTML = h + '<div class="vacio" style="padding:1.2rem 0;"><p class="ajustes-desc" style="text-align:center;">Aún sin registros de asistencia para este alumno.</p></div>';
+        return;
       }
 
       // ── Cursos (sep–jun): el actual desplegado, los anteriores plegados ──
