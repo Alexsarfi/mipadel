@@ -39,6 +39,17 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.109.0 — Sustitutos externos como chips con su propio detalle (2026-07)
+    · En la fila de entrenadores del detalle, tras el chip "＋ Sustituto
+      externo" aparecen ahora los NOMBRES de los externos del catálogo en
+      chips ÁMBAR: a la izquierda del "＋" queda el club, a la derecha los
+      externos, distinguibles de un vistazo.
+    · Al pinchar un externo se abre su propio detalle, como el de un
+      entrenador: letrero de clases CUBIERTAS del mes por duración (azul
+      1h · verde 1h 30 · total) y el listado de cada clase cubierta con
+      fecha, franja y titular al que sustituyó. Con navegación ‹ mes ›.
+    · Sin cambios en Supabase.
+
   v0.108.0 — Detalle del entrenador: letrero mensual en vez de los 3 KPI (2026-07)
     · Fuera los tres recuadros "Clases dadas · Alumnos · Asistencia" del
       detalle del entrenador.
@@ -1946,6 +1957,13 @@
     .gdet-ent-chip:active { transform:scale(0.97); }
     .gdet-ent-chip.sel { color:var(--blanco); background:var(--verde); border-color:var(--verde); }
     .gdet-ent-chip.todos { color:var(--verde); border-color:var(--verde); border-style:dashed; }
+    /* v0.109: sustitutos externos en ámbar, a la derecha del "＋" */
+    .gdet-ent-chip.ext { color:#92400e; background:#fffbeb; border-color:#f59e0b; }
+    /* v0.109: filas de clases cubiertas del sustituto externo */
+    .gsx-row { display:flex; align-items:center; gap:10px; background:var(--blanco); border:1.5px solid var(--borde); border-radius:12px; padding:0.65rem 0.8rem; margin-bottom:7px; flex-wrap:wrap; }
+    .gsx-fecha { font-size:13px; font-weight:800; color:var(--texto); flex-shrink:0; }
+    .gsx-franja { font-size:12.5px; font-weight:700; color:var(--lila); background:var(--lila-suave); border-radius:8px; padding:3px 8px; }
+    .gsx-tit { margin-left:auto; font-size:12px; font-weight:700; color:var(--gris); }
     .ghd-tramo { padding:0.55rem 0; border-bottom:1px solid var(--borde); }
     .ghd-tramo:last-child { border-bottom:none; }
     /* Desplegable de asistencia bajo el tramo */
@@ -3040,6 +3058,18 @@
     </div>
   </div>
 
+  <!-- ══ GESTOR — DETALLE DE UN SUSTITUTO EXTERNO ══ (v0.109) -->
+  <div id="pantalla-gestor-sustituto" class="pantalla">
+    <div class="cabecera">
+      <button class="btn-volver" onclick="irA('pantalla-gestor-detalle')">‹ Volver</button>
+      <div class="cab-titulo" id="gsx-titulo">Sustituto</div>
+      <div class="cab-sub">Sustituto externo · clases cubiertas</div>
+    </div>
+    <div class="contenido">
+      <div id="gsx-contenido"></div>
+    </div>
+  </div>
+
   <!-- ══ GESTOR/EN3 — ALUMNOS DE UN ENTRENADOR ════ -->
   <div id="pantalla-gestor-alumnos" class="pantalla">
     <div class="cabecera">
@@ -3794,7 +3824,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.108.0';
+    var APP_VERSION = '0.109.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -5367,6 +5397,70 @@
       cont.innerHTML = h;
     }
 
+    // ── v0.109: DETALLE de un sustituto EXTERNO ──────────────────
+    // Funciona como el de un entrenador pero con las clases que ha
+    // CUBIERTO: letrero por duración (1h · 1h30 · total) y el listado de
+    // cada clase cubierta, con navegación por meses.
+    var _gSustExtNom = null, _gSustExtMesOff = 0;
+    function abrirGestorSustituto(nom) {
+      _gSustExtNom = nom;
+      _gSustExtMesOff = _gPanelMesOffset();
+      irA('pantalla-gestor-sustituto');
+    }
+    function gsxMesNav(delta) { _gSustExtMesOff += delta; renderGestorSustituto(); }
+    function renderGestorSustituto() {
+      var cont = document.getElementById('gsx-contenido');
+      if (!cont) return;
+      var nom = _gSustExtNom;
+      var tit = document.getElementById('gsx-titulo');
+      if (tit) tit.textContent = nom || 'Sustituto';
+      if (!_gestorData || !nom) { cont.innerHTML = '<p class="ajustes-desc">Sin datos.</p>'; return; }
+      var mesISO   = getMesISO_A(_gSustExtMesOff);
+      var mesLabel = getMesLabelA(_gSustExtMesOff);
+      var by = _gestorAgrupar();
+      var clasePor = {};
+      (_gestorData.clases || []).forEach(function(c){ clasePor[c.user_id + '|' + c.id] = c; });
+      var items = [], n60 = 0, n90 = 0, nOt = 0;
+      (_gestorData.registros || []).forEach(function(r){
+        if (!r.impartida_por || r.impartida_por.uid || (r.impartida_por.nombre || '') !== nom) return;
+        if (!r.fecha || r.fecha.slice(0,7) !== mesISO || !_regPasada(r)) return;
+        var c = clasePor[r.user_id + '|' + r.clase_id] || {};
+        var dur = _duracionFranja(c.franja || '');
+        if (dur === 60) n60++; else if (dur === 90) n90++; else nOt++;
+        items.push({ fecha: r.fecha, franja: c.franja || '—',
+                     titular: _gestorNombre(by[r.user_id] || { uid: r.user_id }) });
+      });
+      items.sort(function(a,b){ return a.fecha.localeCompare(b.fecha) || a.franja.localeCompare(b.franja); });
+      var tot = n60 + n90 + nOt;
+
+      var h = '<div class="gestor-mes-nav">' +
+        '<button class="gestor-mes-btn" onclick="gsxMesNav(-1)">‹</button>' +
+        '<span class="gestor-mes-lbl">' + _gEsc(mesLabel) + '</span>' +
+        '<button class="gestor-mes-btn" onclick="gsxMesNav(1)">›</button>' +
+      '</div>';
+      h += '<div class="gent-mes" style="justify-content:center;margin:0 0 0.7rem;">' +
+        '<div class="gent-dur h1"><b>' + n60 + '</b><span>1h</span></div>' +
+        '<div class="gent-dur h15"><b>' + n90 + '</b><span>1h 30</span></div>' +
+        (nOt ? '<div class="gent-dur ot"><b>' + nOt + '</b><span>otras</span></div>' : '') +
+        '<div class="gent-dur tot"><b>' + tot + '</b><span>cubiertas</span></div>' +
+      '</div>';
+      if (!items.length) {
+        h += '<p class="ajustes-desc" style="text-align:center;">Sin clases cubiertas este mes.</p>';
+      } else {
+        h += '<div class="grupo-titulo">Clases cubiertas · ' + _gEsc(mesLabel) + '</div>';
+        items.forEach(function(it){
+          var p = it.fecha.split('-');
+          var wd = _GDIAS[new Date(+p[0], +p[1]-1, +p[2]).getDay()];
+          h += '<div class="gsx-row">' +
+            '<span class="gsx-fecha">' + wd + ' ' + parseInt(p[2],10) + '/' + parseInt(p[1],10) + '</span>' +
+            '<span class="gsx-franja">🕐 ' + _gEsc(it.franja) + '</span>' +
+            '<span class="gsx-tit">de 👤 ' + _gEsc(it.titular) + '</span>' +
+          '</div>';
+        });
+      }
+      cont.innerHTML = h;
+    }
+
     // ── VENTANA "ENTRENADORES" + sustitutos externos (v0.67) ─────
     function abrirGestorEntrenadores() { _gEntMesOff = 0; irA('pantalla-gestor-entrenadores'); }
     // v0.106: navegación por meses en la página de entrenadores
@@ -6066,6 +6160,13 @@
         _chipsEnt += '<button type="button" class="gdet-ent-chip todos" onclick="abrirGestorEntrenadores()">Todos ›</button>';
         // v0.108: alta de sustituto externo a mano, junto a los entrenadores
         _chipsEnt += '<button type="button" class="gdet-ent-chip" onclick="gestorSustNuevo()">＋ Sustituto externo</button>';
+        // v0.109: los externos del catálogo, como chips tras el "＋": a la
+        // izquierda el club, a la derecha los externos. Al pinchar uno se
+        // abre su detalle con las clases que ha cubierto, mes a mes.
+        ((_gestorData && _gestorData.sustitutos) || []).forEach(function(sx){
+          _chipsEnt += '<button type="button" class="gdet-ent-chip ext" onclick="abrirGestorSustituto(\'' +
+            _gEsc(sx.nombre).replace(/'/g, "\\'") + '\')">' + _gEsc(sx.nombre) + '</button>';
+        });
         h += '<div class="gdet-ent-row">' + _chipsEnt + '</div>';
       }
       // ── Años anteriores (cursos archivados de este entrenador) ──
@@ -9041,7 +9142,7 @@
       'pantalla-gestor-clases','pantalla-gestor-entrenadores',
       'pantalla-gestor-alumnos','pantalla-gestor-alumno',
       'pantalla-gestor-todos-alumnos','pantalla-gestor-todos-alumno',
-      'pantalla-gestor-calendario'];
+      'pantalla-gestor-calendario','pantalla-gestor-sustituto'];
 
     function irA(id) {
       // Salir de las pantallas de asistencia/panel apaga el modo gestión
@@ -9084,6 +9185,7 @@
       if (id === 'pantalla-gestor-planning')        renderGestorPlanning();
       if (id === 'pantalla-gestor-clases')          renderGestorClases();
       if (id === 'pantalla-gestor-entrenadores')    renderGestorEntrenadores();
+      if (id === 'pantalla-gestor-sustituto')       renderGestorSustituto();
       if (id === 'pantalla-gestor-alumnos')         renderGestorAlumnos();
       if (id === 'pantalla-gestor-alumno')          renderGestorAlumno();
       if (id === 'pantalla-gestor-todos-alumnos')   renderGestorTodosAlumnos();
