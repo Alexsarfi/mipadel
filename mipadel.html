@@ -39,6 +39,18 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.105.0 — Planning del gestor: días sin clase del club en los chips (2026-07)
+    · En la vista de Inicio con todas las clases de todos los entrenadores
+      (y también en el detalle del entrenador y el planning por franja,
+      que comparten los mismos chips de días), los DÍAS SIN CLASE que
+      marca el gestor en el calendario (club cerrado, fiesta, sin pista…)
+      aparecen ahora en rojo con ✗ delante del número.
+    · Si aun así alguien dio clase ese día, el chip se pinta VERDE "dada"
+      con BORDE ROJO (sin ✗): se dio clase en un día marcado sin clase.
+    · Al abrir el panel del gestor se refrescan los días sin clase del
+      club desde Supabase para pintarlos al momento.
+    · Sin cambios en Supabase.
+
   v0.104.1 — Ficha del alumno: el rojo ✗ solo para días sin clase del club (2026-07)
     · El chip rojo ✗ queda reservado a los DÍAS SIN CLASE que marca el
       gestor en el calendario (club cerrado, sin pista, fiesta…).
@@ -1836,6 +1848,10 @@
     .ghd-day.dada { background:#dcfce7; color:#166534; }
     .ghd-day.nodada { background:#fee2e2; color:#991b1b; }
     .ghd-day.sinlista { background:#f3f4f6; color:#9ca3af; }
+    /* v0.105: día sin clase del club (gestor) → rojo con ✗; si aun así se
+       dio clase, el chip verde "dada" lleva borde rojo (sin ✗) */
+    .ghd-day.dsc { background:#fee2e2; color:#b91c1c; border:1.5px dashed #fca5a5; }
+    .ghd-day.dada.dsc-dada { border:2px solid #dc2626; }
     /* Chips-botón del calendario (abren la asistencia de esa fecha) */
     button.ghd-day { cursor:pointer; -webkit-tap-highlight-color:transparent; transition:box-shadow .12s; }
     button.ghd-day:active { transform:scale(0.92); }
@@ -3728,7 +3744,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.104.1';
+    var APP_VERSION = '0.105.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -4674,6 +4690,7 @@
 
     // Descarga toda la asistencia + perfiles (RLS lo permite solo a gestores)
     function cargarDatosGestor() {
+      _dscCargarSb();   // v0.105: días sin clase del club para pintarlos en el planning
       var emailEl = document.getElementById('gestor-email');
       if (emailEl && _sbUser) emailEl.textContent = _sbUser.email;
       // El EN3 entra desde Inicio y puede volver; el gestor vive aquí
@@ -6221,14 +6238,19 @@
         var did  = opts.idPref + '-' + uid + '-' + c.id + '-' + f;
         // v0.66.1: día con sustituto → chip y desplegable sombreados en ámbar
         var sust = (cf[f] && cf[f].impartidaPor) ? ' sust' : '';
+        // v0.105: los días sin clase del club (gestor) llevan ✗ delante
         chips += '<button type="button" class="ghd-day ' + st + (extra?' extra':'') + sust + '" onclick="gestorToggleDet(\'' + did + '\',this)">' +
-                 (extra?'+':'') + parseInt(f.split('-')[2],10) + '</button>';
+                 (st === 'dsc' ? '✗' : '') + (extra?'+':'') + parseInt(f.split('-')[2],10) + '</button>';
         dets  += '<div class="gdd-det' + sust + '" id="' + did + '" style="display:none;">' +
                  _gddDetalleHTML(c, f, cf[f] || null, extra, opts) + '</div>';
       }
       fechas.forEach(function(f){
-        var reg = cf[f], st;
-        if (_regPasada(reg)) { st='dada'; dadas++; }
+        // v0.105: día sin clase del club (lo marca el gestor: cerrado,
+        // fiesta, sin pista…) → rojo con ✗; si aun así se dio clase ese
+        // día → verde "dada" con borde rojo (sin ✗).
+        var reg = cf[f], st, dsc = _dscEsSinClase(f);
+        if (_regPasada(reg)) { st = 'dada' + (dsc ? ' dsc-dada' : ''); dadas++; }
+        else if (dsc) { st='dsc'; }
         else if (reg && reg.sinClase) { st='nodada'; }
         else { st='sinlista'; }   // sin registro o solo recups previstas
         _chip(f, st, false);
