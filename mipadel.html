@@ -39,6 +39,21 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.108.0 — Detalle del entrenador: letrero mensual en vez de los 3 KPI (2026-07)
+    · Fuera los tres recuadros "Clases dadas · Alumnos · Asistencia" del
+      detalle del entrenador.
+    · En su lugar, el mismo LETRERO de la página "Todos": clases dadas
+      del mes visto por duración (azul 1h · verde 1h 30 · gris otras) y
+      un recuadro oscuro con el TOTAL. Cambia al navegar de mes con la
+      flecha ‹ › de siempre. Si hay sustituciones o clases cubiertas a
+      otros, se indican en una línea pequeña debajo.
+    · El botón "＋ Añadir sustituto externo" sale de la página "Todos" y
+      pasa a ser un chip "＋ Sustituto externo" al final de la fila de
+      entrenadores (tras "Todos ›"). El catálogo con ✕ sigue en "Todos".
+    · El listado de alumnos del entrenador ("Ver historial ›") queda
+      accesible desde el KPI "Alumnos" del panel y desde los chips de
+      alumnos de cada franja. Sin cambios en Supabase.
+
   v0.107.0 — Página "Todos": solo datos, sin enlaces + botón sustitutos (2026-07)
     · La página que abre el chip "Todos ›" (y la ventana Entrenadores) es
       ahora un VISTAZO puro de las clases dadas por cada entrenador en el
@@ -1575,6 +1590,7 @@
     .gent-dur.h1  { background:#eff6ff; color:#1e40af; }
     .gent-dur.h15 { background:#f0fdf4; color:#166534; }
     .gent-dur.ot  { background:#f3f4f6; color:#6b7280; }
+    .gent-dur.tot { background:var(--verde); color:var(--blanco); }
     .gestor-reg-row { display:flex; align-items:center; gap:10px; padding:0.55rem 0; border-bottom:1px solid var(--borde); font-size:13px; }
     .gestor-reg-fecha { font-weight:700; color:var(--texto); min-width:92px; }
     .gestor-reg-pres { color:#166534; font-weight:700; }
@@ -3778,7 +3794,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.107.0';
+    var APP_VERSION = '0.108.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -5415,9 +5431,8 @@
       });
       if (!uids.length) h += '<p class="ajustes-desc" style="text-align:center;padding:1rem 0;">Aún no hay entrenadores con datos.</p>';
 
-      // v0.107: el botón de añadir sustituto externo va justo DESPUÉS del
-      // listado de entrenadores; el catálogo queda debajo.
-      h += '<button class="btn btn-sec btn-sm" style="margin:0.4rem 0 0;" onclick="gestorSustNuevo()">＋ Añadir sustituto externo</button>';
+      // v0.108: el alta de sustitutos vive ahora en el chip "＋ Sustituto
+      // externo" del detalle del entrenador; aquí queda solo el catálogo.
 
       // Catálogo de sustitutos EXTERNOS (antes en el panel principal)
       h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Sustitutos externos</div>';
@@ -6049,6 +6064,8 @@
         }).join('');
         // Acceso al resumen de todos (tarjetas con % + catálogo de externos)
         _chipsEnt += '<button type="button" class="gdet-ent-chip todos" onclick="abrirGestorEntrenadores()">Todos ›</button>';
+        // v0.108: alta de sustituto externo a mano, junto a los entrenadores
+        _chipsEnt += '<button type="button" class="gdet-ent-chip" onclick="gestorSustNuevo()">＋ Sustituto externo</button>';
         h += '<div class="gdet-ent-row">' + _chipsEnt + '</div>';
       }
       // ── Años anteriores (cursos archivados de este entrenador) ──
@@ -6112,19 +6129,21 @@
       // apartar las suyas que dio un sustituto (solo en el curso vivo)
       var cub = hist ? { m60:0, m90:0, otras:0, total:0 } : _gestorCubiertasMes(_gestorUid, mesISO);
       suma.m60 += cub.m60; suma.m90 += cub.m90; suma.otras += cub.otras; suma.total += cub.total;
-      var sumaTxt = [];
-      if (suma.m60)   sumaTxt.push(suma.m60 + '×1h');
-      if (suma.m90)   sumaTxt.push(suma.m90 + '×1h30');
-      if (suma.otras) sumaTxt.push(suma.otras + ' otras');
-      if (suma.sust)  sumaTxt.push('🔁 ' + suma.sust + ' con sustituto');
-      if (cub.total)  sumaTxt.push('+' + cub.total + ' cubiertas');
-      h += '<div class="gestor-resumen">' +
-        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + suma.total + '</div><div class="gestor-kpi-lbl">Clases dadas</div><div class="gestor-kpi-sub">' + (sumaTxt.length ? sumaTxt.join(' · ') : '—') + '</div></div>' +
-        (hist
-          ? '<div class="gestor-kpi"><div class="gestor-kpi-num">' + alumnos.length + '</div><div class="gestor-kpi-lbl">Alumnos</div><div class="gestor-kpi-sub">curso archivado</div></div>'
-          : '<div class="gestor-kpi gestor-kpi-btn" onclick="abrirGestorAlumnos()"><div class="gestor-kpi-num">' + alumnos.length + '</div><div class="gestor-kpi-lbl">Alumnos</div><div class="gestor-kpi-sub">Ver historial ›</div></div>') +
-        '<div class="gestor-kpi"><div class="gestor-kpi-num">' + (pctMes==null?'—':pctMes+'%') + '</div><div class="gestor-kpi-lbl">Asistencia</div><div class="gestor-kpi-sub">' + fechasCols.length + ' día' + (fechasCols.length!==1?'s':'') + ' clase</div></div>' +
+      // v0.108: fuera los tres KPI (Clases dadas · Alumnos · Asistencia).
+      // En su lugar, el LETRERO de clases dadas del mes por duración,
+      // igual que en la página "Todos" (azul 1h · verde 1h30 · total).
+      h += '<div class="gent-mes" style="justify-content:center;margin:0 0 0.7rem;">' +
+        '<div class="gent-dur h1"><b>' + suma.m60 + '</b><span>1h</span></div>' +
+        '<div class="gent-dur h15"><b>' + suma.m90 + '</b><span>1h 30</span></div>' +
+        (suma.otras ? '<div class="gent-dur ot"><b>' + suma.otras + '</b><span>otras</span></div>' : '') +
+        '<div class="gent-dur tot"><b>' + suma.total + '</b><span>dadas</span></div>' +
       '</div>';
+      if (suma.sust || cub.total) {
+        var _notas = [];
+        if (suma.sust) _notas.push('🔁 ' + suma.sust + ' con sustituto (no cuentan aquí)');
+        if (cub.total) _notas.push('+' + cub.total + ' cubierta' + (cub.total!==1?'s':'') + ' a otros (incluidas)');
+        h += '<p class="ajustes-desc" style="text-align:center;margin:-2px 0 0.6rem;">' + _notas.join(' · ') + '</p>';
+      }
 
       // (v0.73: "＋ Añadir clase" se movió al pie, junto a Resumen y Cerrar
       // curso, para no ocupar la parte alta todo el año siendo de uso puntual.)
