@@ -39,6 +39,30 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.102.0 — Franjas más limpias en móvil + quitar franja (−) + alta en panel (2026-07)
+    · ⚠️ REQUIERE la migración 'migracion_fin_clase.sql' (columnas fin y
+      fin_motivo en asistencia_clases). Ejecútala ANTES de usar la v0.102
+      o fallará el guardado de clases.
+    · Cabecera de cada franja (compartida en Inicio, detalle y planning):
+      una sola línea con HORA · "N dadas" · "✏ Editar", a la misma altura.
+      Fuera la píldora de duración y el nombre por defecto "Clase" (ruido
+      visual); los nombres personalizados sí se muestran. Los ALUMNOS
+      pasan a su propia línea bajo la hora: con 4 o menos, los chips se
+      reparten el ancho (elipsis si no caben) para verlos todos en una
+      línea; con más de 4 fluyen en varias líneas como antes.
+    · Nuevo botón "−" junto al "＋" de cada entrenador en el día abierto
+      de Inicio: abre un panel para elegir cuál de sus franjas de ese día
+      quitar y pregunta el MOTIVO:
+        · "🏁 Finalización de la clase": la clase deja de aparecer a
+          partir de hoy pero CONSERVA todo su historial de asistencia
+          (se guarda fin + motivo en la clase).
+        · "Otra causa": borra la clase y TODOS sus registros (con
+          confirmación), como el botón "Eliminar esta clase".
+    · El "＋" (por entrenador y el general del día) ya no cambia de
+      pantalla: el formulario "Nueva clase" se abre como PANEL deslizante
+      (bottom sheet) sobre el planning, que sigue visible detrás. Al
+      guardar o cerrar se vuelve al día abierto sin perder contexto.
+
   v0.101.0 — Detalle del entrenador: todos los días en paralelo en web (2026-07)
     · Al entrar en un entrenador (p.ej. desde el botón "Entrenadores" de la
       cabecera), en pantalla ancha (web, ≥760px) se muestran TODOS los días
@@ -1601,6 +1625,15 @@
     .ghd-fr { font-size:12.5px; font-weight:600; color:var(--gris); }
     .ghd-dur { font-size:11px; font-weight:700; color:var(--lila); background:var(--lila-suave); border-radius:20px; padding:1px 8px; }
     .ghd-cont { margin-left:auto; font-size:12px; font-weight:800; color:var(--verde); }
+    /* v0.102: fila 1 = hora · dadas · editar en una sola línea */
+    .ghd-hdr-linea { flex-wrap:nowrap; min-width:0; }
+    .ghd-nom { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .ghd-hdr-linea .ghd-ent-chip { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    /* v0.102: alumnos en su propia línea bajo la hora; con ≤4 se reparten
+       el ancho (elipsis si hace falta) para que entren todos en una línea */
+    .ghd-als { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:7px; }
+    .ghd-als.fit { flex-wrap:nowrap; }
+    .ghd-als.fit .ghd-al { flex:1 1 0; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:center; }
     .ghd-edit-btn { flex-shrink:0; font-size:11px; font-weight:700; color:var(--lila); background:var(--lila-suave); border:1.5px solid var(--lila-claro); border-radius:8px; padding:3px 9px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
     .ghd-edit-btn:active { transform:scale(0.96); }
     .ghd-hist-banner { display:flex; align-items:center; gap:8px; flex-wrap:wrap; background:var(--lila-suave); border:1.5px solid var(--lila-claro); border-radius:11px; padding:0.55rem 0.8rem; margin:0 0 0.9rem; font-size:12.5px; font-weight:700; color:var(--lila); }
@@ -1646,8 +1679,28 @@
     /* v0.99: atajos de alta rápida de clase desde el día abierto en Inicio */
     .gpplan-add-ent { flex-shrink:0; width:26px; height:26px; border:none; border-radius:8px; background:var(--verde); color:#fff; font-size:16px; font-weight:800; line-height:1; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0; }
     .gpplan-add-ent:active { opacity:.8; }
+    /* v0.102: botón "−" para quitar una franja del entrenador ese día */
+    .gpplan-del-ent { flex-shrink:0; width:26px; height:26px; border:1.5px solid #fecaca; border-radius:8px; background:#fee2e2; color:#b91c1c; font-size:18px; font-weight:800; line-height:1; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0; }
+    .gpplan-del-ent:active { opacity:.8; }
     .gpplan-add-dia { display:block; width:100%; margin-top:8px; padding:0.6rem; border:1.5px dashed var(--verde); border-radius:11px; background:var(--verde-suave); color:var(--verde); font-size:13px; font-weight:800; cursor:pointer; font-family:inherit; }
     .gpplan-add-dia:active { opacity:.85; }
+    /* v0.102: panel deslizante (bottom sheet) sobre el planning.
+       Lo usan el formulario "Nueva clase" (abierto desde ＋) y el panel
+       de quitar franja (−). El fondo queda visible tras el velo. */
+    .gp-sheet-bd { display:none; position:fixed; inset:0; background:rgba(15,23,42,.4); z-index:110; }
+    .pantalla.como-sheet { display:block; position:fixed; left:0; right:0; bottom:0; top:auto; min-height:0; max-height:88vh; overflow-y:auto; z-index:120; border-radius:18px 18px 0 0; box-shadow:0 -10px 32px rgba(0,0,0,.28); background:var(--arena); animation:gpSheetUp .22s ease-out; }
+    .pantalla.como-sheet .contenido { padding-bottom:24px; }
+    .gp-del-sheet { display:none; position:fixed; left:0; right:0; bottom:0; z-index:120; background:#fff; border-radius:18px 18px 0 0; box-shadow:0 -10px 32px rgba(0,0,0,.28); padding:1rem 1rem 1.4rem; max-height:75vh; overflow-y:auto; animation:gpSheetUp .22s ease-out; }
+    .gp-del-titulo { font-size:15px; font-weight:800; margin:0 0 2px; }
+    .gp-del-sub { font-size:12.5px; color:var(--gris); margin:0 0 10px; }
+    .gp-del-item { display:flex; align-items:center; gap:8px; width:100%; text-align:left; border:1.5px solid var(--borde); border-radius:11px; background:#fff; padding:0.6rem 0.7rem; margin-bottom:7px; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; }
+    .gp-del-item:active { background:#f9fafb; }
+    .gp-del-item small { font-weight:600; color:var(--gris); }
+    .gp-del-opcion { display:block; width:100%; border-radius:11px; padding:0.65rem; margin-bottom:7px; font-size:13.5px; font-weight:800; cursor:pointer; font-family:inherit; }
+    .gp-del-opcion.fin { border:1.5px solid #bbf7d0; background:#f0fdf4; color:#166534; }
+    .gp-del-opcion.borrar { border:1.5px solid #fecaca; background:#fee2e2; color:#b91c1c; }
+    .gp-del-opcion.cancel { border:1.5px solid var(--borde); background:#fff; color:var(--gris); }
+    @keyframes gpSheetUp { from { transform:translateY(40px); opacity:.5; } to { transform:translateY(0); opacity:1; } }
     .alquitar-panel { background:var(--arena); border:1.5px solid var(--borde); border-radius:10px; padding:0.7rem 0.75rem; margin-top:8px; }
     /* Botón pequeño en la cabecera (⚙ Clases, v0.65) */
     .cab-mini-btn { position:absolute; top:2.05rem; right:1.5rem; background:rgba(255,255,255,0.12); border:none; color:rgba(255,255,255,0.92); font-size:13px; font-weight:700; font-family:'Outfit',sans-serif; cursor:pointer; padding:8px 13px; border-radius:12px; -webkit-tap-highlight-color:transparent; z-index:2; }
@@ -3491,6 +3544,11 @@
     </div>
   </div>
 
+  <!-- v0.102: velo compartido de los paneles (sheet) del planning y panel
+       para quitar una franja con motivo (botón −) -->
+  <div id="gp-sheet-bd" class="gp-sheet-bd" onclick="gpSheetCancelar()"></div>
+  <div id="gp-del-sheet" class="gp-del-sheet"></div>
+
   <!-- ══ ASISTENCIA — RESUMEN MENSUAL ════════════ -->
   <div id="pantalla-asistencia-resumen" class="pantalla">
     <div class="cabecera">
@@ -3626,7 +3684,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.101.0';
+    var APP_VERSION = '0.102.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -3903,7 +3961,8 @@
           id:c.id, nombre:c.nombre,
           diaSemana:c.dia_semana||'', franja:c.franja||'',
           alumnos:c.alumnos||[],
-          curso:c.curso||''
+          curso:c.curso||'',
+          fin:c.fin||'', finMotivo:c.fin_motivo||''   // v0.102
         }; });
 
         var regsServ = (results[5].data || []).map(function(r){ return {
@@ -4128,7 +4187,9 @@
         dia_semana:(c.diaSemana == null || c.diaSemana === '' || c.diaSemana < 0) ? '' : String(c.diaSemana),
         franja:c.franja||'',
         alumnos:c.alumnos||[],
-        curso:c.curso||''       // v0.55: curso escolar de la clase ("2025-26")
+        curso:c.curso||'',      // v0.55: curso escolar de la clase ("2025-26")
+        fin:c.fin||null,              // v0.102: fecha de finalización (conserva historial)
+        fin_motivo:c.finMotivo||null  // v0.102: motivo ('finalizacion' | otro)
       }; },
       asistencia_registros: function(r, uid) { return {  // siempre privada
         id:r.id, user_id:uid, clase_id:r.claseId, fecha:r.fecha,
@@ -4427,7 +4488,8 @@
         var g = _gEditDatos();
         return { clases: g.clases.map(function(c){
           var ds = (c.dia_semana === '' || c.dia_semana == null) ? -1 : Number(c.dia_semana);
-          return { id:c.id, nombre:c.nombre || '', diaSemana:ds, franja:c.franja || '', alumnos:c.alumnos || [], curso:c.curso || '' };
+          return { id:c.id, nombre:c.nombre || '', diaSemana:ds, franja:c.franja || '', alumnos:c.alumnos || [], curso:c.curso || '',
+                   fin:c.fin || '', finMotivo:c.fin_motivo || '' };
         }) };
       }
       var d = _lzGet('padel-asistencia-cfg'); return d ? JSON.parse(d) : {clases:[]};
@@ -4542,6 +4604,13 @@
       var p = iso.split('-');
       return p[2] + '/' + p[1] + '/' + p[0].slice(2);
     }
+    // v0.102: ¿la clase (quizá finalizada) sigue siendo visible en un mes?
+    // Finalizada ANTES del mes → oculta; finalizada dentro del mes o sin
+    // finalizar → visible (con las fechas truncadas por fechasClaseEnMes).
+    function _claseVisibleEnMes(c, mesISO) {
+      return !c.fin || c.fin >= mesISO + '-01';
+    }
+
     // Minutos de duración a partir de la franja horaria (ej. "17:00-18:30" → 90)
     function _duracionFranja(fr) {
       if (!fr) return null;
@@ -4927,6 +4996,7 @@
         var regsU = _gestorRegsLocal(d2);
         _gestorClasesLocal(d2).forEach(function(c){
           if (_claseCurso(c) !== cursoAct || c.diaSemana < 0) return;
+          if (!_claseVisibleEnMes(c, _gPanelMes)) return;   // v0.102: finalizada
           // Clases dadas de esa clase en el MES seleccionado
           var dadasMes = regsU.filter(function(r){
             return r.claseId === c.id && r.fecha && r.fecha.slice(0,7) === _gPanelMes && _regPasada(r);
@@ -4976,7 +5046,7 @@
           uidsDia.forEach(function(u){
             var e = entsDia[u];
             var d3 = by[u];
-            var clasesDia = _gestorClasesLocal(d3).filter(function(c){ return _claseCurso(c) === cursoAct && c.diaSemana === _gpSelDia; })
+            var clasesDia = _gestorClasesLocal(d3).filter(function(c){ return _claseCurso(c) === cursoAct && c.diaSemana === _gpSelDia && _claseVisibleEnMes(c, _gPanelMes); })
               .sort(function(a,b){ return (a.franja||'').localeCompare(b.franja||''); });
             var regsAll3 = _gestorRegsLocal(d3);
             var bloques = '';
@@ -4990,6 +5060,7 @@
                 '<span class="gpplan-ent-nom" style="color:' + col.tx + ';">👤 ' + _gEsc(e.ent) + '</span>' +
                 '<span class="gpplan-ent-meta">' + e.nFranjas + ' franja' + (e.nFranjas!==1?'s':'') + (e.dadas ? ' · ' + e.dadas + '✓' : '') + '</span>' +
                 '<button type="button" class="gpplan-add-ent" title="Añadir clase a ' + _gEsc(e.ent) + ' este día" onclick="gpAddClaseEnt(\'' + u + '\',' + _gpSelDia + ')">＋</button>' +
+                '<button type="button" class="gpplan-del-ent" title="Quitar una franja de ' + _gEsc(e.ent) + ' este día" onclick="gpDelClaseEnt(\'' + u + '\',' + _gpSelDia + ')">−</button>' +
               '</div>' +
               '<div class="gpplan-franjas">' + (bloques || '<p class="ajustes-desc" style="margin:0.3rem 2px;">Sin franjas este mes.</p>') + '</div>' +
             '</div>';
@@ -5562,7 +5633,7 @@
       asistAlumnosForm = [];
       _gPrefillDia     = dia;
       _gPrefillEntPick = !!pedirEnt;
-      irA('pantalla-asistencia-nueva-clase');
+      _gpFormAbrirSheet();   // v0.102: panel sobre el planning, sin cambiar de pantalla
     }
     // ＋ de una columna: entrenador y día ya conocidos (mínimos pasos)
     function gpAddClaseEnt(uid, dia) { _gpAbrirFormClase(uid, dia, false); }
@@ -5578,6 +5649,125 @@
     function gpFormEntChange(uid) {
       _gestorUid = uid;
       _gEditUid  = (_sbUser && uid === _sbUser.id) ? null : uid;
+    }
+
+    // ── v0.102: formulario "Nueva clase" como PANEL (bottom sheet) ──────
+    // Al abrirlo desde el ＋ del planning no se cambia de pantalla: el
+    // formulario se desliza sobre el día abierto, que sigue visible detrás.
+    var _gFormSheet = false;
+    function _gpFormAbrirSheet() {
+      _gFormSheet = true;
+      document.getElementById('gp-sheet-bd').style.display = 'block';
+      var p = document.getElementById('pantalla-asistencia-nueva-clase');
+      p.classList.add('como-sheet');
+      prepararFormClaseAsistencia();
+      p.scrollTop = 0;
+    }
+    function _gpFormCerrarSheet() {
+      _gFormSheet = false;
+      _gEditVolverA = null;
+      _gEditUid = null;
+      document.getElementById('gp-sheet-bd').style.display = 'none';
+      document.getElementById('pantalla-asistencia-nueva-clase').classList.remove('como-sheet');
+      cargarDatosGestor();   // refresca el planning (el día abierto se conserva)
+    }
+    // Toque en el velo: cierra el panel que esté abierto
+    function gpSheetCancelar() {
+      if (_gFormSheet) { _gpFormCerrarSheet(); return; }
+      gpDelCerrar();
+    }
+
+    // ── v0.102: quitar una franja (botón −) con motivo ──────────────────
+    // "Finalización": la clase conserva su historial y deja de aparecer a
+    // partir de hoy (campos fin + fin_motivo). "Otra causa": borra la
+    // clase y todos sus registros (como "Eliminar esta clase").
+    var _gDelCtx = null;   // { uid, dia, cid }
+    function gpDelClaseEnt(uid, dia) {
+      var by = _gestorAgrupar();
+      var d = by[uid]; if (!d) return;
+      var cursoAct = cursoDeFecha(hoyLocal());
+      var hoy = hoyLocal();
+      var clases = _gestorClasesLocal(d).filter(function(c){
+        return _claseCurso(c) === cursoAct && c.diaSemana === dia && !(c.fin && c.fin < hoy);
+      }).sort(function(a,b){ return (a.franja||'').localeCompare(b.franja||''); });
+      if (!clases.length) { alert('Este entrenador no tiene franjas ese día.'); return; }
+      _gDelCtx = { uid: uid, dia: dia, cid: null };
+      var ent = _gestorNombre(d).split(' ')[0];
+      var h = '<p class="gp-del-titulo">− Quitar franja · ' + _gEsc(ent) + ' · ' + _gEsc(_GDIASL[dia]) + '</p>' +
+        '<p class="gp-del-sub">Elige la franja que quieres quitar.</p>';
+      clases.forEach(function(c){
+        var na = (c.alumnos||[]).filter(function(a){ return alNom(a); }).length;
+        h += '<button type="button" class="gp-del-item" onclick="gpDelElegir(' + c.id + ')">🕐 ' + _gEsc(c.franja||'—') +
+             (c.nombre && c.nombre !== 'Clase' ? ' · ' + _gEsc(c.nombre) : '') +
+             ' <small>· ' + na + ' alumno' + (na!==1?'s':'') + '</small></button>';
+      });
+      h += '<button type="button" class="gp-del-opcion cancel" onclick="gpDelCerrar()">Cancelar</button>';
+      var sheet = document.getElementById('gp-del-sheet');
+      sheet.innerHTML = h;
+      sheet.style.display = 'block';
+      document.getElementById('gp-sheet-bd').style.display = 'block';
+    }
+    function gpDelElegir(cid) {
+      if (!_gDelCtx) return;
+      _gDelCtx.cid = cid;
+      var by = _gestorAgrupar(); var d = by[_gDelCtx.uid];
+      var c = d ? _gestorClasesLocal(d).filter(function(x){ return x.id === cid; })[0] : null;
+      var h = '<p class="gp-del-titulo">¿Por qué se quita la franja ' + _gEsc(c ? (c.franja||'—') : '') + '?</p>' +
+        '<p class="gp-del-sub">Con "finalización" la clase deja de aparecer desde hoy pero CONSERVA todo su historial de asistencia. Con "otra causa" se borra la clase y todos sus registros.</p>' +
+        '<button type="button" class="gp-del-opcion fin" onclick="gpDelFinalizar()">🏁 Finalización de la clase (conserva historial)</button>' +
+        '<button type="button" class="gp-del-opcion borrar" onclick="gpDelBorrar()">🗑 Otra causa (borrar clase y registros)</button>' +
+        '<button type="button" class="gp-del-opcion cancel" onclick="gpDelCerrar()">Cancelar</button>';
+      document.getElementById('gp-del-sheet').innerHTML = h;
+    }
+    function gpDelCerrar() {
+      _gDelCtx = null;
+      document.getElementById('gp-del-sheet').style.display = 'none';
+      if (!_gFormSheet) document.getElementById('gp-sheet-bd').style.display = 'none';
+    }
+    function _gpDelEntrar(uid) {
+      _gestorUid = uid;
+      _gEditUid  = (_sbUser && uid === _sbUser.id) ? null : uid;
+    }
+    function gpDelFinalizar() {
+      if (!_gDelCtx || !_gDelCtx.cid) return;
+      var ctx = _gDelCtx, hoy = hoyLocal();
+      _gpDelEntrar(ctx.uid);
+      var cfg = leerAsistConfig();
+      (cfg.clases || []).forEach(function(c){
+        if (c.id === ctx.cid) { c.fin = hoy; c.finMotivo = 'finalizacion'; }
+      });
+      escribirAsistConfig(cfg);
+      // Reflejar también en la copia del panel (caso de clases propias)
+      if (_gestorData) (_gestorData.clases || []).forEach(function(c){
+        if (c.user_id === ctx.uid && c.id === ctx.cid) { c.fin = hoy; c.fin_motivo = 'finalizacion'; }
+      });
+      _gEditUid = null;
+      gpDelCerrar();
+      renderGestor();
+      planToast('🏁 Franja finalizada hoy: este mes conserva su historial y desde el próximo ya no aparece');
+    }
+    function gpDelBorrar() {
+      if (!_gDelCtx || !_gDelCtx.cid) return;
+      if (!confirm('¿Borrar la clase y TODOS sus registros de asistencia?\n\nEsta acción no se puede deshacer.')) return;
+      var ctx = _gDelCtx;
+      _gpDelEntrar(ctx.uid);
+      var cfg = leerAsistConfig();
+      cfg.clases = (cfg.clases || []).filter(function(c){ return c.id !== ctx.cid; });
+      escribirAsistConfig(cfg);
+      _sbDelete('asistencia_clases', ctx.cid);
+      var todos = leerAsistRegistros();
+      todos.filter(function(r){ return r.claseId === ctx.cid; })
+           .forEach(function(r){ _sbDelete('asistencia_registros', r.id); });
+      escribirAsistRegistros(todos.filter(function(r){ return r.claseId !== ctx.cid; }));
+      // Reflejar también en la copia del panel (caso de clases propias)
+      if (_gestorData) {
+        _gestorData.clases = (_gestorData.clases || []).filter(function(c){ return !(c.user_id === ctx.uid && c.id === ctx.cid); });
+        _gestorData.registros = (_gestorData.registros || []).filter(function(r){ return !(r.user_id === ctx.uid && r.clase_id === ctx.cid); });
+      }
+      _gEditUid = null;
+      gpDelCerrar();
+      renderGestor();
+      planToast('🗑 Clase y registros eliminados');
     }
 
     // v0.89: menú de cuenta (correo · actualizar · salir) desde el botón
@@ -5623,6 +5813,7 @@
         _gestorClasesLocal(d).forEach(function(c){
           if (c.diaSemana !== _gPlanDia) return;
           if (_claseCurso(c) !== cursoMes) return;
+          if (!_claseVisibleEnMes(c, mesISO)) return;   // v0.102: finalizada
           if (_gPlanFranja && (c.franja || '—') !== _gPlanFranja) return;
           entradas.push({ uid: u, ent: _gestorNombre(d), c: c, regsAll: regsAll });
         });
@@ -5685,7 +5876,8 @@
     function _gestorClasesLocal(d) {
       return (d.clases || []).map(function(c){
         var ds = (c.dia_semana === '' || c.dia_semana == null) ? -1 : Number(c.dia_semana);
-        return { id:c.id, nombre:c.nombre || 'Clase', diaSemana:ds, franja:c.franja || '', alumnos:c.alumnos || [], curso:c.curso || '' };
+        return { id:c.id, nombre:c.nombre || 'Clase', diaSemana:ds, franja:c.franja || '', alumnos:c.alumnos || [], curso:c.curso || '',
+                 fin:c.fin || '', finMotivo:c.fin_motivo || '' };
       });
     }
     function _gestorRegsLocal(d) {
@@ -5719,7 +5911,7 @@
       var mesLabel = getMesLabelA(_gestorMesOff);
       var cursoMes = cursoDeFecha(mesISO);
       var clases   = hist ? (hist.clases || [])
-                          : _gestorClasesLocal(d).filter(function(c){ return _claseCurso(c) === cursoMes; });
+                          : _gestorClasesLocal(d).filter(function(c){ return _claseCurso(c) === cursoMes && _claseVisibleEnMes(c, mesISO); });
       var regsAll  = hist ? (hist.regs || []) : _gestorRegsLocal(d);
       var regsMes  = regsAll.filter(function(r){ return r.fecha && r.fecha.startsWith(mesISO); });
 
@@ -6015,7 +6207,7 @@
         (r.presentes || []).forEach(function(n){ asistieron[n] = true; });
       });
       var finMes = mesISO + '-31';
-      var alsHtml = '';
+      var alsHtml = '', nAls = 0;
       (c.alumnos || []).forEach(function(a){
         var nom = alNom(a);
         if (!nom) return;
@@ -6025,6 +6217,7 @@
         if (baja && !asistieron[nom]) return;              // baja sin asistencias → fuera
         var cls   = 'ghd-al' + (baja ? ' baja' : (fut ? ' fut' : ''));
         var texto = (baja ? '✗ ' : (fut ? '⏳ ' : '')) + _gEsc(alCorto(a));
+        nAls++;
         if (hist) {
           alsHtml += '<span class="' + cls + '">' + texto + '</span>';
         } else {
@@ -6033,16 +6226,18 @@
         }
       });
 
+      // v0.102: fila 1 = hora · dadas · ✏ Editar a la misma altura (sin la
+      // píldora de duración ni el nombre por defecto "Clase"); fila 2 =
+      // alumnos bajo la hora (con ≤4, chips repartidos en una sola línea).
       var html = '<div class="ghd-tramo">';
-      html += '<div class="ghd-clase-hdr" style="margin-bottom:7px;">' +
+      html += '<div class="ghd-clase-hdr ghd-hdr-linea" style="margin-bottom:7px;">' +
         (opts.entLabel ? '<button type="button" class="ghd-ent-chip" onclick="abrirGestorDetalle(\'' + uid + '\')">👤 ' + _gEsc(opts.entLabel) + '</button>' : '') +
-        '<span class="ghd-fr" style="font-weight:800;color:var(--texto);">' + _gEsc(c.franja||'—') + '</span>' +
-        (c.nombre ? '<span class="ghd-fr">' + _gEsc(c.nombre) + '</span>' : '') +
-        (_durLabel(dur) ? '<span class="ghd-dur">' + _durLabel(dur) + '</span>' : '') +
-        alsHtml +
-        '<span class="ghd-cont">' + dadas + ' dada' + (dadas!==1?'s':'') + '</span>' +
+        '<span class="ghd-fr" style="font-weight:800;color:var(--texto);flex-shrink:0;">' + _gEsc(c.franja||'—') + '</span>' +
+        (c.nombre && c.nombre !== 'Clase' ? '<span class="ghd-fr ghd-nom">' + _gEsc(c.nombre) + '</span>' : '') +
+        '<span class="ghd-cont" style="flex-shrink:0;">' + dadas + ' dada' + (dadas!==1?'s':'') + '</span>' +
         (hist ? '' : '<button type="button" class="ghd-edit-btn" onclick="gestorEditarClaseU(\'' + uid + '\',' + c.id + ',\'' + vol + '\')">✏ Editar</button>') +
         '</div>';
+      if (alsHtml) html += '<div class="ghd-als' + (nAls <= 4 ? ' fit' : '') + '">' + alsHtml + '</div>';
       html += '<div class="ghd-dias">' + (chips || '<span class="ajustes-desc" style="margin:0;">sin días este mes</span>') + '</div>';
       html += dets;
       html += '</div>';
@@ -6245,6 +6440,7 @@
     }
     // Salida del formulario de clase (volver / guardar / borrar)
     function _asistFormSalida() {
+      if (_gFormSheet) { _gpFormCerrarSheet(); return; }   // v0.102: cerrar el panel
       if (_gEditVolverA) { var v = _gEditVolverA; _gEditVolverA = null; irA(v); return; }
       irA('pantalla-asistencia-config');
     }
@@ -11506,6 +11702,9 @@
         var d = new Date(y, m, i);
         if (d.getDay() === clase.diaSemana) out.push(dateToISOLocal(d));
       }
+      // v0.102: clase finalizada → sin fechas posteriores a su fin (el
+      // historial hasta esa fecha se conserva intacto)
+      if (clase.fin) out = out.filter(function(f){ return f <= clase.fin; });
       return out;
     }
 
@@ -11577,7 +11776,7 @@
       // clase), fut (con clase, futuro), null (sin clases). rec = recups.
       function _estadoDia(f) {
         var dow = new Date(+f.slice(0,4), +f.slice(5,7)-1, +f.slice(8,10)).getDay();
-        var cls = (diasMap[dow] || []).filter(function(c){ return _claseCurso(c) === cursoDeFecha(f); });
+        var cls = (diasMap[dow] || []).filter(function(c){ return _claseCurso(c) === cursoDeFecha(f) && !(c.fin && f > c.fin); });
         if (!cls.length) return null;
         var pas = 0, sc = 0, rec = false, sust = false;
         cls.forEach(function(c){
@@ -11666,7 +11865,7 @@
           var diasNom = DIAS_NOMBRES_A[dia];
 
           // v0.55: solo las clases del curso al que pertenece esa fecha
-          var clasesCurso = diasMap[dia].filter(function(c){ return _claseCurso(c) === cursoDeFecha(fecha); });
+          var clasesCurso = diasMap[dia].filter(function(c){ return _claseCurso(c) === cursoDeFecha(fecha) && !(c.fin && fecha > c.fin); });
           if (!clasesCurso.length) return;
 
           html += '<div class="asist-dia-card' + (esHoy ? ' es-hoy' : '') + '">';
@@ -11822,7 +12021,7 @@
     function _recupClasePanelHTML(clases, fnCrear, fnPasar) {
       var cursoAct = cursoDeFecha(hoyLocal());
       var ordDia = function(ds){ return ds<0 ? 8 : (ds===0 ? 7 : ds); };
-      var cls = clases.filter(function(c){ return _claseCurso(c) === cursoAct; })
+      var cls = clases.filter(function(c){ return _claseCurso(c) === cursoAct && !(c.fin && c.fin < hoyLocal()); })
                       .sort(function(a,b){ return ordDia(a.diaSemana)-ordDia(b.diaSemana) || (a.franja||'').localeCompare(b.franja||''); });
       _recupPanelClases = cls;
       if (!cls.length) return '<div class="recup-panel"><p class="ajustes-desc" style="margin:0;">No hay clases del curso para recuperar.</p></div>';
@@ -12644,7 +12843,8 @@
       if (asistClaseEditId) {
         cfg.clases = cfg.clases.map(function(c) {
           if (c.id !== asistClaseEditId) return c;
-          return { id:c.id, diaSemana:dia, franja:franja, nombre:nombre, alumnos:asistAlumnosForm.slice(), curso:_claseCurso(c) };
+          return { id:c.id, diaSemana:dia, franja:franja, nombre:nombre, alumnos:asistAlumnosForm.slice(), curso:_claseCurso(c),
+                   fin:c.fin || '', finMotivo:c.finMotivo || '' };   // v0.102: conservar finalización
         });
       } else {
         var newId = cfg.clases.length > 0 ? Math.max.apply(null, cfg.clases.map(function(c){return c.id||0;}))+1 : 1;
@@ -12693,7 +12893,7 @@
 
       var cfg    = leerAsistConfig();
       // v0.55: solo las clases del curso al que pertenece el mes visto
-      var clases = (cfg.clases || []).filter(function(c){ return _claseCurso(c) === cursoDeFecha(mesISO); });
+      var clases = (cfg.clases || []).filter(function(c){ return _claseCurso(c) === cursoDeFecha(mesISO) && _claseVisibleEnMes(c, mesISO); });
       var regs   = leerAsistRegistros().filter(function(r){ return r.fecha && r.fecha.startsWith(mesISO); });
       var occ    = ocurrenciasDiaEnMes(mesISO);
 
