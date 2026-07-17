@@ -39,6 +39,26 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.112.0 — Entrenadores EXTERNOS con clases propias (como un entrenador) (2026-07)
+    · ⚠️ REQUIERE la migración 'migracion_clases_externo.sql' (tablas
+      sustituto_clases y sustituto_registros). Ejecútala ANTES de usar la
+      v0.112 o fallará el guardado de clases de externos.
+    · Un entrenador externo ahora tiene sus PROPIAS clases (día, franja,
+      alumnos) y se le pasa lista igual que a un entrenador del club.
+    · Al pinchar su chip ámbar se abre su DETALLE completo (letrero de
+      clases dadas del mes, clases por día, pasar lista, editar, ＋ añadir
+      clase, − quitar franja), idéntico al de un entrenador.
+    · Sus clases salen en el PLANNING semanal como una columna más, en
+      ámbar (el color reservado a externos), con su ＋ y −.
+    · Implementación: como los externos no son usuarios de auth, sus
+      clases y registros viven en tablas propias (sustituto_clases /
+      sustituto_registros) referidas al catálogo; la app los trata en
+      memoria con la clave 'ext:<id>' y reutiliza toda la maquinaria de
+      entrenadores (agrupar, planning, detalle, pasar lista).
+    · El "＋ Añadir clase" del externo ya no marca una clase de otro
+      entrenador: crea una clase suya (el desplegable con clases del club
+      desaparece).
+
   v0.111.0 — Planning del panel: saltar de curso con dos botones (2026-07)
     · En Inicio del gestor, el planning semanal deja de estar fijo al
       curso actual. Cabecera minimalista con dos botones ‹ › a los lados
@@ -3865,7 +3885,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.111.0';
+    var APP_VERSION = '0.112.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -4648,9 +4668,38 @@
     }
     // Upsert directo con el user_id del gestionado (la RLS v0.46 lo permite
     // a gestor y nivel3). Mantiene _gestorData al día en memoria.
+    // v0.112: ¿la clave gestionada es un entrenador EXTERNO? ('ext:<id>')
+    function _esExtUid(u) { return String(u || '').slice(0,4) === 'ext:'; }
+    function _extId(u) { return String(u || '').slice(4); }
+    // Mapea el nombre de tabla de asistencia a la tabla equivalente de
+    // externos y construye la fila (sin user_id, con sustituto).
+    var _EXT_TABLA = { asistencia_clases:'sustituto_clases', asistencia_registros:'sustituto_registros' };
+    function _extRow(tabla, x, sustId) {
+      if (tabla === 'asistencia_clases') {
+        return { id:x.id, sustituto:sustId, nombre:x.nombre||'',
+                 dia_semana:(x.diaSemana==null||x.diaSemana===''||x.diaSemana<0)?'':String(x.diaSemana),
+                 franja:x.franja||'', alumnos:x.alumnos||[], curso:x.curso||'',
+                 fin:x.fin||null, fin_motivo:x.finMotivo||null };
+      }
+      return { id:x.id, sustituto:sustId, clase_id:x.claseId, fecha:x.fecha,
+               presentes:x.presentes||[], ausentes:x.ausentes||[], justificadas:x.justificadas||[],
+               recups:x.recups||[], sin_clase:!!x.sinClase, recup_clase:!!x.recupClase,
+               recup_hora:x.recupHora||null };
+    }
     function _gEditUpsert(tabla, filas) {
       if (!_sb || !_gEditUid || !filas.length) return;
       var uid = _gEditUid;
+      // v0.112: entrenador externo → tabla propia, clave (sustituto,id)
+      if (_esExtUid(uid) && _EXT_TABLA[tabla]) {
+        var sustId = _extId(uid);
+        _sb.from(_EXT_TABLA[tabla]).upsert(
+          filas.map(function(x){ return _extRow(tabla, x, sustId); }),
+          { onConflict: 'sustituto,id' }
+        ).then(function(r){
+          if (r.error) { console.warn('gestión ext sync', tabla, r.error); alert('⚠️ No se pudo guardar en el servidor: ' + r.error.message + '\n¿Está ejecutada la migración de clases de externos?'); }
+        });
+        return;
+      }
       _sb.from(tabla).upsert(
         filas.map(function(x){ return _upMap[tabla](x, uid); }),
         { onConflict: 'user_id,id' }
@@ -4660,6 +4709,11 @@
     }
     function _gEditDelete(tabla, id) {
       if (!_sb || !_gEditUid) return;
+      if (_esExtUid(_gEditUid) && _EXT_TABLA[tabla]) {   // v0.112
+        _sb.from(_EXT_TABLA[tabla]).delete().match({ sustituto: _extId(_gEditUid), id: id })
+          .then(function(r){ if (r.error) { console.warn('gestión ext delete', tabla, r.error); alert('⚠️ No se pudo borrar en el servidor: ' + r.error.message); } });
+        return;
+      }
       _sb.from(tabla).delete().match({ user_id: _gEditUid, id: id })
         .then(function(r){ if (r.error) { console.warn('gestión delete', tabla, r.error); alert('⚠️ No se pudo borrar en el servidor: ' + r.error.message); } });
     }
@@ -4825,13 +4879,29 @@
         _sb.from('asistencia_clases').select('*'),
         _sb.from('asistencia_registros').select('*'),
         _sb.from('asistencia_historico').select('id,user_id,curso'),   // v0.54 (si la tabla no existe aún, se ignora)
-        _sb.from('sustitutos').select('*').order('nombre')             // v0.66 (si la tabla no existe aún, se ignora)
+        _sb.from('sustitutos').select('*').order('nombre'),            // v0.66 (si la tabla no existe aún, se ignora)
+        _sb.from('sustituto_clases').select('*'),                      // v0.112 (si no existe, se ignora)
+        _sb.from('sustituto_registros').select('*')                    // v0.112 (si no existe, se ignora)
       ]).then(function(res) {
         if (res[1].error || res[2].error) { throw (res[1].error || res[2].error); }
+        // v0.112: clases/registros de externos, con clave user_id 'ext:<id>'
+        // para que TODA la maquinaria de entrenadores (agrupar, planning,
+        // detalle, pasar lista) los trate como un entrenador más.
+        var extC = (res[5] && !res[5].error && res[5].data || []).map(function(c){
+          return { id:c.id, user_id:'ext:'+c.sustituto, sustituto:c.sustituto, nombre:c.nombre,
+                   dia_semana:c.dia_semana, franja:c.franja, alumnos:c.alumnos,
+                   curso:c.curso, fin:c.fin, fin_motivo:c.fin_motivo };
+        });
+        var extR = (res[6] && !res[6].error && res[6].data || []).map(function(r){
+          return { id:r.id, user_id:'ext:'+r.sustituto, sustituto:r.sustituto, clase_id:r.clase_id,
+                   fecha:r.fecha, presentes:r.presentes, ausentes:r.ausentes,
+                   justificadas:r.justificadas, recups:r.recups, impartida_por:null,
+                   sin_clase:r.sin_clase, recup_clase:r.recup_clase, recup_hora:r.recup_hora };
+        });
         _gestorData = {
           perfiles:  res[0].data || [],
-          clases:    res[1].data || [],
-          registros: res[2].data || [],
+          clases:    (res[1].data || []).concat(extC),
+          registros: (res[2].data || []).concat(extR),
           historico: (res[3] && !res[3].error && res[3].data) || [],
           sustitutos:(res[4] && !res[4].error && res[4].data) || []
         };
@@ -4839,7 +4909,7 @@
         // entrenador que aún no lo tengan (la RLS del gestor lo permite).
         // Así el cambio de curso funciona aunque un entrenador no
         // actualice su app. Fallo silencioso si falta la migración v0.55.
-        var sinCurso = _gestorData.clases.filter(function(c){ return !c.curso; });
+        var sinCurso = _gestorData.clases.filter(function(c){ return !c.curso && String(c.user_id).slice(0,4) !== 'ext:'; });
         if (sinCurso.length && _esGestor) {
           var cAct = cursoDeFecha(hoyLocal());
           sinCurso.forEach(function(c){ c.curso = cAct; });
@@ -4861,6 +4931,9 @@
       (_gestorData.perfiles  || []).forEach(function(p){ ens(p.user_id).perfil = p; });
       (_gestorData.clases    || []).forEach(function(c){ ens(c.user_id).clases.push(c); });
       (_gestorData.registros || []).forEach(function(r){ ens(r.user_id).regs.push(r); });
+      // v0.112: sembrar un grupo por cada externo del catálogo, aunque aún
+      // no tenga clases, para poder abrir su detalle y crearle la primera.
+      (_gestorData.sustitutos || []).forEach(function(s){ ens('ext:' + s.id); });
       return by;
     }
 
@@ -4886,11 +4959,18 @@
       uids.forEach(function(u, i){ _entColorCache[u] = _ENT_PAL[i % _ENT_PAL.length]; });
     }
     function _entColor(uid) {
+      // v0.112: los externos siempre en ÁMBAR (convención de la app)
+      if (_esExtUid(uid)) return { bg:'#fffbeb', bar:'#f59e0b', tx:'#92400e' };
       if (!_entColorCache) _entColorReset();
       return _entColorCache[uid] || _ENT_PAL[0];
     }
 
     function _gestorNombre(d) {
+      // v0.112: entrenador externo → nombre del catálogo de sustitutos
+      if (d && _esExtUid(d.uid)) {
+        var sx = ((_gestorData && _gestorData.sustitutos) || []).filter(function(s){ return s.id === _extId(d.uid); })[0];
+        return sx ? sx.nombre : 'Externo';
+      }
       var p = d.perfil;
       if (p) {
         var nom = ((p.nombre || '') + ' ' + (p.apellidos || '')).trim();
@@ -6262,9 +6342,10 @@
       if (!d) { cont.innerHTML = '<p class="ajustes-desc">Entrenador sin datos.</p>'; return; }
       var nom = _gestorNombre(d);
       document.getElementById('gestor-det-nombre').textContent = nom;
-      document.getElementById('gestor-det-sub').textContent =
-        (d.perfil && d.perfil.email ? d.perfil.email : '') +
-        (d.perfil && d.perfil.club ? ' · ' + d.perfil.club : '');
+      document.getElementById('gestor-det-sub').textContent = _esExtUid(_gestorUid)
+        ? '🔁 Entrenador externo'
+        : ((d.perfil && d.perfil.email ? d.perfil.email : '') +
+           (d.perfil && d.perfil.club ? ' · ' + d.perfil.club : ''));
 
       // Curso archivado abierto (_gHist) o curso vivo. Las clases vivas se
       // filtran por el CURSO del mes que se está viendo: septiembre ya
@@ -6282,9 +6363,10 @@
       // ── Selector de entrenadores (v0.72): chips con todos los del club;
       // al pinchar uno, el detalle salta a ese entrenador sin volver al panel.
       var _by = _gestorAgrupar();
-      var _uidsSel = Object.keys(_by).filter(function(u){ return _by[u].clases.length || _by[u].regs.length; });
+      // Solo entrenadores del CLUB en el bucle (los externos van aparte)
+      var _uidsSel = Object.keys(_by).filter(function(u){ return !_esExtUid(u) && (_by[u].clases.length || _by[u].regs.length); });
       _uidsSel.sort(function(a,b){ return _gestorNombre(_by[a]).localeCompare(_gestorNombre(_by[b])); });
-      if (_uidsSel.length) {
+      if (_uidsSel.length || (_gestorData && (_gestorData.sustitutos||[]).length)) {
         var _chipsEnt = _uidsSel.map(function(u){
           return '<button type="button" class="gdet-ent-chip' + (u === _gestorUid ? ' sel' : '') +
             '" onclick="gestorCambiarEntrenador(\'' + u + '\')">' + _gEsc(_gestorNombre(_by[u]).split(' ')[0]) + '</button>';
@@ -6293,12 +6375,12 @@
         _chipsEnt += '<button type="button" class="gdet-ent-chip todos" onclick="abrirGestorEntrenadores()">Todos ›</button>';
         // v0.108: alta de sustituto externo a mano, junto a los entrenadores
         _chipsEnt += '<button type="button" class="gdet-ent-chip" onclick="gestorSustNuevo()">＋ Sustituto externo</button>';
-        // v0.109: los externos del catálogo, como chips tras el "＋": a la
-        // izquierda el club, a la derecha los externos. Al pinchar uno se
-        // abre su detalle con las clases que ha cubierto, mes a mes.
+        // v0.112: los externos del catálogo, como chips ámbar tras el "＋".
+        // Al pinchar uno se abre su detalle como el de un entrenador (sus
+        // clases propias, letrero, pasar lista, editar…).
         ((_gestorData && _gestorData.sustitutos) || []).forEach(function(sx){
-          _chipsEnt += '<button type="button" class="gdet-ent-chip ext" onclick="abrirGestorSustituto(\'' +
-            _gEsc(sx.nombre).replace(/'/g, "\\'") + '\')">' + _gEsc(sx.nombre) + '</button>';
+          _chipsEnt += '<button type="button" class="gdet-ent-chip ext' + (_gestorUid === ('ext:'+sx.id) ? ' sel' : '') +
+            '" onclick="abrirGestorDetalle(\'ext:' + sx.id + '\')">' + _gEsc(sx.nombre) + '</button>';
         });
         h += '<div class="gdet-ent-row">' + _chipsEnt + '</div>';
       }
