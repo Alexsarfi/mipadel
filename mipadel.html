@@ -39,6 +39,21 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.110.0 — Externos: añadir clase + el ámbar solo para externos (2026-07)
+    · En el detalle del sustituto externo, nuevo botón "＋ Añadir clase":
+      se elige entrenador titular → clase → fecha y esa clase queda
+      marcada como impartida por el externo (🔁). Las asignadas sin lista
+      aún se listan en punteado "— sin lista aún" y no cuentan en el
+      letrero hasta pasar asistencia.
+    · El SOMBREADO ÁMBAR queda reservado EXCLUSIVAMENTE a los sustitutos
+      EXTERNOS, en toda la app del gestor: chips de días, desplegables,
+      chip 🔁 del día y tarjetas de "Sustituciones del mes" (con fondo
+      ámbar). Si la sustitución la hace OTRO ENTRENADOR del club, el
+      sombreado pasa a ser LILA (chip de día, desplegable, chip 🔁 y
+      avatar de la tarjeta).
+    · Así, en la pantalla principal, todo lo ámbar = clase cubierta por
+      un externo, de un vistazo. Sin cambios en Supabase.
+
   v0.109.0 — Sustitutos externos como chips con su propio detalle (2026-07)
     · En la fila de entrenadores del detalle, tras el chip "＋ Sustituto
       externo" aparecen ahora los NOMBRES de los externos del catálogo en
@@ -1921,6 +1936,10 @@
     /* v0.66.1: el día lo dio (o lo dará) un sustituto → destacado ámbar */
     .ghd-day.sust { background:#fde68a; color:#92400e; }
     .gdd-det.sust { background:#fffbeb; border-color:#fde68a; }
+    /* v0.110: sustituto INTERNO (otro entrenador del club) → lila, el
+       ámbar queda reservado a los sustitutos EXTERNOS */
+    .ghd-day.susti { background:#e9ecf5; color:#16264f; }
+    .gdd-det.susti { background:#f4f6fb; border-color:#c7d0e8; }
     /* Tarjeta por día de la semana (el nombre del día, una sola vez) */
     /* v0.86: fila horizontal de días en "Clases dadas" */
     .ghd-diarow { display:flex; flex-wrap:wrap; gap:6px; margin:0.3rem 0 0.7rem; }
@@ -3824,7 +3843,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.109.0';
+    var APP_VERSION = '0.110.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -5223,7 +5242,8 @@
         var porSust = {};   // nombre → {n, tits:{}, items:[]}
         sustMes.forEach(function(r){
           var nom = r.impartida_por.nombre || '¿?';
-          var e = (porSust[nom] = porSust[nom] || { n:0, tits:{}, items:[] });
+          var e = (porSust[nom] = porSust[nom] || { n:0, tits:{}, items:[], ext:false });
+          if (!r.impartida_por.uid) e.ext = true;   // v0.110: sustituto externo
           e.n++;
           var titD   = by[r.user_id] || { uid:r.user_id };
           var titNom = _gestorNombre(titD);
@@ -5242,9 +5262,10 @@
         Object.keys(porSust).sort().forEach(function(nom){
           var e = porSust[nom];
           e.items.sort(function(a,b){ return (b.fecha||'').localeCompare(a.fecha||''); });
-          h += '<details class="gsust-det">' +
+          // v0.110: avatar ámbar SOLO para externos; lila para internos
+          h += '<details class="gsust-det"' + (e.ext ? ' style="background:#fffbeb;border-color:#fde68a;"' : '') + '>' +
             '<summary class="gsust-sum">' +
-              '<div class="gestor-card-ava" style="background:#fef3c7;color:#92400e;">🔁</div>' +
+              '<div class="gestor-card-ava" style="' + (e.ext ? 'background:#fef3c7;color:#92400e;' : 'background:var(--lila-suave);color:var(--lila);') + '">🔁</div>' +
               '<div class="gestor-card-body">' +
                 '<div class="gestor-card-nom">' + _gEsc(nom) + '</div>' +
                 '<div class="gestor-card-meta">cubrió a ' + _gEsc(Object.keys(e.tits).join(', ')) + '</div>' +
@@ -5423,11 +5444,16 @@
       var items = [], n60 = 0, n90 = 0, nOt = 0;
       (_gestorData.registros || []).forEach(function(r){
         if (!r.impartida_por || r.impartida_por.uid || (r.impartida_por.nombre || '') !== nom) return;
-        if (!r.fecha || r.fecha.slice(0,7) !== mesISO || !_regPasada(r)) return;
+        if (!r.fecha || r.fecha.slice(0,7) !== mesISO) return;
+        var pasada = _regPasada(r);
         var c = clasePor[r.user_id + '|' + r.clase_id] || {};
-        var dur = _duracionFranja(c.franja || '');
-        if (dur === 60) n60++; else if (dur === 90) n90++; else nOt++;
-        items.push({ fecha: r.fecha, franja: c.franja || '—',
+        if (pasada) {
+          var dur = _duracionFranja(c.franja || '');
+          if (dur === 60) n60++; else if (dur === 90) n90++; else nOt++;
+        }
+        // v0.110: las asignadas SIN lista aún también se listan (marcadas
+        // como pendientes), pero no cuentan en el letrero hasta pasarla
+        items.push({ fecha: r.fecha, franja: c.franja || '—', pdte: !pasada,
                      titular: _gestorNombre(by[r.user_id] || { uid: r.user_id }) });
       });
       items.sort(function(a,b){ return a.fecha.localeCompare(b.fecha) || a.franja.localeCompare(b.franja); });
@@ -5444,6 +5470,21 @@
         (nOt ? '<div class="gent-dur ot"><b>' + nOt + '</b><span>otras</span></div>' : '') +
         '<div class="gent-dur tot"><b>' + tot + '</b><span>cubiertas</span></div>' +
       '</div>';
+
+      // v0.110: asignar una clase a este externo (queda como "impartida
+      // por" él; la lista de asistencia se pasa después como siempre)
+      h += '<button class="btn btn-verde" style="margin:0 0 0.7rem;" onclick="gsxFormToggle()">＋ Añadir clase</button>';
+      h += '<div id="gsx-form" class="form-card" style="display:none;margin-bottom:10px;gap:0.6rem;">' +
+        '<div class="form-grupo"><label class="form-label">Entrenador titular *</label>' +
+          '<select id="gsx-f-ent" class="form-select" onchange="gsxFormEnt()"></select></div>' +
+        '<div class="form-grupo"><label class="form-label">Clase *</label>' +
+          '<select id="gsx-f-clase" class="form-select"></select></div>' +
+        '<div class="form-grupo"><label class="form-label">Fecha *</label>' +
+          '<input id="gsx-f-fecha" class="form-input" type="date" value="' + hoyLocal() + '" onclick="if(this.showPicker)this.showPicker()"></div>' +
+        '<button class="btn btn-verde btn-sm" style="margin:0;" onclick="gsxFormGuardar()">💾 Guardar</button>' +
+        '<p class="form-hint" style="margin:0;">La clase de esa fecha quedará marcada como impartida por ' + _gEsc(nom) + ' (🔁 ámbar). La asistencia se pasa después como siempre.</p>' +
+      '</div>';
+
       if (!items.length) {
         h += '<p class="ajustes-desc" style="text-align:center;">Sin clases cubiertas este mes.</p>';
       } else {
@@ -5451,14 +5492,56 @@
         items.forEach(function(it){
           var p = it.fecha.split('-');
           var wd = _GDIAS[new Date(+p[0], +p[1]-1, +p[2]).getDay()];
-          h += '<div class="gsx-row">' +
+          h += '<div class="gsx-row"' + (it.pdte ? ' style="opacity:0.75;border-style:dashed;"' : '') + '>' +
             '<span class="gsx-fecha">' + wd + ' ' + parseInt(p[2],10) + '/' + parseInt(p[1],10) + '</span>' +
             '<span class="gsx-franja">🕐 ' + _gEsc(it.franja) + '</span>' +
+            (it.pdte ? '<span class="gsx-franja" style="background:#f3f4f6;color:#6b7280;">— sin lista aún</span>' : '') +
             '<span class="gsx-tit">de 👤 ' + _gEsc(it.titular) + '</span>' +
           '</div>';
         });
       }
       cont.innerHTML = h;
+    }
+
+    // v0.110: formulario "＋ Añadir clase" del sustituto externo:
+    // entrenador titular → clase → fecha; guarda impartida_por = externo.
+    function gsxFormToggle() {
+      var f = document.getElementById('gsx-form');
+      if (!f) return;
+      var abrir = f.style.display === 'none';
+      f.style.display = abrir ? '' : 'none';
+      if (!abrir) return;
+      var by = _gestorAgrupar();
+      var uids = Object.keys(by).filter(function(u){ return by[u].clases.length || by[u].regs.length; });
+      uids.sort(function(a,b){ return _gestorNombre(by[a]).localeCompare(_gestorNombre(by[b])); });
+      var selE = document.getElementById('gsx-f-ent');
+      selE.innerHTML = uids.map(function(u){
+        return '<option value="' + u + '">' + _gEsc(_gestorNombre(by[u])) + '</option>';
+      }).join('');
+      gsxFormEnt();
+    }
+    function gsxFormEnt() {
+      var selE = document.getElementById('gsx-f-ent');
+      var selC = document.getElementById('gsx-f-clase');
+      if (!selE || !selC) return;
+      var d = _gestorAgrupar()[selE.value];
+      var cursoAct = cursoDeFecha(hoyLocal()), hoy = hoyLocal();
+      var ordDia = function(ds){ return ds<0 ? 8 : (ds===0 ? 7 : ds); };
+      var cls = d ? _gestorClasesLocal(d).filter(function(c){
+        return _claseCurso(c) === cursoAct && c.diaSemana >= 0 && !(c.fin && c.fin < hoy);
+      }).sort(function(a,b){ return ordDia(a.diaSemana)-ordDia(b.diaSemana) || (a.franja||'').localeCompare(b.franja||''); }) : [];
+      selC.innerHTML = cls.length
+        ? cls.map(function(c){
+            return '<option value="' + c.id + '">' + _gEsc((_GDIAS[c.diaSemana] || '') + ' · ' + (c.franja || c.nombre || ('Clase ' + c.id))) + '</option>';
+          }).join('')
+        : '<option value="">Sin clases este curso</option>';
+    }
+    function gsxFormGuardar() {
+      var uid = (document.getElementById('gsx-f-ent') || {}).value;
+      var cid = parseInt((document.getElementById('gsx-f-clase') || {}).value, 10);
+      var f   = (document.getElementById('gsx-f-fecha') || {}).value;
+      if (!uid || !cid || !f) { alert('Elige entrenador, clase y fecha.'); return; }
+      gestorSustSetDia(uid, cid, f, 'x:' + _gSustExtNom, 'pantalla-gestor-sustituto');
     }
 
     // ── VENTANA "ENTRENADORES" + sustitutos externos (v0.67) ─────
@@ -5692,6 +5775,7 @@
     // Si el día aún no tiene registro se crea uno "previsto" (sin lista).
     function _gSustRerender(volverA) {
       if (volverA === 'pantalla-gestor-planning') renderGestorPlanning();
+      else if (volverA === 'pantalla-gestor-sustituto') renderGestorSustituto();   // v0.110
       else renderGestorDetalle();
     }
     function gestorSustSetDia(uid, cid, fecha, val, volverA) {
@@ -6416,8 +6500,11 @@
         // uid en el id: en el planning conviven clases de varios
         // entrenadores y sus ids locales pueden repetirse
         var did  = opts.idPref + '-' + uid + '-' + c.id + '-' + f;
-        // v0.66.1: día con sustituto → chip y desplegable sombreados en ámbar
-        var sust = (cf[f] && cf[f].impartidaPor) ? ' sust' : '';
+        // v0.66.1: día con sustituto → chip y desplegable sombreados.
+        // v0.110: el ÁMBAR queda SOLO para sustitutos EXTERNOS; si cubre
+        // un entrenador del club, sombreado lila (interno).
+        var _ip = cf[f] && cf[f].impartidaPor;
+        var sust = _ip ? (_ip.uid ? ' susti' : ' sust') : '';
         // v0.105: los días sin clase del club (gestor) llevan ✗ delante
         chips += '<button type="button" class="ghd-day ' + st + (extra?' extra':'') + sust + '" onclick="gestorToggleDet(\'' + did + '\',this)">' +
                  (st === 'dsc' ? '✗' : '') + (extra?'+':'') + parseInt(f.split('-')[2],10) + '</button>';
@@ -6535,8 +6622,12 @@
           diaTodoSel +
         '</div>';
       // Chip ámbar con el sustituto (visible en cualquier estado del día)
+      // v0.110: chip ámbar solo si el sustituto es EXTERNO; lila si es
+      // otro entrenador del club
       var sustChip = (reg && reg.impartidaPor)
-        ? ' <span style="font-size:12px;font-weight:700;background:#fde68a;color:#92400e;border-radius:10px;padding:1px 7px;">🔁 ' + _gEsc(reg.impartidaPor.nombre || '') + '</span>'
+        ? ' <span style="font-size:12px;font-weight:700;' +
+          (reg.impartidaPor.uid ? 'background:#e9ecf5;color:#16264f;' : 'background:#fde68a;color:#92400e;') +
+          'border-radius:10px;padding:1px 7px;">🔁 ' + _gEsc(reg.impartidaPor.nombre || '') + '</span>'
         : '';
       // Recuperaciones PREVISTAS del día (v0.60): solo el nombre, sin asistencia
       var previstas = '';
