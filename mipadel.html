@@ -39,6 +39,23 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.111.0 — Planning del panel: saltar de curso con dos botones (2026-07)
+    · En Inicio del gestor, el planning semanal deja de estar fijo al
+      curso actual. Cabecera minimalista con dos botones ‹ › a los lados
+      del nombre del curso ("Curso 2025-26 · actual") para ir al curso
+      anterior o siguiente.
+    · Al cambiar de curso, la fila de meses, los días y todos los accesos
+      (día · franja · entrenador) se recolocan en ese curso. En el curso
+      actual arranca en el mes en curso; en otros cursos, en septiembre.
+    · Sin cambios en Supabase.
+
+  v0.110.1 — Añadir clase del externo sin desplegar entrenadores (2026-07)
+    · En "＋ Añadir clase" del sustituto externo desaparece el desplegable
+      de entrenadores: estando ya en el externo, solo se elige la CLASE en
+      un único selector con todas las del club (Día · hora · titular) y la
+      fecha. Menos pasos, sin listas de por medio.
+    · Sin cambios en Supabase.
+
   v0.110.0 — Externos: añadir clase + el ámbar solo para externos (2026-07)
     · En el detalle del sustituto externo, nuevo botón "＋ Añadir clase":
       se elige entrenador titular → clase → fecha y esa clase queda
@@ -1889,6 +1906,11 @@
     .acal-ley { display:flex; gap:9px; flex-wrap:wrap; align-items:center; font-size:10px; color:var(--gris); margin-top:7px; padding-top:6px; border-top:1px solid var(--borde); }
     .acal-ley span { display:inline-flex; align-items:center; gap:3px; }
     /* Meses del curso en el panel del gestor (v0.64) */
+    /* v0.111: cabecera del planning con navegación entre cursos */
+    .gpcurso-hdr { display:flex; align-items:center; gap:10px; margin:1.2rem 0 0.5rem; }
+    .gpcurso-lbl { flex:1; text-align:center; font-size:13px; font-weight:800; color:var(--texto); text-transform:uppercase; letter-spacing:0.04em; }
+    .gpcurso-nav { flex-shrink:0; width:34px; height:34px; border:1.5px solid var(--borde); border-radius:10px; background:var(--blanco); color:var(--verde); font-size:20px; font-weight:800; line-height:1; cursor:pointer; -webkit-tap-highlight-color:transparent; display:inline-flex; align-items:center; justify-content:center; }
+    .gpcurso-nav:active { transform:scale(0.94); background:var(--verde-suave); }
     .gpmes-row { display:flex; gap:4px; flex-wrap:wrap; margin:0 0 4px; }
     .gpmes-chip { flex:1; min-width:44px; font-size:11px; font-weight:700; color:var(--gris); background:var(--blanco); border:1.5px solid var(--borde); border-radius:8px; padding:5px 2px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
     .gpmes-chip:active { transform:scale(0.96); }
@@ -3843,7 +3865,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.110.0';
+    var APP_VERSION = '0.111.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -5133,12 +5155,20 @@
       // curso (sep–jun, el mes en curso sombreado en azul): al elegir un
       // mes, el planning muestra las clases dadas de ese mes y todos los
       // accesos (día, franja, entrenador) se abren YA en ese mes.
-      var cursoAct = cursoDeFecha(hoyLocal());
+      // v0.111: el planning muestra el curso indicado por _gPanelCursoOff
+      // (dos botones ‹ › para saltar de curso), no siempre el actual.
+      var cursoAct = _gPanelCursoLbl();
       var mesesCurso = _gPanelMesesCurso();
-      if (!_gPanelMes || mesesCurso.indexOf(_gPanelMes) < 0) _gPanelMes = _gPanelMesDefecto(mesesCurso);
+      if (!_gPanelMes || mesesCurso.indexOf(_gPanelMes) < 0) {
+        _gPanelMes = _gPanelCursoOff === 0 ? _gPanelMesDefecto(mesesCurso) : mesesCurso[0];
+      }
       var mesHoy = hoyLocal().slice(0, 7);
 
-      h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Planning semanal · curso ' + cursoAct + '</div>';
+      h += '<div class="gpcurso-hdr">' +
+        '<button type="button" class="gpcurso-nav" onclick="gestorPanelCurso(-1)" aria-label="Curso anterior">‹</button>' +
+        '<span class="gpcurso-lbl">Curso ' + cursoAct + (_gPanelCursoOff === 0 ? ' · actual' : '') + '</span>' +
+        '<button type="button" class="gpcurso-nav" onclick="gestorPanelCurso(1)" aria-label="Curso siguiente">›</button>' +
+      '</div>';
       h += '<div class="gpmes-row">' + mesesCurso.map(function(m){
         var cls = 'gpmes-chip' + (m === mesHoy ? ' hoy' : '') + (m === _gPanelMes ? ' sel' : '');
         return '<button type="button" class="' + cls + '" onclick="gestorPanelMes(\'' + m + '\')">' +
@@ -5297,12 +5327,34 @@
     // desde el panel (detalle del entrenador, planning de día/franja)
     // arrancan YA posicionadas en ese mes.
     var _gPanelMes = null;   // 'YYYY-MM' seleccionado en el panel
+    // v0.111: curso visto en el planning del panel (0 = curso actual;
+    // −1 = anterior; +1 = siguiente). Dos botones ‹ › lo cambian.
+    var _gPanelCursoOff = 0;
+    // Año de inicio del curso visto (según el offset)
+    function _gPanelCursoY0() {
+      return parseInt(cursoDeFecha(hoyLocal()).slice(0,4), 10) + _gPanelCursoOff;
+    }
+    // Etiqueta del curso visto ("2025-26")
+    function _gPanelCursoLbl() {
+      var y0 = _gPanelCursoY0();
+      return y0 + '-' + ('0' + ((y0 + 1) % 100)).slice(-2);
+    }
     function _gPanelMesesCurso() {
-      var y0 = parseInt(cursoDeFecha(hoyLocal()).slice(0,4), 10);
+      var y0 = _gPanelCursoY0();
       var out = [];
       [9,10,11,12].forEach(function(m){ out.push(y0 + '-' + ('0'+m).slice(-2)); });
       [1,2,3,4,5,6,7].forEach(function(m){ out.push((y0+1) + '-0' + m); });   // v0.90: incluye julio
       return out;
+    }
+    // Cambiar de curso: reinicia el mes al primero del curso (o al mes en
+    // curso si es el actual) y cierra el día abierto.
+    function gestorPanelCurso(delta) {
+      _gPanelCursoOff += delta;
+      var meses = _gPanelMesesCurso();
+      // En el curso actual, el mes en curso; en otros cursos, septiembre
+      _gPanelMes = _gPanelCursoOff === 0 ? _gPanelMesDefecto(meses) : meses[0];
+      _gpSelDia = null; _gpSelEnt = null;
+      renderGestor();
     }
     function _gPanelMesDefecto(meses) {
       var hoy = hoyLocal().slice(0,7);
@@ -5473,10 +5525,10 @@
 
       // v0.110: asignar una clase a este externo (queda como "impartida
       // por" él; la lista de asistencia se pasa después como siempre)
+      // v0.110.1: sin desplegable de entrenadores — estamos ya en el
+      // externo, así que solo se elige la CLASE (día · hora · titular).
       h += '<button class="btn btn-verde" style="margin:0 0 0.7rem;" onclick="gsxFormToggle()">＋ Añadir clase</button>';
       h += '<div id="gsx-form" class="form-card" style="display:none;margin-bottom:10px;gap:0.6rem;">' +
-        '<div class="form-grupo"><label class="form-label">Entrenador titular *</label>' +
-          '<select id="gsx-f-ent" class="form-select" onchange="gsxFormEnt()"></select></div>' +
         '<div class="form-grupo"><label class="form-label">Clase *</label>' +
           '<select id="gsx-f-clase" class="form-select"></select></div>' +
         '<div class="form-grupo"><label class="form-label">Fecha *</label>' +
@@ -5505,6 +5557,8 @@
 
     // v0.110: formulario "＋ Añadir clase" del sustituto externo:
     // entrenador titular → clase → fecha; guarda impartida_por = externo.
+    // v0.110.1: un solo desplegable con TODAS las clases del club
+    // (Día · hora · titular); sin lista de entrenadores aparte.
     function gsxFormToggle() {
       var f = document.getElementById('gsx-form');
       if (!f) return;
@@ -5512,36 +5566,31 @@
       f.style.display = abrir ? '' : 'none';
       if (!abrir) return;
       var by = _gestorAgrupar();
-      var uids = Object.keys(by).filter(function(u){ return by[u].clases.length || by[u].regs.length; });
-      uids.sort(function(a,b){ return _gestorNombre(by[a]).localeCompare(_gestorNombre(by[b])); });
-      var selE = document.getElementById('gsx-f-ent');
-      selE.innerHTML = uids.map(function(u){
-        return '<option value="' + u + '">' + _gEsc(_gestorNombre(by[u])) + '</option>';
-      }).join('');
-      gsxFormEnt();
-    }
-    function gsxFormEnt() {
-      var selE = document.getElementById('gsx-f-ent');
-      var selC = document.getElementById('gsx-f-clase');
-      if (!selE || !selC) return;
-      var d = _gestorAgrupar()[selE.value];
       var cursoAct = cursoDeFecha(hoyLocal()), hoy = hoyLocal();
       var ordDia = function(ds){ return ds<0 ? 8 : (ds===0 ? 7 : ds); };
-      var cls = d ? _gestorClasesLocal(d).filter(function(c){
-        return _claseCurso(c) === cursoAct && c.diaSemana >= 0 && !(c.fin && c.fin < hoy);
-      }).sort(function(a,b){ return ordDia(a.diaSemana)-ordDia(b.diaSemana) || (a.franja||'').localeCompare(b.franja||''); }) : [];
+      var cls = [];
+      Object.keys(by).forEach(function(u){
+        var ent = _gestorNombre(by[u]).split(' ')[0];
+        _gestorClasesLocal(by[u]).forEach(function(c){
+          if (_claseCurso(c) !== cursoAct || c.diaSemana < 0 || (c.fin && c.fin < hoy)) return;
+          cls.push({ uid: u, id: c.id, diaSemana: c.diaSemana, franja: c.franja || '', nombre: c.nombre || '', ent: ent });
+        });
+      });
+      cls.sort(function(a,b){ return ordDia(a.diaSemana)-ordDia(b.diaSemana) || (a.franja||'').localeCompare(b.franja||'') || a.ent.localeCompare(b.ent); });
+      var selC = document.getElementById('gsx-f-clase');
       selC.innerHTML = cls.length
         ? cls.map(function(c){
-            return '<option value="' + c.id + '">' + _gEsc((_GDIAS[c.diaSemana] || '') + ' · ' + (c.franja || c.nombre || ('Clase ' + c.id))) + '</option>';
+            return '<option value="' + c.uid + '|' + c.id + '">' +
+              _gEsc((_GDIAS[c.diaSemana] || '') + ' · ' + (c.franja || c.nombre || ('Clase ' + c.id)) + ' · ' + c.ent) + '</option>';
           }).join('')
         : '<option value="">Sin clases este curso</option>';
     }
     function gsxFormGuardar() {
-      var uid = (document.getElementById('gsx-f-ent') || {}).value;
-      var cid = parseInt((document.getElementById('gsx-f-clase') || {}).value, 10);
+      var val = (document.getElementById('gsx-f-clase') || {}).value || '';
       var f   = (document.getElementById('gsx-f-fecha') || {}).value;
-      if (!uid || !cid || !f) { alert('Elige entrenador, clase y fecha.'); return; }
-      gestorSustSetDia(uid, cid, f, 'x:' + _gSustExtNom, 'pantalla-gestor-sustituto');
+      var p   = val.split('|');
+      if (p.length !== 2 || !f) { alert('Elige clase y fecha.'); return; }
+      gestorSustSetDia(p[0], parseInt(p[1], 10), f, 'x:' + _gSustExtNom, 'pantalla-gestor-sustituto');
     }
 
     // ── VENTANA "ENTRENADORES" + sustitutos externos (v0.67) ─────
