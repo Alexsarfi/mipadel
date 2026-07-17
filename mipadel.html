@@ -39,6 +39,29 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.107.0 — Página "Todos": solo datos, sin enlaces + botón sustitutos (2026-07)
+    · La página que abre el chip "Todos ›" (y la ventana Entrenadores) es
+      ahora un VISTAZO puro de las clases dadas por cada entrenador en el
+      mes visto: las tarjetas ya NO son enlaces (tocar un entrenador no
+      lleva a ninguna parte, solo se ven sus horas dadas). Al detalle se
+      sigue llegando por los chips de nombres o desde el planning.
+    · Navegación ‹ mes › para buscar datos por meses (ya de v0.106).
+    · El botón "＋ Añadir sustituto externo" sube justo debajo del listado
+      de entrenadores; el catálogo de externos queda al final.
+    · Sin cambios en Supabase.
+
+  v0.106.0 — Página de entrenadores: letrero mensual de clases dadas (2026-07)
+    · Fuera los apartados de "clases · alumnos · días pasados" y el % de
+      asistencia de cada tarjeta de entrenador.
+    · En su lugar, cada entrenador lleva un LETRERO grande y claro con las
+      clases dadas el MES visto, separadas por duración: recuadro azul
+      para las de 1h y verde para las de 1h 30 (y gris "otras" si las
+      hay). Debajo del nombre, el total del mes.
+    · Arriba, navegación por meses (‹ mes ›): al cambiar de mes se
+      actualizan todos los letreros. Se abre siempre en el mes actual.
+    · Cuenta también las clases que cada uno cubrió como sustituto
+      (igual que el informe mensual). Sin cambios en Supabase.
+
   v0.105.0 — Planning del gestor: días sin clase del club en los chips (2026-07)
     · En la vista de Inicio con todas las clases de todos los entrenadores
       (y también en el detalle del entrenador y el planning por franja,
@@ -1523,6 +1546,9 @@
     .gestor-kpi-lbl { font-size:10.5px; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:0.04em; margin-top:5px; }
     .gestor-card { display:flex; align-items:center; gap:12px; background:var(--blanco); border:1.5px solid var(--borde); border-radius:14px; padding:0.9rem 1rem; margin-bottom:9px; cursor:pointer; transition:all .15s; }
     .gestor-card:active { border-color:var(--lila-claro); background:var(--lila-suave); }
+    /* v0.107: tarjeta solo informativa (página "Todos"), sin enlace */
+    .gestor-card.plana { cursor:default; }
+    .gestor-card.plana:active { border-color:var(--borde); background:var(--blanco); }
     /* Desplegable de sustituciones del mes (panel del gestor) */
     .gsust-det { background:var(--blanco); border:1.5px solid var(--borde); border-radius:14px; margin-bottom:9px; overflow:hidden; }
     .gsust-det[open] { border-color:var(--lila-claro); }
@@ -1541,6 +1567,14 @@
     .gestor-card-meta { font-size:12px; color:var(--gris); margin-top:3px; }
     .gestor-card-pct { flex-shrink:0; font-size:15px; font-weight:800; color:var(--verde); }
     .gestor-card-arr { font-size:20px; color:var(--lila); flex-shrink:0; }
+    /* v0.106: letrero mensual por entrenador (clases dadas por duración) */
+    .gent-mes { display:flex; gap:6px; align-items:stretch; flex-shrink:0; margin-left:auto; }
+    .gent-dur { display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:10px; padding:4px 9px; min-width:50px; }
+    .gent-dur b { font-size:21px; font-weight:800; line-height:1.05; }
+    .gent-dur span { font-size:10px; font-weight:800; letter-spacing:0.03em; opacity:0.8; }
+    .gent-dur.h1  { background:#eff6ff; color:#1e40af; }
+    .gent-dur.h15 { background:#f0fdf4; color:#166534; }
+    .gent-dur.ot  { background:#f3f4f6; color:#6b7280; }
     .gestor-reg-row { display:flex; align-items:center; gap:10px; padding:0.55rem 0; border-bottom:1px solid var(--borde); font-size:13px; }
     .gestor-reg-fecha { font-weight:700; color:var(--texto); min-width:92px; }
     .gestor-reg-pres { color:#166534; font-weight:700; }
@@ -3744,7 +3778,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.105.0';
+    var APP_VERSION = '0.107.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -5318,7 +5352,10 @@
     }
 
     // ── VENTANA "ENTRENADORES" + sustitutos externos (v0.67) ─────
-    function abrirGestorEntrenadores() { irA('pantalla-gestor-entrenadores'); }
+    function abrirGestorEntrenadores() { _gEntMesOff = 0; irA('pantalla-gestor-entrenadores'); }
+    // v0.106: navegación por meses en la página de entrenadores
+    var _gEntMesOff = 0;
+    function gentMesNav(delta) { _gEntMesOff += delta; renderGestorEntrenadores(); }
     // v0.73: el KPI "Entrenadores" del panel abre YA el detalle del primer
     // entrenador (con los chips arriba para saltar a cualquiera), el mismo
     // acceso fluido que al pulsar un entrenador en el planning semanal.
@@ -5339,24 +5376,48 @@
       uids.sort(function(a, b){ return _gestorNombre(by[a]).localeCompare(_gestorNombre(by[b])); });
       var sub = document.getElementById('gent-sub');
       if (sub) sub.textContent = uids.length + ' entrenador' + (uids.length !== 1 ? 'es' : '') + ' con datos';
-      var h = '';
+
+      // v0.106: fuera los apartados de clases/alumnos/asistencia. Cada
+      // tarjeta muestra un LETRERO con las clases dadas el mes visto,
+      // separadas por duración (1h y 1h30, grandes y claras), y arriba
+      // hay navegación por meses para ir viendo cada mes.
+      var mesISO   = getMesISO_A(_gEntMesOff);
+      var mesLabel = getMesLabelA(_gEntMesOff);
+      var cursoMes = cursoDeFecha(mesISO);
+      var h = '<div class="gestor-mes-nav">' +
+        '<button class="gestor-mes-btn" onclick="gentMesNav(-1)">‹</button>' +
+        '<span class="gestor-mes-lbl">' + _gEsc(mesLabel) + '</span>' +
+        '<button class="gestor-mes-btn" onclick="gentMesNav(1)">›</button>' +
+      '</div>';
+      h += '<p class="ajustes-desc" style="text-align:center;margin:-2px 0 0.6rem;">Clases dadas por cada entrenador ese mes (incluye las que cubrió como sustituto).</p>';
       uids.forEach(function(u){
-        var d = by[u], s = _gestorStats(d), nom = _gestorNombre(d);
-        var pct = s.pct == null ? '—' : s.pct + '%';
-        h += '<div class="gestor-card" onclick="abrirGestorDetalle(\'' + u + '\')">' +
+        var d = by[u], nom = _gestorNombre(d);
+        var clases  = _gestorClasesLocal(d).filter(function(c){ return _claseCurso(c) === cursoMes; });
+        var regsMes = _gestorRegsLocal(d).filter(function(r){ return r.fecha && r.fecha.slice(0,7) === mesISO; });
+        var s   = _gestorSumaMes(clases, regsMes, mesISO);
+        var cub = _gestorCubiertasMes(u, mesISO);
+        var n60 = s.m60 + cub.m60, n90 = s.m90 + cub.m90, nOt = s.otras + cub.otras;
+        var tot = n60 + n90 + nOt;
+        // v0.107: tarjeta SOLO informativa (sin enlace al detalle): esta
+        // página es el vistazo "Todos" de clases dadas por mes.
+        h += '<div class="gestor-card plana">' +
           '<div class="gestor-card-ava">' + _gEsc(nom.charAt(0).toUpperCase()) + '</div>' +
           '<div class="gestor-card-body">' +
             '<div class="gestor-card-nom">' + _gEsc(nom) + '</div>' +
-            '<div class="gestor-card-meta">' + s.nClases + ' clase' + (s.nClases !== 1 ? 's' : '') +
-              ' · ' + s.nAlumnos + ' alumno' + (s.nAlumnos !== 1 ? 's' : '') +
-              ' · ' + s.nDias + ' día' + (s.nDias !== 1 ? 's' : '') + ' pasados' +
-            '</div>' +
+            '<div class="gestor-card-meta">' + (tot ? tot + ' clase' + (tot !== 1 ? 's' : '') + ' dada' + (tot !== 1 ? 's' : '') : 'Sin clases dadas') + '</div>' +
           '</div>' +
-          '<div class="gestor-card-pct">' + pct + '</div>' +
-          '<div class="gestor-card-arr">›</div>' +
+          '<div class="gent-mes">' +
+            '<div class="gent-dur h1"><b>' + n60 + '</b><span>1h</span></div>' +
+            '<div class="gent-dur h15"><b>' + n90 + '</b><span>1h 30</span></div>' +
+            (nOt ? '<div class="gent-dur ot"><b>' + nOt + '</b><span>otras</span></div>' : '') +
+          '</div>' +
         '</div>';
       });
       if (!uids.length) h += '<p class="ajustes-desc" style="text-align:center;padding:1rem 0;">Aún no hay entrenadores con datos.</p>';
+
+      // v0.107: el botón de añadir sustituto externo va justo DESPUÉS del
+      // listado de entrenadores; el catálogo queda debajo.
+      h += '<button class="btn btn-sec btn-sm" style="margin:0.4rem 0 0;" onclick="gestorSustNuevo()">＋ Añadir sustituto externo</button>';
 
       // Catálogo de sustitutos EXTERNOS (antes en el panel principal)
       h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Sustitutos externos</div>';
@@ -5372,7 +5433,6 @@
       } else {
         h += '<p class="ajustes-desc" style="margin:0 0 0.5rem;">Sin sustitutos externos todavía.</p>';
       }
-      h += '<button class="btn btn-sec btn-sm" style="margin:0;" onclick="gestorSustNuevo()">＋ Añadir sustituto externo</button>';
       cont.innerHTML = h;
     }
 
