@@ -39,6 +39,16 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.104.1 — Ficha del alumno: el rojo ✗ solo para días sin clase del club (2026-07)
+    · El chip rojo ✗ queda reservado a los DÍAS SIN CLASE que marca el
+      gestor en el calendario (club cerrado, sin pista, fiesta…).
+    · Si una clase no se dio por otra razón (🚫 sin clase del entrenador)
+      o simplemente no tiene lista pasada, el día se pinta en el MISMO
+      gris punteado que los días futuros pendientes: probablemente sea un
+      olvido del entrenador al pasar asistencia, no un festivo.
+    · Leyenda actualizada: "pendiente / sin lista" y "✗ sin clase (club)".
+    · Sin cambios en Supabase.
+
   v0.104.0 — Ficha del alumno: mes planificado también en meses anteriores (2026-07)
     · La vista planificada del mes (v0.103) se aplica ahora TAMBIÉN a los
       meses pasados donde el alumno tuvo al menos una clase: además de las
@@ -1621,8 +1631,8 @@
     .galm-chip.recup  { background:#dbeafe; color:#1e40af; }
     /* v0.103: vista planificada del mes en la ficha del alumno */
     .galm-chip.pend     { background:#f8fafc; color:#475569; border:1.5px dashed #cbd5e1; }   /* día previsto, aún por dar */
-    .galm-chip.sinlista { background:#f3f4f6; color:#9ca3af; }                                /* pasado sin lista */
-    .galm-chip.sc       { background:#fee2e2; color:#b91c1c; border:1.5px dashed #fca5a5; }   /* ✗ sin clase */
+    .galm-chip.sinlista { background:#f8fafc; color:#475569; border:1.5px dashed #cbd5e1; }   /* v0.104.1: sin dar / sin lista, mismo gris que pendiente */
+    .galm-chip.sc       { background:#fee2e2; color:#b91c1c; border:1.5px dashed #fca5a5; }   /* ✗ sin clase del club (gestor) */
     .galm-quedan { margin-left:auto; font-size:11px; font-weight:800; color:#166534; background:#dcfce7; border-radius:20px; padding:2px 9px; white-space:nowrap; }
     .galm-quedan.cero { color:#9ca3af; background:#f3f4f6; }
     .galm-leyenda { display:flex; flex-wrap:wrap; align-items:center; gap:5px 10px; margin:2px 0 10px; font-size:11px; }
@@ -3718,7 +3728,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.104.0';
+    var APP_VERSION = '0.104.1';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -7041,8 +7051,8 @@
         '<span class="galm-lg falta">15</span> falta IJ &nbsp;' +
         '<span class="galm-lg faltaj">15</span> falta J &nbsp;' +
         '<span class="galm-lg recup">↩</span> recup &nbsp;' +
-        '<span class="galm-lg pend">15</span> pendiente &nbsp;' +
-        '<span class="galm-lg sc">✗</span> sin clase</p>';
+        '<span class="galm-lg pend">15</span> pendiente / sin lista &nbsp;' +
+        '<span class="galm-lg sc">✗</span> sin clase (club)</p>';
     }
     // Devuelve { html, prev, quedan } o null si el alumno no tiene clases
     // en el curso de ese mes (se usa entonces la vista clásica de registros).
@@ -7084,7 +7094,12 @@
           var p = f.split('-');
           var wd = _GALLETRAS[new Date(+p[0], +p[1]-1, +p[2]).getDay()];
           var reg = regPF[f], cls, pref = '';
-          if ((reg && reg.sinClase) || _dscEsSinClase(f)) { cls = 'sc'; pref = '✗'; }
+          // v0.104.1: el rojo ✗ queda SOLO para los días sin clase del club
+          // (los marca el gestor: cerrado, sin pista, fiesta…). Si la clase
+          // no se dio por otra razón (🚫 del entrenador o sin lista) va en
+          // gris como los pendientes: puede ser un olvido al pasar lista.
+          if (_dscEsSinClase(f)) { cls = 'sc'; pref = '✗'; }
+          else if (reg && reg.sinClase) { cls = 'sinlista'; }
           else if (_regPasada(reg)) {
             var pres = (reg.presentes||[]).indexOf(nombre) !== -1;
             var aus  = (reg.ausentes ||[]).indexOf(nombre) !== -1;
