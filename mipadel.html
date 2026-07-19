@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.119.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.120.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,37 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.120.0 — Leyenda colapsada del gestor + Registro semanal de Competición (2026-07)
+    · Ficha del alumno (gestor): la leyenda de colores ("presente", "falta
+      IJ/J", "recuperación", "pendiente / sin lista", "sin clase") ya no va
+      fija encima de la franja. Ahora va DESPUÉS, colapsada tras un botón
+      "?" redondo que la despliega/repliega al tocarlo (_leyendaColapsableHTML,
+      reutilizada en las 3 pantallas donde aparecía: ficha propia, ficha vista
+      por el gestor y la lista global de alumnos). Menos ruido visual al
+      abrir un alumno.
+    · Planificación → Competición: fuera el texto "Competición va por ciclo +
+      áreas…" y el banner "Preparar → Competir → Analizar → Mejorar" (ambos
+      puramente informativos). En su lugar, nuevo REGISTRO SEMANAL
+      (_compSemanaHTML):
+        - Semana libre L-D (independiente de "Mis Clases"), navegable con
+          ‹ › (compSemNav), igual que el calendario de Asistencia.
+        - Cada día se marca tocándolo, en ciclo: pendiente → dado (✓) →
+          festivo/no dado (✗) → pendiente (compSemToggleDia).
+        - "Foco de la semana": multi-selección libre de filas sueltas de
+          CUALQUIER apartado del catálogo de Competición (no solo una),
+          con selector agrupado por apartado (compSemToggleFoco /
+          compSemToggleFocoEdit).
+        - Se guarda por semana en p.compSemanas[lunesISO] = {foco:[...],
+          dias:{fechaISO:'dado'|'festivo'}}, dentro del plan (como
+          p.hechos/p.contenido ya existentes).
+    · Sincronización: comp_semanas se sube/baja en plan_grupo igual que
+      contenido/hechos/biblioteca, para que el registro semanal se comparta
+      entre los dispositivos del grupo (antes solo local). REQUIERE
+      migración: ejecutar migracion_comp_semanas.sql en Supabase antes de
+      usar esta versión (si no se ejecuta, el registro sigue funcionando
+      pero solo en local, sin romper nada más — el fallo de subida queda
+      en un aviso de consola).
 
   v0.119.0 — PRUEBA DE CONCEPTO: Competición enlaza ejercicios, no sesiones (2026-07)
     · Solo para el nivel Competición de Planificación: cada fila del catálogo
@@ -1899,6 +1930,14 @@
     .galm-lg.faltaj { background:#fef3c7; color:#92400e; }
     .galm-lg.recup  { background:#dbeafe; color:#1e40af; }
     .galm-lg.pend   { background:#f8fafc; color:#475569; border:1.5px dashed #cbd5e1; }
+    /* v0.119: leyenda colapsada tras la franja, con icono ? para reducir ruido visual */
+    .galm-leyenda-wrap { display:flex; justify-content:flex-end; margin:2px 0 4px; }
+    .galm-leyenda-toggle { width:22px; height:22px; border-radius:50%; border:1.5px solid var(--borde,#e2e8f0);
+      background:#fff; color:var(--gris,#6b7280); font-weight:800; font-size:12px; line-height:1; cursor:pointer; }
+    .galm-leyenda-toggle.on { background:var(--lila-claro,#ede9fe); color:var(--lila,#7c3aed); }
+    .galm-leyenda-panel { display:none; width:100%; }
+    .galm-leyenda-panel.abierto { display:block; }
+    .galm-leyenda-panel .galm-leyenda { justify-content:flex-end; }
     .galm-lg.sc     { background:#fee2e2; color:#b91c1c; border:1.5px dashed #fca5a5; }
     /* Asistencia por días: tramos horarios dentro de cada día */
     .gad-tramo { padding:0.55rem 0; border-bottom:1px solid var(--borde); }
@@ -2803,10 +2842,35 @@
     .plan-etapa.abierto .plan-etapa-chev { transform:rotate(90deg); }
     .plan-etapa-body { display:none; padding:0 11px 10px; flex-direction:column; gap:7px; }
     .plan-etapa.abierto .plan-etapa-body { display:flex; }
-    /* Banner del ciclo de competición */
-    .plan-ciclo { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:6px; background:#ecfeff; border:1.5px solid #0891b2; border-radius:13px; padding:0.7rem 0.6rem; margin-bottom:0.6rem; }
-    .plan-ciclo-fase { font-size:12px; font-weight:800; color:#0e7490; }
-    .plan-ciclo-arr { font-size:12px; color:#0891b2; }
+    /* v0.119 — Registro semanal de Competición (sustituye al banner del ciclo) */
+    .comp-sem { background:var(--blanco); border:1.5px solid var(--borde); border-radius:14px; padding:0.9rem 1rem; margin-bottom:0.7rem; }
+    .comp-sem-nav { display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:0.7rem; }
+    .comp-sem-nav button { width:26px; height:26px; border-radius:50%; border:1.5px solid var(--borde); background:#fff; font-size:13px; cursor:pointer; color:var(--texto); }
+    .comp-sem-lbl { font-size:12.5px; font-weight:800; color:var(--texto); }
+    .comp-sem-hoy-tag { font-weight:600; color:var(--gris); }
+    .comp-sem-dias { display:flex; gap:5px; justify-content:space-between; margin-bottom:0.8rem; }
+    .comp-sem-dia { flex:1; text-align:center; border-radius:10px; padding:6px 2px; cursor:pointer; -webkit-tap-highlight-color:transparent;
+      border:1.5px dashed var(--borde); background:#f8fafc; }
+    .comp-sem-dia .csd-nom { display:block; font-size:10px; color:var(--gris); font-weight:700; }
+    .comp-sem-dia .csd-num { display:block; font-size:13px; font-weight:800; color:var(--texto); margin-top:1px; }
+    .comp-sem-dia.dado { background:#dcfce7; border-color:#86efac; border-style:solid; }
+    .comp-sem-dia.dado .csd-num { color:#166534; }
+    .comp-sem-dia.festivo { background:var(--rojo-suave); border-color:#fca5a5; border-style:solid; }
+    .comp-sem-dia.festivo .csd-num { color:var(--rojo); }
+    .comp-sem-dia.hoy { box-shadow:0 0 0 2px var(--dorado); }
+    .comp-sem-foco-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:0.4rem; }
+    .comp-sem-foco-titulo { font-size:11.5px; font-weight:800; color:var(--gris); text-transform:uppercase; letter-spacing:.3px; }
+    .comp-sem-foco-edit { font-size:11.5px; font-weight:700; color:var(--azul); background:none; border:none; cursor:pointer; padding:0; }
+    .comp-sem-foco-chips { display:flex; flex-wrap:wrap; gap:6px; }
+    .comp-sem-foco-chip { font-size:11px; font-weight:700; background:var(--azul-suave); color:var(--azul); border-radius:20px; padding:3px 10px; }
+    .comp-sem-foco-vacio { font-size:12px; color:var(--gris); font-style:italic; }
+    .comp-sem-foco-pick { max-height:260px; overflow-y:auto; border-top:1px solid var(--borde); margin-top:0.4rem; padding-top:0.5rem; }
+    .comp-sem-foco-pick-grupo { font-size:11px; font-weight:800; color:var(--gris); margin:8px 0 3px; }
+    .comp-sem-foco-pick-it { display:flex; align-items:center; gap:8px; padding:6px 4px; border-radius:8px; cursor:pointer; font-size:12.5px; color:var(--texto); }
+    .comp-sem-foco-pick-it.on { background:var(--azul-suave); }
+    .comp-sem-foco-pick-check { width:18px; height:18px; border-radius:5px; border:1.5px solid var(--borde); display:flex; align-items:center;
+      justify-content:center; font-size:11px; flex-shrink:0; background:#fff; }
+    .comp-sem-foco-pick-it.on .comp-sem-foco-pick-check { background:var(--azul); border-color:var(--azul); color:#fff; }
     /* Apartado (item) — tappable → sesiones */
     .plan-item { display:flex; flex-direction:column; border:1px solid var(--borde); border-radius:11px; overflow:hidden; background:var(--blanco); }
     .plan-item-row { display:flex; align-items:stretch; }
@@ -4024,7 +4088,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.119.0';
+    var APP_VERSION = '0.120.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -4346,6 +4410,7 @@
           pLocal.planEtapasV     = planServ.plan_etapas_v   != null ? planServ.plan_etapas_v   : pLocal.planEtapasV;
           pLocal.bibVersion      = planServ.bib_version     != null ? planServ.bib_version     : pLocal.bibVersion;
           pLocal.bibEstrategias  = planServ.bib_estrategias != null ? planServ.bib_estrategias : pLocal.bibEstrategias;
+          pLocal.compSemanas     = planServ.comp_semanas || pLocal.compSemanas || {};
           escribirPlan(pLocal, true);
         } else if (!qPlanRes.error) {
           // No hay fila en el servidor: sembrar con el plan local (primera
@@ -4581,6 +4646,7 @@
         plan_etapas_v:   p.planEtapasV || 2,
         bib_version:     p.bibVersion || 3,
         bib_estrategias: !!p.bibEstrategias,
+        comp_semanas:    p.compSemanas || {},
         updated_by:      uid,
         updated_at:      new Date().toISOString()
       };
@@ -7600,13 +7666,22 @@
       });
       return h;
     }
+    // v0.119: envoltorio colapsable para una leyenda — icono "?" que despliega
+    // el contenido al tocarlo (reduce ruido visual; va DESPUÉS de la franja).
+    function _leyendaColapsableHTML(contenidoHTML) {
+      return '<div class="galm-leyenda-wrap">' +
+        '<button type="button" class="galm-leyenda-toggle" title="¿Qué significa cada marca?" ' +
+          'onclick="this.classList.toggle(\'on\');this.nextElementSibling.classList.toggle(\'abierto\')">?</button>' +
+        '<div class="galm-leyenda-panel">' + contenidoHTML + '</div>' +
+      '</div>';
+    }
     // Leyenda de colores para la vista de chips del alumno
     function _alMesLeyenda() {
-      return '<p class="ajustes-desc galm-leyenda">' +
+      return _leyendaColapsableHTML('<p class="ajustes-desc galm-leyenda">' +
         '<span class="galm-lg pres">15</span> presente &nbsp;' +
         '<span class="galm-lg falta">15</span> falta IJ &nbsp;' +
         '<span class="galm-lg faltaj">15</span> falta J &nbsp;' +
-        '<span class="galm-lg recup">↩</span> recuperación</p>';
+        '<span class="galm-lg recup">↩</span> recuperación</p>');
     }
 
     // ── v0.103: vista PLANIFICADA del mes en la ficha del alumno ──────
@@ -7615,13 +7690,13 @@
     // asistencia, pendientes en gris punteado (con contador "quedan N"),
     // y los días SIN CLASE (festivo del club o clase anulada) en rojo ✗.
     function _alMesPlanLeyenda() {
-      return '<p class="ajustes-desc galm-leyenda">' +
+      return _leyendaColapsableHTML('<p class="ajustes-desc galm-leyenda">' +
         '<span class="galm-lg pres">15</span> presente &nbsp;' +
         '<span class="galm-lg falta">15</span> falta IJ &nbsp;' +
         '<span class="galm-lg faltaj">15</span> falta J &nbsp;' +
         '<span class="galm-lg recup">↩</span> recup &nbsp;' +
         '<span class="galm-lg pend">15</span> pendiente / sin lista &nbsp;' +
-        '<span class="galm-lg sc">✗</span> sin clase (club)</p>';
+        '<span class="galm-lg sc">✗</span> sin clase (club)</p>');
     }
     // Devuelve { html, prev, quedan } o null si el alumno no tiene clases
     // en el curso de ese mes (se usa entonces la vista clásica de registros).
@@ -8022,11 +8097,11 @@
         h += '<p class="ajustes-desc" style="text-align:center;margin:-2px 0 0.4rem;">' +
           plan.prev + ' clase' + (plan.prev !== 1 ? 's' : '') + ' prevista' + (plan.prev !== 1 ? 's' : '') + ' este mes · ' +
           (plan.quedan ? '<b>quedan ' + plan.quedan + '</b>' : 'ninguna pendiente') + '</p>';
-        h += _alMesPlanLeyenda();
         h += plan.html;
+        h += _alMesPlanLeyenda();
       } else if (itemsMes.length) {
-        h += _alMesLeyenda();
         h += _alMesChipsHTML(itemsMes, {});
+        h += _alMesLeyenda();
       } else {
         h += '<p class="ajustes-desc" style="text-align:center;">Sin clases ni registros este mes.</p>';
       }
@@ -8443,8 +8518,8 @@
       if (!itemsMes.length) {
         h += '<p class="ajustes-desc" style="text-align:center;">Sin registros este mes.</p>';
       } else {
-        h += _alMesLeyenda();
         h += _alMesChipsHTML(itemsMes, { conEntrenador:true });
+        h += _alMesLeyenda();
       }
 
       // ── Cursos anteriores (sep–jun), plegados; solo si tuvieron clases ──
@@ -9496,6 +9571,129 @@
       return h;
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // v0.119 — Registro semanal de Competición (sustituye al banner del ciclo)
+    // Semana LIBRE (L-D), independiente de "Mis Clases": cada semana se elige
+    // un foco (varias filas sueltas del catálogo, de cualquier apartado) y
+    // cada día se marca tocándolo, en ciclo: pendiente → dado → festivo/no
+    // dado → pendiente. Se guarda en p.compSemanas[lunesISO] = {foco, dias}.
+    // ══════════════════════════════════════════════════════════════════
+    var compSemOff = 0;          // navegación ‹ › (semanas relativas a hoy)
+    var compSemFocoEdit = false; // mostrar el selector de filas del foco
+
+    function _compSemanaClave(wOff) {
+      return dateToISOLocal(getLunesDeSemana(wOff));
+    }
+    // Devuelve (y crea si hace falta) el registro de una semana. NO guarda por
+    // sí sola: solo lee/crea en memoria; quien llama decide cuándo _planGuardar.
+    function _compSemanaData(p, clave) {
+      if (!p.compSemanas) p.compSemanas = {};
+      if (!p.compSemanas[clave]) p.compSemanas[clave] = { foco: [], dias: {} };
+      return p.compSemanas[clave];
+    }
+    // Todas las filas del catálogo de Competición (de TODOS los apartados),
+    // para poder elegir el foco de la semana sin restringirlo a uno solo.
+    function _compTodasFilas(p) {
+      var cont   = planContenido(p).competicion || {};
+      var etapas = PLAN_ETAPAS.competicion || [];
+      var out = [];
+      etapas.forEach(function(et){
+        (cont[et.key] || []).forEach(function(it){
+          out.push({ id: it.id, t: it.t, int: it.int, apartado: et.nombre });
+        });
+      });
+      return out;
+    }
+    function compSemNav(delta) { compSemOff += delta; mostrarPlanificacion(); }
+    function compSemToggleFocoEdit() { compSemFocoEdit = !compSemFocoEdit; mostrarPlanificacion(); }
+    function compSemToggleFoco(filaId) {
+      var p = leerPlan();
+      var sem = _compSemanaData(p, _compSemanaClave(compSemOff));
+      var i = sem.foco.indexOf(filaId);
+      if (i >= 0) sem.foco.splice(i, 1); else sem.foco.push(filaId);
+      _planGuardar(p);
+      mostrarPlanificacion();
+    }
+    function compSemToggleDia(fechaISO) {
+      var p = leerPlan();
+      var sem = _compSemanaData(p, _compSemanaClave(compSemOff));
+      var actual = sem.dias[fechaISO];
+      var nuevo = (actual === 'dado') ? 'festivo' : (actual === 'festivo') ? null : 'dado';
+      if (nuevo) sem.dias[fechaISO] = nuevo; else delete sem.dias[fechaISO];
+      _planGuardar(p);
+      mostrarPlanificacion();
+    }
+
+    var COMP_SEM_DIAS_LBL = ['L','M','X','J','V','S','D'];
+    function _compSemanaHTML(p) {
+      var clave = _compSemanaClave(compSemOff);
+      var sem   = _compSemanaData(p, clave);
+      var hoyISO = hoyLocal();
+      var h = '<div class="comp-sem">';
+
+      h += '<div class="comp-sem-nav">' +
+        '<button onclick="compSemNav(-1)" title="Semana anterior">‹</button>' +
+        '<span class="comp-sem-lbl">Semana del ' + formatFechaDiaMes(clave) + (compSemOff === 0 ? ' <span class="comp-sem-hoy-tag">· esta semana</span>' : '') + '</span>' +
+        '<button onclick="compSemNav(1)" title="Semana siguiente">›</button>' +
+      '</div>';
+
+      h += '<div class="comp-sem-dias">';
+      for (var i = 0; i < 7; i++) {
+        var fISO   = addDiasISO(clave, i);
+        var estado = sem.dias[fISO] || '';
+        var numDia = parseInt(fISO.split('-')[2], 10);
+        var titulo = estado === 'dado' ? 'Dado — toca para marcar festivo/no dado'
+                   : estado === 'festivo' ? 'Festivo / no dado — toca para dejar pendiente'
+                   : 'Pendiente — toca para marcar dado';
+        h += '<div class="comp-sem-dia' + (estado ? ' ' + estado : '') + (fISO === hoyISO ? ' hoy' : '') +
+             '" onclick="compSemToggleDia(\'' + fISO + '\')" title="' + titulo + '">' +
+          '<span class="csd-nom">' + COMP_SEM_DIAS_LBL[i] + '</span>' +
+          '<span class="csd-num">' + (estado === 'dado' ? '✓' : estado === 'festivo' ? '✗' : numDia) + '</span>' +
+        '</div>';
+      }
+      h += '</div>';
+
+      // Foco de la semana
+      var todas = _compTodasFilas(p);
+      var mapFilas = {}; todas.forEach(function(f){ mapFilas[f.id] = f; });
+      h += '<div class="comp-sem-foco-hdr"><span class="comp-sem-foco-titulo">Foco de la semana</span>' +
+        (esEN1Cuenta() ? '' : '<button class="comp-sem-foco-edit" onclick="compSemToggleFocoEdit()">' +
+          (compSemFocoEdit ? '✓ Terminar' : '✏️ Elegir') + '</button>') +
+      '</div>';
+
+      if (compSemFocoEdit) {
+        h += '<div class="comp-sem-foco-pick">';
+        if (!todas.length) {
+          h += '<div class="comp-sem-foco-vacio">Aún no hay filas en el catálogo de Competición.</div>';
+        } else {
+          var porApartado = {};
+          todas.forEach(function(f){ (porApartado[f.apartado] = porApartado[f.apartado] || []).push(f); });
+          Object.keys(porApartado).forEach(function(ap){
+            h += '<div class="comp-sem-foco-pick-grupo">' + ap + '</div>';
+            porApartado[ap].forEach(function(f){
+              var on = sem.foco.indexOf(f.id) >= 0;
+              h += '<div class="comp-sem-foco-pick-it' + (on ? ' on' : '') + '" onclick="compSemToggleFoco(\'' + f.id + '\')">' +
+                '<span class="comp-sem-foco-pick-check">' + (on ? '✓' : '') + '</span>' + f.t +
+              '</div>';
+            });
+          });
+        }
+        h += '</div>';
+      } else if (!sem.foco.length) {
+        h += '<div class="comp-sem-foco-vacio">Sin foco elegido esta semana. Toca «✏️ Elegir» y marca qué áreas vas a entrenar.</div>';
+      } else {
+        h += '<div class="comp-sem-foco-chips">';
+        sem.foco.forEach(function(fid){
+          var f = mapFilas[fid];
+          h += '<span class="comp-sem-foco-chip">' + (f ? f.t : '(fila borrada)') + '</span>';
+        });
+        h += '</div>';
+      }
+
+      h += '</div>';
+      return h;
+    }
+
     function mostrarPlanificacion() {
       _planSesCache = null;   // refresca clases/ejercicios para las sesiones inline
       var p = leerPlan();
@@ -9527,11 +9725,14 @@
            (edit ? '✓ Terminar de editar' : '✏️ Editar plan') + '</button>';
 
       var esComp = (nivel === 'competicion');
-      h += '<div class="plan-intro">' + (edit
-        ? '✏️ <strong>Modo edición.</strong> Toca un apartado para editarlo, ▲▼ para ordenar y 🗑️ para borrar. «＋ Nuevo» o «📚 Biblioteca» para añadir.'
-        : (esComp
-            ? '🔄 Competición va por <strong>ciclo + áreas</strong>, no por etapas. Tras cada torneo eliges del catálogo lo que toque mejorar.'
-            : '🧭 Plan por <strong>etapas</strong> (sin meses). Se avanza a la siguiente al cumplir su <strong>objetivo</strong>. El saque es transversal.')) + '</div>';
+      // v0.119: en Competición (vista normal) el texto informativo + banner del
+      // ciclo se sustituyen por el registro semanal (_compSemanaHTML). En modo
+      // edición, o en el resto de niveles, se mantiene el intro de siempre.
+      if (edit) {
+        h += '<div class="plan-intro">✏️ <strong>Modo edición.</strong> Toca un apartado para editarlo, ▲▼ para ordenar y 🗑️ para borrar. «＋ Nuevo» o «📚 Biblioteca» para añadir.</div>';
+      } else if (!esComp) {
+        h += '<div class="plan-intro">🧭 Plan por <strong>etapas</strong> (sin meses). Se avanza a la siguiente al cumplir su <strong>objetivo</strong>. El saque es transversal.</div>';
+      }
 
       function _planEtapaCard(et, opts) {
         opts = opts || {};
@@ -9554,12 +9755,9 @@
       }
 
       if (esComp) {
-        // Banner del ciclo (informativo)
-        h += '<div class="plan-ciclo">' +
-          '<span class="plan-ciclo-fase">📋 Preparar</span><span class="plan-ciclo-arr">→</span>' +
-          '<span class="plan-ciclo-fase">🏆 Competir</span><span class="plan-ciclo-arr">→</span>' +
-          '<span class="plan-ciclo-fase">🔍 Analizar</span><span class="plan-ciclo-arr">→</span>' +
-          '<span class="plan-ciclo-fase">🎯 Mejorar</span></div>';
+        // v0.119: registro semanal (sustituye al banner informativo del ciclo).
+        // Solo en modo consulta (no tiene sentido mientras editas el catálogo).
+        if (!edit) h += _compSemanaHTML(p);
         // Catálogo de áreas (sin secuencia, ◆)
         h += '<div class="grupo-titulo" style="margin-top:0.4rem;">Áreas de trabajo · elige según el último torneo</div>';
         etapas.filter(function(et){ return et.tipo === 'area'; }).forEach(function(et){
