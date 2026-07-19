@@ -39,6 +39,14 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.118.0 — Pasar lista: reordenar acciones + solo iconos en móvil (2026-07)
+    · La fila de acciones al pasar lista pasa a este orden: ＋ Añadir
+      alumno · ↩ Recuperación · 🔁 Entrenador sustituto · 🚫 Sin clase.
+    · "Sustitución de clase" se renombra a "Entrenador sustituto".
+    · En móvil (pantallas estrechas) los botones muestran SOLO el icono
+      para reducir ruido; en pantalla ancha siguen con texto.
+    · Sin cambios en Supabase.
+
   v0.117.0 — Baja de una franja: elegir la fecha (2026-07)
     · Al pulsar el 🗑 de una franja se abre un mini panel con un SELECTOR
       de fecha (por defecto hoy) para elegir el día de baja. El mensaje de
@@ -1828,6 +1836,12 @@
     .galm-baja-date { font-family:inherit; font-size:13px; border:1.5px solid var(--borde); border-radius:9px; padding:5px 8px; background:var(--arena); color:var(--texto); }
     .galm-baja-ok { font-family:inherit; font-size:12.5px; font-weight:800; border:1.5px solid #fecaca; border-radius:9px; padding:6px 12px; background:#fff5f5; color:#b91c1c; cursor:pointer; }
     .galm-baja-ok:active { background:#fee2e2; }
+    /* v0.118: fila de acciones al pasar lista. En móvil, solo iconos */
+    .asist-acc-btn { flex:1; min-width:120px; }
+    @media (max-width:600px) {
+      .asist-acc-btn { min-width:0; flex:1 1 0; font-size:18px; padding-left:6px; padding-right:6px; }
+      .asist-acc-txt { display:none; }
+    }
     /* v0.115: día de fin de clases (baja) resaltado + aviso */
     .galm-chip.fin { box-shadow:0 0 0 2px #b45309; }
     .galm-fin { margin-top:8px; font-size:11.5px; font-weight:800; color:#b45309; }
@@ -3985,7 +3999,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.117.0';
+    var APP_VERSION = '0.118.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -13062,20 +13076,22 @@
         // el catálogo de entrenadores). Si ya hay sustituto, se muestra en
         // ámbar con su nombre para no perder el dato aunque el panel esté
         // cerrado; así "Impartida por" solo aparece al cambiar el titular.
+        // v0.118: orden ＋ Añadir alumno · ↩ Recuperación · 🔁 Entrenador
+        // sustituto · 🚫 Sin clase. En móvil se ven SOLO los iconos.
         var sustBtn = '';
         if (_sb && _sbUser) {
           var sustOn = !!asistImpartida;
           sustBtn =
-            '<button class="btn btn-sec btn-sm" style="flex:1;min-width:130px;border-color:#fde68a;color:#92400e;' +
-              (sustOn ? 'background:#fffbeb;font-weight:700;' : '') + '" onclick="asistToggleSustPanel()">🔁 ' +
-              (sustOn ? _gEsc(asistImpartida.nombre) : 'Sustitución de clase') + '</button>';
+            '<button class="btn btn-sec btn-sm asist-acc-btn" style="border-color:#fde68a;color:#92400e;' +
+              (sustOn ? 'background:#fffbeb;font-weight:700;' : '') + '" onclick="asistToggleSustPanel()">🔁 <span class="asist-acc-txt">' +
+              (sustOn ? _gEsc(asistImpartida.nombre) : 'Entrenador sustituto') + '</span></button>';
         }
         zona.innerHTML =
           '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
-            '<button class="btn btn-sec btn-sm" style="flex:1;min-width:130px;border-color:var(--lila-claro);color:var(--lila);" onclick="asistToggleRecupPanel()">↩ Recuperación</button>' +
-            '<button class="btn btn-sec btn-sm" style="flex:1;min-width:130px;border-color:#bbf7d0;color:#166534;" onclick="asistToggleAltaPanel()">＋ Añadir alumno</button>' +
+            '<button class="btn btn-sec btn-sm asist-acc-btn" style="border-color:#bbf7d0;color:#166534;" onclick="asistToggleAltaPanel()">＋ <span class="asist-acc-txt">Añadir alumno</span></button>' +
+            '<button class="btn btn-sec btn-sm asist-acc-btn" style="border-color:var(--lila-claro);color:var(--lila);" onclick="asistToggleRecupPanel()">↩ <span class="asist-acc-txt">Recuperación</span></button>' +
             sustBtn +
-            '<button class="btn btn-sec btn-sm" style="flex:1;min-width:130px;border-color:#e2e8f0;color:#64748b;" onclick="asistSinClase()">🚫 Sin clase</button>' +
+            '<button class="btn btn-sec btn-sm asist-acc-btn" style="border-color:#e2e8f0;color:#64748b;" onclick="asistSinClase()">🚫 <span class="asist-acc-txt">Sin clase</span></button>' +
           '</div>';
         return;
       }
