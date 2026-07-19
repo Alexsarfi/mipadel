@@ -39,6 +39,15 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.116.0 — Ficha del alumno: señal de comienzo de clases (alta) (2026-07)
+    · Simétrico al fin de clases: cuando un alumno se añade a una franja,
+      su primer día de clase se marca con 🚩 y un aviso "🚩 Comienzo de
+      clases · DD/MM" en el mes del alta.
+    · Al añadir un alumno desde el formulario de la clase, su alta queda
+      con fecha de HOY (antes se guardaba "desde el principio"), para que
+      cuente desde hoy y tenga un comienzo real.
+    · Sin cambios en Supabase.
+
   v0.115.1 — Fix: alumno escrito y sin pulsar ＋ ya se guarda (2026-07)
     · Al editar/crear una clase, si escribías el nombre de un alumno y
       pulsabas "Guardar" sin haber tocado antes el ＋ (o Enter), ese
@@ -1802,6 +1811,9 @@
     /* v0.115: día de fin de clases (baja) resaltado + aviso */
     .galm-chip.fin { box-shadow:0 0 0 2px #b45309; }
     .galm-fin { margin-top:8px; font-size:11.5px; font-weight:800; color:#b45309; }
+    /* v0.116: día de comienzo de clases (alta) resaltado + aviso */
+    .galm-chip.ini { box-shadow:0 0 0 2px #15803d; }
+    .galm-ini { margin-top:8px; font-size:11.5px; font-weight:800; color:#15803d; }
     .galm-nom { font-size:12.5px; color:var(--gris); }
     .galm-dur { font-size:11px; font-weight:700; color:var(--verde); background:var(--verde-suave); border-radius:20px; padding:2px 9px; }
     .galm-ent { font-size:11px; font-weight:700; color:var(--lila); background:var(--lila-suave); border-radius:20px; padding:2px 9px; }
@@ -3953,7 +3965,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.115.1';
+    var APP_VERSION = '0.116.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -7594,6 +7606,15 @@
             if (f <= baja && alActivo(entry, f) && f > finFecha) finFecha = f;
           });
         }
+        // v0.116: si el alumno tiene ALTA en este mes, su primer día de
+        // clase activo lleva marca de "comienzo de clases".
+        var alta = entry ? alAlta(entry) : '';
+        var iniFecha = '';
+        if (alta && alta.slice(0,7) === mesISO) {
+          fechasClaseEnMes(c, mesISO).forEach(function(f){
+            if (alActivo(entry, f) && (iniFecha === '' || f < iniFecha)) iniFecha = f;
+          });
+        }
         var chips = '', quedan = 0, nPrev = 0;
         fechasClaseEnMes(c, mesISO).forEach(function(f){
           // v0.104: si el alumno ya no está en el cupo (entry null, clase
@@ -7618,8 +7639,10 @@
           else if (f >= hoy) { cls = 'pend'; quedan++; }
           else cls = 'sinlista';               // pasado sin lista
           nPrev++;
-          chips += '<div class="galm-chip ' + cls + (f === finFecha ? ' fin' : '') + '">' +
-                     '<span class="galm-chip-dia">' + (f === finFecha ? '🏁' : wd) + '</span>' +
+          var mk = (f === iniFecha ? ' ini' : '') + (f === finFecha ? ' fin' : '');
+          var diaIco = (f === iniFecha ? '🚩' : (f === finFecha ? '🏁' : wd));
+          chips += '<div class="galm-chip ' + cls + mk + '">' +
+                     '<span class="galm-chip-dia">' + diaIco + '</span>' +
                      '<span class="galm-chip-num">' + pref + parseInt(p[2],10) + '</span>' +
                    '</div>';
         });
@@ -7638,6 +7661,8 @@
               (quedan ? 'quedan ' + quedan : 'sin días pendientes') + '</span>' +
           '</div>' +
           '<div class="galm-dias">' + chips + '</div>' +
+          // v0.116: aviso de comienzo de clases (alta) en el mes en que ocurre
+          (iniFecha ? '<div class="galm-ini">🚩 Comienzo de clases · ' + parseInt(iniFecha.split('-')[2],10) + '/' + (+iniFecha.slice(5,7)) + '</div>' : '') +
           // v0.115: aviso de fin de clases (baja) en el mes en que ocurre
           (finFecha ? '<div class="galm-fin">🏁 Fin de clases · ' + parseInt(finFecha.split('-')[2],10) + '/' + (+finFecha.slice(5,7)) + '</div>' : '') +
           // v0.115: botón de baja (fin de clases hoy) solo si sigue activo
@@ -13516,7 +13541,8 @@
         input.value = ''; return;
       }
       asistAutoRellenar(nombre);
-      asistAlumnosForm.push({ nombre: nombre, apellidos: inpApe.value.trim(), telefono: inpTel.value.trim(), alta: '', baja: '' });
+      // v0.116: alta = hoy → cuenta desde hoy y marca "comienzo de clases"
+      asistAlumnosForm.push({ nombre: nombre, apellidos: inpApe.value.trim(), telefono: inpTel.value.trim(), alta: hoyLocal(), baja: '' });
       input.value = ''; inpApe.value = ''; inpTel.value = '';
       renderAlumnosForm();
       input.focus();
