@@ -39,6 +39,20 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.113.0 — Planning del gestor: menos ruido visual en los tramos (2026-07)
+    · Cada tramo pasa a DOS COLUMNAS: a la izquierda la hora y, debajo,
+      los números de día del mes (siguen abriendo el detalle de
+      asistencia al tocarlos); a la derecha el lápiz de editar y, debajo,
+      los alumnos uno bajo otro.
+    · Editar y "Pasar/Corregir lista" quedan como SOLO el icono ✏.
+    · En el desplegable del día, "Recuperación", "Añadir alumno" y
+      "Sustitución" quedan como solo icono (↩ · ＋ · 🔁) manteniendo su
+      sombreado; el texto vive en el tooltip.
+    · En la cabecera del entrenador se quita el "1 franja" junto al ＋
+      (se deja solo el recuento de clases dadas "N✓" si lo hay).
+    · Al seleccionar un día de la semana, ese botón pasa a MAYÚSCULAS.
+    · Sin cambios en Supabase.
+
   v0.112.0 — Entrenadores EXTERNOS con clases propias (como un entrenador) (2026-07)
     · ⚠️ REQUIERE la migración 'migracion_clases_externo.sql' (tablas
       sustituto_clases y sustituto_registros). Ejecútala ANTES de usar la
@@ -1803,6 +1817,13 @@
     .ghd-als { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:7px; }
     .ghd-als.fit { flex-wrap:nowrap; }
     .ghd-als.fit .ghd-al { flex:1 1 0; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:center; }
+    /* v0.113: tramo en dos columnas (izq: hora + días · der: lápiz + alumnos) */
+    .ghd-2col { display:flex; gap:12px; align-items:flex-start; }
+    .ghd-col-izq { flex:0 0 auto; max-width:52%; min-width:0; }
+    .ghd-col-der { flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:flex-end; gap:5px; }
+    .ghd-cont-l { font-size:11px; font-weight:800; color:var(--verde); margin:2px 0 7px; }
+    .ghd-als-col { display:flex; flex-direction:column; gap:4px; width:100%; }
+    .ghd-als-col .ghd-al { width:100%; text-align:center; }
     .ghd-edit-btn { flex-shrink:0; font-size:11px; font-weight:700; color:var(--lila); background:var(--lila-suave); border:1.5px solid var(--lila-claro); border-radius:8px; padding:3px 9px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
     .ghd-edit-btn:active { transform:scale(0.96); }
     .ghd-hist-banner { display:flex; align-items:center; gap:8px; flex-wrap:wrap; background:var(--lila-suave); border:1.5px solid var(--lila-claro); border-radius:11px; padding:0.55rem 0.8rem; margin:0 0 0.9rem; font-size:12.5px; font-weight:700; color:var(--lila); }
@@ -1830,7 +1851,7 @@
     /* v0.87: drill-down del planning (día → entrenadores → franjas) */
     .gpplan-diarow { display:flex; gap:6px; margin:0.3rem 0 0.6rem; }
     .gpplan-diarow .gplan-day { flex:1; min-width:0; padding:9px 2px; font-size:13px; }
-    .gplan-day.sel { box-shadow:0 0 0 2.5px var(--verde-suave), 0 0 0 4px var(--verde); }
+    .gplan-day.sel { box-shadow:0 0 0 2.5px var(--verde-suave), 0 0 0 4px var(--verde); text-transform:uppercase; }
     .gpplan-panel { background:var(--blanco); border:1.5px solid var(--verde-suave); border-radius:13px; padding:0.4rem 0.7rem 0.6rem; margin-bottom:10px; }
     .gpplan-panel-hdr { font-size:12.5px; font-weight:800; color:var(--verde); padding:0.45rem 2px 0.4rem; border-bottom:1px solid var(--borde); margin-bottom:0.35rem; }
     .gpplan-entblock { border:1.5px solid var(--borde); border-radius:11px; margin-bottom:8px; overflow:hidden; }
@@ -3885,7 +3906,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.112.0';
+    var APP_VERSION = '0.113.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -5328,7 +5349,7 @@
             h += '<div class="gpplan-entblock" style="border-left:4px solid ' + col.bar + ';">' +
               '<div class="gpplan-ent-hdr" style="background:' + col.bg + ';">' +
                 '<span class="gpplan-ent-nom" style="color:' + col.tx + ';">👤 ' + _gEsc(e.ent) + '</span>' +
-                '<span class="gpplan-ent-meta">' + e.nFranjas + ' franja' + (e.nFranjas!==1?'s':'') + (e.dadas ? ' · ' + e.dadas + '✓' : '') + '</span>' +
+                (e.dadas ? '<span class="gpplan-ent-meta">' + e.dadas + '✓</span>' : '') +
                 '<button type="button" class="gpplan-add-ent" title="Añadir clase a ' + _gEsc(e.ent) + ' este día" onclick="gpAddClaseEnt(\'' + u + '\',' + _gpSelDia + ')">＋</button>' +
                 '<button type="button" class="gpplan-del-ent" title="Quitar una franja de ' + _gEsc(e.ent) + ' este día" onclick="gpDelClaseEnt(\'' + u + '\',' + _gpSelDia + ')">−</button>' +
               '</div>' +
@@ -6690,19 +6711,26 @@
         }
       });
 
-      // v0.102: fila 1 = hora · dadas · ✏ Editar a la misma altura (sin la
-      // píldora de duración ni el nombre por defecto "Clase"); fila 2 =
-      // alumnos bajo la hora (con ≤4, chips repartidos en una sola línea).
+      // v0.113: dos columnas para menos ruido visual. IZQUIERDA: hora,
+      // "N dadas" y debajo los números de día del mes. DERECHA: el lápiz
+      // (editar, solo icono) y debajo los alumnos, uno bajo otro. Los
+      // números de día siguen abriendo el detalle de asistencia.
       var html = '<div class="ghd-tramo">';
-      html += '<div class="ghd-clase-hdr ghd-hdr-linea" style="margin-bottom:7px;">' +
-        (opts.entLabel ? '<button type="button" class="ghd-ent-chip" onclick="abrirGestorDetalle(\'' + uid + '\')">👤 ' + _gEsc(opts.entLabel) + '</button>' : '') +
-        '<span class="ghd-fr" style="font-weight:800;color:var(--texto);flex-shrink:0;">' + _gEsc(c.franja||'—') + '</span>' +
-        (c.nombre && c.nombre !== 'Clase' ? '<span class="ghd-fr ghd-nom">' + _gEsc(c.nombre) + '</span>' : '') +
-        '<span class="ghd-cont" style="flex-shrink:0;">' + dadas + ' dada' + (dadas!==1?'s':'') + '</span>' +
-        (hist ? '' : '<button type="button" class="ghd-edit-btn" onclick="gestorEditarClaseU(\'' + uid + '\',' + c.id + ',\'' + vol + '\')">✏ Editar</button>') +
-        '</div>';
-      if (alsHtml) html += '<div class="ghd-als' + (nAls <= 4 ? ' fit' : '') + '">' + alsHtml + '</div>';
-      html += '<div class="ghd-dias">' + (chips || '<span class="ajustes-desc" style="margin:0;">sin días este mes</span>') + '</div>';
+      if (opts.entLabel) {
+        html += '<button type="button" class="ghd-ent-chip" style="margin-bottom:6px;" onclick="abrirGestorDetalle(\'' + uid + '\')">👤 ' + _gEsc(opts.entLabel) + '</button>';
+      }
+      html += '<div class="ghd-2col">';
+      html +=   '<div class="ghd-col-izq">' +
+                  '<div class="ghd-fr" style="font-weight:800;color:var(--texto);">' + _gEsc(c.franja||'—') + '</div>' +
+                  (c.nombre && c.nombre !== 'Clase' ? '<div class="ghd-fr ghd-nom">' + _gEsc(c.nombre) + '</div>' : '') +
+                  '<div class="ghd-cont-l">' + dadas + ' dada' + (dadas!==1?'s':'') + '</div>' +
+                  '<div class="ghd-dias">' + (chips || '<span class="ajustes-desc" style="margin:0;">sin días este mes</span>') + '</div>' +
+                '</div>';
+      html +=   '<div class="ghd-col-der">' +
+                  (hist ? '' : '<button type="button" class="ghd-edit-btn" title="Editar clase" aria-label="Editar clase" onclick="gestorEditarClaseU(\'' + uid + '\',' + c.id + ',\'' + vol + '\')">✏</button>') +
+                  (alsHtml ? '<div class="ghd-als-col">' + alsHtml + '</div>' : '') +
+                '</div>';
+      html += '</div>';
       html += dets;
       html += '</div>';
       return { html: html, dadas: dadas };
@@ -6718,7 +6746,7 @@
       // En el curso vivo, cada día permite pasar/corregir su lista y,
       // debajo, apuntar recuperaciones o dar de alta a un alumno nuevo
       var btnLista = hist ? '' :
-        ' <button type="button" class="ghd-edit-btn" style="margin-left:auto;" onclick="gestorEditarListaU(\'' + uid + '\',' + clase.id + ',\'' + f + '\',\'' + vol + '\')">✏ ' + (pasada ? 'Corregir lista' : 'Pasar lista') + '</button>';
+        ' <button type="button" class="ghd-edit-btn" style="margin-left:auto;" title="' + (pasada ? 'Corregir lista' : 'Pasar lista') + '" aria-label="' + (pasada ? 'Corregir lista' : 'Pasar lista') + '" onclick="gestorEditarListaU(\'' + uid + '\',' + clase.id + ',\'' + f + '\',\'' + vol + '\')">✏</button>';
       // v0.66.1: botón "🔁 Sustitución" junto a Recuperación y Añadir
       // alumno: despliega el selector y guarda al momento, sin pasar lista
       var pid = opts.idPref + '-sp-' + uid + '-' + clase.id + '-' + f;
@@ -6742,9 +6770,9 @@
       }
       var btnsExtra = hist ? '' :
         '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;">' +
-          '<button type="button" class="ghd-edit-btn" onclick="gestorListaPanelU(\'' + uid + '\',' + clase.id + ',\'' + f + '\',\'recup\',\'' + vol + '\')">↩ Recuperación</button>' +
-          '<button type="button" class="ghd-edit-btn" style="border-color:#bbf7d0;color:#166534;background:#f0fdf4;" onclick="gestorListaPanelU(\'' + uid + '\',' + clase.id + ',\'' + f + '\',\'alta\',\'' + vol + '\')">＋ Añadir alumno</button>' +
-          '<button type="button" class="ghd-edit-btn" style="border-color:#fde68a;color:#92400e;background:#fffbeb;" onclick="var p=document.getElementById(\'' + pid + '\');p.style.display=p.style.display===\'none\'?\'\':\'none\';">🔁 Sustitución</button>' +
+          '<button type="button" class="ghd-edit-btn" title="Recuperación" aria-label="Recuperación" onclick="gestorListaPanelU(\'' + uid + '\',' + clase.id + ',\'' + f + '\',\'recup\',\'' + vol + '\')">↩</button>' +
+          '<button type="button" class="ghd-edit-btn" style="border-color:#bbf7d0;color:#166534;background:#f0fdf4;" title="Añadir alumno" aria-label="Añadir alumno" onclick="gestorListaPanelU(\'' + uid + '\',' + clase.id + ',\'' + f + '\',\'alta\',\'' + vol + '\')">＋</button>' +
+          '<button type="button" class="ghd-edit-btn" style="border-color:#fde68a;color:#92400e;background:#fffbeb;" title="Sustitución" aria-label="Sustitución" onclick="var p=document.getElementById(\'' + pid + '\');p.style.display=p.style.display===\'none\'?\'\':\'none\';">🔁</button>' +
         '</div>' +
         '<div id="' + pid + '" style="display:none;margin-top:7px;">' +
           '<label class="form-label" style="display:block;margin-bottom:3px;">¿Quién imparte esta clase el ' + parseInt(f.split('-')[2],10) + '/' + f.slice(5,7) + '?</label>' +
