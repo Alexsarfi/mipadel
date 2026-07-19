@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.101.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.119.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,31 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.119.0 — PRUEBA DE CONCEPTO: Competición enlaza ejercicios, no sesiones (2026-07)
+    · Solo para el nivel Competición de Planificación: cada fila del catálogo
+      (ej. "Defensa paciente bajo presión") ahora enlaza EJERCICIOS
+      directamente en vez de "sesiones" compuestas de varios ejercicios.
+      Nuevo campo it.ejInc (array de ids de ejercicio) en plan_grupo,
+      paralelo al it.sesInc que ya existía para sesiones.
+    · "✏️ Añadir / quitar ejercicios" en la fila lista TODO el catálogo de
+      ejercicios (los que coinciden con la intención de la fila salen
+      primero), con toggle igual que el de sesiones. Los enlazados se ven
+      como tarjetas de la cuadrícula de Ejercicios (ejercicioCardHTML).
+    · La vista compacta del apartado (bajo cada fila) muestra los ejercicios
+      enlazados en vez de "Sin sesiones enlazadas".
+    · verEjercicio() acepta origen 'plan'/'planif' para volver correctamente
+      a la pantalla de Planificación.
+    · Iniciación/Avanzado/Equipo NO se tocan: siguen enlazando sesiones
+      exactamente igual que antes. El análisis de cobertura (huecos,
+      % trabajado) tampoco se ha adaptado todavía a ejercicios — sigue
+      contando solo sesiones antiguas, incluso en Competición.
+    · Alcance deliberado: de momento solo se ha probado con la fila
+      "Defensa paciente bajo presión" (Solidez y defensa). El resto de
+      filas funcionan igual (mismo mecanismo), pendiente de ir enlazando
+      ejercicios fila a fila.
+    · Sin migración de Supabase (it.ejInc vive dentro del jsonb de
+      plan_grupo.contenido, igual que it.sesInc).
 
   v0.118.0 — Pasar lista: reordenar acciones + solo iconos en móvil (2026-07)
     · La fila de acciones al pasar lista pasa a este orden: ＋ Añadir
@@ -3999,7 +4024,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.118.0';
+    var APP_VERSION = '0.119.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -9186,16 +9211,30 @@
       renderPlanSesiones();
     }
 
+    // v0.119 — PRUEBA DE CONCEPTO: en Competición, las filas enlazan EJERCICIOS
+    // directamente (en vez de sesiones compuestas). Enlaza/desenlaza un ejercicio
+    // a esta fila (lista blanca: solo los que añadas). Solo se usa cuando
+    // planSesCtx.nivel === 'competicion'; Iniciación/Avanzado siguen con sesiones.
+    function planEjToggle(ejId) {
+      var p = leerPlan();
+      var arr = (planContenido(p)[planSesCtx.nivel] || {})[planSesCtx.mes] || [];
+      var it = arr.filter(function(x){ return x.id === planSesCtx.id; })[0];
+      if (!it) return;
+      if (!it.ejInc) it.ejInc = [];
+      var i = it.ejInc.indexOf(ejId);
+      if (i >= 0) it.ejInc.splice(i, 1); else it.ejInc.push(ejId);
+      _planGuardar(p);
+      renderPlanSesiones();
+    }
+
     function renderPlanSesiones() {
       if (!planSesCtx) return;
       var ctx = planSesCtx;
       document.getElementById('plan-ses-titulo').textContent = ctx.t;
       document.getElementById('plan-ses-sub').textContent = planNivelLabel(ctx.nivel) + ' · ' + ctx.etiqueta;
-      var mapEj    = _ejsById();
-      var sesNivel = leerClases().filter(function(c){ return nivelDeSesion(c, mapEj) === ctx.nivel; });
       var it   = _planSesItem();
-      var inc  = (it && it.sesInc) ? it.sesInc : [];
       var edit = planSesEditMode;
+      var esComp = (ctx.nivel === 'competicion');
       var h = '';
 
       // Metadatos del apartado (intención · zona · golpe · foco) — visibles solo aquí dentro
@@ -9210,7 +9249,53 @@
       }
 
       if (!esEN1Cuenta()) h += '<button class="plan-edit-toggle' + (edit ? ' on' : '') + '" onclick="planSesToggleEdit()">' +
-           (edit ? '✓ Terminar' : '✏️ Añadir / quitar sesiones') + '</button>';
+           (edit ? '✓ Terminar' : (esComp ? '✏️ Añadir / quitar ejercicios' : '✏️ Añadir / quitar sesiones')) + '</button>';
+
+      // ── Competición (v0.119, prueba de concepto): ejercicios enlazados directamente ──
+      if (esComp) {
+        var todosEj = leerEjercicios();
+        var incEj   = (it && it.ejInc) ? it.ejInc : [];
+        if (edit) {
+          if (!todosEj.length) {
+            h += '<div class="plan-ses-intro">Aún no tienes ejercicios en el catálogo.</div>';
+          } else {
+            h += '<div class="plan-intro">✏️ <strong>Marca</strong> los ejercicios que quieres enlazar a esta fila.</div>';
+            // Los que coinciden con la intención de la fila, primero.
+            var ordenEj = todosEj.slice().sort(function(a, b){
+              var ai = (it && ejFaceta(a, 'intencion') === it.int) ? 0 : 1;
+              var bi = (it && ejFaceta(b, 'intencion') === it.int) ? 0 : 1;
+              return ai - bi;
+            });
+            ordenEj.forEach(function(e){
+              var on = incEj.indexOf(e.id) >= 0;
+              var metaBits = [ejFaceta(e, 'intencion'), (ZONA_LABEL[ejFaceta(e, 'zona')] || ejFaceta(e, 'zona')), ejFaceta(e, 'golpe')].filter(Boolean);
+              h += '<div class="plan-ses-card plansel' + (on ? ' on' : '') + '" onclick="planEjToggle(' + e.id + ')">' +
+                     '<span class="plansel-check">' + (on ? '✓' : '') + '</span>' +
+                     '<div class="plan-ses-card-body">' +
+                       '<div class="plan-ses-card-nom">' + e.nombre + '</div>' +
+                       '<div class="plan-ses-card-meta">' + metaBits.join(' · ') + '</div>' +
+                     '</div></div>';
+            });
+          }
+        } else {
+          var visEj = todosEj.filter(function(e){ return incEj.indexOf(e.id) >= 0; });
+          if (!visEj.length) {
+            h += '<div class="plan-ses-intro">Esta fila no tiene ejercicios enlazados. Pulsa «Añadir / quitar ejercicios» para enlazar los que quieras.</div>';
+          } else {
+            h += '<div class="plan-ses-intro">' + visEj.length + ' ejercicio' + (visEj.length!==1?'s':'') + ' enlazado' + (visEj.length!==1?'s':'') + ' · toca para ver el detalle.</div>';
+            h += '<div class="grid-ejercicios">';
+            visEj.forEach(function(e){ h += ejercicioCardHTML(e, 'plan'); });
+            h += '</div>';
+          }
+        }
+        document.getElementById('plan-ses-list').innerHTML = h;
+        return;
+      }
+
+      // ── Resto de niveles (Iniciación/Avanzado/Equipo…): sesiones, como siempre ──
+      var mapEj    = _ejsById();
+      var sesNivel = leerClases().filter(function(c){ return nivelDeSesion(c, mapEj) === ctx.nivel; });
+      var inc  = (it && it.sesInc) ? it.sesInc : [];
 
       if (edit) {
         if (!sesNivel.length) {
@@ -9256,6 +9341,16 @@
       return _planSesCache.clases.filter(function(c){ return inc.indexOf(c.id) >= 0; });
     }
 
+    // v0.119 (POC Competición) — Ejercicios enlazados a una fila (solo los que
+    // el usuario añadió a mano vía planEjToggle).
+    var _planEjCache = null;
+    function _planEjerciciosDeBloque(nivel, it) {
+      var inc = it.ejInc || [];
+      if (!inc.length) return [];
+      if (!_planEjCache) _planEjCache = { ejs:leerEjercicios() };
+      return _planEjCache.ejs.filter(function(e){ return inc.indexOf(e.id) >= 0; });
+    }
+
     function _planItemHTML(nivel, mes, it, hechos, editMode) {
       var hecho = !!hechos[it.id];
       var ic = PLAN_INT[it.int] || PLAN_INT.dominar;
@@ -9285,18 +9380,34 @@
       h2 += '<button class="plan-item-check' + (hecho ? ' on' : '') + '" onclick="planToggleHecho(\'' + it.id + '\');event.stopPropagation()" title="Marcar como trabajado">✓</button>';
       h2 += '</div>'; // .plan-item-row
 
-      // ── Sesiones enlazadas (inline, tocables; sombreadas si trabajadas) ──
-      var ses = _planSesionesDeBloque(nivel, it);
-      if (ses.length) {
-        h2 += '<div class="plan-item-ses">';
-        ses.forEach(function(c){
-          h2 += '<div class="plan-ses-mini' + (c.trabajada ? ' trabajada' : '') + '" onclick="verSesion(' + c.id + ',\'planif\')" title="' + nombreSesion(c).replace(/"/g,'') + '">' +
-            '<span class="plan-ses-mini-ic">' + (c.trabajada ? '✓' : '🎾') + '</span>' +
-            '<span class="plan-ses-mini-nom">' + nombreSesion(c) + '</span></div>';
-        });
-        h2 += '</div>';
+      // ── Enlazados (inline, tocables) ──
+      // v0.119 (POC): en Competición son ejercicios directos; en el resto, sesiones.
+      if (nivel === 'competicion') {
+        var ejsB = _planEjerciciosDeBloque(nivel, it);
+        if (ejsB.length) {
+          h2 += '<div class="plan-item-ses">';
+          ejsB.forEach(function(e){
+            h2 += '<div class="plan-ses-mini" onclick="verEjercicio(' + e.id + ',\'planif\')" title="' + e.nombre.replace(/"/g,'') + '">' +
+              '<span class="plan-ses-mini-ic">🎯</span>' +
+              '<span class="plan-ses-mini-nom">' + e.nombre + '</span></div>';
+          });
+          h2 += '</div>';
+        } else {
+          h2 += '<div class="plan-item-ses-vacio">Sin ejercicios enlazados</div>';
+        }
       } else {
-        h2 += '<div class="plan-item-ses-vacio">Sin sesiones enlazadas</div>';
+        var ses = _planSesionesDeBloque(nivel, it);
+        if (ses.length) {
+          h2 += '<div class="plan-item-ses">';
+          ses.forEach(function(c){
+            h2 += '<div class="plan-ses-mini' + (c.trabajada ? ' trabajada' : '') + '" onclick="verSesion(' + c.id + ',\'planif\')" title="' + nombreSesion(c).replace(/"/g,'') + '">' +
+              '<span class="plan-ses-mini-ic">' + (c.trabajada ? '✓' : '🎾') + '</span>' +
+              '<span class="plan-ses-mini-nom">' + nombreSesion(c) + '</span></div>';
+          });
+          h2 += '</div>';
+        } else {
+          h2 += '<div class="plan-item-ses-vacio">Sin sesiones enlazadas</div>';
+        }
       }
       h2 += '</div>'; // .plan-item
       return h2;
@@ -10475,7 +10586,8 @@
 
     function verEjercicio(id, origen) {
       ejActivoId      = id;
-      origenDetalleEj = origen === 'explorar' ? 'pantalla-explorar-cat' : origen === 'sesion' ? 'pantalla-detalle-sesion' : 'pantalla-ejercicios';
+      origenDetalleEj = origen === 'explorar' ? 'pantalla-explorar-cat' : origen === 'sesion' ? 'pantalla-detalle-sesion' :
+                        origen === 'plan' ? 'pantalla-plan-sesiones' : origen === 'planif' ? 'pantalla-planificacion' : 'pantalla-ejercicios';
 
       var ej   = leerEjercicios().filter(function(e){ return e.id === id; })[0];
       var cats = leerCategorias();
