@@ -39,6 +39,27 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.115.1 — Fix: alumno escrito y sin pulsar ＋ ya se guarda (2026-07)
+    · Al editar/crear una clase, si escribías el nombre de un alumno y
+      pulsabas "Guardar" sin haber tocado antes el ＋ (o Enter), ese
+      nombre se perdía y el alumno no aparecía en la franja. Ahora, al
+      guardar, la casilla pendiente se añade automáticamente.
+
+  v0.115.0 — Quitar de franja = baja con fin de clases (no borra historial) (2026-07)
+    · El 🗑 de una franja ya no borra al alumno del cupo: le pone fecha de
+      BAJA hoy. Así los MESES ANTERIORES siguen apareciendo intactos y el
+      alumno deja de aparecer solo a partir de hoy.
+    · En el mes de la baja, su último día de clase se marca con 🏁 y un
+      aviso "🏁 Fin de clases · DD/MM".
+    · El 🗑 solo aparece mientras el alumno sigue activo en esa franja; una
+      vez de baja, desaparece.
+    · Ningún registro de asistencia se toca. Sin cambios en Supabase.
+
+  v0.114.2 — Ficha del alumno: quitar de franja solo con icono 🗑 (2026-07)
+    · El botón "Quitar de esta franja" queda solo con el icono de papelera
+      (🗑), pequeño y alineado a la derecha al final de la franja, para
+      menos ruido visual. El texto pasa al tooltip.
+
   v0.114.1 — Planning del gestor: día activo con sombreado dorado (2026-07)
     · Al pulsar un día de la semana, el botón activo cambia su sombreado a
       DORADO (además de pasar a mayúsculas), manteniendo el mismo tamaño,
@@ -1775,8 +1796,12 @@
     .galm-fr-wrap { display:flex; flex-direction:column; gap:1px; }
     .galm-dow { font-size:11px; font-weight:800; letter-spacing:0.05em; color:var(--gris); text-transform:uppercase; }
     /* v0.114: botón para quitar al alumno de la franja */
-    .galm-quitar { display:block; width:100%; margin-top:10px; padding:0.55rem; border:1.5px solid #fecaca; border-radius:11px; background:#fff5f5; color:#b91c1c; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent; }
+    /* v0.114.2: solo el icono de papelera, alineado a la derecha */
+    .galm-quitar { display:block; margin:10px 0 0 auto; padding:5px 11px; border:1.5px solid #fecaca; border-radius:10px; background:#fff5f5; color:#b91c1c; font-size:15px; line-height:1; cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent; }
     .galm-quitar:active { background:#fee2e2; }
+    /* v0.115: día de fin de clases (baja) resaltado + aviso */
+    .galm-chip.fin { box-shadow:0 0 0 2px #b45309; }
+    .galm-fin { margin-top:8px; font-size:11.5px; font-weight:800; color:#b45309; }
     .galm-nom { font-size:12.5px; color:var(--gris); }
     .galm-dur { font-size:11px; font-weight:700; color:var(--verde); background:var(--verde-suave); border-radius:20px; padding:2px 9px; }
     .galm-ent { font-size:11px; font-weight:700; color:var(--lila); background:var(--lila-suave); border-radius:20px; padding:2px 9px; }
@@ -3928,7 +3953,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.114.1';
+    var APP_VERSION = '0.115.1';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -7560,6 +7585,15 @@
         regsLoc.forEach(function(r){
           if (r.claseId === c.id && r.fecha && r.fecha.slice(0,7) === mesISO) regPF[r.fecha] = r;
         });
+        // v0.115: si el alumno tiene BAJA en este mes, su último día de
+        // clase activo lleva marca de "fin de clases".
+        var baja = entry ? alBaja(entry) : '';
+        var finFecha = '';
+        if (baja && baja.slice(0,7) === mesISO) {
+          fechasClaseEnMes(c, mesISO).forEach(function(f){
+            if (f <= baja && alActivo(entry, f) && f > finFecha) finFecha = f;
+          });
+        }
         var chips = '', quedan = 0, nPrev = 0;
         fechasClaseEnMes(c, mesISO).forEach(function(f){
           // v0.104: si el alumno ya no está en el cupo (entry null, clase
@@ -7584,8 +7618,8 @@
           else if (f >= hoy) { cls = 'pend'; quedan++; }
           else cls = 'sinlista';               // pasado sin lista
           nPrev++;
-          chips += '<div class="galm-chip ' + cls + '">' +
-                     '<span class="galm-chip-dia">' + wd + '</span>' +
+          chips += '<div class="galm-chip ' + cls + (f === finFecha ? ' fin' : '') + '">' +
+                     '<span class="galm-chip-dia">' + (f === finFecha ? '🏁' : wd) + '</span>' +
                      '<span class="galm-chip-num">' + pref + parseInt(p[2],10) + '</span>' +
                    '</div>';
         });
@@ -7604,8 +7638,10 @@
               (quedan ? 'quedan ' + quedan : 'sin días pendientes') + '</span>' +
           '</div>' +
           '<div class="galm-dias">' + chips + '</div>' +
-          // v0.114: quitar al alumno de ESTA franja sin tocar su historial
-          (entry ? '<button type="button" class="galm-quitar" onclick="gestorAlQuitarFranja(' + c.id + ')">🗑 Quitar de esta franja</button>' : '') +
+          // v0.115: aviso de fin de clases (baja) en el mes en que ocurre
+          (finFecha ? '<div class="galm-fin">🏁 Fin de clases · ' + parseInt(finFecha.split('-')[2],10) + '/' + (+finFecha.slice(5,7)) + '</div>' : '') +
+          // v0.115: botón de baja (fin de clases hoy) solo si sigue activo
+          (entry && !alBaja(entry) ? '<button type="button" class="galm-quitar" title="Fin de clases (baja hoy)" aria-label="Fin de clases (baja hoy)" onclick="gestorAlQuitarFranja(' + c.id + ')">🗑</button>' : '') +
         '</div>';
       });
       if (!hayClases) return null;
@@ -7630,26 +7666,35 @@
       return { html: bloques, prev: totPrev, quedan: totQuedan };
     }
 
-    // v0.114: quitar al alumno del cupo de UNA franja (clase) sin borrar
-    // ninguno de sus registros de asistencia. Solo deja de estar en el
-    // cupo de esa clase; su historial (presentes/ausentes) se conserva.
+    // v0.115: quitar al alumno de UNA franja = darle de BAJA con fecha de
+    // hoy (fin de clases). No se borra nada: los meses y registros
+    // anteriores quedan intactos; deja de aparecer SOLO a partir de hoy y
+    // se marca el "fin de clases" en su último día.
+    function _alBajaEnClase(alu, hoy) {
+      return function(a){
+        if (alNom(a) !== alu) return a;
+        if (typeof a === 'object') { a.baja = hoy; return a; }
+        return { nombre: a, baja: hoy };   // formato antiguo (string) → objeto
+      };
+    }
     function gestorAlQuitarFranja(claseId) {
       var alu = _gestorAlumno, uid = _gestorUid;
       if (!alu || !_gestorData) return;
-      if (!confirm('¿Quitar a "' + alu + '" de esta franja?\n\nSe conserva TODO su historial de asistencia hasta hoy; solo deja de estar en el cupo de esta clase.')) return;
+      var hoy = hoyLocal();
+      if (!confirm('¿Dar de baja a "' + alu + '" en esta franja a partir de hoy (' + _gFecha(hoy) + ')?\n\nSe marca su fin de clases hoy y deja de aparecer desde esta fecha. Los meses y registros ANTERIORES no se tocan.')) return;
       _gEditUid = (_sbUser && uid === _sbUser.id) ? null : uid;
       try {
         var cfg = leerAsistConfig();
         (cfg.clases || []).forEach(function(c){
-          if (c.id === claseId) c.alumnos = (c.alumnos || []).filter(function(a){ return alNom(a) !== alu; });
+          if (c.id === claseId) c.alumnos = (c.alumnos || []).map(_alBajaEnClase(alu, hoy));
         });
         escribirAsistConfig(cfg);
       } finally { _gEditUid = null; }
       // Asegurar el cambio en memoria para el re-render (clase propia del gestor)
       (_gestorData.clases || []).forEach(function(c){
-        if (c.user_id === uid && c.id === claseId) c.alumnos = (c.alumnos || []).filter(function(a){ return alNom(a) !== alu; });
+        if (c.user_id === uid && c.id === claseId) c.alumnos = (c.alumnos || []).map(_alBajaEnClase(alu, hoy));
       });
-      planToast('✓ Quitado de la franja · historial conservado');
+      planToast('🏁 Fin de clases hoy · historial conservado');
       renderGestorAlumno();
     }
 
@@ -13488,6 +13533,11 @@
     }
 
     function asistGuardarClase() {
+      // v0.115.1: si quedó un nombre escrito en la casilla de alumno sin
+      // pulsar ＋/Enter, añadirlo antes de guardar (si no, se perdía).
+      var _inNuevo = document.getElementById('asist-form-nuevo-alumno');
+      if (_inNuevo && _inNuevo.value.trim()) asistAnadirAlumno();
+
       // v0.99: si el selector de entrenador está visible (＋ general desde
       // Inicio), asegurar que se guarda en el entrenador elegido.
       var _entG = document.getElementById('asist-form-ent-grupo');
