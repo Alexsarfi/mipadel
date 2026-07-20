@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.131.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.132.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,31 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.132.0 — Competición: marcado por días PRIVADO por entrenador (2026-07)
+    · Bug de diseño detectado por el usuario: al abrir otro entrenador del
+      mismo grupo aparecían los MISMOS días marcados. Causa: el marcado
+      por días (comp_dias) vivía dentro de plan_grupo, que es una fila
+      COMPARTIDA por todo el grupo. No era cosa del navegador.
+    · Ahora comp_dias es PRIVADO de cada entrenador (como la asistencia):
+      vive en su propia tabla plan_dias_usuario (una fila por user_id,
+      RLS "solo el dueño"), sincronizado entre los dispositivos de esa
+      misma cuenta pero invisible para el resto del grupo. Lo COMPARTIDO
+      del plan (catálogo de áreas, ejercicios enlazados, biblioteca,
+      hechos) sigue igual en plan_grupo, sin cambios.
+    · Requiere ejecutar la migración migracion_comp_dias_privado.sql UNA
+      vez en Supabase ANTES de usar esta versión (crea plan_dias_usuario).
+      Sin ella, el marcado sigue funcionando SOLO en local (no sincroniza
+      entre tus dispositivos; aviso "bg sync comp_dias" en consola).
+    · Migración de datos: la primera vez que cada cuenta entra con v0.132,
+      si ya tenía marcado local (heredado del modelo compartido) siembra
+      con él su fila privada. Nota: si varias cuentas compartían los mismos
+      días, cada una arrancará con esa copia; revisa/limpia en las cuentas
+      secundarias si hace falta. El servidor manda a partir de ahí.
+    · Detalles técnicos: nuevo _bgUpsertCompDias() + candado _diasSyncOK
+      (análogo a _planSyncOK); _bgUpsertPlan ya no envía comp_dias;
+      _syncDownload consulta plan_dias_usuario y resuelve compDias aparte.
+      plan_grupo.comp_dias queda sin uso (se puede borrar, ver el .sql).
 
   v0.131.0 — Competición: resumen del día más limpio + miniaturas de sesión (2026-07)
     · (1) El botón de texto "✏️ Cambiar selección" del resumen de un día
@@ -4325,7 +4350,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.131.0';
+    var APP_VERSION = '0.132.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -4358,7 +4383,7 @@
         _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         _sb.auth.onAuthStateChange(function(event, session) {
           _sbUser = session ? { id: session.user.id, email: session.user.email } : null;
-          if (!_sbUser) { _sbGrupo = null; _sbGrupoId = null; _esEN1 = false; _esGestor = false; _planSyncOK = false; }
+          if (!_sbUser) { _sbGrupo = null; _sbGrupoId = null; _esEN1 = false; _esGestor = false; _planSyncOK = false; _diasSyncOK = false; }
           if (event === 'SIGNED_IN') {
             _authActualizarBadge();
             _fetchGrupo(_sbUser.id).then(function() {
@@ -4554,11 +4579,16 @@
                      : _sb.from('partidos').select('*').eq('user_id', uid).order('fecha', { ascending: false });
       // Plan: una sola fila por grupo (o por cuenta en solitario)
       var qPlan = _sb.from('plan_grupo').select('*').eq('scope_id', gid || uid).maybeSingle();
+      // v0.132: el marcado por días de Competición (comp_dias) es PRIVADO de
+      // cada entrenador (como la asistencia), ya no compartido por el grupo.
+      // Vive en su propia tabla plan_dias_usuario, una fila por user_id.
+      var qDias = _sb.from('plan_dias_usuario').select('*').eq('user_id', uid).maybeSingle();
       return Promise.all([
         qCat, qEj, qCls, qPrt,
         _sb.from('asistencia_clases').select('*').eq('user_id', uid),    // siempre privada
         _sb.from('asistencia_registros').select('*').eq('user_id', uid), // siempre privada
-        qPlan
+        qPlan,
+        qDias
       ]).then(function(results) {
         // ── Mapear filas del servidor al formato local ──
         // _ownerUid preserva el user_id original del creador para no
@@ -4647,13 +4677,34 @@
           pLocal.planEtapasV     = planServ.plan_etapas_v   != null ? planServ.plan_etapas_v   : pLocal.planEtapasV;
           pLocal.bibVersion      = planServ.bib_version     != null ? planServ.bib_version     : pLocal.bibVersion;
           pLocal.bibEstrategias  = planServ.bib_estrategias != null ? planServ.bib_estrategias : pLocal.bibEstrategias;
-          pLocal.compDias        = planServ.comp_dias || pLocal.compDias || {};
+          // compDias NO se lee del plan de grupo (v0.132): es privado por
+          // entrenador y se resuelve más abajo con plan_dias_usuario.
           escribirPlan(pLocal, true);
         } else if (!qPlanRes.error) {
           // No hay fila en el servidor: sembrar con el plan local (primera
           // cuenta del grupo que entra con v0.44+)
           var pPropio = leerPlan();
           if (pPropio.contenido) _bgUpsertPlan(pPropio);
+        }
+
+        // ── comp_dias privado (v0.132): store por usuario ──
+        // El servidor manda si ya hay fila propia. Si no la hay todavía,
+        // se siembra con lo que hubiera en local (migración desde el antiguo
+        // comp_dias compartido del plan_grupo, que quedaba cacheado aquí).
+        var qDiasRes = results[7] || {};
+        if (!qDiasRes.error) {
+          _diasSyncOK = true;
+          var diasServ = qDiasRes.data;
+          var pD = leerPlan();
+          if (diasServ) {
+            pD.compDias = diasServ.comp_dias || {};
+            escribirPlan(pD, true);
+          } else {
+            // Primera vez para esta cuenta: si hay marcado local previo
+            // (heredado del modelo compartido), lo conserva como suyo y
+            // siembra su fila privada; si no, arranca vacío.
+            if (pD.compDias && Object.keys(pD.compDias).length) _bgUpsertCompDias(pD);
+          }
         }
 
         actualizarInicio && actualizarInicio();
@@ -4870,6 +4921,10 @@
     // descarga subía su plan por defecto y MACHACABA el plan del grupo
     // (los apartados perdían las sesiones enlazadas para todos).
     var _planSyncOK = false;
+    // v0.132: candado análogo para el store privado de días (comp_dias).
+    // Solo se permite subir tras haber consultado plan_dias_usuario con éxito
+    // en esta sesión, para no pisar con vacío lo que haya en el servidor.
+    var _diasSyncOK = false;
     function _bgUpsertPlan(p) {
       if (!_sb || !_sbUser || _esGestor || !_planSyncOK) return;
       var uid = _sbUser.id;
@@ -4883,13 +4938,31 @@
         plan_etapas_v:   p.planEtapasV || 2,
         bib_version:     p.bibVersion || 3,
         bib_estrategias: !!p.bibEstrategias,
-        comp_dias:       p.compDias || {},
+        // v0.132: comp_dias ya NO viaja en el plan de grupo (es privado por
+        // entrenador; se sube aparte con _bgUpsertCompDias a plan_dias_usuario).
         updated_by:      uid,
         updated_at:      new Date().toISOString()
       };
       setTimeout(function() {
         _sb.from('plan_grupo').upsert(row, { onConflict: 'scope_id' })
           .then(function(r){ if (r.error) console.warn('bg sync plan', r.error); });
+      }, 0);
+    }
+
+    // v0.132: sube el marcado por días de Competición (privado por
+    // entrenador) a su propia fila en plan_dias_usuario (una por user_id).
+    // Independiente del plan de grupo: dos entrenadores del mismo grupo
+    // comparten catálogo/ejercicios pero NO sus días marcados.
+    function _bgUpsertCompDias(p) {
+      if (!_sb || !_sbUser || _esGestor || !_diasSyncOK) return;
+      var row = {
+        user_id:    _sbUser.id,
+        comp_dias:  p.compDias || {},
+        updated_at: new Date().toISOString()
+      };
+      setTimeout(function() {
+        _sb.from('plan_dias_usuario').upsert(row, { onConflict: 'user_id' })
+          .then(function(r){ if (r.error) console.warn('bg sync comp_dias', r.error); });
       }, 0);
     }
 
@@ -9104,7 +9177,7 @@
     // al fusionar lo que baja del servidor, igual que el resto de escribirX()).
     function escribirPlan(p, soloLocal) {
       _lzSet('padel-plan', JSON.stringify(p));
-      if (!soloLocal) _bgUpsertPlan(p);
+      if (!soloLocal) { _bgUpsertPlan(p); _bgUpsertCompDias(p); }
     }
 
     function planNivelLabel(key) {
