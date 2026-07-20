@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.150.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.151.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,19 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.151.0 — Competición: al entrar, sombreada la semana en curso (2026-07)
+    · Nada más abrir Planificación → Competición, sin haber tocado ningún
+      día, ya aparece sombreada la semana EN CURSO (la de hoy), con el
+      mismo sombreado de la v0.150.
+    · Se mantiene UNA sola semana sombreada en todo momento: la del día que
+      estés mirando o, si no hay ninguno abierto, la de hoy. Al cerrar el
+      día, el sombreado vuelve solo a la semana en curso.
+    · Si navegas a otro mes, no se sombrea ninguna semana (la actual no
+      está ahí), salvo que abras un día.
+    · Funciona aunque hoy no sea día de clase: se mira la semana completa,
+      no si hoy hay clase.
+    · Sin cambios de datos/esquema.
 
   v0.150.0 — Competición: la semana en la que trabajas, sombreada (2026-07)
     · Al abrir un día, se sombrea ENTERA la columna de su semana (todo el
@@ -4745,7 +4758,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.150.0';
+    var APP_VERSION = '0.151.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -11001,6 +11014,12 @@
         (semanas[kL] = semanas[kL] || []).push(dateToISOLocal(dd));
       }
       var lunes = Object.keys(semanas).sort();
+      // v0.151: lunes de la semana EN CURSO. Al entrar (sin ningún día
+      // abierto) se sombrea esa semana, para ubicarse de un vistazo.
+      var hoyD    = new Date(+hoyISO.slice(0,4), +hoyISO.slice(5,7)-1, +hoyISO.slice(8,10));
+      var lunHoy  = new Date(hoyD);
+      lunHoy.setDate(lunHoy.getDate() - ((hoyD.getDay() + 6) % 7));
+      var lunHoyISO = dateToISOLocal(lunHoy);
 
       var abiertoHTML = '';
       var colsHTML = '';
@@ -11036,7 +11055,12 @@
         // ellas lo pone el CSS (borde izquierdo a partir de la segunda).
         // v0.150: la semana en la que se está trabajando se sombrea entera
         // (toda su columna), para ubicarse de un vistazo.
-        var semActiva = !!(compDiaAbierta && fechas.indexOf(compDiaAbierta) >= 0);
+        // v0.151: si no hay ningún día abierto, la sombreada es la semana EN
+        // CURSO. Así siempre hay una sola semana marcada: la que estás
+        // mirando, o la de hoy nada más entrar.
+        var semActiva = compDiaAbierta
+          ? (fechas.indexOf(compDiaAbierta) >= 0)
+          : (kL === lunHoyISO);
         colsHTML += '<div class="comp-sem-col' + (semActiva ? ' activa' : '') + '">';
         colsHTML += '<p class="comp-sem-titulo">S' + (i + 1) +
           ' <span class="comp-dow-cont">' + marcadas + '/' + activas + '</span></p>';
