@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.136.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.137.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,35 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.137.0 — Clases por recuperar: ¿se pierde o se recupera? (2026-07)
+    · ENTRENADOR: al marcar "🚫 Sin clase" ya no basta con confirmar; ahora
+      se abre un panel con la decisión: "↩ Se recupera" (queda PENDIENTE)
+      o "✖ Se pierde". Nuevo campo reg.sinClaseRecup.
+    · GESTOR: el botón "🎾 Clases" de la cabecera pasa a ser "↩ Clases por
+      recuperar", y su número ya no son las clases dadas sino el SALDO
+      pendiente de todo el club.
+    · Esa pantalla tiene ahora DOS niveles:
+      1) Lista de todos los entrenadores (con sus horas del mes, como
+         antes, más un chip "↩ N por recuperar"). También aparecen los que
+         tienen pendientes aunque ese mes no hayan dado clase.
+      2) Al pulsar uno: su saldo del curso, navegación por meses, un
+         CALENDARIO mensual con cada día coloreado (por recuperar · dada ·
+         recuperada · perdida, con leyenda) y debajo las listas de
+         PENDIENTES, DADAS y RECUPERADAS (y perdidas, si las hay).
+    · Saldo AUTOMÁTICO (decisión consultada): pendientes = clases marcadas
+      "se recupera" menos clases de recuperación ya dadas (recup_clase),
+      dentro del curso en marcha. Nunca baja de 0. No hay que enlazar cada
+      recuperación con el día concreto que recupera.
+    · Los días sin clase del CLUB que marca el gestor (festivos, cierres)
+      NO son recuperables: siempre se pierden (decisión consultada).
+    · Requiere ejecutar migracion_sin_clase_recup.sql UNA vez en Supabase
+      ANTES de usar esta versión (añade sin_clase_recup a
+      asistencia_registros). Sin ella la elección funciona solo en local y
+      el gestor no vería los pendientes del resto de entrenadores.
+    · Compatibilidad: los días ya marcados "sin clase" antes de v0.137 se
+      leen como "se pierde" (sin_clase_recup por defecto false), así que
+      ningún saldo antiguo aparece inflado.
 
   v0.136.0 — Gestor: "Todos" primero y desplegado en línea (2026-07)
     · En el detalle de entrenadores, el chip "Todos" pasa del FINAL de la
@@ -2080,6 +2109,39 @@
     .gestor-kpi-lbl { font-size:10.5px; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:0.04em; margin-top:5px; }
     .gestor-card { display:flex; align-items:center; gap:12px; background:var(--blanco); border:1.5px solid var(--borde); border-radius:14px; padding:0.9rem 1rem; margin-bottom:9px; cursor:pointer; transition:all .15s; }
     .gestor-card:active { border-color:var(--lila-claro); background:var(--lila-suave); }
+    /* v0.137: Clases por recuperar — calendario del mes y listas */
+    .grec-cal { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin:0.2rem 0 0.5rem; }
+    .grec-wd { text-align:center; font-size:10px; font-weight:800; color:var(--gris); padding-bottom:2px; }
+    .grec-cell { aspect-ratio:1; display:flex; align-items:center; justify-content:center; border-radius:8px;
+      font-size:12px; font-weight:700; color:var(--gris); background:var(--arena); border:1.5px solid transparent; }
+    .grec-cell.vacia { background:none; }
+    .grec-cell.dada  { background:var(--verde-suave); color:var(--verde); }
+    .grec-cell.recup { background:var(--lila-claro); color:var(--lila); }
+    .grec-cell.pend  { background:#fffbeb; color:#92400e; border-color:#f59e0b; }
+    .grec-cell.perd  { background:#f1f5f9; color:#94a3b8; text-decoration:line-through; }
+    .grec-cell.hoy   { box-shadow:0 0 0 2px var(--dorado); }
+    .grec-leyenda { display:flex; flex-wrap:wrap; gap:10px; font-size:10.5px; color:var(--gris); margin-bottom:0.4rem; }
+    .grec-leyenda span { display:inline-flex; align-items:center; gap:4px; }
+    .grec-leyenda i { width:10px; height:10px; border-radius:3px; display:inline-block; }
+    .grec-leyenda i.pend  { background:#fffbeb; border:1.5px solid #f59e0b; }
+    .grec-leyenda i.recup { background:var(--lila-claro); }
+    .grec-leyenda i.dada  { background:var(--verde-suave); }
+    .grec-leyenda i.perd  { background:#f1f5f9; }
+    .grec-saldo { background:var(--blanco); border:1.5px solid var(--borde); border-radius:12px; padding:0.6rem 0.8rem;
+      font-size:13px; color:var(--texto); margin-bottom:0.6rem; }
+    .grec-saldo.hay { border-color:#f59e0b; background:#fffbeb; }
+    .grec-saldo b { font-size:22px; font-weight:800; margin-right:5px; }
+    .grec-saldo span { display:block; font-size:11px; color:var(--gris); margin-top:2px; }
+    .grec-pend-chip { display:inline-block; font-size:10.5px; font-weight:800; color:#92400e; background:#fffbeb;
+      border:1px solid #f59e0b; border-radius:20px; padding:1px 8px; }
+    .grec-lista { display:flex; flex-direction:column; gap:4px; margin-top:5px; }
+    .grec-item { display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:9px;
+      font-size:12px; background:var(--blanco); border:1px solid var(--borde); }
+    .grec-item.pend  { border-color:#f59e0b; background:#fffbeb; }
+    .grec-item.recup { border-color:var(--lila-claro); }
+    .grec-item.perd  { color:var(--gris); }
+    .grec-item-fecha { font-weight:800; flex-shrink:0; min-width:38px; }
+    .grec-item-fr { color:var(--gris); }
     /* v0.107: tarjeta solo informativa (página "Todos"), sin enlace */
     .gestor-card.plana { cursor:default; }
     .gestor-card.plana:active { border-color:var(--borde); background:var(--blanco); }
@@ -3647,7 +3709,7 @@
   <div id="pantalla-gestor-clases" class="pantalla">
     <div class="cabecera">
       <button class="btn-volver" onclick="irA('pantalla-gestor')">‹ Panel</button>
-      <div class="cab-titulo">Clases dadas</div>
+      <div class="cab-titulo" id="gcl-titulo">Clases por recuperar</div>
       <div class="cab-sub" id="gcl-sub">—</div>
     </div>
     <div class="contenido">
@@ -4433,7 +4495,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.136.0';
+    var APP_VERSION = '0.137.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -4735,6 +4797,7 @@
           recups:r.recups||[],
           impartidaPor:r.impartida_por||null,
           sinClase:!!r.sin_clase,
+          sinClaseRecup:!!r.sin_clase_recup,   // v0.137: la clase anulada se recuperará
           recupClase:!!r.recup_clase,
           recupHora:r.recup_hora||''
         }; });
@@ -4983,6 +5046,7 @@
         recups:r.recups||[],       // v0.60: recuperaciones previstas ese día
         impartida_por:r.impartidaPor||null,   // v0.66: {uid,nombre} del sustituto (null = titular)
         sin_clase:!!r.sinClase,
+        sin_clase_recup:!!r.sinClaseRecup,  // v0.137: anulada pero pendiente de recuperar
         recup_clase:!!r.recupClase,   // v0.82: sesión de recuperación de clase
         recup_hora:r.recupHora||null  // v0.98: hora elegida para la recuperación
       }; }
@@ -5290,7 +5354,8 @@
       }
       return { id:x.id, sustituto:sustId, clase_id:x.claseId, fecha:x.fecha,
                presentes:x.presentes||[], ausentes:x.ausentes||[], justificadas:x.justificadas||[],
-               recups:x.recups||[], sin_clase:!!x.sinClase, recup_clase:!!x.recupClase,
+               recups:x.recups||[], sin_clase:!!x.sinClase, sin_clase_recup:!!x.sinClaseRecup,
+               recup_clase:!!x.recupClase,
                recup_hora:x.recupHora||null };
     }
     function _gEditUpsert(tabla, filas) {
@@ -5356,7 +5421,8 @@
                    presentes:r.presentes || [], ausentes:r.ausentes || [],
                    justificadas:r.justificadas || [], recups:r.recups || [],
                    impartidaPor:r.impartida_por || null,
-                   sinClase:!!r.sin_clase, recupClase:!!r.recup_clase, recupHora:r.recup_hora||'' };
+                   sinClase:!!r.sin_clase, sinClaseRecup:!!r.sin_clase_recup,
+                   recupClase:!!r.recup_clase, recupHora:r.recup_hora||'' };
         });
       }
       var d = _lzGet('padel-asistencia-reg'); return d ? JSON.parse(d) : [];
@@ -5503,7 +5569,8 @@
           return { id:r.id, user_id:'ext:'+r.sustituto, sustituto:r.sustituto, clase_id:r.clase_id,
                    fecha:r.fecha, presentes:r.presentes, ausentes:r.ausentes,
                    justificadas:r.justificadas, recups:r.recups, impartida_por:null,
-                   sin_clase:r.sin_clase, recup_clase:r.recup_clase, recup_hora:r.recup_hora };
+                   sin_clase:r.sin_clase, sin_clase_recup:r.sin_clase_recup,
+                   recup_clase:r.recup_clase, recup_hora:r.recup_hora };
         });
         _gestorData = {
           perfiles:  res[0].data || [],
@@ -5835,7 +5902,7 @@
       if (hdrEl) hdrEl.innerHTML =
         '<button type="button" class="gest-hdr-btn" onclick="abrirGestorEntrenadoresDirecto()"><span class="ghb-ic">👥</span>Entrenadores<b>' + uids.length + '</b></button>' +
         '<button type="button" class="gest-hdr-btn" onclick="abrirGestorTodosAlumnos()"><span class="ghb-ic">👤</span>Alumnos<b>' + totAlumnos + '</b></button>' +
-        '<button type="button" class="gest-hdr-btn" onclick="abrirGestorClasesMes()"><span class="ghb-ic">🎾</span>Clases<b>' + totClases + '</b></button>' +
+        '<button type="button" class="gest-hdr-btn" onclick="abrirGestorClasesMes()"><span class="ghb-ic">↩</span>Clases por recuperar<b>' + _gRecupSaldoClub() + '</b></button>' +
         '<button type="button" class="gest-hdr-btn" onclick="abrirGestorCalendario()"><span class="ghb-ic">📅</span>Días sin clase</button>';
       var h = '';
       if (!uids.length) {
@@ -6074,8 +6141,94 @@
     // Con la atribución de sustituciones: al titular se le apartan y
     // al que cubre (entrenador o externo) se le suman.
     var _gClasesMesOff = 0;
-    function abrirGestorClasesMes() { _gClasesMesOff = _gPanelMesOffset(); irA('pantalla-gestor-clases'); }
+    function abrirGestorClasesMes() { _gclUid = null; _gClasesMesOff = _gPanelMesOffset(); irA('pantalla-gestor-clases'); }
     function gestorClasesMesNav(d) { _gClasesMesOff += d; renderGestorClases(); }
+
+    // ── v0.137: CLASES POR RECUPERAR ──────────────────────────────
+    // Al anular su franja, el entrenador dice si la clase SE PIERDE o
+    // SE RECUPERA (reg.sinClaseRecup). El saldo pendiente es automático:
+    // marcadas para recuperar − recuperaciones ya dadas (reg.recupClase).
+    // Los días sin clase del CLUB (festivos del gestor) no son recuperables.
+    var _gclUid = null;   // entrenador abierto (null = lista de todos)
+    function gclAbrirEnt(uid) { _gclUid = uid; renderGestorClases(); }
+    function gclVolverLista() { _gclUid = null; renderGestorClases(); }
+    function _gRecupClasifica(r) {
+      if (!r) return '';
+      if (r.sinClase) return r.sinClaseRecup ? 'pend' : 'perd';
+      if (_regPasada(r)) return r.recupClase ? 'recup' : 'dada';
+      return '';   // solo recups previstas, sin lista pasada
+    }
+    // Reparto del MES de un entrenador: {pend, dada, recup, perd}
+    function _gRecupMes(uid, mesISO) {
+      var out = { pend:[], dada:[], recup:[], perd:[] };
+      var by = _gestorAgrupar(), d = by[uid];
+      if (!d) return out;
+      var mapC = {};
+      _gestorClasesLocal(d).forEach(function(c){ mapC[c.id] = c; });
+      _gestorRegsLocal(d).forEach(function(r){
+        if (!r.fecha || r.fecha.slice(0,7) !== mesISO) return;
+        var k = _gRecupClasifica(r);
+        if (!k) return;
+        var c = mapC[r.claseId] || {};
+        out[k].push({ fecha:r.fecha, franja:c.franja || '', nombre:c.nombre || '' });
+      });
+      Object.keys(out).forEach(function(k){
+        out[k].sort(function(a,b){ return a.fecha.localeCompare(b.fecha) || a.franja.localeCompare(b.franja); });
+      });
+      return out;
+    }
+    // Saldo pendiente del CURSO en marcha (nunca negativo)
+    function _gRecupSaldo(uid) {
+      var by = _gestorAgrupar(), d = by[uid];
+      if (!d) return 0;
+      var curso = cursoDeFecha(hoyLocal()), pend = 0, rec = 0;
+      _gestorRegsLocal(d).forEach(function(r){
+        if (!r.fecha || cursoDeFecha(r.fecha) !== curso) return;
+        var k = _gRecupClasifica(r);
+        if (k === 'pend') pend++; else if (k === 'recup') rec++;
+      });
+      return Math.max(0, pend - rec);
+    }
+    function _gRecupSaldoClub() {
+      if (!_gestorData) return 0;
+      var by = _gestorAgrupar(), t = 0;
+      Object.keys(by).forEach(function(u){ t += _gRecupSaldo(u); });
+      return t;
+    }
+    // Calendario del mes con el estado de cada día (prioridad: pendiente
+    // > recuperada > dada > perdida, si ese día tiene varias franjas).
+    function _gRecupCalHTML(uid, mesISO) {
+      var ORD = { pend:4, recup:3, dada:2, perd:1 };
+      var by = _gestorAgrupar(), d = by[uid], estado = {};
+      if (d) {
+        _gestorRegsLocal(d).forEach(function(r){
+          if (!r.fecha || r.fecha.slice(0,7) !== mesISO) return;
+          var k = _gRecupClasifica(r);
+          if (!k) return;
+          var prev = estado[r.fecha];
+          if (!prev || ORD[k] > ORD[prev]) estado[r.fecha] = k;
+        });
+      }
+      var y = +mesISO.slice(0,4), m = +mesISO.slice(5,7);
+      var nd = new Date(y, m, 0).getDate();
+      var primero = (new Date(y, m - 1, 1).getDay() + 6) % 7;   // Lun=0
+      var h = '<div class="grec-cal">';
+      ['L','M','X','J','V','S','D'].forEach(function(w){ h += '<div class="grec-wd">' + w + '</div>'; });
+      for (var i = 0; i < primero; i++) h += '<div class="grec-cell vacia"></div>';
+      for (var dd = 1; dd <= nd; dd++) {
+        var f  = mesISO + '-' + _pad2(dd);
+        var st = estado[f] || '';
+        h += '<div class="grec-cell' + (st ? ' ' + st : '') + (f === hoyLocal() ? ' hoy' : '') + '">' + dd + '</div>';
+      }
+      h += '</div>';
+      h += '<div class="grec-leyenda">' +
+        '<span><i class="pend"></i>Por recuperar</span>' +
+        '<span><i class="recup"></i>Recuperada</span>' +
+        '<span><i class="dada"></i>Dada</span>' +
+        '<span><i class="perd"></i>Perdida</span>' +
+      '</div>';
+      return h;
+    }
     function renderGestorClases() {
       var cont = document.getElementById('gcl-contenido');
       if (!cont) return;
@@ -6083,7 +6236,14 @@
       var mesISO   = getMesISO_A(_gClasesMesOff);
       var mesLabel = getMesLabelA(_gClasesMesOff);
       var cursoMes = cursoDeFecha(mesISO);
-      document.getElementById('gcl-sub').textContent = 'Sumatorio de la academia por mes';
+      // v0.137: nivel 2 — un entrenador abierto: calendario del mes +
+      // pendientes / dadas / recuperadas.
+      if (_gclUid) { cont.innerHTML = _gclDetalleHTML(_gclUid, mesISO, mesLabel); return; }
+      var _saldoClub = _gRecupSaldoClub();
+      document.getElementById('gcl-titulo').textContent = 'Clases por recuperar';
+      document.getElementById('gcl-sub').textContent = _saldoClub
+        ? (_saldoClub + ' clase' + (_saldoClub !== 1 ? 's' : '') + ' pendiente' + (_saldoClub !== 1 ? 's' : '') + ' en el club')
+        : 'Sin clases pendientes de recuperar';
       var by = _gestorAgrupar();
       // v0.67.1: la ventana habla en HORAS. Horas propias del entrenador
       // (sin las sustituidas) + horas de sustitución (cubiertas a otros o
@@ -6109,8 +6269,11 @@
         var regsMes = _gestorRegsLocal(d).filter(function(r){ return r.fecha && r.fecha.slice(0,7) === mesISO; });
         var propias = _gestorSumaMes(clases, regsMes, mesISO);
         var cub     = _gestorCubiertasMes(u, mesISO);
-        if (!propias.total && !cub.total) return;
-        filas.push({ nom: _gestorNombre(d), propias: propias, cub: cub, ext: false });
+        // v0.137: también aparece quien tenga clases pendientes de
+        // recuperar, aunque ese mes no haya dado ninguna.
+        var _sal = _gRecupSaldo(u);
+        if (!propias.total && !cub.total && !_sal) return;
+        filas.push({ nom: _gestorNombre(d), propias: propias, cub: cub, ext: false, uid: u, saldo: _sal });
       });
       // Externos: clases que cubrieron ese mes (no son de ningún entrenador)
       var clasePor = {};
@@ -6152,12 +6315,19 @@
             ? '<div style="font-size:26px;font-weight:800;line-height:1;color:#92400e;">' + _hTxt(minC) + '</div>'
             : '<div style="font-size:26px;font-weight:800;line-height:1;color:var(--verde);">' + _hTxt(minP + minC) + '</div>' +
               (minC ? '<div style="font-size:12px;font-weight:800;color:#92400e;margin-top:3px;">🔁 ' + _hTxt(minC) + '</div>' : '');
-          h += '<div class="gestor-card" style="cursor:default;">' +
+          // v0.137: los entrenadores del club son clicables y llevan el
+          // saldo de clases por recuperar; los externos siguen sin detalle.
+          var pendChip = f.saldo
+            ? '<span class="grec-pend-chip">↩ ' + f.saldo + ' por recuperar</span>'
+            : '';
+          h += '<div class="gestor-card"' +
+              (f.ext ? ' style="cursor:default;"' : ' onclick="gclAbrirEnt(\'' + f.uid + '\')"') + '>' +
             '<div class="gestor-card-ava"' + (f.ext ? ' style="background:#fef3c7;color:#92400e;"' : '') + '>' +
               (f.ext ? '🔁' : _gEsc(f.nom.charAt(0).toUpperCase())) + '</div>' +
             '<div class="gestor-card-body">' +
               '<div class="gestor-card-nom">' + _gEsc(f.nom) + (f.ext ? ' <span style="font-size:10px;font-weight:700;color:#92400e;">EXTERNO</span>' : '') + '</div>' +
               '<div class="gestor-card-meta">' + meta + '</div>' +
+              (pendChip ? '<div style="margin-top:4px;">' + pendChip + '</div>' : '') +
             '</div>' +
             '<div style="text-align:right;flex-shrink:0;">' + horas + '</div>' +
           '</div>';
@@ -6165,6 +6335,53 @@
         if (_gEsSeptiembre(mesISO)) h += '<p class="ajustes-desc" style="margin-top:0.4rem;">Las horas en <span style="color:#92400e;font-weight:700;">ámbar 🔁</span> son sustituciones: ya están incluidas en el total de quien las dio y descontadas del titular.</p>';
       }
       cont.innerHTML = h;
+    }
+
+    // v0.137: nivel 2 — ficha mensual de un entrenador con el calendario
+    // del mes y, debajo, PENDIENTES · DADAS · RECUPERADAS.
+    function _gclDetalleHTML(uid, mesISO, mesLabel) {
+      var by  = _gestorAgrupar(), d = by[uid];
+      var nom = d ? _gestorNombre(d) : '¿?';
+      var sal = _gRecupSaldo(uid);
+      var tEl = document.getElementById('gcl-titulo');
+      if (tEl) tEl.textContent = nom;
+      var sEl = document.getElementById('gcl-sub');
+      if (sEl) sEl.textContent = sal
+        ? (sal + ' clase' + (sal !== 1 ? 's' : '') + ' por recuperar')
+        : 'Sin clases pendientes de recuperar';
+
+      var m = _gRecupMes(uid, mesISO);
+      var h = '<button type="button" class="btn btn-sec btn-sm" style="margin-bottom:0.6rem;" onclick="gclVolverLista()">‹ Todos los entrenadores</button>';
+      h += '<div class="grec-saldo' + (sal ? ' hay' : '') + '">' +
+             '<b>' + sal + '</b> clase' + (sal !== 1 ? 's' : '') + ' por recuperar' +
+             '<span>curso ' + _gEsc(cursoDeFecha(hoyLocal())) + ' · marcadas para recuperar menos las ya recuperadas</span>' +
+           '</div>';
+      h += '<div class="gestor-mes-nav">' +
+        '<button class="gestor-mes-btn" onclick="gestorClasesMesNav(-1)">‹</button>' +
+        '<span class="gestor-mes-lbl">' + _gEsc(mesLabel) + '</span>' +
+        '<button class="gestor-mes-btn" onclick="gestorClasesMesNav(1)">›</button>' +
+      '</div>';
+      h += _gRecupCalHTML(uid, mesISO);
+
+      function bloque(titulo, items, cls, vacio) {
+        var s = '<div class="grupo-titulo" style="margin-top:1rem;">' + titulo +
+                (items.length ? ' <span style="font-weight:700;color:var(--gris);">· ' + items.length + '</span>' : '') + '</div>';
+        if (!items.length) { return s + '<p class="ajustes-desc" style="margin:0;">' + vacio + '</p>'; }
+        s += '<div class="grec-lista">';
+        items.forEach(function(it){
+          s += '<div class="grec-item ' + cls + '">' +
+                 '<span class="grec-item-fecha">' + parseInt(it.fecha.slice(8,10),10) + '/' + it.fecha.slice(5,7) + '</span>' +
+                 '<span class="grec-item-fr">' + _gEsc(it.franja || '—') +
+                   (it.nombre && it.nombre !== 'Clase' ? ' · ' + _gEsc(it.nombre) : '') + '</span>' +
+               '</div>';
+        });
+        return s + '</div>';
+      }
+      h += bloque('↩ Por recuperar', m.pend, 'pend', 'Ninguna clase anulada pendiente este mes.');
+      h += bloque('✓ Dadas',        m.dada, 'dada', 'Sin clases dadas este mes.');
+      h += bloque('↩ Recuperadas',  m.recup,'recup','Sin recuperaciones este mes.');
+      if (m.perd.length) h += bloque('✖ Perdidas', m.perd, 'perd', '');
+      return h;
     }
 
     // ── v0.109: DETALLE de un sustituto EXTERNO ──────────────────
@@ -6966,7 +7183,8 @@
                  presentes:r.presentes || [], ausentes:r.ausentes || [],
                  justificadas:r.justificadas || [], recups:r.recups || [],
                  impartidaPor:r.impartida_por || null,
-                 sinClase:!!r.sin_clase, recupClase:!!r.recup_clase, recupHora:r.recup_hora||'' };
+                 sinClase:!!r.sin_clase, sinClaseRecup:!!r.sin_clase_recup,
+                 recupClase:!!r.recup_clase, recupHora:r.recup_hora||'' };
       });
     }
 
@@ -13355,6 +13573,7 @@
     var asistRecupPanelOn  = false;
     var asistAltaPanelOn   = false;   // panel de alta rápida (v0.60)
     var asistSustPanelOn   = false;   // panel de sustitución "Impartida por" (v0.68.1)
+    var asistSinClasePanelOn = false; // panel "¿se pierde o se recupera?" (v0.137)
     var _abrirPanelRecup   = false;   // abrir Pasar lista con el panel de recup ya abierto
     var _abrirPanelAlta    = false;   // ídem con el panel de alta rápida
     var asistMesOffset     = 0;    // meses desde el actual
@@ -14067,6 +14286,7 @@
       asistRecupPanelOn = _abrirPanelRecup; _abrirPanelRecup = false;
       asistAltaPanelOn  = _abrirPanelAlta;  _abrirPanelAlta  = false;
       asistSustPanelOn  = false;   // el panel de sustitución arranca cerrado
+      asistSinClasePanelOn = false; // v0.137: el de "sin clase" también
       renderToggleAlumnos(clase);
       _asistListaSnap = _asistSnap();   // estado de referencia para detectar cambios
     }
@@ -14127,7 +14347,7 @@
       if (!zona) return;
       _dlAlumnosFill();   // autocompletado con la base de alumnos de la academia
       var html = '';
-      if (!asistRecupPanelOn && !asistAltaPanelOn && !asistSustPanelOn) {
+      if (!asistRecupPanelOn && !asistAltaPanelOn && !asistSustPanelOn && !asistSinClasePanelOn) {
         // Botón de sustitución (v0.68.1): solo con sesión Supabase (necesita
         // el catálogo de entrenadores). Si ya hay sustituto, se muestra en
         // ámbar con su nombre para no perder el dato aunque el panel esté
@@ -14155,6 +14375,20 @@
             '<button class="btn btn-sec btn-sm asist-acc-btn" style="border-color:var(--lila-claro);color:var(--lila);" onclick="asistToggleRecupPanel()">↩ <span class="asist-acc-txt">Recuperación</span></button>' +
             sustBtn +
             '<button class="btn btn-sec btn-sm asist-acc-btn" style="border-color:#e2e8f0;color:#64748b;" onclick="asistSinClase()">🚫 <span class="asist-acc-txt">Sin clase</span></button>' +
+          '</div>';
+        return;
+      }
+      // v0.137: al anular la clase hay que decir qué pasa con ella.
+      if (asistSinClasePanelOn) {
+        zona.innerHTML =
+          '<div class="asist-recup-panel">' +
+            '<div style="font-size:12px;font-weight:700;color:var(--texto);margin-bottom:2px;">🚫 Sin clase este día</div>' +
+            '<div class="ajustes-desc" style="margin:0 0 8px;">¿Qué pasa con esta clase? No se registrará asistencia.</div>' +
+            '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+              '<button class="btn btn-sec btn-sm" style="border-color:#fde68a;color:#92400e;background:#fffbeb;font-weight:700;" onclick="asistSinClaseConfirm(true)">↩ Se recupera</button>' +
+              '<button class="btn btn-sec btn-sm" style="border-color:#e2e8f0;color:#64748b;" onclick="asistSinClaseConfirm(false)">✖ Se pierde</button>' +
+            '</div>' +
+            '<button class="btn btn-sec btn-sm" style="margin-top:8px;" onclick="asistToggleSinClasePanel()">Cancelar</button>' +
           '</div>';
         return;
       }
@@ -14222,7 +14456,13 @@
     }
     function asistToggleSustPanel() {
       asistSustPanelOn = !asistSustPanelOn;
-      if (asistSustPanelOn) { asistRecupPanelOn = false; asistAltaPanelOn = false; }
+      if (asistSustPanelOn) { asistRecupPanelOn = false; asistAltaPanelOn = false; asistSinClasePanelOn = false; }
+      renderToggleAlumnos(null);
+    }
+    // v0.137: panel de "Sin clase" con la decisión pierde/recupera
+    function asistToggleSinClasePanel() {
+      asistSinClasePanelOn = !asistSinClasePanelOn;
+      if (asistSinClasePanelOn) { asistRecupPanelOn = false; asistAltaPanelOn = false; asistSustPanelOn = false; }
       renderToggleAlumnos(null);
     }
     function asistAltaAutoRellenar(v) {
@@ -14346,11 +14586,16 @@
       renderToggleAlumnos(null);
     }
 
-    function asistSinClase() {
+    // v0.137: marcar "Sin clase" ya no es una sola decisión: hay que decir
+    // si esa clase SE PIERDE o SE RECUPERA. El botón abre un panel con las
+    // dos opciones (asistSinClasePanelOn) y cada una llama aquí con
+    // recupera=true/false. El gestor ve los pendientes en "Clases por
+    // recuperar" (saldo = marcadas para recuperar − recuperaciones dadas).
+    function asistSinClase() { asistToggleSinClasePanel(); }
+    function asistSinClaseConfirm(recupera) {
       var fecha = document.getElementById('asist-lista-fecha').value;
       if (!fecha) { alert('Selecciona una fecha'); return; }
       if (!asistClaseActivaId) return;
-      if (!confirm('¿Marcar este día como "Sin clase"? No se registrará asistencia.')) return;
       var regs = leerAsistRegistros();
       var idx  = -1;
       regs.forEach(function(r,i){ if (r.claseId===asistClaseActivaId && r.fecha===fecha) idx=i; });
@@ -14363,11 +14608,16 @@
         justificadas: [],
         recups:    [],
         impartidaPor: null,
-        sinClase:  true
+        sinClase:  true,
+        sinClaseRecup: !!recupera   // v0.137: true = queda pendiente de recuperar
       };
       if (idx>=0) { regs[idx]=nuevoReg; } else { regs.push(nuevoReg); }
       escribirAsistRegistros(regs, false, [nuevoReg]);
+      asistSinClasePanelOn = false;
       _asistListaSnap = _asistSnap();   // "sin clase" guardado: sin cambios pendientes
+      if (typeof planToast === 'function') {
+        planToast(recupera ? '🚫 Sin clase · pendiente de recuperar' : '🚫 Sin clase · se pierde');
+      }
       _asistListaSalida();
     }
 
