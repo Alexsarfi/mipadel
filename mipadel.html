@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.123.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.124.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,24 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.124.0 — Competición: catálogo colapsable + contador de veces trabajada (2026-07)
+    · "Áreas de trabajo" (catálogo de filas bajo la vista mensual) ya no
+      lleva el texto "· elige según el último torneo" (ruido visual) y
+      ahora es un acordeón colapsado por defecto (mismo patrón visual que
+      "Análisis de planificación"), con nuevo estado local p.areasAbierto
+      y función planToggleAreas(). En modo edición se fuerza abierto.
+    · Picker que se abre al tocar un día (_compPickerHTML): cada fila
+      muestra ahora un contador "N×" con las veces que se ha marcado en
+      total (cualquier día, vía nueva _compContadorTrabajo(p) sobre
+      p.compDias), para saber de un vistazo qué está cubierto y qué no —
+      sin impedir volver a marcar/repetir una fila ya trabajada.
+    · La fila ya marcada ese día concreto se sigue pudiendo desmarcar
+      tocándola otra vez (corrección de errores); se aclara con el
+      atributo title de cada fila del picker.
+    · Sin cambios de esquema: reutiliza p.compDias (migración v0.121,
+      comp_dias en Supabase) y p.etapasAbiertas/p.analisisAbierto como
+      precedente para el nuevo p.areasAbierto (estado local, no sincroniza).
 
   v0.123.0 — Rediseño: vista mensual de Competición por día de la semana (2026-07)
     · La lista semanal de v0.122 se sustituye por una vista MENSUAL
@@ -2942,6 +2960,9 @@
     .comp-picker-check { width:18px; height:18px; border-radius:5px; border:1.5px solid var(--borde); display:flex; align-items:center;
       justify-content:center; font-size:11px; flex-shrink:0; background:#fff; }
     .comp-picker-it.on .comp-picker-check { background:var(--azul); border-color:var(--azul); color:#fff; }
+    .comp-picker-txt { flex:1; }
+    .comp-picker-veces { flex-shrink:0; font-size:10.5px; font-weight:800; color:var(--gris); background:var(--arena); border:1px solid var(--borde); border-radius:20px; padding:1px 7px; }
+    .comp-picker-it.on .comp-picker-veces { background:#fff; }
     .comp-picker-vacio { font-size:12px; color:var(--gris); font-style:italic; }
     /* Apartado (item) — tappable → sesiones */
     .plan-item { display:flex; flex-direction:column; border:1px solid var(--borde); border-radius:11px; overflow:hidden; background:var(--blanco); }
@@ -4160,7 +4181,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.123.0';
+    var APP_VERSION = '0.124.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -9111,6 +9132,7 @@
     }
     function planToggleEtapa(key) { var p = leerPlan(); p.etapasAbiertas[key] = !p.etapasAbiertas[key]; _planGuardar(p); }
     function planToggleAnalisis() { var p = leerPlan(); p.analisisAbierto = !p.analisisAbierto; _planGuardar(p); }
+    function planToggleAreas() { var p = leerPlan(); p.areasAbierto = !p.areasAbierto; _planGuardar(p); }
     function planToggleHecho(id) {
       var p = leerPlan();
       if (p.hechos[id]) delete p.hechos[id]; else p.hechos[id] = true;
@@ -9706,9 +9728,20 @@
       mostrarPlanificacion();
     }
 
+    // v0.124: cuántas veces (en total, cualquier día) se ha marcado cada
+    // fila. Sirve para que el picker muestre cobertura sin impedir repetir.
+    function _compContadorTrabajo(p) {
+      var out = {};
+      var dias = p.compDias || {};
+      Object.keys(dias).forEach(function(fecha){
+        (dias[fecha] || []).forEach(function(id){ out[id] = (out[id] || 0) + 1; });
+      });
+      return out;
+    }
     function _compPickerHTML(p, fechaISO) {
       var todas = _compTodasFilas(p);
       var elegidas = (p.compDias && p.compDias[fechaISO]) || [];
+      var contador = _compContadorTrabajo(p);
       var dow = new Date(+fechaISO.slice(0,4), +fechaISO.slice(5,7)-1, +fechaISO.slice(8,10)).getDay();
       var h = '<div class="comp-cal-picker">';
       h += '<div class="comp-cal-picker-hdr">' + DIAS_NOMBRES_A[dow] + ' ' + formatFechaDiaMes(fechaISO) + ' — marca lo trabajado</div>';
@@ -9721,8 +9754,12 @@
           h += '<div class="comp-picker-grupo">' + ap + '</div>';
           porApartado[ap].forEach(function(f){
             var on = elegidas.indexOf(f.id) >= 0;
-            h += '<div class="comp-picker-it' + (on ? ' on' : '') + '" onclick="compDiaToggleFila(\'' + fechaISO + '\',\'' + f.id + '\')">' +
-              '<span class="comp-picker-check">' + (on ? '✓' : '') + '</span>' + f.t +
+            var veces = contador[f.id] || 0;
+            var tit = on ? 'Ya marcada este día · toca para corregir/quitar' : (veces ? 'Trabajada ' + veces + ' vez(es) antes · toca para marcar también hoy' : 'Toca para marcar');
+            h += '<div class="comp-picker-it' + (on ? ' on' : '') + '" onclick="compDiaToggleFila(\'' + fechaISO + '\',\'' + f.id + '\')" title="' + tit + '">' +
+              '<span class="comp-picker-check">' + (on ? '✓' : '') + '</span>' +
+              '<span class="comp-picker-txt">' + f.t + '</span>' +
+              (veces ? '<span class="comp-picker-veces">' + veces + '×</span>' : '') +
             '</div>';
           });
         });
@@ -9855,11 +9892,18 @@
         // banner informativo del ciclo, al calendario-cuadrícula de v0.121
         // y a la lista semanal de v0.122). Solo en modo consulta.
         if (!edit) h += _compListaMesHTML(p);
-        // Catálogo de áreas (sin secuencia, ◆)
-        h += '<div class="grupo-titulo" style="margin-top:0.4rem;">Áreas de trabajo · elige según el último torneo</div>';
+        // Catálogo de áreas (sin secuencia, ◆). v0.124: colapsado por
+        // defecto (acordeón, mismo patrón que "Análisis de planificación")
+        // para quitar ruido visual; el texto "elige según el último
+        // torneo" se elimina del título.
+        var areasOpen = edit || !!p.areasAbierto;
+        h += '<div class="plan-otros' + (areasOpen ? ' abierto' : '') + '" style="margin-top:0.4rem;">';
+        h += '<div class="plan-otros-hdr" onclick="planToggleAreas();this.parentNode.classList.toggle(\'abierto\')">Áreas de trabajo<span class="chev">›</span></div>';
+        h += '<div class="plan-otros-body">';
         etapas.filter(function(et){ return et.tipo === 'area'; }).forEach(function(et){
           h += _planEtapaCard(et, { ico:'◆' });
         });
+        h += '</div></div>';
         // Eventos del ciclo (Competir y evaluar)
         etapas.filter(function(et){ return et.tipo === 'ciclo'; }).forEach(function(et){
           h += '<div class="grupo-titulo" style="margin-top:1rem;">Ciclo · competir y evaluar</div>';
