@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.151.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.152.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,29 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.152.0 — AVANZADO estrena la estructura de trabajo de Competición (2026-07)
+    · Avanzado tiene ahora la misma vista que Competición: el mes por
+      SEMANAS en columnas (con la semana en curso sombreada, los días sin
+      clase del club marcados, el día abierto resaltado), marcar lo
+      trabajado cada día, y el resumen del día con las sesiones en pestañas
+      y sus vídeos, que se reproducen al tocarlos.
+    · Cada nivel enseña LO SUYO: al abrir un día en Avanzado salen las áreas
+      de trabajo de Avanzado, y en Competición las de Competición. El
+      catálogo lo decide el nivel activo (_compNivel / _compTodasFilas).
+    · El registro por fecha es común, pero la vista NO se mezcla: lo marcado
+      en Competición no marca los días de Avanzado ni al revés, y un mismo
+      día puede llevar trabajo de los dos niveles sin pisarse (se filtra por
+      las filas de cada catálogo).
+    · Al cambiar de nivel se cierra el día abierto: su contenido es de otro
+      catálogo y no tiene sentido arrastrarlo.
+    · FIX de paso: planSetNivel() guardaba el nivel DESPUÉS de repintar, así
+      que el repintado se hacía leyendo el nivel anterior de localStorage.
+      Ahora guarda antes. (Se notaba poco porque la pantalla se redibuja
+      enseguida, pero con el catálogo por nivel habría enseñado el equivocado.)
+    · Iniciación se queda como estaba, sin vista por días.
+    · Sin cambios de datos/esquema (sigue usando p.compDias y la migración
+      v0.132 de comp_dias).
 
   v0.151.0 — Competición: al entrar, sombreada la semana en curso (2026-07)
     · Nada más abrir Planificación → Competición, sin haber tocado ningún
@@ -4758,7 +4781,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.151.0';
+    var APP_VERSION = '0.152.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -10130,8 +10153,15 @@
     function planSetNivel(nv) {
       if (!nivelPermitido(nv)) nv = 'iniciacion';
       var p = leerPlan(); p.nivel = nv;
-      mostrarPlanificacion(); window.scrollTo(0,0);
+      // v0.152: guardar ANTES de repintar. mostrarPlanificacion() (y ahora
+      // también _compNivel(), que decide de qué catálogo salen las áreas de
+      // trabajo del día) releen el plan de localStorage: si se guardaba
+      // después, el repintado se hacía con el nivel ANTERIOR.
       _planGuardar(p);
+      // Al cambiar de nivel se cierra el día abierto: su contenido es de
+      // otro catálogo y no tiene sentido arrastrarlo.
+      compDiaAbierta = null; compDiaEditando = false; compFilaSel = null;
+      mostrarPlanificacion(); window.scrollTo(0,0);
     }
     function planToggleEtapa(key) { var p = leerPlan(); p.etapasAbiertas[key] = !p.etapasAbiertas[key]; _planGuardar(p); }
     function planToggleAnalisis() { var p = leerPlan(); p.analisisAbierto = !p.analisisAbierto; _planGuardar(p); }
@@ -10747,11 +10777,28 @@
       });
       return algunaReal ? 'activa' : 'festivo';
     }
-    // Todas las filas del catálogo de Competición (de TODOS los apartados),
+    // v0.152: esta maquinaria (vista por semanas, marcado por día, resumen
+    // con vídeos) la usan Competición y Avanzado. El NIVEL activo decide de
+    // qué catálogo salen las áreas de trabajo, así que cada uno enseña y
+    // marca lo suyo aunque compartan el mismo registro por fecha.
+    var COMP_NIVELES = ['competicion', 'avanzado'];
+    function _compNivel() {
+      var n = leerPlan().nivel;
+      return COMP_NIVELES.indexOf(n) >= 0 ? n : 'competicion';
+    }
+    // Ids de fila del nivel activo (para no mezclar lo marcado de un nivel
+    // con lo del otro: el registro por fecha es común, la vista no).
+    function _compIdsNivel(p) {
+      var set = {};
+      _compTodasFilas(p).forEach(function(f){ set[f.id] = true; });
+      return set;
+    }
+    // Todas las filas del catálogo del nivel activo (de TODOS los apartados),
     // para poder marcar en cualquier día lo trabajado sin restringirlo a uno solo.
     function _compTodasFilas(p) {
-      var cont   = planContenido(p).competicion || {};
-      var etapas = PLAN_ETAPAS.competicion || [];
+      var nivel  = _compNivel();
+      var cont   = planContenido(p)[nivel] || {};
+      var etapas = PLAN_ETAPAS[nivel] || [];
       var out = [];
       etapas.forEach(function(et){
         (cont[et.key] || []).forEach(function(it){
@@ -10770,7 +10817,11 @@
         compDiaAbierta = null;
       } else {
         var p = leerPlan();
-        var yaMarcado = !!(p.compDias && p.compDias[fechaISO] && p.compDias[fechaISO].length);
+        // v0.152: solo cuenta lo marcado del NIVEL activo para decidir si el
+        // día se abre en resumen (ya tiene contenido) o en selección.
+        var _ids = _compIdsNivel(p);
+        var yaMarcado = ((p.compDias && p.compDias[fechaISO]) || [])
+                          .some(function(id){ return _ids[id]; });
         compDiaAbierta = fechaISO;
         // v0.125: si el día ya tiene algo marcado, se abre directamente en
         // modo RESUMEN (solo lo elegido + vídeos, poco ruido); si está
@@ -11014,6 +11065,9 @@
         (semanas[kL] = semanas[kL] || []).push(dateToISOLocal(dd));
       }
       var lunes = Object.keys(semanas).sort();
+      // v0.152: solo cuentan como marcadas las filas del NIVEL activo, para
+      // que lo trabajado en Competición no marque los días de Avanzado.
+      var idsNivel = _compIdsNivel(p);
       // v0.151: lunes de la semana EN CURSO. Al entrar (sin ningún día
       // abierto) se sombrea esa semana, para ubicarse de un vistazo.
       var hoyD    = new Date(+hoyISO.slice(0,4), +hoyISO.slice(5,7)-1, +hoyISO.slice(8,10));
@@ -11031,7 +11085,7 @@
           var dsc     = estado === 'dsc';                  // día sin clase del club
           var festivo = estado === 'festivo';
           var bloq    = dsc || festivo;                    // no se puede marcar
-          var nFilas  = (p.compDias && p.compDias[fISO]) ? p.compDias[fISO].length : 0;
+          var nFilas  = ((p.compDias && p.compDias[fISO]) || []).filter(function(id){ return idsNivel[id]; }).length;
           if (!bloq) { activas++; if (nFilas) marcadas++; }
           var marcada = !bloq && nFilas > 0;
           var numDia  = parseInt(fISO.slice(8,10), 10);
@@ -11185,6 +11239,11 @@
           h += '</div></div>';
         }
       } else {
+        // v0.152: AVANZADO usa la misma estructura de trabajo que Competición
+        // (vista del mes por semanas + marcar lo trabajado cada día), pero con
+        // SU catálogo: al abrir un día salen las áreas de trabajo de Avanzado,
+        // no las de Competición. Iniciación se queda como estaba.
+        if (!edit && nivel === 'avanzado') h += _compListaMesHTML(p);
         // Iniciación / Avanzado: etapas en secuencia. Sin "en curso" automático;
         // el progreso lo marca el usuario con el ✓ "trabajado" de cada bloque.
         etapas.forEach(function(et, idx){
