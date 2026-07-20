@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.125.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.126.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,19 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.126.0 — Competición: botón "Editar plan" movido a Áreas de trabajo (2026-07)
+    · En el perfil de entrenador, Planificación → Competición: el botón
+      "✏️ Editar plan" ya no va arriba de toda la pantalla; se mueve al
+      FINAL del acordeón "Áreas de trabajo" (dentro de esa franja, justo
+      donde aparecen las áreas), a petición explícita para ir ordenando
+      la pantalla por contexto.
+    · En el resto de niveles (Iniciación/Avanzado/Equipo…) el botón se
+      mantiene arriba, sin cambios.
+    · Sigue oculto para cuentas EN1 (plan de solo lectura) y sigue solo
+      visible en pantalla ancha (≥560px, edición pensada para ordenador),
+      igual que antes — no se ha tocado esa regla.
+    · Sin cambios de datos/esquema.
 
   v0.125.0 — Competición: picker del día con modo selección/resumen + vídeos (2026-07)
     · El desplegable de un día pasa a tener DOS modos, según feedback:
@@ -4210,7 +4223,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.125.0';
+    var APP_VERSION = '0.126.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -9942,11 +9955,14 @@
       });
       h += '</div>';
 
-      // Botón editar (oculto para EN1: el plan es de solo lectura)
-      if (!esEN1Cuenta()) h += '<button class="plan-edit-toggle' + (edit ? ' on' : '') + '" onclick="planToggleEdit()">' +
-           (edit ? '✓ Terminar de editar' : '✏️ Editar plan') + '</button>';
-
       var esComp = (nivel === 'competicion');
+
+      // Botón editar (oculto para EN1: el plan es de solo lectura).
+      // v0.126: en Competición se mueve al final de "Áreas de trabajo"
+      // (contextual, donde se edita realmente); en el resto de niveles
+      // se mantiene arriba, como siempre.
+      if (!esEN1Cuenta() && !esComp) h += '<button class="plan-edit-toggle' + (edit ? ' on' : '') + '" onclick="planToggleEdit()">' +
+           (edit ? '✓ Terminar de editar' : '✏️ Editar plan') + '</button>';
       // v0.119/v0.123: en Competición (vista normal) el texto informativo +
       // banner del ciclo se sustituyen por la vista mensual agrupada por
       // día de la semana (_compListaMesHTML). En edición, o en el resto de
@@ -9993,6 +10009,10 @@
         etapas.filter(function(et){ return et.tipo === 'area'; }).forEach(function(et){
           h += _planEtapaCard(et, { ico:'◆' });
         });
+        // v0.126: botón "Editar plan" al final de Áreas de trabajo (antes
+        // iba arriba de toda la pantalla) — contextual, junto a lo que edita.
+        if (!esEN1Cuenta()) h += '<button class="plan-edit-toggle' + (edit ? ' on' : '') + '" style="margin:0.6rem 0 0;" onclick="planToggleEdit()">' +
+             (edit ? '✓ Terminar de editar' : '✏️ Editar plan') + '</button>';
         h += '</div></div>';
         // Eventos del ciclo (Competir y evaluar)
         etapas.filter(function(et){ return et.tipo === 'ciclo'; }).forEach(function(et){
