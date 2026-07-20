@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.127.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.128.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,25 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.128.0 — Competición: franja para Ciclo + días en columnas (2026-07)
+    · "Ciclo · competir y evaluar" pasa a ser una franja blanca colapsable
+      (mismo acordeón que "Áreas de trabajo" y "Análisis de planificación",
+      patrón .plan-otros), en vez de un simple título + tarjetas sueltas.
+      Nuevo estado local p.cicloAbierto y función planToggleCiclo().
+    · Los tres bloques de Competición (Áreas de trabajo, Ciclo · competir
+      y evaluar, Análisis de planificación) son ahora visualmente
+      consistentes: franja blanca con cabecera tocable y flecha.
+    · Vista mensual (_compListaMesHTML): cuando el entrenador tiene varios
+      días de clase a la semana (p. ej. miércoles y viernes), los grupos
+      por día de la semana van uno AL LADO del otro (columnas, con ajuste
+      automático a otra fila en pantallas estrechas), ya no uno debajo de
+      otro. Nuevo contenedor .comp-dow-cols (flex-wrap).
+    · El desplegable del día abierto (picker de selección o resumen con
+      vídeos) ya no vive dentro de su columna — quedaba demasiado estrecho
+      al poner los días en fila. Ahora se renderiza una sola vez, a ancho
+      completo, justo debajo de todas las columnas (.comp-dia-abierto).
+    · Sin cambios de datos/esquema.
 
   v0.127.0 — Fix: sesiones antiguas invisibles en Áreas de trabajo (2026-07)
     · Bug reportado: filas de Competición con una sesión enlazada de ANTES
@@ -2997,7 +3016,11 @@
     .comp-cal-nav button { width:26px; height:26px; border-radius:50%; border:1.5px solid var(--borde); background:#fff; font-size:13px; cursor:pointer; color:var(--texto); }
     .comp-cal-lbl { font-size:12.5px; font-weight:800; color:var(--texto); }
     .comp-lista { margin-bottom:0.7rem; }
-    .comp-dow-grupo { margin-bottom:1.1rem; }
+    /* v0.128: los días de la semana con clase van en columnas, uno al lado
+       del otro (no apilados); en móvil estrecho se envuelven a otra fila. */
+    .comp-dow-cols { display:flex; flex-wrap:wrap; gap:6px 22px; align-items:flex-start; }
+    .comp-dow-grupo { flex:1 1 140px; min-width:130px; margin-bottom:1.1rem; }
+    .comp-dia-abierto { margin-top:0.3rem; }
     .comp-dow-titulo { font-size:13.5px; font-weight:800; color:var(--texto); margin:0 0 8px; }
     .comp-dow-cont { font-size:11.5px; font-weight:600; color:var(--gris); }
     .comp-circ-fila { display:flex; gap:8px; flex-wrap:wrap; }
@@ -4242,7 +4265,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.127.0';
+    var APP_VERSION = '0.128.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -9194,6 +9217,7 @@
     function planToggleEtapa(key) { var p = leerPlan(); p.etapasAbiertas[key] = !p.etapasAbiertas[key]; _planGuardar(p); }
     function planToggleAnalisis() { var p = leerPlan(); p.analisisAbierto = !p.analisisAbierto; _planGuardar(p); }
     function planToggleAreas() { var p = leerPlan(); p.areasAbierto = !p.areasAbierto; _planGuardar(p); }
+    function planToggleCiclo() { var p = leerPlan(); p.cicloAbierto = !p.cicloAbierto; _planGuardar(p); }
     function planToggleHecho(id) {
       var p = leerPlan();
       if (p.hechos[id]) delete p.hechos[id]; else p.hechos[id] = true;
@@ -9939,6 +9963,12 @@
       '</div>';
 
       var huboGrupo = false;
+      var colsHTML = '';
+      var abiertoHTML = ''; // v0.128: el desplegable del día abierto ya no vive
+                             // dentro de su columna (quedaba estrecho al poner
+                             // los días uno al lado del otro) — se renderiza
+                             // una sola vez, a ancho completo, debajo de todas
+                             // las columnas.
       DOW_ORDEN.forEach(function(dow){
         if (!diasMap[dow] || !diasMap[dow].length) return; // ese día de la semana nunca tiene clase configurada
 
@@ -9964,17 +9994,25 @@
           return '<div class="' + cls + '"' + onclick + titulo + '>' + numDia + '</div>';
         }).join('');
 
-        h += '<div class="comp-dow-grupo">';
-        h += '<p class="comp-dow-titulo">' + DIAS_NOMBRES_A[dow] +
+        colsHTML += '<div class="comp-dow-grupo">';
+        colsHTML += '<p class="comp-dow-titulo">' + DIAS_NOMBRES_A[dow] +
           ' <span class="comp-dow-cont">· ' + marcadas + '/' + activas + ' marcados</span></p>';
-        h += '<div class="comp-circ-fila">' + circulos + '</div>';
+        colsHTML += '<div class="comp-circ-fila">' + circulos + '</div>';
+        colsHTML += '</div>';
+
         if (compDiaAbierta && fechas.indexOf(compDiaAbierta) >= 0) {
-          h += compDiaEditando ? _compPickerHTML(p, compDiaAbierta) : _compResumenHTML(p, compDiaAbierta);
+          abiertoHTML = compDiaEditando ? _compPickerHTML(p, compDiaAbierta) : _compResumenHTML(p, compDiaAbierta);
         }
-        h += '</div>';
       });
 
-      if (!huboGrupo) h += '<div class="comp-picker-vacio" style="padding:0.5rem 0 1rem;text-align:center;">Sin clases configuradas.</div>';
+      if (!huboGrupo) {
+        h += '<div class="comp-picker-vacio" style="padding:0.5rem 0 1rem;text-align:center;">Sin clases configuradas.</div>';
+      } else {
+        // v0.128: los días de la semana con clase van uno AL LADO del otro
+        // (columnas), no apilados uno debajo de otro.
+        h += '<div class="comp-dow-cols">' + colsHTML + '</div>';
+        if (abiertoHTML) h += '<div class="comp-dia-abierto">' + abiertoHTML + '</div>';
+      }
       h += '</div>';
       return h;
     }
@@ -10064,11 +10102,20 @@
         if (!esEN1Cuenta()) h += '<button class="plan-edit-toggle' + (edit ? ' on' : '') + '" style="margin:0.6rem 0 0;" onclick="planToggleEdit()">' +
              (edit ? '✓ Terminar de editar' : '✏️ Editar plan') + '</button>';
         h += '</div></div>';
-        // Eventos del ciclo (Competir y evaluar)
-        etapas.filter(function(et){ return et.tipo === 'ciclo'; }).forEach(function(et){
-          h += '<div class="grupo-titulo" style="margin-top:1rem;">Ciclo · competir y evaluar</div>';
-          h += _planEtapaCard(et, { ico:'🏆', icoBg:'#0891b2', noProg:true });
-        });
+        // Eventos del ciclo (Competir y evaluar). v0.128: misma franja
+        // blanca colapsable que Áreas de trabajo y Análisis de planificación
+        // (antes era solo un título + tarjetas sueltas, sin acordeón).
+        var cicloEtapas = etapas.filter(function(et){ return et.tipo === 'ciclo'; });
+        if (cicloEtapas.length) {
+          var cicloOpen = edit || !!p.cicloAbierto;
+          h += '<div class="plan-otros' + (cicloOpen ? ' abierto' : '') + '" style="margin-top:0.6rem;">';
+          h += '<div class="plan-otros-hdr" onclick="planToggleCiclo();this.parentNode.classList.toggle(\'abierto\')">🏆 Ciclo · competir y evaluar<span class="chev">›</span></div>';
+          h += '<div class="plan-otros-body">';
+          cicloEtapas.forEach(function(et){
+            h += _planEtapaCard(et, { ico:'🏆', icoBg:'#0891b2', noProg:true });
+          });
+          h += '</div></div>';
+        }
       } else {
         // Iniciación / Avanzado: etapas en secuencia. Sin "en curso" automático;
         // el progreso lo marca el usuario con el ✓ "trabajado" de cada bloque.
