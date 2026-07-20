@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.145.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.146.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,17 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.146.0 — La leyenda "?" también en el panel del día (2026-07)
+    · La leyenda de las franjas (v0.139/v0.141) solo se había puesto en el
+      DETALLE de un entrenador, así que en el panel principal —al desplegar
+      un día y ver a cada entrenador con sus franjas— no aparecía por
+      ninguna parte y no se encontraba.
+    · Ahora sale también ahí: el icono "?" bajo el nombre del día (Lunes,
+      Martes…), justo encima de los bloques de entrenador. Mismo
+      desplegable y cerrada por defecto.
+    · Si ese día no da clase nadie, no se pinta (no hay nada que explicar).
+    · Sin cambios de datos/esquema.
 
   v0.145.0 — Competición: los días de clase, agrupados POR SEMANA (2026-07)
     · Dentro del mes, los días de clase dejan de agruparse por día de la
@@ -4659,7 +4670,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.145.0';
+    var APP_VERSION = '0.146.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -6220,6 +6231,10 @@
 
         h += '<div class="gpplan-panel">';
         h += '<div class="gpplan-panel-hdr">' + _gEsc(_GDIASL[_gpSelDia]) + '</div>';
+        // v0.146: la leyenda "?" también aquí, en el panel del día — es donde
+        // más se consultan las franjas (antes solo estaba en el detalle del
+        // entrenador y no se encontraba).
+        if (uidsDia.length) h += _gFranjaLeyenda();
         if (!uidsDia.length) {
           h += '<p class="ajustes-desc" style="margin:0.3rem 2px;">Ningún entrenador da clase este día.</p>';
         } else {
