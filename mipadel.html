@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.128.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.130.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,25 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.129.0 — Competición: tick de Áreas de trabajo → contador del curso (2026-07)
+    · El tick manual "✓ trabajado" (p.hechos) de cada fila en Áreas de
+      trabajo se sustituye, SOLO en Competición, por un contador "N×" con
+      las veces que esa fila se ha marcado como trabajada durante el
+      CURSO actual (curso escolar, frontera 1-sep, vía cursoDeFecha) —
+      derivado de p.compDias, el mismo registro por día del calendario
+      mensual. La fila se atenúa (como antes hacía "hecho") en cuanto
+      veces > 0. El resto de niveles (Iniciación/Avanzado/Equipo…)
+      conserva el tick manual tal cual, sin cambios.
+    · Se preguntó por una inconsistencia detectada: el contador "N×" del
+      picker del día (v0.124) contaba TODO el histórico, no solo el
+      curso — con el nuevo contador de Áreas de trabajo (curso actual)
+      podían salir números distintos para la misma fila. A petición
+      expresa, se ha UNIFICADO: _compContadorTrabajo(p, curso) ahora
+      acepta el curso a filtrar, y el picker usa el curso de la fecha
+      que se está consultando. Mismo número en los dos sitios.
+    · Sin cambios de datos/esquema (p.hechos se deja de leer en
+      Competición pero no se borra; sigue viéndose en otros niveles).
 
   v0.128.0 — Competición: franja para Ciclo + días en columnas (2026-07)
     · "Ciclo · competir y evaluar" pasa a ser una franja blanca colapsable
@@ -3082,6 +3101,10 @@
     .plan-chip.golpe { background:#f1f5f9; color:#475569; }
     .plan-item-check { width:42px; flex-shrink:0; border:none; border-left:1px solid var(--borde); background:var(--blanco); cursor:pointer; font-size:15px; color:#cbd5e1; display:flex; align-items:center; justify-content:center; }
     .plan-item-check.on { background:var(--verde-suave); color:var(--verde); }
+    /* v0.129: contador "veces trabajada este curso" — sustituye al tick
+       manual en Competición (misma columna/tamaño que .plan-item-check). */
+    .plan-item-contador { width:42px; flex-shrink:0; border-left:1px solid var(--borde); background:var(--blanco); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; color:#cbd5e1; }
+    .plan-item-contador.con { background:var(--azul-suave); color:var(--azul); }
     .plan-link-hint { font-size:11px; color:var(--gris); text-align:center; margin:10px 2px 0; }
     /* Toast */
     .plan-toast { position:fixed; left:50%; bottom:80px; transform:translateX(-50%); background:var(--texto); color:#fff; font-size:12.5px; font-weight:600; padding:10px 16px; border-radius:22px; box-shadow:0 6px 20px rgba(0,0,0,.25); z-index:9999; opacity:0; transition:opacity .2s; max-width:80%; text-align:center; }
@@ -4265,7 +4288,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.128.0';
+    var APP_VERSION = '0.129.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -9620,8 +9643,14 @@
       return _planEjCache.ejs.filter(function(e){ return inc.indexOf(e.id) >= 0; });
     }
 
-    function _planItemHTML(nivel, mes, it, hechos, editMode) {
-      var hecho = !!hechos[it.id];
+    function _planItemHTML(nivel, mes, it, hechos, editMode, contadorCurso) {
+      // v0.129: en Competición el tick manual "trabajado" se sustituye por
+      // un contador de veces trabajada ESTE CURSO (derivado de p.compDias,
+      // el mismo registro por día que usa el calendario mensual). El resto
+      // de niveles conserva el tick manual (p.hechos) tal cual.
+      var esCompItem = (nivel === 'competicion');
+      var veces = (esCompItem && contadorCurso) ? (contadorCurso[it.id] || 0) : 0;
+      var hecho = esCompItem ? (veces > 0) : !!hechos[it.id];
       var ic = PLAN_INT[it.int] || PLAN_INT.dominar;
       var chips = '<div class="plan-item-chips">' +
         '<span class="plan-chip int" style="background:' + ic.c + '">' + ic.l + '</span>' +
@@ -9646,7 +9675,12 @@
       h2 += '<div class="plan-item-body" onclick="planAbrirSesionesBloque(\'' + nivel + '\',\'' + mes + '\',\'' + it.id + '\')">';
       h2 += '<div class="plan-item-top"><span class="plan-item-titulo">' + it.t + '</span><span class="plan-item-flecha">⚙</span></div>';
       h2 += '</div>'; // chips/foco (intención · zona · golpe) ahora solo dentro del apartado
-      h2 += '<button class="plan-item-check' + (hecho ? ' on' : '') + '" onclick="planToggleHecho(\'' + it.id + '\');event.stopPropagation()" title="Marcar como trabajado">✓</button>';
+      if (esCompItem) {
+        var titVeces = veces ? ('Trabajada ' + veces + ' vez' + (veces > 1 ? 'es' : '') + ' este curso') : 'Sin trabajar este curso todavía';
+        h2 += '<div class="plan-item-contador' + (veces ? ' con' : '') + '" title="' + titVeces + '">' + veces + '×</div>';
+      } else {
+        h2 += '<button class="plan-item-check' + (hecho ? ' on' : '') + '" onclick="planToggleHecho(\'' + it.id + '\');event.stopPropagation()" title="Marcar como trabajado">✓</button>';
+      }
       h2 += '</div>'; // .plan-item-row
 
       // ── Enlazados (inline, tocables) ──
@@ -9821,7 +9855,7 @@
       var out = [];
       etapas.forEach(function(et){
         (cont[et.key] || []).forEach(function(it){
-          out.push({ id: it.id, t: it.t, int: it.int, apartado: et.nombre, ejInc: it.ejInc || [] });
+          out.push({ id: it.id, t: it.t, int: it.int, apartado: et.nombre, ejInc: it.ejInc || [], sesInc: it.sesInc || [] });
         });
       });
       return out;
@@ -9867,12 +9901,16 @@
       mostrarPlanificacion();
     }
 
-    // v0.124: cuántas veces (en total, cualquier día) se ha marcado cada
-    // fila. Sirve para que el picker muestre cobertura sin impedir repetir.
-    function _compContadorTrabajo(p) {
+    // v0.124/v0.129: cuántas veces se ha marcado cada fila. Curso-scoped
+    // (parámetro curso, formato de cursoDeFecha: "2026-27") para que el
+    // mismo número se vea igual aquí y en el contador de Áreas de trabajo
+    // — antes este contaba TODO el histórico y el de Áreas de trabajo solo
+    // el curso actual, y podían no coincidir.
+    function _compContadorTrabajo(p, curso) {
       var out = {};
       var dias = p.compDias || {};
       Object.keys(dias).forEach(function(fecha){
+        if (curso && cursoDeFecha(fecha) !== curso) return;
         (dias[fecha] || []).forEach(function(id){ out[id] = (out[id] || 0) + 1; });
       });
       return out;
@@ -9880,7 +9918,7 @@
     function _compPickerHTML(p, fechaISO) {
       var todas = _compTodasFilas(p);
       var elegidas = (p.compDias && p.compDias[fechaISO]) || [];
-      var contador = _compContadorTrabajo(p);
+      var contador = _compContadorTrabajo(p, cursoDeFecha(fechaISO));
       var dow = new Date(+fechaISO.slice(0,4), +fechaISO.slice(5,7)-1, +fechaISO.slice(8,10)).getDay();
       var h = '<div class="comp-cal-picker">';
       h += '<div class="comp-cal-picker-hdr">' + DIAS_NOMBRES_A[dow] + ' ' + formatFechaDiaMes(fechaISO) + ' — marca lo trabajado</div>';
@@ -9894,7 +9932,7 @@
           porApartado[ap].forEach(function(f){
             var on = elegidas.indexOf(f.id) >= 0;
             var veces = contador[f.id] || 0;
-            var tit = on ? 'Ya marcada este día · toca para corregir/quitar' : (veces ? 'Trabajada ' + veces + ' vez(es) antes · toca para marcar también hoy' : 'Toca para marcar');
+            var tit = on ? 'Ya marcada este día · toca para corregir/quitar' : (veces ? 'Trabajada ' + veces + ' vez(es) este curso · toca para marcar también hoy' : 'Toca para marcar');
             h += '<div class="comp-picker-it' + (on ? ' on' : '') + '" onclick="compDiaToggleFila(\'' + fechaISO + '\',\'' + f.id + '\')" title="' + tit + '">' +
               '<span class="comp-picker-check">' + (on ? '✓' : '') + '</span>' +
               '<span class="comp-picker-txt">' + f.t + '</span>' +
@@ -9933,7 +9971,23 @@
             ejs.forEach(function(e){ h += ejercicioCardHTML(e, 'planif'); });
             h += '</div>';
           } else {
-            h += '<div class="plan-item-ses-vacio">Sin ejercicios enlazados aún</div>';
+            // v0.130: mismo fallback que ya se aplicó en v0.127 al listado
+            // (Áreas de trabajo) y al detalle de la fila — aquí, en el
+            // resumen del día, faltaba: si no hay ejercicios (ejInc) pero
+            // SÍ hay una sesión del modelo antiguo (sesInc, sin migrar),
+            // se muestra esa sesión en vez de "Sin ejercicios enlazados".
+            var sesLeg = _planSesionesDeBloque('competicion', { sesInc: f.sesInc || [] });
+            if (sesLeg.length) {
+              h += '<div class="plan-item-ses" style="border:1px solid var(--borde);border-radius:10px;">';
+              sesLeg.forEach(function(c){
+                h += '<div class="plan-ses-mini' + (c.trabajada ? ' trabajada' : '') + '" onclick="verSesion(' + c.id + ',\'planif\')" title="' + nombreSesion(c).replace(/"/g,'') + ' (sesión antigua, sin migrar a ejercicios)">' +
+                  '<span class="plan-ses-mini-ic">' + (c.trabajada ? '✓' : '🎾') + '</span>' +
+                  '<span class="plan-ses-mini-nom">' + nombreSesion(c) + '</span></div>';
+              });
+              h += '</div>';
+            } else {
+              h += '<div class="plan-item-ses-vacio">Sin ejercicios enlazados aún</div>';
+            }
           }
           h += '</div>';
         });
@@ -10044,6 +10098,9 @@
       h += '</div>';
 
       var esComp = (nivel === 'competicion');
+      // v0.129: contador "veces trabajada este curso" (Áreas de trabajo),
+      // curso-scoped igual que el del picker del día.
+      var compContadorCurso = esComp ? _compContadorTrabajo(p, cursoDeFecha(hoyLocal())) : null;
 
       // Botón editar (oculto para EN1: el plan es de solo lectura).
       // v0.126: en Competición se mueve al final de "Áreas de trabajo"
@@ -10075,7 +10132,7 @@
           (opts.noProg ? '' : '<span class="plan-etapa-prog">' + done + '/' + its.length + '</span>') +
           '<span class="plan-etapa-chev">›</span></div>';
         s += '<div class="plan-etapa-body">';
-        its.forEach(function(it){ s += _planItemHTML(nivel, et.key, it, p.hechos, edit); });
+        its.forEach(function(it){ s += _planItemHTML(nivel, et.key, it, p.hechos, edit, compContadorCurso); });
         if (edit) s += _planAddRow(nivel, et.key);
         s += '</div></div>';
         return s;
