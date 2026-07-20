@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.122.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.123.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,32 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.123.0 — Rediseño: vista mensual de Competición por día de la semana (2026-07)
+    · La lista semanal de v0.122 se sustituye por una vista MENSUAL
+      agrupada por día de la semana, tras el feedback: "quiero que sea
+      mensual, que abajo aparezca miércoles con los días de ese mes, y que
+      al pinchar un día aparezca la clase programada".
+    · Navegación ‹ › por MES otra vez (compMesNav). Dentro del mes, un
+      grupo por cada día de la semana con clase configurada ("Miércoles",
+      "Viernes"...), con un contador de cobertura junto al título (p. ej.
+      "Miércoles · 2/5 marcados": marcados / días activos ese mes).
+    · Bajo cada título, una fila de CÍRCULOS — uno por cada fecha de ese
+      mes que cae en ese día de la semana. Relleno = ya tiene alguna fila
+      marcada; contorno = clase activa sin marcar aún; rayado/atenuado =
+      festivo o sin clase activa ese día concreto (no clicable, se queda
+      en su sitio para no romper la secuencia de fechas — decisión
+      tomada tras valorarlo).
+    · Al tocar un círculo activo se abre el mismo desplegable de siempre
+      (_compPickerHTML) justo debajo de esa fila de círculos, con la fecha
+      completa en el título ("Miércoles 15 de julio — marca lo trabajado").
+    · _compDiaEstado ahora distingue 'festivo' (sin clase activa, o todas
+      sus franjas marcadas sinClase) de 'activa' (hay clase real ese día,
+      esté ya marcada o no) — antes distinguía dada/futura/pendiente, que
+      ya no hacía falta porque el color del círculo solo refleja "marcada
+      o no", no el estado de asistencia.
+    · Mismo dato de siempre: p.compDias[fechaISO] = [filaId,...]. Sin
+      cambios de sincronización ni de migración.
 
   v0.122.0 — Rediseño: lista semanal de Competición, sin cuadrícula (2026-07)
     · El calendario mensual en forma de cuadrícula de v0.121 se sustituye
@@ -2891,23 +2917,24 @@
     .plan-etapa.abierto .plan-etapa-chev { transform:rotate(90deg); }
     .plan-etapa-body { display:none; padding:0 11px 10px; flex-direction:column; gap:7px; }
     .plan-etapa.abierto .plan-etapa-body { display:flex; }
-    /* v0.122 — Lista semanal de Competición (sustituye al calendario-cuadrícula
-       de v0.121): solo los días con clase real, en orden, sin grid */
+    /* v0.123 — Vista mensual de Competición agrupada por día de la semana
+       (sustituye a la lista semanal de v0.122): círculos por fecha, uno por
+       cada ocurrencia del día de la semana en el mes visto */
     .comp-cal-nav { display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:0.6rem; }
     .comp-cal-nav button { width:26px; height:26px; border-radius:50%; border:1.5px solid var(--borde); background:#fff; font-size:13px; cursor:pointer; color:var(--texto); }
     .comp-cal-lbl { font-size:12.5px; font-weight:800; color:var(--texto); }
     .comp-lista { margin-bottom:0.7rem; }
-    .comp-dia-card { background:var(--blanco); border:1.5px solid var(--borde); border-radius:12px; margin-bottom:8px; overflow:hidden; }
-    .comp-dia-card.hoy { border-color:var(--dorado); }
-    .comp-dia-card.abierto { border-color:var(--azul); }
-    .comp-dia-hdr { display:flex; align-items:center; justify-content:space-between; padding:0.7rem 0.85rem; cursor:pointer; -webkit-tap-highlight-color:transparent; }
-    .comp-dia-nom { font-size:14px; font-weight:800; color:var(--texto); margin-right:8px; }
-    .comp-dia-est { font-size:11.5px; color:var(--gris); }
-    .comp-dia-est.dada { color:#166534; }
-    .comp-dia-est.futura { color:var(--azul); }
-    .comp-dia-est.pendiente { color:var(--rojo); }
-    .comp-dia-chev { font-size:12px; color:var(--gris); }
-    .comp-cal-picker { background:var(--arena); border-top:1.5px solid var(--borde); padding:0.6rem 0.85rem; }
+    .comp-dow-grupo { margin-bottom:1.1rem; }
+    .comp-dow-titulo { font-size:13.5px; font-weight:800; color:var(--texto); margin:0 0 8px; }
+    .comp-dow-cont { font-size:11.5px; font-weight:600; color:var(--gris); }
+    .comp-circ-fila { display:flex; gap:8px; flex-wrap:wrap; }
+    .comp-circ { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+      font-size:12.5px; font-weight:700; color:var(--azul); border:2px solid var(--azul); background:#fff;
+      cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .comp-circ.marcada { background:var(--azul); color:#fff; }
+    .comp-circ.festivo { border:1.5px dashed var(--borde); color:var(--gris); opacity:0.55; text-decoration:line-through; cursor:default; }
+    .comp-circ.hoy { box-shadow:0 0 0 2px var(--dorado); }
+    .comp-cal-picker { background:var(--arena); border:1.5px solid var(--borde); border-radius:11px; padding:0.6rem 0.85rem; margin-top:8px; }
     .comp-cal-picker-hdr { font-size:12px; font-weight:800; color:var(--texto); margin-bottom:0.4rem; }
     .comp-picker-grupo { font-size:11px; font-weight:800; color:var(--gris); margin:8px 0 3px; }
     .comp-picker-it { display:flex; align-items:center; gap:8px; padding:6px 4px; border-radius:8px; cursor:pointer; font-size:12.5px; color:var(--texto); }
@@ -4133,7 +4160,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.122.0';
+    var APP_VERSION = '0.123.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -9617,35 +9644,35 @@
     }
 
     // ══════════════════════════════════════════════════════════════════
-    // v0.122 — Lista semanal de Competición, ligada a clases REALES (día de
-    // la semana, sin franja), no a un calendario-cuadrícula. Sustituye al
-    // calendario mensual de v0.121: mismo dato (p.compDias[fechaISO] =
-    // [filaId,...]) pero se ve como una lista vertical, solo con los días
-    // que tienen clase configurada (pasados o futuros), en orden
-    // cronológico; se navega semana a semana con ‹ ›.
+    // v0.123 — Vista MENSUAL de Competición agrupada por día de la semana
+    // (sustituye a la lista semanal de v0.122). Mismo dato de siempre
+    // (p.compDias[fechaISO] = [filaId,...]), pero se navega mes a mes y,
+    // dentro del mes, se agrupa por día de la semana ("Miércoles" con todas
+    // sus fechas del mes en fila de círculos, "Viernes" debajo con las
+    // suyas). Cada círculo: relleno = ya marcada, contorno = sin marcar,
+    // rayado = festivo/sin clase ese día concreto (no clicable).
     // ══════════════════════════════════════════════════════════════════
-    var compSemOff     = 0;    // navegación ‹ › (semanas relativas a hoy)
+    var compMesOff     = 0;    // navegación ‹ › (meses relativos a hoy)
     var compDiaAbierta = null; // fecha ISO del día con el desplegable abierto (o null)
+    var DOW_ORDEN = [1,2,3,4,5,6,0]; // Lunes..Domingo
 
-    function _compSemanaClave(wOff) { return dateToISOLocal(getLunesDeSemana(wOff)); }
-
-    // Estado agregado de un día (todas las franjas de ese día de la semana,
-    // vía diasMap): 'dada' si al menos una clase tiene asistencia registrada,
-    // 'futura' si aún no ha llegado, 'pendiente' si ya pasó y no se registró.
-    // null si ese día de la semana no tiene ninguna clase configurada.
+    // Estado de una fecha concreta para un día de la semana con clase
+    // configurada: 'festivo' (sin clase activa ese día, o marcada sinClase
+    // en TODAS sus franjas) o 'activa' (hay clase real ese día, marcada o
+    // no — el marcado en sí lo decide p.compDias, no este estado).
     function _compDiaEstado(fISO, diasMap, regs) {
       var dow = new Date(+fISO.slice(0,4), +fISO.slice(5,7)-1, +fISO.slice(8,10)).getDay();
-      var cls = (diasMap[dow] || []).filter(function(c){
+      var todasCls = diasMap[dow] || [];
+      if (!todasCls.length) return null; // ese día de la semana nunca tiene clase
+      var cls = todasCls.filter(function(c){
         return _claseCurso(c) === cursoDeFecha(fISO) && !(c.fin && fISO > c.fin);
       });
-      if (!cls.length) return null;
-      var hoy = hoyLocal();
-      var dada = cls.some(function(c){
+      if (!cls.length) return 'festivo'; // sin clase activa ese día concreto (alta/baja)
+      var algunaReal = cls.some(function(c){
         var reg = regs.filter(function(r){ return r.claseId === c.id && r.fecha === fISO; })[0];
-        return _regPasada(reg);
+        return !(reg && reg.sinClase);
       });
-      if (dada) return 'dada';
-      return (fISO > hoy) ? 'futura' : 'pendiente';
+      return algunaReal ? 'activa' : 'festivo';
     }
     // Todas las filas del catálogo de Competición (de TODOS los apartados),
     // para poder marcar en cualquier día lo trabajado sin restringirlo a uno solo.
@@ -9660,10 +9687,11 @@
       });
       return out;
     }
-    function compSemNav(delta) { compSemOff += delta; compDiaAbierta = null; mostrarPlanificacion(); }
+    function compMesNav(delta) { compMesOff += delta; compDiaAbierta = null; mostrarPlanificacion(); }
     function compDiaAbrir(fechaISO) {
-      // Cualquier día con clase real (pasada o futura) es clicable: permite
+      // Cualquier día activo (pasado o futuro) es clicable: permite
       // planificar con antelación lo que se va a dar, no solo lo ya dado.
+      // Los festivos no llaman a esta función (sin onclick en el círculo).
       compDiaAbierta = (compDiaAbierta === fechaISO) ? null : fechaISO;
       mostrarPlanificacion();
     }
@@ -9681,8 +9709,9 @@
     function _compPickerHTML(p, fechaISO) {
       var todas = _compTodasFilas(p);
       var elegidas = (p.compDias && p.compDias[fechaISO]) || [];
+      var dow = new Date(+fechaISO.slice(0,4), +fechaISO.slice(5,7)-1, +fechaISO.slice(8,10)).getDay();
       var h = '<div class="comp-cal-picker">';
-      h += '<div class="comp-cal-picker-hdr">Marca lo trabajado (o lo que vas a trabajar)</div>';
+      h += '<div class="comp-cal-picker-hdr">' + DIAS_NOMBRES_A[dow] + ' ' + formatFechaDiaMes(fechaISO) + ' — marca lo trabajado</div>';
       if (!todas.length) {
         h += '<div class="comp-picker-vacio">Aún no hay filas en el catálogo de Competición.</div>';
       } else {
@@ -9702,42 +9731,60 @@
       return h;
     }
 
-    var _COMP_EST_LBL = { dada:'Clase dada', futura:'Clase programada', pendiente:'Sin registrar' };
-    function _compListaSemanaHTML(p) {
+    function _compListaMesHTML(p) {
       var clases  = leerAsistConfig().clases || [];
       var regs    = leerAsistRegistros();
       var diasMap = {};
       clases.forEach(function(c){ (diasMap[c.diaSemana] = diasMap[c.diaSemana] || []).push(c); });
 
-      var lunISO = _compSemanaClave(compSemOff);
+      var mesISO   = getMesISO_A(compMesOff);
+      var mesLabel = getMesLabelA(compMesOff);
+      var y = +mesISO.slice(0,4), m = +mesISO.slice(5,7);
+      var ultimoDia = new Date(y, m, 0).getDate();
       var hoyISO = hoyLocal();
 
       var h = '<div class="comp-lista">';
       h += '<div class="comp-cal-nav">' +
-        '<button onclick="compSemNav(-1)" title="Semana anterior">‹</button>' +
-        '<span class="comp-cal-lbl">Semana del ' + formatFechaDiaMes(lunISO) + ' al ' + formatFechaDiaMes(addDiasISO(lunISO, 6)) + '</span>' +
-        '<button onclick="compSemNav(1)" title="Semana siguiente">›</button>' +
+        '<button onclick="compMesNav(-1)" title="Mes anterior">‹</button>' +
+        '<span class="comp-cal-lbl">' + mesLabel + '</span>' +
+        '<button onclick="compMesNav(1)" title="Mes siguiente">›</button>' +
       '</div>';
 
-      var huboDia = false;
-      for (var i = 0; i < 7; i++) {
-        var fISO   = addDiasISO(lunISO, i);
-        var estado = _compDiaEstado(fISO, diasMap, regs);
-        if (!estado) continue; // ese día de la semana no tiene ninguna clase configurada: no aparece
-        huboDia = true;
-        var dow     = new Date(+fISO.slice(0,4), +fISO.slice(5,7)-1, +fISO.slice(8,10)).getDay();
-        var nFilas  = (p.compDias && p.compDias[fISO]) ? p.compDias[fISO].length : 0;
-        var abierto = compDiaAbierta === fISO;
-        h += '<div class="comp-dia-card' + (abierto ? ' abierto' : '') + (fISO === hoyISO ? ' hoy' : '') + '">';
-        h += '<div class="comp-dia-hdr" onclick="compDiaAbrir(\'' + fISO + '\')">' +
-          '<div><span class="comp-dia-nom">' + DIAS_NOMBRES_A[dow] + ' ' + parseInt(fISO.slice(8,10),10) + '</span><br>' +
-          '<span class="comp-dia-est ' + estado + '">' + _COMP_EST_LBL[estado] + (nFilas ? ' · ' + nFilas + ' marcada' + (nFilas!==1?'s':'') : '') + '</span></div>' +
-          '<span class="comp-dia-chev">' + (abierto ? '▲' : '▼') + '</span>' +
-        '</div>';
-        if (abierto) h += _compPickerHTML(p, fISO);
+      var huboGrupo = false;
+      DOW_ORDEN.forEach(function(dow){
+        if (!diasMap[dow] || !diasMap[dow].length) return; // ese día de la semana nunca tiene clase configurada
+
+        var fechas = [];
+        for (var d = 1; d <= ultimoDia; d++) {
+          var dd = new Date(y, m - 1, d);
+          if (dd.getDay() === dow) fechas.push(dateToISOLocal(dd));
+        }
+        if (!fechas.length) return;
+        huboGrupo = true;
+
+        var activas = 0, marcadas = 0;
+        var circulos = fechas.map(function(fISO){
+          var estado  = _compDiaEstado(fISO, diasMap, regs);
+          var festivo = estado === 'festivo';
+          var nFilas  = (p.compDias && p.compDias[fISO]) ? p.compDias[fISO].length : 0;
+          if (!festivo) { activas++; if (nFilas) marcadas++; }
+          var marcada = !festivo && nFilas > 0;
+          var numDia  = parseInt(fISO.slice(8,10), 10);
+          var cls = 'comp-circ' + (festivo ? ' festivo' : '') + (marcada ? ' marcada' : '') + (fISO === hoyISO ? ' hoy' : '');
+          var onclick = festivo ? '' : (' onclick="compDiaAbrir(\'' + fISO + '\')"');
+          var titulo  = festivo ? ' title="Sin clase este día"' : (marcada ? ' title="' + nFilas + ' fila(s) marcada(s) — toca para editar"' : ' title="Toca para marcar lo trabajado"');
+          return '<div class="' + cls + '"' + onclick + titulo + '>' + numDia + '</div>';
+        }).join('');
+
+        h += '<div class="comp-dow-grupo">';
+        h += '<p class="comp-dow-titulo">' + DIAS_NOMBRES_A[dow] +
+          ' <span class="comp-dow-cont">· ' + marcadas + '/' + activas + ' marcados</span></p>';
+        h += '<div class="comp-circ-fila">' + circulos + '</div>';
+        if (compDiaAbierta && fechas.indexOf(compDiaAbierta) >= 0) h += _compPickerHTML(p, compDiaAbierta);
         h += '</div>';
-      }
-      if (!huboDia) h += '<div class="comp-picker-vacio" style="padding:0.5rem 0 1rem;text-align:center;">Sin clases configuradas esta semana.</div>';
+      });
+
+      if (!huboGrupo) h += '<div class="comp-picker-vacio" style="padding:0.5rem 0 1rem;text-align:center;">Sin clases configuradas.</div>';
       h += '</div>';
       return h;
     }
@@ -9773,9 +9820,9 @@
            (edit ? '✓ Terminar de editar' : '✏️ Editar plan') + '</button>';
 
       var esComp = (nivel === 'competicion');
-      // v0.119/v0.122: en Competición (vista normal) el texto informativo +
-      // banner del ciclo se sustituyen por la lista semanal ligada a clases
-      // reales (_compListaSemanaHTML). En edición, o en el resto de
+      // v0.119/v0.123: en Competición (vista normal) el texto informativo +
+      // banner del ciclo se sustituyen por la vista mensual agrupada por
+      // día de la semana (_compListaMesHTML). En edición, o en el resto de
       // niveles, se mantiene el intro de siempre.
       if (edit) {
         h += '<div class="plan-intro">✏️ <strong>Modo edición.</strong> Toca un apartado para editarlo, ▲▼ para ordenar y 🗑️ para borrar. «＋ Nuevo» o «📚 Biblioteca» para añadir.</div>';
@@ -9804,10 +9851,10 @@
       }
 
       if (esComp) {
-        // v0.122: lista semanal ligada a clases reales (sustituye al banner
-        // informativo del ciclo y al calendario-cuadrícula de v0.121). Solo
-        // en modo consulta.
-        if (!edit) h += _compListaSemanaHTML(p);
+        // v0.123: vista mensual agrupada por día de la semana (sustituye al
+        // banner informativo del ciclo, al calendario-cuadrícula de v0.121
+        // y a la lista semanal de v0.122). Solo en modo consulta.
+        if (!edit) h += _compListaMesHTML(p);
         // Catálogo de áreas (sin secuencia, ◆)
         h += '<div class="grupo-titulo" style="margin-top:0.4rem;">Áreas de trabajo · elige según el último torneo</div>';
         etapas.filter(function(et){ return et.tipo === 'area'; }).forEach(function(et){
