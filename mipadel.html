@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.124.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.125.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,29 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.125.0 — Competición: picker del día con modo selección/resumen + vídeos (2026-07)
+    · El desplegable de un día pasa a tener DOS modos, según feedback:
+      "primero se elija qué sesiones voy a trabajar como una manera de
+      edición pero luego se visualice cada día con sus vídeos para pinchar
+      y ver qué se trabaja".
+    · Modo SELECCIÓN (_compPickerHTML, como antes): se abre solo si el día
+      está vacío, o al pulsar "✏️ Cambiar selección" desde el resumen.
+      Muestra todo el catálogo con el contador "N×" de v0.124. Nuevo botón
+      "✓ Listo, ver resumen" al final para terminar de elegir.
+    · Modo RESUMEN (nueva _compResumenHTML): se abre directamente si el día
+      YA tiene algo marcado — solo muestra la(s) fila(s) elegidas (sin el
+      catálogo completo, menos ruido visual) con sus vídeos enlazados como
+      miniaturas alineadas (reutiliza ejercicioCardHTML + .grid-ejercicios,
+      igual que en "Editar sesiones enlazadas"), listas para tocar y ver
+      en pista. Botón "✏️ Cambiar selección" para volver a modo edición y
+      corregir si hubo un error (compDiaEditar).
+    · Nuevas funciones: compDiaEditar(fecha), compDiaVerResumen(fecha);
+      compDiaAbrir() decide el modo inicial según p.compDias[fecha]. Nuevo
+      estado local compDiaEditando (no sincroniza, solo UI).
+    · _compTodasFilas() ahora incluye ejInc de cada fila (antes se perdía)
+      para poder resolver sus ejercicios/vídeos en el resumen.
+    · Sin cambios de esquema (sigue usando p.compDias, migración v0.121).
 
   v0.124.0 — Competición: catálogo colapsable + contador de veces trabajada (2026-07)
     · "Áreas de trabajo" (catálogo de filas bajo la vista mensual) ya no
@@ -2964,6 +2987,12 @@
     .comp-picker-veces { flex-shrink:0; font-size:10.5px; font-weight:800; color:var(--gris); background:var(--arena); border:1px solid var(--borde); border-radius:20px; padding:1px 7px; }
     .comp-picker-it.on .comp-picker-veces { background:#fff; }
     .comp-picker-vacio { font-size:12px; color:var(--gris); font-style:italic; }
+    .comp-picker-listo { display:block; width:100%; margin-top:12px; padding:10px; border:none; border-radius:10px; background:var(--azul); color:#fff; font-size:13px; font-weight:800; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .comp-picker-listo:active { opacity:0.85; }
+    .comp-resumen-fila { margin:4px 0 14px; }
+    .comp-resumen-fila-tit { font-size:12.5px; font-weight:800; color:var(--texto); margin-bottom:8px; }
+    .comp-resumen-editar { display:block; width:100%; margin-top:4px; padding:9px; border:1.5px dashed var(--borde); border-radius:10px; background:none; font-size:12px; font-weight:700; color:var(--gris); cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .comp-resumen-editar:active { background:var(--arena); }
     /* Apartado (item) — tappable → sesiones */
     .plan-item { display:flex; flex-direction:column; border:1px solid var(--borde); border-radius:11px; overflow:hidden; background:var(--blanco); }
     .plan-item-row { display:flex; align-items:stretch; }
@@ -4181,7 +4210,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.124.0';
+    var APP_VERSION = '0.125.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -9676,6 +9705,7 @@
     // ══════════════════════════════════════════════════════════════════
     var compMesOff     = 0;    // navegación ‹ › (meses relativos a hoy)
     var compDiaAbierta = null; // fecha ISO del día con el desplegable abierto (o null)
+    var compDiaEditando = false; // v0.125: dentro del día abierto, ¿modo selección (todo el catálogo) o modo resumen (solo lo elegido + vídeos)?
     var DOW_ORDEN = [1,2,3,4,5,6,0]; // Lunes..Domingo
 
     // Estado de una fecha concreta para un día de la semana con clase
@@ -9704,17 +9734,39 @@
       var out = [];
       etapas.forEach(function(et){
         (cont[et.key] || []).forEach(function(it){
-          out.push({ id: it.id, t: it.t, int: it.int, apartado: et.nombre });
+          out.push({ id: it.id, t: it.t, int: it.int, apartado: et.nombre, ejInc: it.ejInc || [] });
         });
       });
       return out;
     }
-    function compMesNav(delta) { compMesOff += delta; compDiaAbierta = null; mostrarPlanificacion(); }
+    function compMesNav(delta) { compMesOff += delta; compDiaAbierta = null; compDiaEditando = false; mostrarPlanificacion(); }
     function compDiaAbrir(fechaISO) {
       // Cualquier día activo (pasado o futuro) es clicable: permite
       // planificar con antelación lo que se va a dar, no solo lo ya dado.
       // Los festivos no llaman a esta función (sin onclick en el círculo).
-      compDiaAbierta = (compDiaAbierta === fechaISO) ? null : fechaISO;
+      if (compDiaAbierta === fechaISO) {
+        compDiaAbierta = null;
+      } else {
+        var p = leerPlan();
+        var yaMarcado = !!(p.compDias && p.compDias[fechaISO] && p.compDias[fechaISO].length);
+        compDiaAbierta = fechaISO;
+        // v0.125: si el día ya tiene algo marcado, se abre directamente en
+        // modo RESUMEN (solo lo elegido + vídeos, poco ruido); si está
+        // vacío, se abre en modo SELECCIÓN (todo el catálogo) para elegir.
+        compDiaEditando = !yaMarcado;
+      }
+      mostrarPlanificacion();
+    }
+    // v0.125: "retroceder" desde el resumen para cambiar lo elegido.
+    function compDiaEditar(fechaISO) {
+      compDiaAbierta = fechaISO;
+      compDiaEditando = true;
+      mostrarPlanificacion();
+    }
+    // v0.125: terminar de elegir → pasar al resumen con vídeos.
+    function compDiaVerResumen(fechaISO) {
+      compDiaAbierta = fechaISO;
+      compDiaEditando = false;
       mostrarPlanificacion();
     }
     function compDiaToggleFila(fechaISO, filaId) {
@@ -9763,7 +9815,43 @@
             '</div>';
           });
         });
+        h += '<button class="comp-picker-listo" onclick="compDiaVerResumen(\'' + fechaISO + '\')">✓ Listo, ver resumen</button>';
       }
+      h += '</div>';
+      return h;
+    }
+
+    // v0.125: vista compacta de un día YA marcado — solo la(s) fila(s)
+    // elegidas con sus vídeos enlazados en fila, para consultar fácil desde
+    // la pista (poco ruido visual). Con botón para volver a modo selección
+    // si hay que corregir.
+    function _compResumenHTML(p, fechaISO) {
+      var elegidas = (p.compDias && p.compDias[fechaISO]) || [];
+      var todas = _compTodasFilas(p);
+      var filas = elegidas.map(function(id){
+        return todas.filter(function(f){ return f.id === id; })[0];
+      }).filter(Boolean);
+      var dow = new Date(+fechaISO.slice(0,4), +fechaISO.slice(5,7)-1, +fechaISO.slice(8,10)).getDay();
+      var h = '<div class="comp-cal-picker comp-cal-resumen">';
+      h += '<div class="comp-cal-picker-hdr">' + DIAS_NOMBRES_A[dow] + ' ' + formatFechaDiaMes(fechaISO) + '</div>';
+      if (!filas.length) {
+        h += '<div class="comp-picker-vacio">Nada marcado todavía.</div>';
+      } else {
+        filas.forEach(function(f){
+          h += '<div class="comp-resumen-fila">';
+          h += '<div class="comp-resumen-fila-tit">' + f.apartado + ' · ' + f.t + '</div>';
+          var ejs = _planEjerciciosDeBloque('competicion', { ejInc: f.ejInc || [] });
+          if (ejs.length) {
+            h += '<div class="grid-ejercicios">';
+            ejs.forEach(function(e){ h += ejercicioCardHTML(e, 'planif'); });
+            h += '</div>';
+          } else {
+            h += '<div class="plan-item-ses-vacio">Sin ejercicios enlazados aún</div>';
+          }
+          h += '</div>';
+        });
+      }
+      h += '<button class="comp-resumen-editar" onclick="compDiaEditar(\'' + fechaISO + '\')">✏️ Cambiar selección</button>';
       h += '</div>';
       return h;
     }
@@ -9809,7 +9897,7 @@
           var numDia  = parseInt(fISO.slice(8,10), 10);
           var cls = 'comp-circ' + (festivo ? ' festivo' : '') + (marcada ? ' marcada' : '') + (fISO === hoyISO ? ' hoy' : '');
           var onclick = festivo ? '' : (' onclick="compDiaAbrir(\'' + fISO + '\')"');
-          var titulo  = festivo ? ' title="Sin clase este día"' : (marcada ? ' title="' + nFilas + ' fila(s) marcada(s) — toca para editar"' : ' title="Toca para marcar lo trabajado"');
+          var titulo  = festivo ? ' title="Sin clase este día"' : (marcada ? ' title="' + nFilas + ' fila(s) marcada(s) — toca para ver el resumen"' : ' title="Toca para marcar lo trabajado"');
           return '<div class="' + cls + '"' + onclick + titulo + '>' + numDia + '</div>';
         }).join('');
 
@@ -9817,7 +9905,9 @@
         h += '<p class="comp-dow-titulo">' + DIAS_NOMBRES_A[dow] +
           ' <span class="comp-dow-cont">· ' + marcadas + '/' + activas + ' marcados</span></p>';
         h += '<div class="comp-circ-fila">' + circulos + '</div>';
-        if (compDiaAbierta && fechas.indexOf(compDiaAbierta) >= 0) h += _compPickerHTML(p, compDiaAbierta);
+        if (compDiaAbierta && fechas.indexOf(compDiaAbierta) >= 0) {
+          h += compDiaEditando ? _compPickerHTML(p, compDiaAbierta) : _compResumenHTML(p, compDiaAbierta);
+        }
         h += '</div>';
       });
 
