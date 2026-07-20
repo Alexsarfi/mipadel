@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.149.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.150.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,16 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.150.0 — Competición: la semana en la que trabajas, sombreada (2026-07)
+    · Al abrir un día, se sombrea ENTERA la columna de su semana (todo el
+      espacio que ocupa, con sus días), no solo el círculo del día. Así se
+      identifica de un vistazo en qué semana se está trabajando.
+    · El número de semana de esa columna pasa a verde, y el día concreto
+      mantiene su resaltado de la v0.148 dentro de la semana sombreada.
+    · Al cambiar de día, el sombreado salta a la semana correspondiente; si
+      se cierra el día, no queda ninguna semana sombreada.
+    · Sin cambios de datos/esquema.
 
   v0.149.0 — Fuera el ⏳ "empieza más adelante" (2026-07)
     · El alumno ya NO se lista en la franja antes de su fecha de entrada.
@@ -3447,8 +3457,11 @@
     /* v0.147: las SEMANAS van una al lado de otra (columnas), separadas por
        una barra vertical. Dentro de cada semana, sus días apilados. */
     .comp-sem-cols { display:flex; align-items:flex-start; overflow-x:auto; padding-bottom:2px; margin-bottom:0.5rem; }
-    .comp-sem-col { flex:1 1 0; min-width:58px; padding:0 8px; }
+    .comp-sem-col { flex:1 1 0; min-width:58px; padding:6px 8px 8px; border-radius:10px; }
     .comp-sem-col + .comp-sem-col { border-left:1.5px solid var(--borde); }
+    /* v0.150: semana en la que se está trabajando, sombreada entera */
+    .comp-sem-col.activa { background:var(--verde-suave); }
+    .comp-sem-col.activa .comp-sem-titulo { color:var(--verde); }
     .comp-sem-titulo { font-size:11px; font-weight:800; color:var(--gris); margin:0 0 6px; text-align:center; }
     .comp-sem-dias { display:flex; flex-direction:column; align-items:center; gap:8px; }
     .comp-diacol { display:flex; flex-direction:column; align-items:center; gap:3px; }
@@ -4732,7 +4745,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.149.0';
+    var APP_VERSION = '0.150.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -11021,7 +11034,10 @@
 
         // v0.147: cada semana es una COLUMNA; el separador vertical entre
         // ellas lo pone el CSS (borde izquierdo a partir de la segunda).
-        colsHTML += '<div class="comp-sem-col">';
+        // v0.150: la semana en la que se está trabajando se sombrea entera
+        // (toda su columna), para ubicarse de un vistazo.
+        var semActiva = !!(compDiaAbierta && fechas.indexOf(compDiaAbierta) >= 0);
+        colsHTML += '<div class="comp-sem-col' + (semActiva ? ' activa' : '') + '">';
         colsHTML += '<p class="comp-sem-titulo">S' + (i + 1) +
           ' <span class="comp-dow-cont">' + marcadas + '/' + activas + '</span></p>';
         colsHTML += '<div class="comp-sem-dias">' + circulos + '</div>';
