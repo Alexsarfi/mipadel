@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.139.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.141.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,35 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.141.0 — La leyenda "?" pasa junto al selector de día (2026-07)
+    · La leyenda de las franjas (v0.139) estaba junto al selector de MES,
+      lejos de lo que explica. Se mueve junto al selector del DÍA DE LA
+      SEMANA, justo encima de las franjas horarias.
+    · Mismo desplegable de siempre (el de la ficha del alumno): icono "?"
+      discreto a la derecha y cerrada por defecto.
+    · Queda una sola leyenda en la pantalla (no se duplica).
+    · Sin cambios de datos/esquema.
+
+  v0.140.0 — Clases por recuperar: el curso en línea, sin calendario (2026-07)
+    · Pulsar un entrenador ya NO abre otra vista con calendario mensual:
+      ahora se DESPLIEGA justo debajo de él, sin salir de la lista. Se
+      vuelve a pulsar para replegarlo.
+    · Dentro, el curso entero en una fila lineal de meses (Sep · Oct · Nov
+      … hasta Jul). El mes se pinta en AMARILLO, con un contador, si tiene
+      clases anuladas marcadas para recuperar.
+    · Al tocar un mes salen SOLO sus tres números: dadas · por recuperar ·
+      recuperadas. Fuera el calendario de días y las listas detalladas de
+      cada clase (v0.137), que era justo el ruido que sobraba.
+    · Matiz del amarillo: marca los meses donde se anuló alguna clase PARA
+      recuperar. Como el saldo es automático (no se enlaza cada
+      recuperación con el día concreto que salda), el amarillo señala el
+      mes en que se generó la deuda, no en cuál se saldó; el saldo real del
+      curso sigue en el chip "↩ N por recuperar" de cada entrenador y en el
+      contador del club de la cabecera.
+    · Las clases anuladas marcadas como "se pierde" no ponen el mes en
+      amarillo (no hay nada que recuperar).
+    · Sin cambios de datos/esquema.
 
   v0.139.0 — Clase cubierta en MORADO + leyenda "?" de la franja (2026-07)
     · Cuando una clase la da OTRO ENTRENADOR del club, ahora se sombrea de
@@ -2154,39 +2183,33 @@
     .gestor-kpi-lbl { font-size:10.5px; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:0.04em; margin-top:5px; }
     .gestor-card { display:flex; align-items:center; gap:12px; background:var(--blanco); border:1.5px solid var(--borde); border-radius:14px; padding:0.9rem 1rem; margin-bottom:9px; cursor:pointer; transition:all .15s; }
     .gestor-card:active { border-color:var(--lila-claro); background:var(--lila-suave); }
-    /* v0.137: Clases por recuperar — calendario del mes y listas */
-    .grec-cal { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin:0.2rem 0 0.5rem; }
-    .grec-wd { text-align:center; font-size:10px; font-weight:800; color:var(--gris); padding-bottom:2px; }
-    .grec-cell { aspect-ratio:1; display:flex; align-items:center; justify-content:center; border-radius:8px;
-      font-size:12px; font-weight:700; color:var(--gris); background:var(--arena); border:1.5px solid transparent; }
-    .grec-cell.vacia { background:none; }
-    .grec-cell.dada  { background:var(--verde-suave); color:var(--verde); }
-    .grec-cell.recup { background:var(--lila-claro); color:var(--lila); }
-    .grec-cell.pend  { background:#fffbeb; color:#92400e; border-color:#f59e0b; }
-    .grec-cell.perd  { background:#f1f5f9; color:#94a3b8; text-decoration:line-through; }
-    .grec-cell.hoy   { box-shadow:0 0 0 2px var(--dorado); }
-    .grec-leyenda { display:flex; flex-wrap:wrap; gap:10px; font-size:10.5px; color:var(--gris); margin-bottom:0.4rem; }
-    .grec-leyenda span { display:inline-flex; align-items:center; gap:4px; }
-    .grec-leyenda i { width:10px; height:10px; border-radius:3px; display:inline-block; }
-    .grec-leyenda i.pend  { background:#fffbeb; border:1.5px solid #f59e0b; }
-    .grec-leyenda i.recup { background:var(--lila-claro); }
-    .grec-leyenda i.dada  { background:var(--verde-suave); }
-    .grec-leyenda i.perd  { background:#f1f5f9; }
-    .grec-saldo { background:var(--blanco); border:1.5px solid var(--borde); border-radius:12px; padding:0.6rem 0.8rem;
-      font-size:13px; color:var(--texto); margin-bottom:0.6rem; }
-    .grec-saldo.hay { border-color:#f59e0b; background:#fffbeb; }
-    .grec-saldo b { font-size:22px; font-weight:800; margin-right:5px; }
-    .grec-saldo span { display:block; font-size:11px; color:var(--gris); margin-top:2px; }
+    /* v0.137/v0.140: Clases por recuperar. El entrenador se despliega en
+       línea con el curso (sep→jul) en una fila de meses; el mes en AMARILLO
+       tiene clases marcadas para recuperar. Al tocarlo, sus tres números. */
     .grec-pend-chip { display:inline-block; font-size:10.5px; font-weight:800; color:#92400e; background:#fffbeb;
       border:1px solid #f59e0b; border-radius:20px; padding:1px 8px; }
-    .grec-lista { display:flex; flex-direction:column; gap:4px; margin-top:5px; }
-    .grec-item { display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:9px;
-      font-size:12px; background:var(--blanco); border:1px solid var(--borde); }
-    .grec-item.pend  { border-color:#f59e0b; background:#fffbeb; }
-    .grec-item.recup { border-color:var(--lila-claro); }
-    .grec-item.perd  { color:var(--gris); }
-    .grec-item-fecha { font-weight:800; flex-shrink:0; min-width:38px; }
-    .grec-item-fr { color:var(--gris); }
+    .gcl-inline { background:var(--arena); border:1.5px solid var(--borde); border-radius:12px;
+      padding:0.6rem 0.7rem; margin:-2px 0 8px; }
+    .gcl-meses { display:flex; flex-wrap:wrap; gap:5px; }
+    .gcl-mes { position:relative; flex:1 1 auto; min-width:44px; padding:6px 8px; border-radius:9px;
+      border:1.5px solid var(--borde); background:var(--blanco); color:var(--gris);
+      font-family:inherit; font-size:11.5px; font-weight:800; cursor:pointer;
+      -webkit-tap-highlight-color:transparent; }
+    .gcl-mes:active { transform:scale(0.96); }
+    .gcl-mes.debe { background:#fffbeb; border-color:#f59e0b; color:#92400e; }
+    .gcl-mes.sel  { box-shadow:0 0 0 2px var(--verde); color:var(--texto); }
+    .gcl-mes i { display:inline-block; font-style:normal; font-size:9.5px; font-weight:800;
+      background:#f59e0b; color:#fff; border-radius:20px; padding:0 5px; margin-left:4px; }
+    .gcl-nums-tit { font-size:11.5px; font-weight:800; color:var(--texto); margin:0.6rem 0 0.3rem; }
+    .gcl-nums { display:flex; gap:6px; }
+    .gcl-num { flex:1; text-align:center; background:var(--blanco); border:1.5px solid var(--borde);
+      border-radius:10px; padding:0.5rem 0.3rem; }
+    .gcl-num b { display:block; font-size:20px; font-weight:800; line-height:1; }
+    .gcl-num span { display:block; font-size:10px; color:var(--gris); margin-top:3px; }
+    .gcl-num.dada  b { color:var(--verde); }
+    .gcl-num.pend  { border-color:#f59e0b; background:#fffbeb; }
+    .gcl-num.pend  b { color:#92400e; }
+    .gcl-num.recup b { color:#6b21a8; }
     /* v0.107: tarjeta solo informativa (página "Todos"), sin enlace */
     .gestor-card.plana { cursor:default; }
     .gestor-card.plana:active { border-color:var(--borde); background:var(--blanco); }
@@ -4544,7 +4567,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.139.0';
+    var APP_VERSION = '0.141.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -6263,9 +6286,19 @@
     // SE RECUPERA (reg.sinClaseRecup). El saldo pendiente es automático:
     // marcadas para recuperar − recuperaciones ya dadas (reg.recupClase).
     // Los días sin clase del CLUB (festivos del gestor) no son recuperables.
-    var _gclUid = null;   // entrenador abierto (null = lista de todos)
-    function gclAbrirEnt(uid) { _gclUid = uid; renderGestorClases(); }
-    function gclVolverLista() { _gclUid = null; renderGestorClases(); }
+    var _gclUid    = null;   // entrenador desplegado (null = ninguno)
+    var _gclMesSel = null;   // mes elegido dentro del despliegue (ISO) o null
+    // v0.140: el entrenador se DESPLIEGA en línea (antes abría otra vista
+    // con calendario). Volver a tocarlo lo repliega.
+    function gclAbrirEnt(uid) {
+      if (_gclUid === uid) { _gclUid = null; }
+      else { _gclUid = uid; _gclMesSel = null; }
+      renderGestorClases();
+    }
+    function gclMesSel(iso) {
+      _gclMesSel = (_gclMesSel === iso) ? null : iso;
+      renderGestorClases();
+    }
     function _gRecupClasifica(r) {
       if (!r) return '';
       if (r.sinClase) return r.sinClaseRecup ? 'pend' : 'perd';
@@ -6309,38 +6342,38 @@
       Object.keys(by).forEach(function(u){ t += _gRecupSaldo(u); });
       return t;
     }
-    // Calendario del mes con el estado de cada día (prioridad: pendiente
-    // > recuperada > dada > perdida, si ese día tiene varias franjas).
-    function _gRecupCalHTML(uid, mesISO) {
-      var ORD = { pend:4, recup:3, dada:2, perd:1 };
-      var by = _gestorAgrupar(), d = by[uid], estado = {};
-      if (d) {
-        _gestorRegsLocal(d).forEach(function(r){
-          if (!r.fecha || r.fecha.slice(0,7) !== mesISO) return;
-          var k = _gRecupClasifica(r);
-          if (!k) return;
-          var prev = estado[r.fecha];
-          if (!prev || ORD[k] > ORD[prev]) estado[r.fecha] = k;
-        });
-      }
-      var y = +mesISO.slice(0,4), m = +mesISO.slice(5,7);
-      var nd = new Date(y, m, 0).getDate();
-      var primero = (new Date(y, m - 1, 1).getDay() + 6) % 7;   // Lun=0
-      var h = '<div class="grec-cal">';
-      ['L','M','X','J','V','S','D'].forEach(function(w){ h += '<div class="grec-wd">' + w + '</div>'; });
-      for (var i = 0; i < primero; i++) h += '<div class="grec-cell vacia"></div>';
-      for (var dd = 1; dd <= nd; dd++) {
-        var f  = mesISO + '-' + _pad2(dd);
-        var st = estado[f] || '';
-        h += '<div class="grec-cell' + (st ? ' ' + st : '') + (f === hoyLocal() ? ' hoy' : '') + '">' + dd + '</div>';
+    // v0.140: despliegue EN LÍNEA bajo el entrenador — el curso entero de
+    // septiembre a julio en una fila de meses. El mes se pinta en AMARILLO
+    // si ese mes tiene alguna clase anulada marcada para recuperar. Al
+    // tocar un mes salen solo sus tres números.
+    function _gclInlineHTML(uid) {
+      var meses = _dscMesesCurso();          // sep → jul del curso en marcha
+      var h = '<div class="gcl-inline">';
+      h += '<div class="gcl-meses">';
+      meses.forEach(function(iso){
+        var m    = _gRecupMes(uid, iso);
+        var debe = m.pend.length > 0;        // hay clases marcadas para recuperar
+        var sel  = (_gclMesSel === iso);
+        var lbl  = MESES_NOMBRES_A[+iso.slice(5,7) - 1].slice(0,3);
+        h += '<button type="button" class="gcl-mes' + (debe ? ' debe' : '') + (sel ? ' sel' : '') +
+             '" onclick="event.stopPropagation();gclMesSel(\'' + iso + '\')" title="' + lbl +
+             (debe ? ' · ' + m.pend.length + ' por recuperar' : '') + '">' + lbl +
+             (debe ? '<i>' + m.pend.length + '</i>' : '') + '</button>';
+      });
+      h += '</div>';
+      if (_gclMesSel) {
+        var mm  = _gRecupMes(uid, _gclMesSel);
+        var lbl2 = MESES_NOMBRES_A[+_gclMesSel.slice(5,7) - 1];
+        h += '<div class="gcl-nums-tit">' + _gEsc(lbl2) + '</div>';
+        h += '<div class="gcl-nums">' +
+          '<div class="gcl-num dada"><b>' + mm.dada.length + '</b><span>dadas</span></div>' +
+          '<div class="gcl-num pend"><b>' + mm.pend.length + '</b><span>por recuperar</span></div>' +
+          '<div class="gcl-num recup"><b>' + mm.recup.length + '</b><span>recuperadas</span></div>' +
+        '</div>';
+      } else {
+        h += '<p class="ajustes-desc" style="margin:0.35rem 0 0;">Toca un mes para ver sus números. En <b style="color:#92400e;">amarillo</b>, los meses con clases por recuperar.</p>';
       }
       h += '</div>';
-      h += '<div class="grec-leyenda">' +
-        '<span><i class="pend"></i>Por recuperar</span>' +
-        '<span><i class="recup"></i>Recuperada</span>' +
-        '<span><i class="dada"></i>Dada</span>' +
-        '<span><i class="perd"></i>Perdida</span>' +
-      '</div>';
       return h;
     }
     function renderGestorClases() {
@@ -6350,9 +6383,6 @@
       var mesISO   = getMesISO_A(_gClasesMesOff);
       var mesLabel = getMesLabelA(_gClasesMesOff);
       var cursoMes = cursoDeFecha(mesISO);
-      // v0.137: nivel 2 — un entrenador abierto: calendario del mes +
-      // pendientes / dadas / recuperadas.
-      if (_gclUid) { cont.innerHTML = _gclDetalleHTML(_gclUid, mesISO, mesLabel); return; }
       var _saldoClub = _gRecupSaldoClub();
       document.getElementById('gcl-titulo').textContent = 'Clases por recuperar';
       document.getElementById('gcl-sub').textContent = _saldoClub
@@ -6445,57 +6475,13 @@
             '</div>' +
             '<div style="text-align:right;flex-shrink:0;">' + horas + '</div>' +
           '</div>';
+          // v0.140: el curso (sep→jul) se despliega aquí mismo, bajo el
+          // entrenador, en vez de abrir otra vista con calendario.
+          if (!f.ext && _gclUid === f.uid) h += _gclInlineHTML(f.uid);
         });
         if (_gEsSeptiembre(mesISO)) h += '<p class="ajustes-desc" style="margin-top:0.4rem;">Las horas en <span style="color:#92400e;font-weight:700;">ámbar 🔁</span> son sustituciones: ya están incluidas en el total de quien las dio y descontadas del titular.</p>';
       }
       cont.innerHTML = h;
-    }
-
-    // v0.137: nivel 2 — ficha mensual de un entrenador con el calendario
-    // del mes y, debajo, PENDIENTES · DADAS · RECUPERADAS.
-    function _gclDetalleHTML(uid, mesISO, mesLabel) {
-      var by  = _gestorAgrupar(), d = by[uid];
-      var nom = d ? _gestorNombre(d) : '¿?';
-      var sal = _gRecupSaldo(uid);
-      var tEl = document.getElementById('gcl-titulo');
-      if (tEl) tEl.textContent = nom;
-      var sEl = document.getElementById('gcl-sub');
-      if (sEl) sEl.textContent = sal
-        ? (sal + ' clase' + (sal !== 1 ? 's' : '') + ' por recuperar')
-        : 'Sin clases pendientes de recuperar';
-
-      var m = _gRecupMes(uid, mesISO);
-      var h = '<button type="button" class="btn btn-sec btn-sm" style="margin-bottom:0.6rem;" onclick="gclVolverLista()">‹ Todos los entrenadores</button>';
-      h += '<div class="grec-saldo' + (sal ? ' hay' : '') + '">' +
-             '<b>' + sal + '</b> clase' + (sal !== 1 ? 's' : '') + ' por recuperar' +
-             '<span>curso ' + _gEsc(cursoDeFecha(hoyLocal())) + ' · marcadas para recuperar menos las ya recuperadas</span>' +
-           '</div>';
-      h += '<div class="gestor-mes-nav">' +
-        '<button class="gestor-mes-btn" onclick="gestorClasesMesNav(-1)">‹</button>' +
-        '<span class="gestor-mes-lbl">' + _gEsc(mesLabel) + '</span>' +
-        '<button class="gestor-mes-btn" onclick="gestorClasesMesNav(1)">›</button>' +
-      '</div>';
-      h += _gRecupCalHTML(uid, mesISO);
-
-      function bloque(titulo, items, cls, vacio) {
-        var s = '<div class="grupo-titulo" style="margin-top:1rem;">' + titulo +
-                (items.length ? ' <span style="font-weight:700;color:var(--gris);">· ' + items.length + '</span>' : '') + '</div>';
-        if (!items.length) { return s + '<p class="ajustes-desc" style="margin:0;">' + vacio + '</p>'; }
-        s += '<div class="grec-lista">';
-        items.forEach(function(it){
-          s += '<div class="grec-item ' + cls + '">' +
-                 '<span class="grec-item-fecha">' + parseInt(it.fecha.slice(8,10),10) + '/' + it.fecha.slice(5,7) + '</span>' +
-                 '<span class="grec-item-fr">' + _gEsc(it.franja || '—') +
-                   (it.nombre && it.nombre !== 'Clase' ? ' · ' + _gEsc(it.nombre) : '') + '</span>' +
-               '</div>';
-        });
-        return s + '</div>';
-      }
-      h += bloque('↩ Por recuperar', m.pend, 'pend', 'Ninguna clase anulada pendiente este mes.');
-      h += bloque('✓ Dadas',        m.dada, 'dada', 'Sin clases dadas este mes.');
-      h += bloque('↩ Recuperadas',  m.recup,'recup','Sin recuperaciones este mes.');
-      if (m.perd.length) h += bloque('✖ Perdidas', m.perd, 'perd', '');
-      return h;
     }
 
     // ── v0.109: DETALLE de un sustituto EXTERNO ──────────────────
@@ -7386,8 +7372,9 @@
         '<span class="gestor-mes-lbl">' + _gEsc(mesLabel) + '</span>' +
         '<button class="gestor-mes-btn" onclick="gestorMesNav(1)">›</button>' +
       '</div>';
-      // v0.139: leyenda de consulta de la franja (colapsada tras el "?")
-      h += _gFranjaLeyenda();
+      // v0.141: la leyenda "?" de las franjas se ha movido de aquí (junto
+      // al selector de mes) a justo encima de las franjas, bajo el selector
+      // de día de la semana, que es donde se consulta.
 
       // ── Cálculo por alumno del mes (misma lógica que el Resumen) ──
       var alumnosMap = {}, fechasSet = {};
@@ -7506,6 +7493,9 @@
           '</button>';
         });
         h += '</div>';
+        // v0.141: leyenda "?" de las franjas, aquí — justo bajo el selector
+        // de día y encima de las franjas, que es lo que explica.
+        h += _gFranjaLeyenda();
 
         // v0.100: TODOS los días que da clase como columnas. En móvil solo se
         // ve el día elegido con los chips (limpio); en web (≥760px) se
