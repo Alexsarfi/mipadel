@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.147.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.149.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,33 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.149.0 — Fuera el ⏳ "empieza más adelante" (2026-07)
+    · El alumno ya NO se lista en la franja antes de su fecha de entrada.
+      Antes aparecía atenuado con ⏳ ("empieza más adelante") en los meses
+      previos, y eso era solo ruido: el alumno pertenece a la franja desde
+      el día que entra, no antes.
+    · Se retira también de la leyenda "?" de la franja, que queda con dos
+      estados: activo y baja (❌ con su fecha, solo en su mes).
+    · Sigue apareciendo con normalidad desde su mes de alta, incluida el
+      alta a mitad de mes.
+    · Sin cambios de datos: no se toca ninguna fecha de alta; solo deja de
+      pintarse antes de tiempo.
+
+  v0.148.0 — Competición: día resaltado y sesiones del día en pestañas (2026-07)
+    · (1) El día que se está consultando queda RESALTADO en su semana:
+      círculo algo más grande, con halo verde y su etiqueta (MIÉ, VIE…) en
+      verde. Antes se abría el contenido abajo pero nada indicaba de qué
+      día era, y con las semanas en columnas era fácil perderse.
+    · (2) Si un día tiene VARIAS sesiones marcadas, ya no se apilan una
+      debajo de otra: aparecen como pestañas horizontales (una por sesión)
+      y solo se ven los vídeos de la que esté elegida. Se toca la pestaña
+      para cambiar de sesión. Con una sola sesión no se pintan pestañas,
+      para no meter ruido.
+    · Al abrir otro día, o al volver del selector, se arranca siempre en la
+      primera sesión. Si la sesión elegida deja de estar marcada, cae a la
+      primera sin romperse.
+    · Sin cambios de datos/esquema.
 
   v0.147.0 — Competición: semanas en columnas y días sin clase del club (2026-07)
     · Las semanas pasan de ir una DEBAJO de otra (v0.145) a ir una AL LADO
@@ -2684,7 +2711,8 @@
     .ghd-al { font-size:11px; font-weight:700; color:#1e40af; background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:20px; padding:3px 9px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
     button.ghd-al:active { transform:scale(0.96); }
     .ghd-al.baja { color:#92400e; background:#fef9c3; border-color:#fde68a; }
-    .ghd-al.fut  { color:var(--gris); background:#f3f4f6; border-color:#e5e7eb; }
+    /* v0.149: se retira .ghd-al.fut (⏳ "empieza más adelante"): el alumno
+       ya no se lista antes de su fecha de entrada, así que no hace falta. */
     /* Historial del alumno: alta/baja por clase */
     .gal-altas-card { background:var(--blanco); border:1.5px solid var(--borde); border-radius:12px; padding:0.35rem 0.8rem; margin-bottom:10px; }
     .gal-altas-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:6px 0; border-bottom:1px solid var(--borde); font-size:12px; }
@@ -3437,6 +3465,10 @@
        visual que en Asistencia: rojo con borde discontinuo. */
     .comp-circ.dsc { background:#fee2e2; color:#b91c1c; border:1.5px dashed #fca5a5; cursor:default; text-decoration:none; opacity:1; }
     .comp-circ.hoy { box-shadow:0 0 0 2px var(--dorado); }
+    /* v0.148: día que se está consultando — resaltado para no perder de
+       vista en qué día estamos mientras se mira su contenido abajo. */
+    .comp-circ.abierta { transform:scale(1.12); box-shadow:0 0 0 3px var(--verde), 0 3px 8px rgba(0,0,0,.18); }
+    .comp-diacol:has(.comp-circ.abierta) .comp-diacol-dow { color:var(--verde); }
     .comp-cal-picker { background:var(--arena); border:1.5px solid var(--borde); border-radius:11px; padding:0.6rem 0.85rem; margin-top:8px; }
     .comp-cal-picker-hdr { font-size:12px; font-weight:800; color:var(--texto); margin-bottom:0.4rem; }
     .comp-picker-grupo { font-size:11px; font-weight:800; color:var(--gris); margin:8px 0 3px; }
@@ -3451,6 +3483,13 @@
     .comp-picker-vacio { font-size:12px; color:var(--gris); font-style:italic; }
     .comp-picker-listo { display:block; width:100%; margin-top:12px; padding:10px; border:none; border-radius:10px; background:var(--azul); color:#fff; font-size:13px; font-weight:800; cursor:pointer; -webkit-tap-highlight-color:transparent; }
     .comp-picker-listo:active { opacity:0.85; }
+    /* v0.148: pestañas horizontales de sesiones del día (si hay varias) */
+    .comp-fila-tabs { display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; margin:2px 0 8px; }
+    .comp-fila-tab { flex:0 0 auto; max-width:60%; padding:6px 12px; border-radius:20px; border:1.5px solid var(--borde);
+      background:var(--blanco); color:var(--gris); font-family:inherit; font-size:11.5px; font-weight:800;
+      cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; -webkit-tap-highlight-color:transparent; }
+    .comp-fila-tab:active { transform:scale(0.97); }
+    .comp-fila-tab.sel { background:var(--verde); border-color:var(--verde); color:#fff; }
     .comp-resumen-fila { margin:4px 0 14px; }
     .comp-resumen-fila-tit { font-size:12.5px; font-weight:800; color:var(--texto); margin-bottom:8px; }
     .comp-resumen-editar { display:block; width:100%; margin-top:4px; padding:9px; border:1.5px dashed var(--borde); border-radius:10px; background:none; font-size:12px; font-weight:700; color:var(--gris); cursor:pointer; -webkit-tap-highlight-color:transparent; }
@@ -4693,7 +4732,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.147.0';
+    var APP_VERSION = '0.149.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -7823,15 +7862,18 @@
         var nom = alNom(a);
         if (!nom) return;
         var alta   = alAlta(a);
-        var fut    = alta && alta > finMes;                // aún no ha empezado
+        // v0.149: si aún no ha empezado, NO se lista. El alumno aparece en
+        // la franja desde la fecha en que entra, no antes (antes salía
+        // atenuado con ⏳ "empieza más adelante", que solo era ruido).
+        if (alta && alta > finMes) return;
         var bajaEf = alBaja(a);                            // baja del periodo vigente
         var mesBaja = bajaEf ? bajaEf.slice(0, 7) : '';
         // Baja anterior a este mes → ya no pertenece al grupo: no se lista.
         if (mesBaja && mesBaja < mesISO) return;
         // Baja real DENTRO de este mes → amarillo con su fecha.
-        var baja  = !fut && !!bajaEf && mesBaja === mesISO && !esBajaFinCurso(bajaEf);
-        var cls   = 'ghd-al' + (baja ? ' baja' : (fut ? ' fut' : ''));
-        var texto = (baja ? '❌ ' : (fut ? '⏳ ' : '')) + _gEsc(alCorto(a)) +
+        var baja  = !!bajaEf && mesBaja === mesISO && !esBajaFinCurso(bajaEf);
+        var cls   = 'ghd-al' + (baja ? ' baja' : '');
+        var texto = (baja ? '❌ ' : '') + _gEsc(alCorto(a)) +
                     (baja ? ' · ' + bajaEf.slice(8, 10) + '/' + bajaEf.slice(5, 7) : '');
         nAls++;
         if (hist) {
@@ -8653,8 +8695,7 @@
           '<span class="ghd-day dada sust">15</span> la cubrió un sustituto externo') +
         grupo('Alumnos',
           '<span class="ghd-al">Marta G.</span> activo' +
-          '<span class="ghd-al baja">❌ Luis P. · 14/03</span> baja, con su fecha (solo ese mes)' +
-          '<span class="ghd-al fut">⏳ Ana R.</span> empieza más adelante')
+          '<span class="ghd-al baja">❌ Luis P. · 14/03</span> baja, con su fecha (solo ese mes)')
       );
     }
 
@@ -10656,6 +10697,7 @@
     var compMesOff     = 0;    // navegación ‹ › (meses relativos a hoy)
     var compDiaAbierta = null; // fecha ISO del día con el desplegable abierto (o null)
     var compDiaEditando = false; // v0.125: dentro del día abierto, ¿modo selección (todo el catálogo) o modo resumen (solo lo elegido + vídeos)?
+    var compFilaSel = null;      // v0.148: sesión (fila) elegida en el resumen del día
     var DOW_ORDEN = [1,2,3,4,5,6,0]; // Lunes..Domingo
 
     // Estado de una fecha concreta para un día de la semana con clase
@@ -10697,6 +10739,7 @@
       // Cualquier día activo (pasado o futuro) es clicable: permite
       // planificar con antelación lo que se va a dar, no solo lo ya dado.
       // Los festivos no llaman a esta función (sin onclick en el círculo).
+      compFilaSel = null;   // v0.148: cada día arranca en su primera sesión
       if (compDiaAbierta === fechaISO) {
         compDiaAbierta = null;
       } else {
@@ -10716,10 +10759,16 @@
       compDiaEditando = true;
       mostrarPlanificacion();
     }
+    // v0.148: cambiar de sesión dentro del resumen del día
+    function compFilaVer(filaId) {
+      compFilaSel = filaId;
+      mostrarPlanificacion();
+    }
     // v0.125: terminar de elegir → pasar al resumen con vídeos.
     function compDiaVerResumen(fechaISO) {
       compDiaAbierta = fechaISO;
       compDiaEditando = false;
+      compFilaSel = null;   // al volver del selector, arranca en la primera
       mostrarPlanificacion();
     }
     function compDiaToggleFila(fechaISO, filaId) {
@@ -10841,7 +10890,21 @@
       if (!filas.length) {
         h += '<div class="comp-picker-vacio">Nada marcado todavía.</div>';
       } else {
-        filas.forEach(function(f){
+        // v0.148: si el día tiene VARIAS sesiones marcadas, se navegan en
+        // horizontal: una pestaña por sesión y solo se ven los vídeos de la
+        // que esté elegida (antes se apilaban todas, una debajo de otra).
+        var selId = compFilaSel;
+        if (!selId || !filas.some(function(f){ return f.id === selId; })) selId = filas[0].id;
+        if (filas.length > 1) {
+          h += '<div class="comp-fila-tabs">';
+          filas.forEach(function(f){
+            h += '<button type="button" class="comp-fila-tab' + (f.id === selId ? ' sel' : '') +
+              '" onclick="compFilaVer(\'' + f.id + '\')" title="' + _gEsc(f.apartado + ' · ' + f.t).replace(/"/g,'') + '">' +
+              _gEsc(f.t) + '</button>';
+          });
+          h += '</div>';
+        }
+        [filas.filter(function(f){ return f.id === selId; })[0]].forEach(function(f){
           h += '<div class="comp-resumen-fila">';
           h += '<div class="comp-resumen-fila-tit">' + f.apartado + ' · ' + f.t + '</div>';
           var ejs = _planEjerciciosDeBloque('competicion', { ejInc: f.ejInc || [] });
@@ -10942,7 +11005,9 @@
           var numDia  = parseInt(fISO.slice(8,10), 10);
           var dowF    = new Date(+fISO.slice(0,4), +fISO.slice(5,7)-1, +fISO.slice(8,10)).getDay();
           var cls = 'comp-circ' + (dsc ? ' dsc' : (festivo ? ' festivo' : '')) +
-                    (marcada ? ' marcada' : '') + (fISO === hoyISO ? ' hoy' : '');
+                    (marcada ? ' marcada' : '') + (fISO === hoyISO ? ' hoy' : '') +
+                    // v0.148: el día que se está viendo queda resaltado
+                    (fISO === compDiaAbierta ? ' abierta' : '');
           var onclick = bloq ? '' : (' onclick="compDiaAbrir(\'' + fISO + '\')"');
           var titulo  = dsc ? ' title="Sin clase — lo marcó el club"'
                       : (festivo ? ' title="Sin clase este día"'
