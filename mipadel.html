@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.152.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.153.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,27 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.153.0 — Fuera el ✓ "trabajado": el progreso sale del trabajo real (2026-07)
+    · Se RETIRA el ✓ manual de cada área de trabajo. Era un dato poco
+      práctico (había que acordarse de marcarlo a mano) y, sobre todo,
+      viajaba en la fila COMPARTIDA del grupo: lo marcaba un entrenador y
+      se le movía el progreso a otro. Era el último dato que se pisaba
+      entre cuentas.
+    · En su lugar, en Competición y Avanzado cada fila muestra el contador
+      "N×" de veces trabajada este curso, sacado del marcado por días —que
+      es privado de cada entrenador— y por tanto refleja trabajo real.
+      Iniciación y Equipo se quedan sin marca en esa columna.
+    · El progreso de la cabecera de cada etapa deja de contar ✓ y pasa a
+      contar filas realmente trabajadas este curso ("2/6"). En los niveles
+      sin registro por días muestra solo el nº de filas.
+    · 'hechos' deja de subirse y de bajarse del plan del grupo. La columna
+      queda sin uso en Supabase (no hace falta migración ni borrarla).
+    · Extra: al borrar un área del plan se limpia también su marcado por
+      días, para no dejar días apuntando a un área que ya no existe.
+    · Con esto, TODO el progreso del entrenador es ya privado: el marcado
+      por días (v0.132) y ahora el recuento por área. Lo común del club
+      sigue siendo el catálogo: áreas, ejercicios y sesiones enlazadas.
 
   v0.152.0 — AVANZADO estrena la estructura de trabajo de Competición (2026-07)
     · Avanzado tiene ahora la misma vista que Competición: el mes por
@@ -3591,8 +3612,7 @@
     .plan-chip.int { color:var(--blanco); }
     .plan-chip.zona { background:#e0e7ff; color:#3730a3; }
     .plan-chip.golpe { background:#f1f5f9; color:#475569; }
-    .plan-item-check { width:42px; flex-shrink:0; border:none; border-left:1px solid var(--borde); background:var(--blanco); cursor:pointer; font-size:15px; color:#cbd5e1; display:flex; align-items:center; justify-content:center; }
-    .plan-item-check.on { background:var(--verde-suave); color:var(--verde); }
+    /* v0.153: se retira .plan-item-check (el ✓ manual "trabajado") */
     /* v0.129: contador "veces trabajada este curso" — sustituye al tick
        manual en Competición (misma columna/tamaño que .plan-item-check). */
     .plan-item-contador { width:42px; flex-shrink:0; border-left:1px solid var(--borde); background:var(--blanco); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; color:#cbd5e1; }
@@ -4781,7 +4801,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.152.0';
+    var APP_VERSION = '0.153.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -5115,7 +5135,7 @@
           var pLocal = leerPlan();
           pLocal.contenido       = planServ.contenido  || pLocal.contenido;
           pLocal.biblioteca      = planServ.biblioteca || pLocal.biblioteca;
-          pLocal.hechos          = planServ.hechos      || pLocal.hechos || {};
+          // v0.153: 'hechos' ya no se baja del grupo (el ✓ manual se retiró)
           pLocal.planEtapasV     = planServ.plan_etapas_v   != null ? planServ.plan_etapas_v   : pLocal.planEtapasV;
           pLocal.bibVersion      = planServ.bib_version     != null ? planServ.bib_version     : pLocal.bibVersion;
           pLocal.bibEstrategias  = planServ.bib_estrategias != null ? planServ.bib_estrategias : pLocal.bibEstrategias;
@@ -5378,7 +5398,10 @@
         scope_id:        scope,
         contenido:       p.contenido || {},
         biblioteca:      p.biblioteca || [],
-        hechos:          p.hechos || {},
+        // v0.153: 'hechos' (el ✓ manual) ya no se envía: se retiró de la
+        // interfaz y, al viajar en la fila compartida del grupo, un
+        // entrenador le movía el progreso a otro. La columna queda sin uso.
+        hechos:          {},
         plan_etapas_v:   p.planEtapasV || 2,
         bib_version:     p.bibVersion || 3,
         bib_estrategias: !!p.bibEstrategias,
@@ -10167,11 +10190,11 @@
     function planToggleAnalisis() { var p = leerPlan(); p.analisisAbierto = !p.analisisAbierto; _planGuardar(p); }
     function planToggleAreas() { var p = leerPlan(); p.areasAbierto = !p.areasAbierto; _planGuardar(p); }
     function planToggleCiclo() { var p = leerPlan(); p.cicloAbierto = !p.cicloAbierto; _planGuardar(p); }
-    function planToggleHecho(id) {
-      var p = leerPlan();
-      if (p.hechos[id]) delete p.hechos[id]; else p.hechos[id] = true;
-      mostrarPlanificacion(); _planGuardar(p);
-    }
+    // v0.153: se retira planToggleHecho(). El ✓ "trabajado" manual
+    // desaparece: no aportaba (había que acordarse de marcarlo a mano) y
+    // además viajaba en la fila COMPARTIDA del grupo, así que un entrenador
+    // le movía el progreso a otro. Lo que cuenta ahora es el trabajo real
+    // registrado por días, que es privado de cada uno.
     function planToggleEdit() { planEditMode = !planEditMode; mostrarPlanificacion(); }
 
     // ── Edición de apartados ──
@@ -10187,7 +10210,14 @@
       if (!confirm('¿Borrar este apartado del plan?')) return;
       var p = leerPlan(); var c = planContenido(p);
       c[nivel][mes] = (c[nivel][mes] || []).filter(function(x){ return x.id !== id; });
-      if (p.hechos[id]) delete p.hechos[id];
+      // v0.153: al borrar una fila se limpia también su marcado por días,
+      // para que no queden días apuntando a un área que ya no existe.
+      if (p.compDias) {
+        Object.keys(p.compDias).forEach(function(f){
+          var arr = p.compDias[f].filter(function(x){ return x !== id; });
+          if (arr.length) p.compDias[f] = arr; else delete p.compDias[f];
+        });
+      }
       _planGuardar(p); mostrarPlanificacion();
     }
     function planAbrirEditor(nivel, mes, id) {
@@ -10570,13 +10600,13 @@
     }
 
     function _planItemHTML(nivel, mes, it, hechos, editMode, contadorCurso) {
-      // v0.129: en Competición el tick manual "trabajado" se sustituye por
-      // un contador de veces trabajada ESTE CURSO (derivado de p.compDias,
-      // el mismo registro por día que usa el calendario mensual). El resto
-      // de niveles conserva el tick manual (p.hechos) tal cual.
-      var esCompItem = (nivel === 'competicion');
-      var veces = (esCompItem && contadorCurso) ? (contadorCurso[it.id] || 0) : 0;
-      var hecho = esCompItem ? (veces > 0) : !!hechos[it.id];
+      // v0.153: fuera el ✓ manual. En los niveles con registro por días
+      // (Competición y Avanzado) cada fila muestra las veces que se ha
+      // trabajado ESTE CURSO, sacado del trabajo real anotado día a día
+      // (privado de cada entrenador). En los demás, ninguna marca.
+      var conDias = (COMP_NIVELES.indexOf(nivel) >= 0);
+      var veces = (conDias && contadorCurso) ? (contadorCurso[it.id] || 0) : 0;
+      var hecho = conDias && veces > 0;
       var ic = PLAN_INT[it.int] || PLAN_INT.dominar;
       var chips = '<div class="plan-item-chips">' +
         '<span class="plan-chip int" style="background:' + ic.c + '">' + ic.l + '</span>' +
@@ -10601,11 +10631,9 @@
       h2 += '<div class="plan-item-body" onclick="planAbrirSesionesBloque(\'' + nivel + '\',\'' + mes + '\',\'' + it.id + '\')">';
       h2 += '<div class="plan-item-top"><span class="plan-item-titulo">' + it.t + '</span><span class="plan-item-flecha">⚙</span></div>';
       h2 += '</div>'; // chips/foco (intención · zona · golpe) ahora solo dentro del apartado
-      if (esCompItem) {
+      if (conDias) {
         var titVeces = veces ? ('Trabajada ' + veces + ' vez' + (veces > 1 ? 'es' : '') + ' este curso') : 'Sin trabajar este curso todavía';
         h2 += '<div class="plan-item-contador' + (veces ? ' con' : '') + '" title="' + titVeces + '">' + veces + '×</div>';
-      } else {
-        h2 += '<button class="plan-item-check' + (hecho ? ' on' : '') + '" onclick="planToggleHecho(\'' + it.id + '\');event.stopPropagation()" title="Marcar como trabajado">✓</button>';
       }
       h2 += '</div>'; // .plan-item-row
 
@@ -11163,9 +11191,10 @@
       h += '</div>';
 
       var esComp = (nivel === 'competicion');
-      // v0.129: contador "veces trabajada este curso" (Áreas de trabajo),
-      // curso-scoped igual que el del picker del día.
-      var compContadorCurso = esComp ? _compContadorTrabajo(p, cursoDeFecha(hoyLocal())) : null;
+      // v0.129/v0.153: contador "veces trabajada este curso", en los niveles
+      // con registro por días (Competición y Avanzado).
+      var compContadorCurso = (COMP_NIVELES.indexOf(nivel) >= 0)
+        ? _compContadorTrabajo(p, cursoDeFecha(hoyLocal())) : null;
 
       // Botón editar (oculto para EN1: el plan es de solo lectura).
       // v0.126: en Competición se mueve al final de "Áreas de trabajo"
@@ -11186,7 +11215,14 @@
       function _planEtapaCard(et, opts) {
         opts = opts || {};
         var its  = meses[et.key] || [];
-        var done = its.filter(function(it){ return p.hechos[it.id]; }).length;
+        // v0.153: el progreso de la cabecera ya no sale del ✓ manual (que se
+        // ha retirado y además era compartido). En los niveles con registro
+        // por días cuenta las filas trabajadas de verdad este curso; en el
+        // resto no se muestra progreso, solo el nº de filas.
+        var conDiasN = (COMP_NIVELES.indexOf(nivel) >= 0);
+        var done = conDiasN && compContadorCurso
+          ? its.filter(function(it){ return (compContadorCurso[it.id] || 0) > 0; }).length
+          : 0;
         var abierta = edit || opts.actual || p.etapasAbiertas[et.key];
         var s = '<div class="plan-etapa' + (opts.actual ? ' actual' : '') + (abierta ? ' abierto' : '') + '">';
         s += '<div class="plan-etapa-cab" onclick="planToggleEtapa(\'' + et.key + '\');this.parentNode.classList.toggle(\'abierto\')">' +
@@ -11194,10 +11230,11 @@
           '<div class="plan-etapa-tit"><span class="plan-etapa-nom">' + et.nombre +
             (opts.actual ? ' <span class="plan-etapa-badge">en curso</span>' : '') + '</span>' +
             '<span class="plan-etapa-obj">' + et.obj + '</span></div>' +
-          (opts.noProg ? '' : '<span class="plan-etapa-prog">' + done + '/' + its.length + '</span>') +
+          (opts.noProg ? '' : '<span class="plan-etapa-prog">' +
+            (conDiasN ? done + '/' + its.length : its.length) + '</span>') +
           '<span class="plan-etapa-chev">›</span></div>';
         s += '<div class="plan-etapa-body">';
-        its.forEach(function(it){ s += _planItemHTML(nivel, et.key, it, p.hechos, edit, compContadorCurso); });
+        its.forEach(function(it){ s += _planItemHTML(nivel, et.key, it, null, edit, compContadorCurso); });
         if (edit) s += _planAddRow(nivel, et.key);
         s += '</div></div>';
         return s;
