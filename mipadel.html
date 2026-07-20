@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.132.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.133.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,16 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.133.0 — Competición: miniaturas del resumen del día en una sola línea (2026-07)
+    · En el resumen de un día, las miniaturas de vídeo ya no usan la
+      rejilla de 2 columnas (que las partía en 2 filas): ahora van en UNA
+      sola línea, repartiéndose el ancho a partes iguales (pensado para
+      hasta 4 vídeos por fila) y encogiendo lo necesario para no ocupar
+      dos líneas nunca. Nueva clase .comp-resumen-videos (flex nowrap),
+      propia del resumen para no afectar a otras pantallas (biblioteca,
+      detalle de sesión, etc., siguen con grid-ejercicios).
+    · Sin cambios de datos/esquema.
 
   v0.132.0 — Competición: marcado por días PRIVADO por entrenador (2026-07)
     · Bug de diseño detectado por el usuario: al abrir otro entrenador del
@@ -3129,6 +3139,12 @@
     .comp-resumen-hdr { display:flex; align-items:center; justify-content:space-between; gap:8px; }
     .comp-resumen-editar-ic { flex-shrink:0; width:30px; height:30px; border-radius:8px; border:1.5px solid var(--borde); background:#fff; color:var(--gris); font-size:15px; line-height:1; cursor:pointer; -webkit-tap-highlight-color:transparent; display:flex; align-items:center; justify-content:center; padding:0; }
     .comp-resumen-editar-ic:active { background:var(--arena); }
+    /* v0.133: miniaturas del resumen del día en UNA sola línea (nunca dos).
+       Cada tarjeta se reparte el ancho a partes iguales (pensado para hasta
+       4 vídeos); min-width:0 permite que encojan para no desbordar la línea. */
+    .comp-resumen-videos { display:flex; flex-wrap:nowrap; gap:6px; align-items:flex-start; }
+    .comp-resumen-videos .ejcard { flex:1 1 0; min-width:0; }
+    .comp-resumen-videos .ejcard-titulo { font-size:11px; }
     /* Apartado (item) — tappable → sesiones */
     .plan-item { display:flex; flex-direction:column; border:1px solid var(--borde); border-radius:11px; overflow:hidden; background:var(--blanco); }
     .plan-item-row { display:flex; align-items:stretch; }
@@ -4350,7 +4366,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.132.0';
+    var APP_VERSION = '0.133.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -10101,7 +10117,11 @@
           h += '<div class="comp-resumen-fila-tit">' + f.apartado + ' · ' + f.t + '</div>';
           var ejs = _planEjerciciosDeBloque('competicion', { ejInc: f.ejInc || [] });
           if (ejs.length) {
-            h += '<div class="grid-ejercicios">';
+            // v0.133: en el resumen del día las miniaturas van en UNA sola
+            // línea (nunca dos), repartiéndose el ancho — pensado para hasta
+            // 4 vídeos. Clase propia (no grid-ejercicios) para no afectar al
+            // resto de pantallas.
+            h += '<div class="comp-resumen-videos">';
             ejs.forEach(function(e){ h += ejercicioCardHTML(e, 'planif'); });
             h += '</div>';
           } else {
@@ -10126,7 +10146,7 @@
               // tener que entrar a la sesión.
               var ejsSes = _compEjerciciosDeSesiones(sesLeg);
               if (ejsSes.length) {
-                h += '<div class="grid-ejercicios" style="margin-top:8px;">';
+                h += '<div class="comp-resumen-videos" style="margin-top:8px;">';
                 ejsSes.forEach(function(e){ h += ejercicioCardHTML(e, 'planif'); });
                 h += '</div>';
               }
