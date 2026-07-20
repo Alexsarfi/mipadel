@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.135.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.136.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,23 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.136.0 — Gestor: "Todos" primero y desplegado en línea (2026-07)
+    · En el detalle de entrenadores, el chip "Todos" pasa del FINAL de la
+      fila al PRINCIPIO (antes ponía "Todos ›" y estaba tras todos los
+      nombres, pasando desapercibido).
+    · Al pulsarlo, el resumen de todos los entrenadores (clases dadas del
+      mes por duración + catálogo de sustitutos externos) se despliega
+      JUSTO DEBAJO, en la misma pantalla — ya no abre una página aparte ni
+      obliga a salir de donde estabas. Se vuelve a pulsar para cerrarlo, o
+      se toca cualquier entrenador para volver a su detalle.
+    · El chip "Todos" se marca como seleccionado mientras está abierto, y
+      las flechas ‹ › de mes refrescan la vista que estés viendo (en línea
+      o su página propia).
+    · Por dentro: el resumen se extrae a _gEntResumenHTML(), reutilizado
+      por la página "Entrenadores" y por la vista en línea, para no
+      duplicar la lógica. La página aparte sigue existiendo y funcionando.
+    · Sin cambios de datos/esquema.
 
   v0.135.0 — Bajas con fecha, fin de curso automático y altas solo del gestor (2026-07)
     · (1) BAJA EN EL PANEL: el alumno de baja (amarillo) aparece SOLO en el
@@ -4416,7 +4433,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.135.0';
+    var APP_VERSION = '0.136.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -6277,7 +6294,15 @@
     function abrirGestorEntrenadores() { _gEntMesOff = 0; irA('pantalla-gestor-entrenadores'); }
     // v0.106: navegación por meses en la página de entrenadores
     var _gEntMesOff = 0;
-    function gentMesNav(delta) { _gEntMesOff += delta; renderGestorEntrenadores(); }
+    // v0.136: "Todos" en línea dentro del detalle (sin cambiar de página)
+    var _gDetTodos = false;
+    function gDetVerTodos() { _gDetTodos = !_gDetTodos; renderGestorDetalle(); }
+    function gentMesNav(delta) {
+      _gEntMesOff += delta;
+      // El mismo resumen se pinta en dos sitios: en línea (detalle) o en su
+      // propia página. Se refresca el que esté a la vista.
+      if (_gDetTodos) renderGestorDetalle(); else renderGestorEntrenadores();
+    }
     // v0.73: el KPI "Entrenadores" del panel abre YA el detalle del primer
     // entrenador (con los chips arriba para saltar a cualquiera), el mismo
     // acceso fluido que al pulsar un entrenador en el planning semanal.
@@ -6292,12 +6317,20 @@
     function renderGestorEntrenadores() {
       var cont = document.getElementById('gent-contenido');
       if (!cont) return;
-      if (!_gestorData) { cont.innerHTML = '<p class="ajustes-desc">Sin datos. Vuelve al panel para cargarlos.</p>'; return; }
+      var _by0 = _gestorData ? _gestorAgrupar() : {};
+      var _u0  = Object.keys(_by0).filter(function(u){ return _by0[u].clases.length || _by0[u].regs.length; });
+      var sub = document.getElementById('gent-sub');
+      if (sub) sub.textContent = _u0.length + ' entrenador' + (_u0.length !== 1 ? 'es' : '') + ' con datos';
+      cont.innerHTML = _gEntResumenHTML();
+    }
+    // v0.136: el resumen "Todos los entrenadores" se extrae a su propia
+    // función para poder pintarlo TAMBIÉN en línea dentro del detalle
+    // (chip "Todos"), sin cambiar de página.
+    function _gEntResumenHTML() {
+      if (!_gestorData) { return '<p class="ajustes-desc">Sin datos. Vuelve al panel para cargarlos.</p>'; }
       var by = _gestorAgrupar();
       var uids = Object.keys(by).filter(function(u){ return by[u].clases.length || by[u].regs.length; });
       uids.sort(function(a, b){ return _gestorNombre(by[a]).localeCompare(_gestorNombre(by[b])); });
-      var sub = document.getElementById('gent-sub');
-      if (sub) sub.textContent = uids.length + ' entrenador' + (uids.length !== 1 ? 'es' : '') + ' con datos';
 
       // v0.106: fuera los apartados de clases/alumnos/asistencia. Cada
       // tarjeta muestra un LETRERO con las clases dadas el mes visto,
@@ -6354,7 +6387,7 @@
       } else {
         h += '<p class="ajustes-desc" style="margin:0 0 0.5rem;">Sin sustitutos externos todavía.</p>';
       }
-      cont.innerHTML = h;
+      return h;
     }
 
     // ── SUSTITUTOS (v0.66) ───────────────────────────────────────
@@ -6616,12 +6649,16 @@
     // v0.75: entrar en un entrenador muestra los días CONTRAÍDOS por defecto
     // (menos ruido visual). Solo desde el planning (abrirGestorDetalleDia) se
     // deja abierto el día de la franja pinchada.
-    function abrirGestorDetalle(uid) { _gestorUid = uid; _gestorMesOff = _gPanelMesOffset(); _gHist = null; _gCierreOpen = false; _gResumenOpen = false; _gColapsarDias(null); _gDiaSel = '__auto__'; irA('pantalla-gestor-detalle'); }
+    function abrirGestorDetalle(uid) { _gDetTodos = false; _gestorUid = uid; _gestorMesOff = _gPanelMesOffset(); _gHist = null; _gCierreOpen = false; _gResumenOpen = false; _gColapsarDias(null); _gDiaSel = '__auto__'; irA('pantalla-gestor-detalle'); }
     function abrirGestorDetalleDia(uid, dia) { _gestorUid = uid; _gestorMesOff = _gPanelMesOffset(); _gHist = null; _gCierreOpen = false; _gResumenOpen = false; _gColapsarDias(dia); irA('pantalla-gestor-detalle'); }
     function gestorMesNav(delta) { _gestorMesOff += delta; _gCierreOpen = false; _gResumenOpen = false; renderGestorDetalle(); }
     // v0.72: cambiar de entrenador sin salir del detalle (chips de arriba)
     function gestorCambiarEntrenador(uid) {
-      if (!uid || uid === _gestorUid) return;
+      if (!uid) return;
+      // v0.136: si estamos en el modo "Todos", pulsar un entrenador sale de
+      // él aunque sea el que ya estaba seleccionado.
+      if (uid === _gestorUid && !_gDetTodos) return;
+      _gDetTodos = false;
       _gestorUid = uid; _gHist = null; _gCierreOpen = false; _gResumenOpen = false;
       renderGestorDetalle();
       var sc = document.getElementById('gestor-det-contenido');
@@ -6967,12 +7004,15 @@
       var _uidsSel = Object.keys(_by).filter(function(u){ return !_esExtUid(u) && (_by[u].clases.length || _by[u].regs.length); });
       _uidsSel.sort(function(a,b){ return _gestorNombre(_by[a]).localeCompare(_gestorNombre(_by[b])); });
       if (_uidsSel.length || (_gestorData && (_gestorData.sustitutos||[]).length)) {
-        var _chipsEnt = _uidsSel.map(function(u){
-          return '<button type="button" class="gdet-ent-chip' + (u === _gestorUid ? ' sel' : '') +
+        // v0.136: "Todos" va PRIMERO y se despliega EN LÍNEA (antes iba al
+        // final y abría otra página). Al activarlo, el resumen de todos los
+        // entrenadores aparece justo debajo, sin salir de esta pantalla.
+        var _chipsEnt = '<button type="button" class="gdet-ent-chip todos' + (_gDetTodos ? ' sel' : '') +
+          '" onclick="gDetVerTodos()">Todos</button>';
+        _chipsEnt += _uidsSel.map(function(u){
+          return '<button type="button" class="gdet-ent-chip' + (!_gDetTodos && u === _gestorUid ? ' sel' : '') +
             '" onclick="gestorCambiarEntrenador(\'' + u + '\')">' + _gEsc(_gestorNombre(_by[u]).split(' ')[0]) + '</button>';
         }).join('');
-        // Acceso al resumen de todos (tarjetas con % + catálogo de externos)
-        _chipsEnt += '<button type="button" class="gdet-ent-chip todos" onclick="abrirGestorEntrenadores()">Todos ›</button>';
         // v0.108: alta de sustituto externo a mano, junto a los entrenadores
         _chipsEnt += '<button type="button" class="gdet-ent-chip" onclick="gestorSustNuevo()">＋ Sustituto externo</button>';
         // v0.112: los externos del catálogo, como chips ámbar tras el "＋".
@@ -6983,6 +7023,17 @@
             '" onclick="abrirGestorDetalle(\'ext:' + sx.id + '\')">' + _gEsc(sx.nombre) + '</button>';
         });
         h += '<div class="gdet-ent-row">' + _chipsEnt + '</div>';
+      }
+      // v0.136: modo "Todos" → el resumen de todos los entrenadores se pinta
+      // aquí mismo, debajo de los chips, en vez de abrir otra página.
+      if (_gDetTodos) {
+        var _nomEl = document.getElementById('gestor-det-nombre');
+        if (_nomEl) _nomEl.textContent = 'Todos los entrenadores';
+        var _subEl = document.getElementById('gestor-det-sub');
+        if (_subEl) _subEl.textContent = _uidsSel.length + ' entrenador' + (_uidsSel.length !== 1 ? 'es' : '') + ' con datos';
+        h += _gEntResumenHTML();
+        cont.innerHTML = h;
+        return;
       }
       // ── Años anteriores (cursos archivados de este entrenador) ──
       if (hist) {
