@@ -39,6 +39,24 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.130.0 — Fix: resumen del día también sin fallback a sesión antigua (2026-07)
+    · Bug reportado: al abrir un día (p. ej. miércoles 8) que tenía marcada
+      "Presión en la red en pareja", el resumen del día decía "Sin
+      ejercicios enlazados aún" — pero esa misma fila SÍ mostraba una
+      sesión enlazada en Áreas de trabajo.
+    · Causa: el fallback a sesiones del modelo antiguo (sesInc) se añadió
+      en v0.127 al listado (_planItemHTML) y al detalle de la fila
+      (renderPlanSesiones), pero se quedó fuera de un TERCER sitio que
+      también muestra "ejercicios enlazados" por fila: el resumen del día
+      (_compResumenHTML, el que se abre al tocar un día ya marcado).
+      Además _compTodasFilas() tampoco llevaba el campo sesInc (solo
+      ejInc), así que el resumen no tenía forma de saber que existía.
+    · Fix: _compTodasFilas() ahora incluye también sesInc de cada fila;
+      _compResumenHTML aplica el mismo fallback que ya tenían los otros
+      dos sitios — si no hay ejercicios (ejInc) pero sí una sesión
+      antigua (sesInc), la muestra (tocable) en vez del mensaje vacío.
+    · Sin cambios de datos: solo visualización, igual que v0.127.
+
   v0.129.0 — Competición: tick de Áreas de trabajo → contador del curso (2026-07)
     · El tick manual "✓ trabajado" (p.hechos) de cada fila en Áreas de
       trabajo se sustituye, SOLO en Competición, por un contador "N×" con
@@ -4288,7 +4306,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.129.0';
+    var APP_VERSION = '0.130.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
