@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.133.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.134.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,26 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.134.0 — Recordar la última pantalla al recargar (F5) (2026-07)
+    · Antes, al recargar la página o reabrir la app, siempre volvía a
+      Inicio (o al Panel, en el perfil de gestor), perdiendo la pantalla
+      que estabas viendo. Ahora la recuerda y te deja donde estabas.
+    · Cómo: en cada navegación se guarda la pantalla actual en localStorage
+      (clave padel-nav) junto con la selección del gestor (entrenador/alumno
+      abierto). Al arrancar se restaura UNA vez, cuando ya se conoce el rol.
+    · Gestor: como sus subpantallas cargan datos en async, primero abre el
+      Panel (que carga los datos) y, en cuanto están listos, salta a la
+      subpantalla que tenías abierta (detalle, alumno, planning…) con su
+      entrenador/alumno seleccionado. Si esa selección ya no existe, la
+      pantalla lo indica y puedes volver al Panel (sin errores).
+    · Perfil normal: restaura pantallas "seguras" (Inicio, Ejercicios,
+      Sesiones, Planificación, Actas, Asistencia y sus subpantallas de
+      configuración/resumen, Ajustes, Categorías). Las pantallas que
+      dependen de una selección puntual (p. ej. detalle de una sesión o
+      pasar lista de una clase) no se restauran a ciegas: caen a un lugar
+      seguro. Los guardarraíles por rol de irA() se respetan igual.
+    · Sin cambios de datos/esquema (solo una clave local de UI, padel-nav).
 
   v0.133.0 — Competición: miniaturas del resumen del día en una sola línea (2026-07)
     · En el resumen de un día, las miniaturas de vídeo ya no usan la
@@ -4366,7 +4386,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.133.0';
+    var APP_VERSION = '0.134.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -4525,10 +4545,19 @@
           // la app con sesión ya iniciada el monitor/gestor vería de más
           // (el rol se resuelve después de pintar la pantalla inicial).
           if (_esGestor) {
+            // v0.134: prepara la restauración de la subpantalla del gestor
+            // (si había una) para abrirla tras cargar sus datos. Solo la
+            // primera vez por carga; el resto de entradas al panel son normales.
+            if (!_navRestaurado) {
+              _navRestaurado = true;
+              var _n = _navLeer();
+              _navPendiente = (_n && GESTOR_PANTALLAS.indexOf(_n.id) >= 0 && _n.id !== 'pantalla-gestor') ? _n : null;
+            }
             irA('pantalla-gestor');
           } else if (_esEN1) {
             irA('pantalla-inicio');
-          } else if (document.getElementById('pantalla-inicio').classList.contains('activa')) {
+          } else if (!_navRestaurarNormal() &&
+                     document.getElementById('pantalla-inicio').classList.contains('activa')) {
             actualizarInicio();
           }
         }).catch(function() { _sbGrupo = null; _esEN1 = false; _esGestor = false; });
@@ -5450,6 +5479,16 @@
             .then(function(r){ if (r.error) console.warn('stamp curso (vacío)', r.error); });
         }
         renderGestor();
+        // v0.134: con los datos ya cargados, restaura la subpantalla del
+        // gestor que estaba abierta antes de recargar (detalle/alumno/etc.),
+        // recuperando también la selección (entrenador/alumno) que necesita.
+        if (_navPendiente) {
+          var _snap = _navPendiente; _navPendiente = null;
+          _gestorUid    = _snap.gu || null;
+          _gestorAlumno = _snap.ga || null;
+          if (_snap.gv) _gAlVolver = _snap.gv;
+          irA(_snap.id);
+        }
       }).catch(function(e) {
         if (cont) cont.innerHTML = '<p class="ajustes-desc" style="color:#b91c1c;">No se pudieron cargar los datos: ' + _gEsc(e && e.message) + '</p>';
       });
@@ -10438,6 +10477,37 @@
       'pantalla-gestor-todos-alumnos','pantalla-gestor-todos-alumno',
       'pantalla-gestor-calendario','pantalla-gestor-sustituto'];
 
+    // ── v0.134: recordar la última pantalla para no volver a Inicio/Panel
+    // al recargar (F5) o reabrir la app. Se guarda en cada navegación y se
+    // restaura UNA sola vez por carga, cuando ya se conoce el rol. ──
+    var _navRestaurado = false;   // la restauración solo se intenta una vez
+    var _navPendiente   = null;   // pantalla de gestor a abrir tras cargar sus datos
+    // Pantallas del perfil normal seguras de restaurar tal cual (su render no
+    // depende de una selección transitoria que se pierda al recargar).
+    var _NAV_NORMAL_OK = ['pantalla-inicio','pantalla-ajustes','pantalla-categorias',
+      'pantalla-ejercicios','pantalla-clases','pantalla-clases-niveles',
+      'pantalla-planificacion','pantalla-actas','pantalla-asistencia',
+      'pantalla-asistencia-config','pantalla-asistencia-resumen'];
+    function _navGuardar(id) {
+      try {
+        localStorage.setItem('padel-nav', JSON.stringify({
+          id: id, gu: _gestorUid || null, ga: _gestorAlumno || null, gv: _gAlVolver || null
+        }));
+      } catch (e) {}
+    }
+    function _navLeer() {
+      try { return JSON.parse(localStorage.getItem('padel-nav') || 'null'); } catch (e) { return null; }
+    }
+    // Restaura la última pantalla del perfil NORMAL (no gestor). irA() ya
+    // redirige por sí solo las pantallas no permitidas para el rol.
+    function _navRestaurarNormal() {
+      if (_navRestaurado) return false;
+      _navRestaurado = true;
+      var nav = _navLeer();
+      if (nav && _NAV_NORMAL_OK.indexOf(nav.id) >= 0) { irA(nav.id); return true; }
+      return false;
+    }
+
     function irA(id) {
       // Salir de las pantallas de asistencia/panel apaga el modo gestión
       if (_gEditUid && GESTION_ASIST_OK.indexOf(id) < 0) { _gEditUid = null; }
@@ -10498,6 +10568,7 @@
         i.value = ''; i.classList.remove('form-error');
       }
       updateBottomNav(id);
+      _navGuardar(id);   // v0.134: recuerda la pantalla actual (id ya resuelto)
       window.scrollTo(0, 0);
     }
 
@@ -14985,6 +15056,9 @@
     actualizarInicio();
     _initSupabase(); // arranca Supabase (redirige a login si hay credenciales)
     if (marcadorEst.activo) irA('pantalla-marcador'); // volver al partido en curso
+    // v0.134: sin Supabase (uso solo-local) no hay login que decida pantalla,
+    // así que restauramos aquí la última vista. Con Supabase lo hace _fetchGrupo.
+    else if (!_sbConfigurado()) _navRestaurarNormal();
     console.log('🎾 App de pádel v' + APP_VERSION);
 
   </script>
