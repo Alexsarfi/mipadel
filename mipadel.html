@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.126.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.127.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,25 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.127.0 — Fix: sesiones antiguas invisibles en Áreas de trabajo (2026-07)
+    · Bug reportado: filas de Competición con una sesión enlazada de ANTES
+      del POC de ejercicios (v0.119) — p. ej. "Presión en la red en
+      pareja" — dejaron de mostrarse por completo al abrir Áreas de
+      trabajo. Causa: desde v0.119 la vista de Competición solo mira
+      it.ejInc (ejercicios); it.sesInc (sesiones, modelo anterior) se
+      dejó de leer ahí, aunque el dato seguía intacto en el plan.
+    · Fix: tanto en el listado (_planItemHTML) como en el detalle de la
+      fila (renderPlanSesiones), si no hay ejercicios enlazados (ejInc
+      vacío) pero SÍ hay una sesión del modelo antiguo (sesInc), se
+      muestra esa sesión (clicable, como antes) en vez del mensaje
+      "Sin ejercicios enlazados". Si hay ejercicios, se muestran ellos
+      (el modelo nuevo tiene prioridad, sin cambios ahí).
+    · No es una migración de datos: no se toca sesInc/ejInc de ninguna
+      fila. Es solo un fallback de visualización mientras cada fila se
+      va migrando una a una al modelo de ejercicios (como ya se hizo con
+      "Defensa paciente bajo presión"), sin perder de vista las que aún
+      no se han migrado.
 
   v0.126.0 — Competición: botón "Editar plan" movido a Áreas de trabajo (2026-07)
     · En el perfil de entrenador, Planificación → Competición: el botón
@@ -4223,7 +4242,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.126.0';
+    var APP_VERSION = '0.127.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -9490,13 +9509,28 @@
           }
         } else {
           var visEj = todosEj.filter(function(e){ return incEj.indexOf(e.id) >= 0; });
-          if (!visEj.length) {
-            h += '<div class="plan-ses-intro">Esta fila no tiene ejercicios enlazados. Pulsa «Añadir / quitar ejercicios» para enlazar los que quieras.</div>';
-          } else {
+          if (visEj.length) {
             h += '<div class="plan-ses-intro">' + visEj.length + ' ejercicio' + (visEj.length!==1?'s':'') + ' enlazado' + (visEj.length!==1?'s':'') + ' · toca para ver el detalle.</div>';
             h += '<div class="grid-ejercicios">';
             visEj.forEach(function(e){ h += ejercicioCardHTML(e, 'plan'); });
             h += '</div>';
+          } else {
+            // v0.127: fallback — sesión enlazada al modelo antiguo (sesInc),
+            // de antes del POC de ejercicios (v0.119), sin migrar todavía.
+            var incSesLeg = (it && it.sesInc) ? it.sesInc : [];
+            var sesLeg = incSesLeg.length ? leerClases().filter(function(c){ return incSesLeg.indexOf(c.id) >= 0; }) : [];
+            if (sesLeg.length) {
+              h += '<div class="plan-ses-intro">⚠️ Sin ejercicios enlazados todavía, pero esta fila tiene ' + sesLeg.length + ' sesión' + (sesLeg.length!==1?'es':'') + ' enlazada' + (sesLeg.length!==1?'s':'') + ' al modelo antiguo (sin migrar). Toca para ver el detalle.</div>';
+              h += '<div class="plan-item-ses" style="border:1px solid var(--borde);border-radius:10px;">';
+              sesLeg.forEach(function(c){
+                h += '<div class="plan-ses-mini' + (c.trabajada ? ' trabajada' : '') + '" onclick="verSesion(' + c.id + ',\'planif\')" title="' + nombreSesion(c).replace(/"/g,'') + '">' +
+                  '<span class="plan-ses-mini-ic">' + (c.trabajada ? '✓' : '🎾') + '</span>' +
+                  '<span class="plan-ses-mini-nom">' + nombreSesion(c) + '</span></div>';
+              });
+              h += '</div>';
+            } else {
+              h += '<div class="plan-ses-intro">Esta fila no tiene ejercicios enlazados. Pulsa «Añadir / quitar ejercicios» para enlazar los que quieras.</div>';
+            }
           }
         }
         document.getElementById('plan-ses-list').innerHTML = h;
@@ -9604,7 +9638,23 @@
           });
           h2 += '</div>';
         } else {
-          h2 += '<div class="plan-item-ses-vacio">Sin ejercicios enlazados</div>';
+          // v0.127: fallback — filas migradas antes del POC de ejercicios
+          // (v0.119) pueden tener una SESIÓN enlazada a la antigua (sesInc)
+          // y ningún ejercicio (ejInc) todavía. Sin este fallback, ese
+          // enlace se veía "Sin ejercicios enlazados" aunque sí hubiera
+          // contenido real detrás (p. ej. "Presión en la red en pareja").
+          var sesLeg = _planSesionesDeBloque(nivel, it);
+          if (sesLeg.length) {
+            h2 += '<div class="plan-item-ses">';
+            sesLeg.forEach(function(c){
+              h2 += '<div class="plan-ses-mini' + (c.trabajada ? ' trabajada' : '') + '" onclick="verSesion(' + c.id + ',\'planif\')" title="' + nombreSesion(c).replace(/"/g,'') + ' (sesión antigua, sin migrar a ejercicios)">' +
+                '<span class="plan-ses-mini-ic">' + (c.trabajada ? '✓' : '🎾') + '</span>' +
+                '<span class="plan-ses-mini-nom">' + nombreSesion(c) + '</span></div>';
+            });
+            h2 += '</div>';
+          } else {
+            h2 += '<div class="plan-item-ses-vacio">Sin ejercicios enlazados</div>';
+          }
         }
       } else {
         var ses = _planSesionesDeBloque(nivel, it);
