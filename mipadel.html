@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.142.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.144.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,33 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.144.0 — Competición: la miniatura del día reproduce el vídeo (2026-07)
+    · En Planificación → Competición, al abrir un día que ya tiene
+      contenido, las miniaturas dejan de llevar a la ficha del ejercicio:
+      ahora al tocarlas se REPRODUCE el vídeo en el acto (mismo visor a
+      pantalla grande que ya usaba la app). En pista interesa ver el
+      vídeo, no leer la ficha.
+    · La tarjeta se queda con lo justo: miniatura, botón ▶ y el NOMBRE.
+      Fuera el código del ejercicio y la valoración ★.
+    · Funciona con vídeos de YouTube y con enlaces directos (Drive u otros).
+    · Si un ejercicio aún no tiene vídeo, su tarjeta se ve atenuada, con
+      la marca "sin vídeo", y no hace nada al tocarla (no hay nada que
+      reproducir). El resto de pantallas —biblioteca, sesiones, detalle de
+      la fila— siguen abriendo la ficha del ejercicio como siempre.
+    · Sin cambios de datos/esquema.
+
+  v0.143.0 — Gestor: qué DÍA fue la clase que queda por recuperar (2026-07)
+    · En "Clases por recuperar", al abrir un entrenador y tocar un mes,
+      bajo los tres números aparece ahora el detalle de QUÉ DÍA fue cada
+      clase que no se dio y sigue pendiente: día de la semana, fecha y su
+      franja horaria (p. ej. "Mié 4/03 · 17:00 - 18:00").
+    · Antes solo se veía el recuento ("1 por recuperar"), sin saber de qué
+      día se trataba.
+    · Solo lista las que siguen pendientes: en cuanto el entrenador
+      programa su recuperación (v0.142), ese día desaparece de la lista.
+      Si el mes no tiene ninguna pendiente, el bloque no se pinta.
+    · Sin cambios de datos/esquema.
 
   v0.142.0 — El entrenador programa sus clases por recuperar (2026-07)
     · En Asistencia, sobre "↩ Recuperar una clase", aparece el cuadro
@@ -2237,6 +2264,13 @@
     .gcl-num.pend  { border-color:#f59e0b; background:#fffbeb; }
     .gcl-num.pend  b { color:#92400e; }
     .gcl-num.recup b { color:#6b21a8; }
+    /* v0.143: qué día concreto fue la clase que queda por recuperar */
+    .gcl-dias-tit { font-size:11px; font-weight:800; color:#92400e; margin:0.6rem 0 0.25rem; }
+    .gcl-dias { display:flex; flex-direction:column; gap:4px; }
+    .gcl-dia { display:flex; align-items:center; gap:8px; background:#fffbeb; border:1px solid #f59e0b;
+      border-radius:9px; padding:5px 9px; font-size:12px; }
+    .gcl-dia-f  { font-weight:800; color:#92400e; flex-shrink:0; }
+    .gcl-dia-fr { color:var(--gris); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     /* v0.107: tarjeta solo informativa (página "Todos"), sin enlace */
     .gestor-card.plana { cursor:default; }
     .gestor-card.plana:active { border-color:var(--borde); background:var(--blanco); }
@@ -3379,6 +3413,11 @@
     .comp-resumen-videos { display:flex; flex-wrap:nowrap; gap:6px; align-items:flex-start; }
     .comp-resumen-videos .ejcard { flex:1 1 0; min-width:0; }
     .comp-resumen-videos .ejcard-titulo { font-size:11px; }
+    /* v0.144: miniatura de solo vídeo (resumen del día) — al tocarla se
+       reproduce; sin código ni valoración, solo el nombre. */
+    .ejcard-vid { cursor:pointer; }
+    .ejcard-vid.sinvid { cursor:default; opacity:0.75; }
+    .ejcard-sinvid { font-size:9.5px; font-weight:700; color:var(--gris); margin-top:3px; }
     /* Apartado (item) — tappable → sesiones */
     .plan-item { display:flex; flex-direction:column; border:1px solid var(--borde); border-radius:11px; overflow:hidden; background:var(--blanco); }
     .plan-item-row { display:flex; align-items:stretch; }
@@ -4601,7 +4640,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.142.0';
+    var APP_VERSION = '0.144.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -6430,6 +6469,21 @@
           '<div class="gcl-num pend"><b>' + mm.pend.length + '</b><span>por recuperar</span></div>' +
           '<div class="gcl-num recup"><b>' + mm.recup.length + '</b><span>recuperadas</span></div>' +
         '</div>';
+        // v0.143: bajo los números, QUÉ DÍA fue la clase que no se dio y
+        // sigue por recuperar (con su franja), no solo cuántas.
+        if (mm.pend.length) {
+          h += '<div class="gcl-dias-tit">Días sin dar, por recuperar</div>';
+          h += '<div class="gcl-dias">';
+          mm.pend.forEach(function(it){
+            var dow = new Date(+it.fecha.slice(0,4), +it.fecha.slice(5,7) - 1, +it.fecha.slice(8,10)).getDay();
+            h += '<div class="gcl-dia">' +
+              '<span class="gcl-dia-f">' + DIAS_NOMBRES_A[dow].slice(0,3) + ' ' +
+                parseInt(it.fecha.slice(8,10), 10) + '/' + it.fecha.slice(5,7) + '</span>' +
+              (it.franja ? '<span class="gcl-dia-fr">' + _gEsc(it.franja) + '</span>' : '') +
+            '</div>';
+          });
+          h += '</div>';
+        }
       } else {
         h += '<p class="ajustes-desc" style="margin:0.35rem 0 0;">Toca un mes para ver sus números. En <b style="color:#92400e;">amarillo</b>, los meses con clases por recuperar.</p>';
       }
@@ -10678,6 +10732,29 @@
       return out;
     }
 
+    // v0.144: miniatura para el resumen del día — SOLO el nombre y, al
+    // tocarla, el vídeo se reproduce en el acto (lightbox). No entra en la
+    // ficha del ejercicio: en pista interesa ver el vídeo, no leer la ficha.
+    function _compVideoCardHTML(ej) {
+      var ytId  = extraerIdYoutube(ej.video);
+      var thumb = ytId ? ('https://img.youtube.com/vi/' + ytId + '/mqdefault.jpg') : (ej.imagen || null);
+      var tieneVid = !!(ytId || ej.video);
+      var click = '';
+      if (ytId)          click = ' onclick="abrirLightboxVideo(\'' + ytId + '\',null)"';
+      else if (ej.video) click = ' onclick="abrirLightboxVideo(null,\'' + String(ej.video).replace(/'/g, "\\'") + '\')"';
+      var thumbHTML = thumb
+        ? '<img src="' + thumb + '" class="ejcard-img" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
+        : '';
+      return '<div class="ejcard ejcard-vid' + (tieneVid ? '' : ' sinvid') + '"' + click +
+        ' title="' + _gEsc(ej.nombre).replace(/"/g, '') + '">' +
+        '<div class="ejcard-thumb">' + thumbHTML + (tieneVid ? '<div class="ejcard-play">▶</div>' : '') + '</div>' +
+        '<div class="ejcard-body">' +
+          '<div class="ejcard-titulo">' + _gEsc(ej.nombre) + '</div>' +
+          (tieneVid ? '' : '<div class="ejcard-sinvid">sin vídeo</div>') +
+        '</div>' +
+      '</div>';
+    }
+
     // v0.125: vista compacta de un día YA marcado — solo la(s) fila(s)
     // elegidas con sus vídeos enlazados en fila, para consultar fácil desde
     // la pista (poco ruido visual). Con botón para volver a modo selección
@@ -10710,7 +10787,7 @@
             // 4 vídeos. Clase propia (no grid-ejercicios) para no afectar al
             // resto de pantallas.
             h += '<div class="comp-resumen-videos">';
-            ejs.forEach(function(e){ h += ejercicioCardHTML(e, 'planif'); });
+            ejs.forEach(function(e){ h += _compVideoCardHTML(e); });
             h += '</div>';
           } else {
             // v0.130: mismo fallback que ya se aplicó en v0.127 al listado
@@ -10735,7 +10812,7 @@
               var ejsSes = _compEjerciciosDeSesiones(sesLeg);
               if (ejsSes.length) {
                 h += '<div class="comp-resumen-videos" style="margin-top:8px;">';
-                ejsSes.forEach(function(e){ h += ejercicioCardHTML(e, 'planif'); });
+                ejsSes.forEach(function(e){ h += _compVideoCardHTML(e); });
                 h += '</div>';
               }
             } else {
