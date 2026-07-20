@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.130.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.131.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,20 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.131.0 — Competición: resumen del día más limpio + miniaturas de sesión (2026-07)
+    · (1) El botón de texto "✏️ Cambiar selección" del resumen de un día
+      desaparece; en su lugar, un icono ⚙ a la derecha de la cabecera de
+      la fecha (p. ej. "Miércoles 8 jul  ⚙"). Menos ruido visual, sobre
+      todo en móvil. Hace lo mismo (compDiaEditar); el texto se conserva
+      en el title/aria-label por accesibilidad.
+    · (2) Cuando una fila del resumen muestra una sesión del modelo antiguo
+      (sesInc), debajo se completa la fila con las MINIATURAS de los
+      ejercicios que contiene esa sesión (sus ejercicioIds), con vídeo si
+      lo tienen — se ven y se tocan igual que en el modelo nuevo, sin
+      tener que entrar a la sesión. Nueva _compEjerciciosDeSesiones()
+      (deduplica ejercicios si varias sesiones comparten alguno).
+    · Sin cambios de datos/esquema.
 
   v0.130.0 — Fix: resumen del día también sin fallback a sesión antigua (2026-07)
     · Bug reportado: al abrir un día (p. ej. miércoles 8) que tenía marcada
@@ -3085,6 +3099,11 @@
     .comp-resumen-fila-tit { font-size:12.5px; font-weight:800; color:var(--texto); margin-bottom:8px; }
     .comp-resumen-editar { display:block; width:100%; margin-top:4px; padding:9px; border:1.5px dashed var(--borde); border-radius:10px; background:none; font-size:12px; font-weight:700; color:var(--gris); cursor:pointer; -webkit-tap-highlight-color:transparent; }
     .comp-resumen-editar:active { background:var(--arena); }
+    /* v0.131: cabecera del resumen con el icono ⚙ a la derecha (menos ruido
+       visual que el botón de texto, sobre todo en móvil). */
+    .comp-resumen-hdr { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .comp-resumen-editar-ic { flex-shrink:0; width:30px; height:30px; border-radius:8px; border:1.5px solid var(--borde); background:#fff; color:var(--gris); font-size:15px; line-height:1; cursor:pointer; -webkit-tap-highlight-color:transparent; display:flex; align-items:center; justify-content:center; padding:0; }
+    .comp-resumen-editar-ic:active { background:var(--arena); }
     /* Apartado (item) — tappable → sesiones */
     .plan-item { display:flex; flex-direction:column; border:1px solid var(--borde); border-radius:11px; overflow:hidden; background:var(--blanco); }
     .plan-item-row { display:flex; align-items:stretch; }
@@ -4306,7 +4325,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.130.0';
+    var APP_VERSION = '0.131.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -9964,6 +9983,24 @@
       return h;
     }
 
+    // v0.131: ejercicios que contienen una o varias sesiones (por sus
+    // ejercicioIds), deduplicados y en orden, para poder mostrar sus
+    // miniaturas debajo de una sesión antigua enlazada.
+    function _compEjerciciosDeSesiones(sesiones) {
+      if (!sesiones || !sesiones.length) return [];
+      if (!_planEjCache) _planEjCache = { ejs: leerEjercicios() };
+      var ejs = _planEjCache.ejs;
+      var vistos = {}, out = [];
+      sesiones.forEach(function(c){
+        (c.ejercicioIds || []).forEach(function(eid){
+          if (vistos[eid]) return;
+          var e = ejs.filter(function(x){ return x.id === eid; })[0];
+          if (e) { vistos[eid] = true; out.push(e); }
+        });
+      });
+      return out;
+    }
+
     // v0.125: vista compacta de un día YA marcado — solo la(s) fila(s)
     // elegidas con sus vídeos enlazados en fila, para consultar fácil desde
     // la pista (poco ruido visual). Con botón para volver a modo selección
@@ -9976,7 +10013,13 @@
       }).filter(Boolean);
       var dow = new Date(+fechaISO.slice(0,4), +fechaISO.slice(5,7)-1, +fechaISO.slice(8,10)).getDay();
       var h = '<div class="comp-cal-picker comp-cal-resumen">';
-      h += '<div class="comp-cal-picker-hdr">' + DIAS_NOMBRES_A[dow] + ' ' + formatFechaDiaMes(fechaISO) + '</div>';
+      // v0.131: la cabecera lleva a la derecha el icono ⚙ para editar la
+      // selección (antes era un botón de texto "Cambiar selección" al final
+      // — más ruido visual, sobre todo en móvil).
+      h += '<div class="comp-cal-picker-hdr comp-resumen-hdr">' +
+        '<span>' + DIAS_NOMBRES_A[dow] + ' ' + formatFechaDiaMes(fechaISO) + '</span>' +
+        '<button class="comp-resumen-editar-ic" onclick="compDiaEditar(\'' + fechaISO + '\')" title="Cambiar selección" aria-label="Cambiar selección">⚙</button>' +
+      '</div>';
       if (!filas.length) {
         h += '<div class="comp-picker-vacio">Nada marcado todavía.</div>';
       } else {
@@ -10003,6 +10046,17 @@
                   '<span class="plan-ses-mini-nom">' + nombreSesion(c) + '</span></div>';
               });
               h += '</div>';
+              // v0.131: debajo de la sesión antigua, completar la fila con
+              // las miniaturas de SUS ejercicios (los ejercicios que la
+              // sesión tiene dentro, ejercicioIds), con vídeo si lo tienen —
+              // así se ven y se tocan igual que en el modelo nuevo, sin
+              // tener que entrar a la sesión.
+              var ejsSes = _compEjerciciosDeSesiones(sesLeg);
+              if (ejsSes.length) {
+                h += '<div class="grid-ejercicios" style="margin-top:8px;">';
+                ejsSes.forEach(function(e){ h += ejercicioCardHTML(e, 'planif'); });
+                h += '</div>';
+              }
             } else {
               h += '<div class="plan-item-ses-vacio">Sin ejercicios enlazados aún</div>';
             }
@@ -10010,7 +10064,6 @@
           h += '</div>';
         });
       }
-      h += '<button class="comp-resumen-editar" onclick="compDiaEditar(\'' + fechaISO + '\')">✏️ Cambiar selección</button>';
       h += '</div>';
       return h;
     }
