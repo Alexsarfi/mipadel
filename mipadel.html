@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.144.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.145.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,23 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.145.0 — Competición: los días de clase, agrupados POR SEMANA (2026-07)
+    · Dentro del mes, los días de clase dejan de agruparse por día de la
+      semana en columnas (v0.128) y pasan a ordenarse POR SEMANAS: una fila
+      por semana ("Semana 1", "Semana 2"…) con los días de clase que caen
+      en ella, en orden Lunes→Domingo.
+    · Se sigue navegando por MES con las flechas ‹ ›: no se pierde la
+      visión del mes completo (decisión consultada; la vista de "solo una
+      semana cada vez" ya se descartó en su día).
+    · Como ahora una misma fila mezcla varios días de la semana, cada
+      círculo lleva encima su día abreviado (MIÉ, VIE…) para no perderse.
+    · Cada semana lleva su contador de cobertura ("1/2 marcados").
+    · El círculo y su comportamiento no cambian: relleno = ya marcado,
+      contorno = sin marcar, rayado = festivo/sin clase (no clicable), y al
+      tocarlo se abre igual el selector o el resumen del día, a ancho
+      completo debajo de las semanas.
+    · Sin cambios de datos/esquema.
 
   v0.144.0 — Competición: la miniatura del día reproduce el vídeo (2026-07)
     · En Planificación → Competición, al abrir un día que ya tiene
@@ -3370,12 +3387,14 @@
     .comp-cal-nav button { width:26px; height:26px; border-radius:50%; border:1.5px solid var(--borde); background:#fff; font-size:13px; cursor:pointer; color:var(--texto); }
     .comp-cal-lbl { font-size:12.5px; font-weight:800; color:var(--texto); }
     .comp-lista { margin-bottom:0.7rem; }
-    /* v0.128: los días de la semana con clase van en columnas, uno al lado
-       del otro (no apilados); en móvil estrecho se envuelven a otra fila. */
-    .comp-dow-cols { display:flex; flex-wrap:wrap; gap:6px 22px; align-items:flex-start; }
-    .comp-dow-grupo { flex:1 1 140px; min-width:130px; margin-bottom:1.1rem; }
+    /* v0.145: dentro del mes, una FILA POR SEMANA con sus días de clase
+       (antes iban en columnas por día de la semana). */
+    .comp-sem-grupo { border-top:1px solid var(--borde); padding-top:0.5rem; margin-bottom:0.7rem; }
+    .comp-sem-grupo:first-of-type { border-top:none; padding-top:0; }
+    .comp-sem-titulo { font-size:12.5px; font-weight:800; color:var(--texto); margin:0 0 6px; }
+    .comp-diacol { display:flex; flex-direction:column; align-items:center; gap:3px; }
+    .comp-diacol-dow { font-size:9.5px; font-weight:800; color:var(--gris); text-transform:uppercase; }
     .comp-dia-abierto { margin-top:0.3rem; }
-    .comp-dow-titulo { font-size:13.5px; font-weight:800; color:var(--texto); margin:0 0 8px; }
     .comp-dow-cont { font-size:11.5px; font-weight:600; color:var(--gris); }
     .comp-circ-fila { display:flex; gap:8px; flex-wrap:wrap; }
     .comp-circ { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;
@@ -4640,7 +4659,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.144.0';
+    var APP_VERSION = '0.145.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -10845,24 +10864,26 @@
         '<button onclick="compMesNav(1)" title="Mes siguiente">›</button>' +
       '</div>';
 
-      var huboGrupo = false;
-      var colsHTML = '';
-      var abiertoHTML = ''; // v0.128: el desplegable del día abierto ya no vive
-                             // dentro de su columna (quedaba estrecho al poner
-                             // los días uno al lado del otro) — se renderiza
-                             // una sola vez, a ancho completo, debajo de todas
-                             // las columnas.
-      DOW_ORDEN.forEach(function(dow){
-        if (!diasMap[dow] || !diasMap[dow].length) return; // ese día de la semana nunca tiene clase configurada
+      // v0.145: dentro del mes se agrupa por SEMANAS (antes por día de la
+      // semana en columnas). Cada semana es una fila con los días de clase
+      // que caen en ella, en orden Lunes→Domingo. El desplegable del día
+      // abierto sigue yendo a ancho completo, debajo de todo.
+      var semanas = {};   // lunesISO → [fechaISO, ...]
+      for (var d = 1; d <= ultimoDia; d++) {
+        var dd  = new Date(y, m - 1, d);
+        var dow = dd.getDay();
+        if (!diasMap[dow] || !diasMap[dow].length) continue;   // ese día nunca hay clase
+        var lun = new Date(dd);
+        lun.setDate(lun.getDate() - ((dow + 6) % 7));          // lunes de esa semana
+        var kL = dateToISOLocal(lun);
+        (semanas[kL] = semanas[kL] || []).push(dateToISOLocal(dd));
+      }
+      var lunes = Object.keys(semanas).sort();
 
-        var fechas = [];
-        for (var d = 1; d <= ultimoDia; d++) {
-          var dd = new Date(y, m - 1, d);
-          if (dd.getDay() === dow) fechas.push(dateToISOLocal(dd));
-        }
-        if (!fechas.length) return;
-        huboGrupo = true;
-
+      var abiertoHTML = '';
+      var filasHTML = '';
+      lunes.forEach(function(kL, i){
+        var fechas = semanas[kL].sort();
         var activas = 0, marcadas = 0;
         var circulos = fechas.map(function(fISO){
           var estado  = _compDiaEstado(fISO, diasMap, regs);
@@ -10871,29 +10892,33 @@
           if (!festivo) { activas++; if (nFilas) marcadas++; }
           var marcada = !festivo && nFilas > 0;
           var numDia  = parseInt(fISO.slice(8,10), 10);
+          var dowF    = new Date(+fISO.slice(0,4), +fISO.slice(5,7)-1, +fISO.slice(8,10)).getDay();
           var cls = 'comp-circ' + (festivo ? ' festivo' : '') + (marcada ? ' marcada' : '') + (fISO === hoyISO ? ' hoy' : '');
           var onclick = festivo ? '' : (' onclick="compDiaAbrir(\'' + fISO + '\')"');
           var titulo  = festivo ? ' title="Sin clase este día"' : (marcada ? ' title="' + nFilas + ' fila(s) marcada(s) — toca para ver el resumen"' : ' title="Toca para marcar lo trabajado"');
-          return '<div class="' + cls + '"' + onclick + titulo + '>' + numDia + '</div>';
+          // Al mezclarse varios días de la semana en la misma fila, cada
+          // círculo lleva encima su día (Mié, Vie…) para no perderse.
+          return '<div class="comp-diacol">' +
+            '<span class="comp-diacol-dow">' + DIAS_NOMBRES_A[dowF].slice(0,3) + '</span>' +
+            '<div class="' + cls + '"' + onclick + titulo + '>' + numDia + '</div>' +
+          '</div>';
         }).join('');
 
-        colsHTML += '<div class="comp-dow-grupo">';
-        colsHTML += '<p class="comp-dow-titulo">' + DIAS_NOMBRES_A[dow] +
+        filasHTML += '<div class="comp-sem-grupo">';
+        filasHTML += '<p class="comp-sem-titulo">Semana ' + (i + 1) +
           ' <span class="comp-dow-cont">· ' + marcadas + '/' + activas + ' marcados</span></p>';
-        colsHTML += '<div class="comp-circ-fila">' + circulos + '</div>';
-        colsHTML += '</div>';
+        filasHTML += '<div class="comp-circ-fila">' + circulos + '</div>';
+        filasHTML += '</div>';
 
         if (compDiaAbierta && fechas.indexOf(compDiaAbierta) >= 0) {
           abiertoHTML = compDiaEditando ? _compPickerHTML(p, compDiaAbierta) : _compResumenHTML(p, compDiaAbierta);
         }
       });
 
-      if (!huboGrupo) {
+      if (!lunes.length) {
         h += '<div class="comp-picker-vacio" style="padding:0.5rem 0 1rem;text-align:center;">Sin clases configuradas.</div>';
       } else {
-        // v0.128: los días de la semana con clase van uno AL LADO del otro
-        // (columnas), no apilados uno debajo de otro.
-        h += '<div class="comp-dow-cols">' + colsHTML + '</div>';
+        h += filasHTML;
         if (abiertoHTML) h += '<div class="comp-dia-abierto">' + abiertoHTML + '</div>';
       }
       h += '</div>';
