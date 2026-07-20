@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.146.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.147.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,24 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.147.0 — Competición: semanas en columnas y días sin clase del club (2026-07)
+    · Las semanas pasan de ir una DEBAJO de otra (v0.145) a ir una AL LADO
+      de otra, en columnas separadas por una barra vertical. Dentro de cada
+      semana, sus días de clase apilados con su día abreviado (MIÉ, VIE).
+    · Menos ruido: el título de cada semana se reduce a "S1 · 1/2"
+      (marcados/activos) en pequeño, en vez de "Semana 1 · 1/2 marcados".
+    · Los días que el GESTOR ha marcado como sin clase del club (festivos,
+      cierres, vacaciones) ahora se señalan aquí: círculo rojo con borde
+      discontinuo —el mismo lenguaje visual que ya usa Asistencia— y no se
+      pueden marcar. Antes esos días salían como cualquier otro.
+    · Esos días tampoco cuentan en el contador de cobertura de su semana:
+      si el único día activo de la semana lo anula el club, la semana no
+      queda como "pendiente de marcar".
+    · La pantalla carga los días sin clase del club al abrirse (antes solo
+      se traían al entrar en Asistencia) y se repinta sola si llegan del
+      servidor estando en Planificación.
+    · Sin cambios de datos/esquema.
 
   v0.146.0 — La leyenda "?" también en el panel del día (2026-07)
     · La leyenda de las franjas (v0.139/v0.141) solo se había puesto en el
@@ -3398,11 +3416,13 @@
     .comp-cal-nav button { width:26px; height:26px; border-radius:50%; border:1.5px solid var(--borde); background:#fff; font-size:13px; cursor:pointer; color:var(--texto); }
     .comp-cal-lbl { font-size:12.5px; font-weight:800; color:var(--texto); }
     .comp-lista { margin-bottom:0.7rem; }
-    /* v0.145: dentro del mes, una FILA POR SEMANA con sus días de clase
-       (antes iban en columnas por día de la semana). */
-    .comp-sem-grupo { border-top:1px solid var(--borde); padding-top:0.5rem; margin-bottom:0.7rem; }
-    .comp-sem-grupo:first-of-type { border-top:none; padding-top:0; }
-    .comp-sem-titulo { font-size:12.5px; font-weight:800; color:var(--texto); margin:0 0 6px; }
+    /* v0.147: las SEMANAS van una al lado de otra (columnas), separadas por
+       una barra vertical. Dentro de cada semana, sus días apilados. */
+    .comp-sem-cols { display:flex; align-items:flex-start; overflow-x:auto; padding-bottom:2px; margin-bottom:0.5rem; }
+    .comp-sem-col { flex:1 1 0; min-width:58px; padding:0 8px; }
+    .comp-sem-col + .comp-sem-col { border-left:1.5px solid var(--borde); }
+    .comp-sem-titulo { font-size:11px; font-weight:800; color:var(--gris); margin:0 0 6px; text-align:center; }
+    .comp-sem-dias { display:flex; flex-direction:column; align-items:center; gap:8px; }
     .comp-diacol { display:flex; flex-direction:column; align-items:center; gap:3px; }
     .comp-diacol-dow { font-size:9.5px; font-weight:800; color:var(--gris); text-transform:uppercase; }
     .comp-dia-abierto { margin-top:0.3rem; }
@@ -3413,6 +3433,9 @@
       cursor:pointer; -webkit-tap-highlight-color:transparent; }
     .comp-circ.marcada { background:var(--azul); color:#fff; }
     .comp-circ.festivo { border:1.5px dashed var(--borde); color:var(--gris); opacity:0.55; text-decoration:line-through; cursor:default; }
+    /* v0.147: día sin clase marcado por el CLUB (gestor) — mismo lenguaje
+       visual que en Asistencia: rojo con borde discontinuo. */
+    .comp-circ.dsc { background:#fee2e2; color:#b91c1c; border:1.5px dashed #fca5a5; cursor:default; text-decoration:none; opacity:1; }
     .comp-circ.hoy { box-shadow:0 0 0 2px var(--dorado); }
     .comp-cal-picker { background:var(--arena); border:1.5px solid var(--borde); border-radius:11px; padding:0.6rem 0.85rem; margin-top:8px; }
     .comp-cal-picker-hdr { font-size:12px; font-weight:800; color:var(--texto); margin-bottom:0.4rem; }
@@ -4670,7 +4693,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.146.0';
+    var APP_VERSION = '0.147.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -5909,8 +5932,12 @@
     function _dscRefrescarVista(){
       var g = document.getElementById('pantalla-gestor-calendario');
       var a = document.getElementById('pantalla-asistencia');
+      var pl = document.getElementById('pantalla-planificacion');
       if (g && g.classList.contains('activa')) renderGestorCalendario();
       else if (a && a.classList.contains('activa') && typeof mostrarAsistencia === 'function') mostrarAsistencia();
+      // v0.147: Competición también pinta los días sin clase del club, así
+      // que se repinta si llegan del servidor estando en esa pantalla.
+      else if (pl && pl.classList.contains('activa') && typeof mostrarPlanificacion === 'function') mostrarPlanificacion();
     }
     // ── Sincronización con Supabase (best-effort) ──
     // La usan el gestor (edita) y los entrenadores (solo leen, para pintar
@@ -10639,6 +10666,9 @@
       var dow = new Date(+fISO.slice(0,4), +fISO.slice(5,7)-1, +fISO.slice(8,10)).getDay();
       var todasCls = diasMap[dow] || [];
       if (!todasCls.length) return null; // ese día de la semana nunca tiene clase
+      // v0.147: día sin clase del CLUB (lo marca el gestor: festivo, cierre,
+      // vacaciones). Manda sobre todo lo demás y se señala aparte.
+      if (_dscEsSinClase(fISO)) return 'dsc';
       var cls = todasCls.filter(function(c){
         return _claseCurso(c) === cursoDeFecha(fISO) && !(c.fin && fISO > c.fin);
       });
@@ -10861,6 +10891,7 @@
     }
 
     function _compListaMesHTML(p) {
+      _dscCargarSb();   // v0.147: días sin clase del club, para señalarlos aquí
       var clases  = leerAsistConfig().clases || [];
       var regs    = leerAsistRegistros();
       var diasMap = {};
@@ -10896,34 +10927,40 @@
       var lunes = Object.keys(semanas).sort();
 
       var abiertoHTML = '';
-      var filasHTML = '';
+      var colsHTML = '';
       lunes.forEach(function(kL, i){
         var fechas = semanas[kL].sort();
         var activas = 0, marcadas = 0;
         var circulos = fechas.map(function(fISO){
           var estado  = _compDiaEstado(fISO, diasMap, regs);
+          var dsc     = estado === 'dsc';                  // día sin clase del club
           var festivo = estado === 'festivo';
+          var bloq    = dsc || festivo;                    // no se puede marcar
           var nFilas  = (p.compDias && p.compDias[fISO]) ? p.compDias[fISO].length : 0;
-          if (!festivo) { activas++; if (nFilas) marcadas++; }
-          var marcada = !festivo && nFilas > 0;
+          if (!bloq) { activas++; if (nFilas) marcadas++; }
+          var marcada = !bloq && nFilas > 0;
           var numDia  = parseInt(fISO.slice(8,10), 10);
           var dowF    = new Date(+fISO.slice(0,4), +fISO.slice(5,7)-1, +fISO.slice(8,10)).getDay();
-          var cls = 'comp-circ' + (festivo ? ' festivo' : '') + (marcada ? ' marcada' : '') + (fISO === hoyISO ? ' hoy' : '');
-          var onclick = festivo ? '' : (' onclick="compDiaAbrir(\'' + fISO + '\')"');
-          var titulo  = festivo ? ' title="Sin clase este día"' : (marcada ? ' title="' + nFilas + ' fila(s) marcada(s) — toca para ver el resumen"' : ' title="Toca para marcar lo trabajado"');
-          // Al mezclarse varios días de la semana en la misma fila, cada
-          // círculo lleva encima su día (Mié, Vie…) para no perderse.
+          var cls = 'comp-circ' + (dsc ? ' dsc' : (festivo ? ' festivo' : '')) +
+                    (marcada ? ' marcada' : '') + (fISO === hoyISO ? ' hoy' : '');
+          var onclick = bloq ? '' : (' onclick="compDiaAbrir(\'' + fISO + '\')"');
+          var titulo  = dsc ? ' title="Sin clase — lo marcó el club"'
+                      : (festivo ? ' title="Sin clase este día"'
+                      : (marcada ? ' title="' + nFilas + ' fila(s) marcada(s) — toca para ver el resumen"'
+                                 : ' title="Toca para marcar lo trabajado"'));
           return '<div class="comp-diacol">' +
             '<span class="comp-diacol-dow">' + DIAS_NOMBRES_A[dowF].slice(0,3) + '</span>' +
             '<div class="' + cls + '"' + onclick + titulo + '>' + numDia + '</div>' +
           '</div>';
         }).join('');
 
-        filasHTML += '<div class="comp-sem-grupo">';
-        filasHTML += '<p class="comp-sem-titulo">Semana ' + (i + 1) +
-          ' <span class="comp-dow-cont">· ' + marcadas + '/' + activas + ' marcados</span></p>';
-        filasHTML += '<div class="comp-circ-fila">' + circulos + '</div>';
-        filasHTML += '</div>';
+        // v0.147: cada semana es una COLUMNA; el separador vertical entre
+        // ellas lo pone el CSS (borde izquierdo a partir de la segunda).
+        colsHTML += '<div class="comp-sem-col">';
+        colsHTML += '<p class="comp-sem-titulo">S' + (i + 1) +
+          ' <span class="comp-dow-cont">' + marcadas + '/' + activas + '</span></p>';
+        colsHTML += '<div class="comp-sem-dias">' + circulos + '</div>';
+        colsHTML += '</div>';
 
         if (compDiaAbierta && fechas.indexOf(compDiaAbierta) >= 0) {
           abiertoHTML = compDiaEditando ? _compPickerHTML(p, compDiaAbierta) : _compResumenHTML(p, compDiaAbierta);
@@ -10933,7 +10970,7 @@
       if (!lunes.length) {
         h += '<div class="comp-picker-vacio" style="padding:0.5rem 0 1rem;text-align:center;">Sin clases configuradas.</div>';
       } else {
-        h += filasHTML;
+        h += '<div class="comp-sem-cols">' + colsHTML + '</div>';
         if (abiertoHTML) h += '<div class="comp-dia-abierto">' + abiertoHTML + '</div>';
       }
       h += '</div>';
