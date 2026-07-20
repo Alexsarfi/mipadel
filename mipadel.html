@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.137.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.139.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,51 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.139.0 — Clase cubierta en MORADO + leyenda "?" de la franja (2026-07)
+    · Cuando una clase la da OTRO ENTRENADOR del club, ahora se sombrea de
+      MORADO de verdad (día, desplegable y chip con su nombre). El ámbar
+      sigue reservado a los sustitutos EXTERNOS, para distinguirlos.
+    · Por qué no se veía: desde v0.110 esa clase ya se marcaba aparte, pero
+      usaba la variable de color "lila", que tras el cambio de paleta dejó
+      de ser lila (era un azul grisáceo). Resultado: apenas se distinguía
+      de un día normal. Ahora usa un morado explícito.
+    · El cambio se aplica también en el panel del propio entrenador
+      titular: su franja cubierta por un compañero sale en morado y la de
+      un externo en ámbar (antes ambas salían en ámbar).
+    · Nueva LEYENDA de consulta de la franja horaria: un icono "?" (mismo
+      patrón colapsable que la ficha del alumno) junto al selector de mes
+      del detalle del entrenador. Explica en tres bloques los días (dada ·
+      sin lista · anulada · sin clase del club · extra), quién la dio
+      (morado club / ámbar externo) y los alumnos (activo · baja con su
+      fecha · empieza más adelante). Va cerrada por defecto.
+    · Sin cambios de datos/esquema.
+
+  v0.138.0 — Alumnos de la ACADEMIA: fichas propias y alta desde el panel (2026-07)
+    · En "Alumnos de la academia" (gestor) desaparece la fila de filtro
+      "Todo el club" + un chip por entrenador: los alumnos son de la
+      ACADEMIA, no de un entrenador, así que ese filtro daba una idea
+      equivocada. En su sitio va ahora "＋ Añadir alumno".
+    · El alta pide nombre (obligatorio), apellidos y teléfono, y avisa si
+      ya existe alguien con ese nombre y apellidos antes de duplicar.
+    · CAMBIO DE FONDO (decisión consultada): hasta ahora un alumno no
+      existía por sí solo — la app lo deducía de los que había dentro de
+      cada franja, así que para darlo de alta había que meterlo ya en la
+      clase de un entrenador. Ahora hay fichas de club de verdad (tabla
+      alumnos_club): se puede crear un alumno con sus datos aunque todavía
+      no se sepa en qué franja entrará, y asignarle franja más adelante.
+    · Los alumnos que YA están dentro de franjas se siguen viendo con
+      normalidad: la lista mezcla ambos orígenes sin duplicar (se cruzan
+      por nombre + apellidos). NO hay migración masiva de datos.
+    · Las fichas nuevas también alimentan el autocompletado de alumnos al
+      pasar lista (_alumnosAcademia), así que el entrenador puede escribir
+      un alumno dado de alta por el gestor y le saldrá sugerido.
+    · Requiere ejecutar migracion_alumnos_club.sql UNA vez en Supabase
+      ANTES de usar esta versión. Sin ella el alta funciona solo en local
+      (ese dispositivo) y no se comparte con el club.
+    · Scope: igual que los días sin clase, un scope FIJO de club, porque el
+      gestor y los entrenadores están en grupos distintos y grupo_id no
+      sirve como identificador común.
 
   v0.137.0 — Clases por recuperar: ¿se pierde o se recupera? (2026-07)
     · ENTRENADOR: al marcar "🚫 Sin clase" ya no basta con confirmar; ahora
@@ -2538,10 +2583,14 @@
     /* v0.66.1: el día lo dio (o lo dará) un sustituto → destacado ámbar */
     .ghd-day.sust { background:#fde68a; color:#92400e; }
     .gdd-det.sust { background:#fffbeb; border-color:#fde68a; }
-    /* v0.110: sustituto INTERNO (otro entrenador del club) → lila, el
-       ámbar queda reservado a los sustitutos EXTERNOS */
-    .ghd-day.susti { background:#e9ecf5; color:#16264f; }
-    .gdd-det.susti { background:#f4f6fb; border-color:#c7d0e8; }
+    /* v0.110: sustituto INTERNO (otro entrenador del club) → MORADO, el
+       ámbar queda reservado a los sustitutos EXTERNOS.
+       v0.139: antes usaba un azul grisáceo heredado del cambio de paleta
+       (la variable "lila" dejó de ser lila), así que no se distinguía de
+       un día normal. Ahora es morado de verdad. */
+    .ghd-day.susti { background:#e9d5ff; color:#6b21a8; }
+    .gdd-det.susti { background:#faf5ff; border-color:#d8b4fe; }
+    .asist-clase-row.susti { background:#faf5ff; border-color:#d8b4fe; }
     /* Tarjeta por día de la semana (el nombre del día, una sola vez) */
     /* v0.86: fila horizontal de días en "Clases dadas" */
     .ghd-diarow { display:flex; flex-wrap:wrap; gap:6px; margin:0.3rem 0 0.7rem; }
@@ -4495,7 +4544,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.137.0';
+    var APP_VERSION = '0.139.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -5771,6 +5820,71 @@
         .catch(function(){});
     }
     function _dscEsSinClase(iso){ _dscInit(); return !!_dscSet[iso]; }
+
+    // ── v0.138: FICHAS DE ALUMNOS DE LA ACADEMIA ─────────────────
+    // Los alumnos son del club, no de un entrenador: aquí viven las
+    // fichas creadas por el gestor (nombre, apellidos, teléfono),
+    // aunque todavía no estén asignadas a ninguna franja. Mismo scope
+    // fijo de club que los días sin clase (gestor y entrenadores están
+    // en grupos distintos, así que grupo_id no vale como común).
+    var _acLista = null;          // [{id, nombre, apellidos, telefono}] | null
+    var _acCargado = false;
+    var _AC_LS = 'padel-alumnos-club';
+    function _acLeerLocal(){
+      try { return JSON.parse(localStorage.getItem(_AC_LS) || '[]'); } catch(e){ return []; }
+    }
+    function _acGuardarLocal(){
+      try { localStorage.setItem(_AC_LS, JSON.stringify(_acLista || [])); } catch(e){}
+    }
+    function _acInit(){ if (!_acLista) _acLista = _acLeerLocal(); return _acLista; }
+    function _acCargarSb(force, cb){
+      _acInit();
+      if (!_sb || !_sbUser) { if (cb) cb(); return; }
+      if (_acCargado && !force) { if (cb) cb(); return; }
+      _sb.from('alumnos_club').select('*').eq('scope_id', _dscScope())
+        .then(function(r){
+          _acCargado = true;
+          if (!r.error && r.data) {
+            _acLista = r.data.map(function(a){
+              return { id:a.id, nombre:a.nombre||'', apellidos:a.apellidos||'', telefono:a.telefono||'' };
+            });
+            _acGuardarLocal();
+          }
+          if (cb) cb();
+        }).catch(function(){ _acCargado = true; if (cb) cb(); });
+    }
+    // Alta de una ficha. Devuelve por callback si se pudo guardar.
+    function _acAnadir(nombre, apellidos, telefono, cb){
+      _acInit();
+      var ficha = { nombre:nombre, apellidos:apellidos||'', telefono:telefono||'' };
+      if (!_sb || !_sbUser) {
+        // Sin sesión: se guarda solo en local (no se comparte con el club)
+        ficha.id = 'loc-' + Date.now();
+        _acLista.push(ficha); _acGuardarLocal();
+        if (cb) cb(true, 'local'); return;
+      }
+      var row = { scope_id:_dscScope(), nombre:ficha.nombre, apellidos:ficha.apellidos, telefono:ficha.telefono };
+      _sb.from('alumnos_club').insert(row).select().then(function(r){
+        if (r.error) {
+          console.warn('alta alumno club', r.error && r.error.message);
+          if (cb) cb(false, r.error && r.error.message); return;
+        }
+        var nuevo = (r.data && r.data[0]) || row;
+        _acLista.push({ id:nuevo.id, nombre:nuevo.nombre, apellidos:nuevo.apellidos||'', telefono:nuevo.telefono||'' });
+        _acGuardarLocal();
+        if (cb) cb(true);
+      }).catch(function(e){ if (cb) cb(false, e && e.message); });
+    }
+    function _acBorrar(id, cb){
+      _acInit();
+      _acLista = _acLista.filter(function(a){ return a.id !== id; });
+      _acGuardarLocal();
+      if (!_sb || !_sbUser || String(id).slice(0,4) === 'loc-') { if (cb) cb(); return; }
+      _sb.from('alumnos_club').delete().eq('id', id)
+        .then(function(r){ if (r.error) console.warn('borrar alumno club', r.error && r.error.message); if (cb) cb(); })
+        .catch(function(){ if (cb) cb(); });
+    }
+    function _acFichas(){ return _acInit(); }
 
     function abrirGestorCalendario(){
       _dscInit();
@@ -7272,6 +7386,8 @@
         '<span class="gestor-mes-lbl">' + _gEsc(mesLabel) + '</span>' +
         '<button class="gestor-mes-btn" onclick="gestorMesNav(1)">›</button>' +
       '</div>';
+      // v0.139: leyenda de consulta de la franja (colapsada tras el "?")
+      h += _gFranjaLeyenda();
 
       // ── Cálculo por alumno del mes (misma lógica que el Resumen) ──
       var alumnosMap = {}, fechasSet = {};
@@ -7628,12 +7744,12 @@
           _sustOptionsHTML(reg && reg.impartidaPor, uid) + '</select>' +
           diaTodoSel +
         '</div>';
-      // Chip ámbar con el sustituto (visible en cualquier estado del día)
-      // v0.110: chip ámbar solo si el sustituto es EXTERNO; lila si es
-      // otro entrenador del club
+      // Chip con el sustituto (visible en cualquier estado del día)
+      // v0.110/v0.139: MORADO si la cubre otro entrenador del club;
+      // ámbar si es un sustituto EXTERNO.
       var sustChip = (reg && reg.impartidaPor)
         ? ' <span style="font-size:12px;font-weight:700;' +
-          (reg.impartidaPor.uid ? 'background:#e9ecf5;color:#16264f;' : 'background:#fde68a;color:#92400e;') +
+          (reg.impartidaPor.uid ? 'background:#e9d5ff;color:#6b21a8;' : 'background:#fde68a;color:#92400e;') +
           'border-radius:10px;padding:1px 7px;">🔁 ' + _gEsc(reg.impartidaPor.nombre || '') + '</span>'
         : '';
       // Recuperaciones PREVISTAS del día (v0.60): solo el nombre, sin asistencia
@@ -8349,6 +8465,33 @@
         '<span class="galm-lg recup">↩</span> recuperación</p>');
     }
 
+    // v0.139: leyenda de consulta de una FRANJA HORARIA (gestor). Explica
+    // los números de día y los estados de los alumnos que aparecen en cada
+    // tramo. Colapsada tras el "?" para no meter ruido.
+    function _gFranjaLeyenda() {
+      function grupo(titulo, items) {
+        return '<div style="width:100%;margin-bottom:6px;">' +
+          '<div style="font-size:11px;font-weight:800;color:var(--texto);text-align:right;">' + titulo + '</div>' +
+          '<p class="ajustes-desc galm-leyenda" style="margin:2px 0 0;">' + items + '</p>' +
+        '</div>';
+      }
+      return _leyendaColapsableHTML(
+        grupo('Días de la franja',
+          '<span class="ghd-day dada">15</span> clase dada' +
+          '<span class="ghd-day sinlista">15</span> sin lista todavía' +
+          '<span class="ghd-day nodada">15</span> anulada (sin clase)' +
+          '<span class="ghd-day dsc">✗</span> día sin clase del club' +
+          '<span class="ghd-day dada extra">15</span> clase extra (día no habitual)') +
+        grupo('Quién la dio',
+          '<span class="ghd-day dada susti">15</span> la cubrió otro entrenador del club' +
+          '<span class="ghd-day dada sust">15</span> la cubrió un sustituto externo') +
+        grupo('Alumnos',
+          '<span class="ghd-al">Marta G.</span> activo' +
+          '<span class="ghd-al baja">❌ Luis P. · 14/03</span> baja, con su fecha (solo ese mes)' +
+          '<span class="ghd-al fut">⏳ Ana R.</span> empieza más adelante')
+      );
+    }
+
     // ── v0.103: vista PLANIFICADA del mes en la ficha del alumno ──────
     // En lugar de enseñar solo los días con registro, se pintan TODOS los
     // días en que sus clases tocan ese mes (por franja): pasados con su
@@ -8885,12 +9028,9 @@
     }
     function gtaMesNav(delta) { _gtaMesOff += delta; renderGestorTodosAlumno(); }
     function gtaFiltrar(v) { _gtaFiltroTxt = v || ''; if (v) _gtaLetra = null; _gtaRenderLista(); }
-    // Filtro opcional por entrenador (toca dos veces el mismo chip → quitar)
-    function gtaFiltroEnt(ent) {
-      _gtaFiltroEnt = (_gtaFiltroEnt === ent) ? null : ent;
-      _gtaLetra = null;   // al cambiar de entrenador se reinicia el abecedario
-      _gtaRenderChips(); _gtaRenderLista();
-    }
+    // v0.138: el filtro por entrenador se retira de esta pantalla (los
+    // alumnos son de la ACADEMIA, no de un entrenador). _gtaFiltroEnt se
+    // queda siempre a null para no tocar el resto de la lógica de la lista.
     // Selección de inicial en el abecedario (toca la activa → Todos)
     function gtaLetra(L) {
       _gtaLetra = (_gtaLetra === L) ? null : L;
@@ -8958,6 +9098,16 @@
           (r.ausentes ||[]).forEach(function(n){ if(n) push(n, false); });
         });
       });
+      // v0.138: fichas de academia sin franja todavía. Se mezclan con los
+      // que ya están en clases, SIN duplicar (misma clave nombre+apellidos):
+      // si la ficha ya aparece por sus clases, solo se completan sus datos.
+      _acFichas().forEach(function(f){
+        if (!f.nombre) return;
+        var key = _gtaFullKey(f.nombre, f.apellidos);
+        var e = ensA(key, f.nombre, f.apellidos);
+        e.ficha = f;                                   // permite borrarla
+        if (!e.apellidos && f.apellidos) e.apellidos = f.apellidos;
+      });
       Object.keys(map).forEach(function(key){
         map[key].sesiones.sort(function(a,b){ return b.fecha.localeCompare(a.fecha); });
       });
@@ -8980,25 +9130,80 @@
       var cont = document.getElementById('gta-contenido');
       if (!cont) return;
       if (!_gestorData) { cont.innerHTML = '<p class="ajustes-desc">Sin datos.</p>'; return; }
+      // v0.138: las fichas del club se cargan una vez y se repinta al llegar
+      if (!_acCargado) { _acCargarSb(false, function(){ renderGestorTodosAlumnos(); }); }
       _gtaCache = _gtaIndex();
       var lista = Object.keys(_gtaCache.al).sort(_gtaCmp);
       document.getElementById('gta-sub').textContent =
         lista.length + ' alumno' + (lista.length!==1?'s':'') + ' del club';
-      if (!lista.length) {
-        cont.innerHTML = '<p class="ajustes-desc" style="text-align:center;padding:1rem 0;">Aún no hay alumnos con datos.</p>';
-        return;
-      }
-      // Barra fija (buscador + chips de filtro + contador); la lista se pinta
-      // aparte para que el input no pierda el foco al filtrar.
+      // v0.138: en lugar de los chips por entrenador (los alumnos son de la
+      // ACADEMIA, no de un entrenador), aquí va el alta de alumno. La barra
+      // se pinta siempre, aunque aún no haya ninguno, para poder crear el
+      // primero.
       cont.innerHTML =
         '<input id="gta-input" class="form-input" type="search" placeholder="🔍 Buscar alumno…" ' +
           'autocomplete="off" oninput="gtaFiltrar(this.value)" style="margin-bottom:0.6rem;">' +
-        '<div class="gals-chips" id="gta-chips"></div>' +
+        '<div id="gta-alta"></div>' +
         '<div id="gta-abc"></div>' +
         '<p class="ajustes-desc" id="gta-count" style="margin:0.15rem 0 0.6rem;"></p>' +
         '<div id="gta-lista"></div>';
-      _gtaRenderChips();
+      _gtaRenderAlta();
+      if (!lista.length) {
+        document.getElementById('gta-lista').innerHTML =
+          '<p class="ajustes-desc" style="text-align:center;padding:1rem 0;">Aún no hay alumnos. Pulsa «＋ Añadir alumno» para crear el primero.</p>';
+        return;
+      }
       _gtaRenderLista();
+    }
+
+    // v0.138: alta de alumno de la academia (nombre, apellidos, teléfono).
+    // Sustituye a los chips de filtro por entrenador.
+    var _gtaAltaOn = false;
+    function gtaToggleAlta(){ _gtaAltaOn = !_gtaAltaOn; _gtaRenderAlta(); }
+    function _gtaRenderAlta(){
+      var el = document.getElementById('gta-alta');
+      if (!el) return;
+      if (!_gtaAltaOn) {
+        el.innerHTML = '<button type="button" class="btn btn-verde btn-sm" style="margin-bottom:0.6rem;" onclick="gtaToggleAlta()">＋ Añadir alumno</button>';
+        return;
+      }
+      el.innerHTML =
+        '<div class="asist-recup-panel" style="margin-bottom:0.6rem;">' +
+          '<div style="font-size:12px;font-weight:700;color:var(--texto);margin-bottom:2px;">＋ Nuevo alumno de la academia</div>' +
+          '<div class="ajustes-desc" style="margin:0 0 8px;">Queda dado de alta en el club. Podrás asignarle franja cuando quieras.</div>' +
+          '<div class="asist-form-add-alumno" style="flex-wrap:wrap;">' +
+            '<input id="gta-nom" class="form-input" type="text" placeholder="Nombre *" style="flex:1;min-width:110px;" ' +
+              'onkeydown="if(event.key===\'Enter\'){event.preventDefault();gtaGuardarAlumno();}">' +
+            '<input id="gta-ape" class="form-input" type="text" placeholder="Apellidos" style="flex:1;min-width:110px;" ' +
+              'onkeydown="if(event.key===\'Enter\'){event.preventDefault();gtaGuardarAlumno();}">' +
+            '<input id="gta-tel" class="form-input" type="tel" placeholder="Teléfono" style="flex:1;min-width:110px;" ' +
+              'onkeydown="if(event.key===\'Enter\'){event.preventDefault();gtaGuardarAlumno();}">' +
+          '</div>' +
+          '<div style="display:flex;gap:8px;margin-top:8px;">' +
+            '<button class="btn btn-verde btn-sm" onclick="gtaGuardarAlumno()">Guardar</button>' +
+            '<button class="btn btn-sec btn-sm" onclick="gtaToggleAlta()">Cancelar</button>' +
+          '</div>' +
+        '</div>';
+      var i = document.getElementById('gta-nom'); if (i) i.focus();
+    }
+    function gtaGuardarAlumno(){
+      var iN = document.getElementById('gta-nom');
+      var iA = document.getElementById('gta-ape');
+      var iT = document.getElementById('gta-tel');
+      var nom = (iN && iN.value || '').trim();
+      if (!nom) { if (iN) iN.classList.add('form-error'); alert('El nombre es obligatorio.'); return; }
+      var ape = (iA && iA.value || '').trim();
+      var tel = (iT && iT.value || '').trim();
+      // Aviso si ya existe alguien con ese nombre y apellidos
+      var yaKey = _gtaFullKey(nom, ape);
+      if (_gtaCache && _gtaCache.al[yaKey] &&
+          !confirm('Ya hay un alumno llamado "' + nom + (ape ? ' ' + ape : '') + '".\n\n¿Crear otra ficha de todas formas?')) return;
+      _acAnadir(nom, ape, tel, function(ok, err){
+        if (!ok) { alert('No se pudo guardar la ficha' + (err ? ': ' + err : '') + '.'); return; }
+        _gtaAltaOn = false;
+        if (typeof planToast === 'function') planToast('👤 ' + nom + ' añadido a la academia');
+        renderGestorTodosAlumnos();
+      });
     }
 
     // Orden alfabético en español (respeta acentos y ñ)
@@ -9029,22 +9234,10 @@
       return h;
     }
 
-    // Chips de filtro opcionales por entrenador ("Todo el club" + uno por
-    // entrenador). Es opt-in: por defecto se ve toda la academia, nunca
-    // agrupada. Un alumno puede aparecer bajo varios entrenadores.
-    function _gtaRenderChips() {
-      var el = document.getElementById('gta-chips');
-      if (!el || !_gtaCache) return;
-      var h = '<button type="button" class="gals-chip' + (_gtaFiltroEnt==null?' activo':'') +
-              '" onclick="gtaFiltroEnt(null)">Todo el club</button>';
-      _gtaCache.ents.forEach(function(e){
-        if (!e.alumnos.length) return;
-        h += '<button type="button" class="gals-chip' + (_gtaFiltroEnt===e.nombre?' activo':'') +
-             '" onclick="gtaFiltroEnt(\'' + _gEsc(e.nombre).replace(/'/g,"\\'") + '\')">' +
-             _gEsc(e.nombre) + '</button>';
-      });
-      el.innerHTML = h;
-    }
+    // v0.138: aquí vivían los chips "Todo el club" + un chip por entrenador.
+    // Se han retirado: los alumnos pertenecen a la ACADEMIA, no a un
+    // entrenador concreto, así que ese filtro daba una idea equivocada. En
+    // su lugar, esta zona la ocupa el alta de alumno (_gtaRenderAlta).
 
     function _primerNombre(s) { return String(s||'').trim().split(/\s+/)[0]; }
 
@@ -13730,6 +13923,8 @@
         _gestorData.clases.forEach(function(c){ (c.alumnos || []).forEach(add); });
       }
       (leerAsistConfig().clases || []).forEach(function(c){ (c.alumnos || []).forEach(add); });
+      // v0.138: fichas de academia (aún sin franja) → también autocompletan
+      _acFichas().forEach(add);
       out.sort(function(a,b){ return a.nombre.localeCompare(b.nombre); });
       return out;
     }
@@ -13957,10 +14152,13 @@
             // que lo vea el entrenador titular en su propio panel
             var sust = reg && reg.impartidaPor;
             if (sust) badge = '<span class="asist-badge-sust">🔁 ' + _gEsc(reg.impartidaPor.nombre || '') + '</span>' + badge;
+            // v0.139: morado si la cubre otro entrenador del club, ámbar
+            // si es un sustituto externo (mismo criterio que en el gestor).
+            var sustCls = sust ? (reg.impartidaPor.uid ? ' susti' : ' sust') : '';
 
             var nombre = clase.nombre || (diasNom + ' · ' + (clase.franja||''));
 
-            html += '<div class="asist-clase-row' + (sust ? ' sust' : '') + '" onclick="asistAbrirLista(' + clase.id + ',\'' + fecha + '\')">';
+            html += '<div class="asist-clase-row' + sustCls + '" onclick="asistAbrirLista(' + clase.id + ',\'' + fecha + '\')">';
             html += '<span class="asist-franja-pill">' + (clase.franja||'—') + '</span>';
             html += '<div class="asist-clase-row-info">';
             html += '<div class="asist-clase-row-nombre">' + _gEsc(nombre) + '</div>';
