@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.134.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.135.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,36 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.135.0 — Bajas con fecha, fin de curso automático y altas solo del gestor (2026-07)
+    · (1) BAJA EN EL PANEL: el alumno de baja (amarillo) aparece SOLO en el
+      mes de su baja, con ❌ y la fecha (p. ej. "❌ Luis P. · 14/03"). En los
+      meses siguientes ya no aparece (antes reaparecía todo el curso si
+      había asistido alguna vez); en los meses anteriores sale normal, en
+      azul. Se sustituye la ✗ por ❌.
+    · (2) FIN DE CURSO AUTOMÁTICO: todo alumno nuevo nace con fecha de baja
+      el 30 de JULIO del curso correspondiente (finCursoISO). Si se le da de
+      baja a mitad de curso, esa fecha manual sustituye a la automática.
+      Al reincorporar a alguien, su periodo nuevo también acaba el 30/07.
+    · Decisión de diseño (consultada): la baja automática de fin de curso NO
+      se pinta de amarillo ni cuenta como "baja" — es el final normal del
+      curso. Así julio no se llena de amarillo. Nuevo helper alBajaReal(),
+      usado en todos los sitios que significan "se dio de baja": chips del
+      panel, 🏁 fin de clases de la ficha, tabla del detalle, orden de
+      alumnos y el resumen mensual exportado.
+    · (3) ALTAS/BAJAS SOLO DEL GESTOR: el entrenador pasa a SOLO pasar lista.
+      En su pantalla quedan ↩ Recuperación y 🚫 Sin clase; desaparecen
+      "＋ Añadir alumno" y "🔁 Entrenador sustituto". En el formulario de
+      clase se le oculta el bloque de Alumnos (puede seguir editando día,
+      franja y nombre; los alumnos NO se pierden al guardar). El 🗑 de baja
+      de la ficha del alumno queda también reservado al gestor.
+    · Ajuste importante: como ahora TODOS los alumnos llevan fecha de baja,
+      los chequeos que decían "sin fecha de baja = activo" pasan a usar
+      alActivo(); si no, al añadir un alumno ya existente habría saltado por
+      error el diálogo de reincorporación.
+    · Compatibilidad: los alumnos YA existentes (sin fecha de baja) siguen
+      funcionando igual — se consideran activos y nunca salen en amarillo.
+      No hace falta migración ni tocar Supabase.
 
   v0.134.0 — Recordar la última pantalla al recargar (F5) (2026-07)
     · Antes, al recargar la página o reabrir la app, siempre volvía a
@@ -4223,7 +4253,7 @@
           <label class="form-label">Nombre de la clase (opcional)</label>
           <input id="asist-form-nombre" class="form-input" type="text" placeholder="Ej: Nivel iniciación, Adultos…">
         </div>
-        <div class="form-grupo">
+        <div class="form-grupo" id="asist-form-grupo-alumnos">
           <label class="form-label">Alumnos</label>
           <datalist id="dl-alumnos"></datalist>
           <div class="asist-form-alumnos-lista" id="asist-form-alumnos"></div>
@@ -4386,7 +4416,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.134.0';
+    var APP_VERSION = '0.135.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -7231,26 +7261,27 @@
       extras.sort();
       extras.forEach(function(f){ dadas++; _chip(f, 'dada', true); });
 
-      // ── Alumnos de la clase, junto a la hora: azul claro los de alta;
-      // amarillo los de baja que asistieron algún día del curso.
-      var cursoRef = hist ? hist.curso : cursoMes;
-      var asistieron = {};
-      regsAll.forEach(function(r){
-        if (r.claseId !== c.id || r.sinClase) return;
-        if (cursoDeFecha(r.fecha || '') !== cursoRef) return;
-        (r.presentes || []).forEach(function(n){ asistieron[n] = true; });
-      });
+      // ── Alumnos de la clase, junto a la hora: azul claro los activos;
+      // amarillo SOLO en el mes de su baja real (v0.135), con ❌ y la
+      // fecha. En los meses siguientes desaparece (ya no es del grupo) y
+      // en los anteriores sale normal, en azul. La baja automática de fin
+      // de curso (30 de julio) no se pinta como baja: es el final normal.
       var finMes = mesISO + '-31';
       var alsHtml = '', nAls = 0;
       (c.alumnos || []).forEach(function(a){
         var nom = alNom(a);
         if (!nom) return;
-        var alta  = alAlta(a);
-        var fut   = alta && alta > finMes;                 // aún no ha empezado
-        var baja  = !fut && !alActivo(a, finMes);          // de baja a fin de mes
-        if (baja && !asistieron[nom]) return;              // baja sin asistencias → fuera
+        var alta   = alAlta(a);
+        var fut    = alta && alta > finMes;                // aún no ha empezado
+        var bajaEf = alBaja(a);                            // baja del periodo vigente
+        var mesBaja = bajaEf ? bajaEf.slice(0, 7) : '';
+        // Baja anterior a este mes → ya no pertenece al grupo: no se lista.
+        if (mesBaja && mesBaja < mesISO) return;
+        // Baja real DENTRO de este mes → amarillo con su fecha.
+        var baja  = !fut && !!bajaEf && mesBaja === mesISO && !esBajaFinCurso(bajaEf);
         var cls   = 'ghd-al' + (baja ? ' baja' : (fut ? ' fut' : ''));
-        var texto = (baja ? '✗ ' : (fut ? '⏳ ' : '')) + _gEsc(alCorto(a));
+        var texto = (baja ? '❌ ' : (fut ? '⏳ ' : '')) + _gEsc(alCorto(a)) +
+                    (baja ? ' · ' + bajaEf.slice(8, 10) + '/' + bajaEf.slice(5, 7) : '');
         nAls++;
         if (hist) {
           alsHtml += '<span class="' + cls + '">' + texto + '</span>';
@@ -7586,7 +7617,7 @@
               else if ((r.justificadas||[]).indexOf(n) !== -1) fJ++; else fIJ++;
             });
             if (!pos) return;
-            filas += '<tr><td>' + _gEsc(alCorto(a)) + (alBaja(a) ? ' <span class="baja">(baja ' + _gFecha(alBaja(a)) + ')</span>' : '') + '</td>' +
+            filas += '<tr><td>' + _gEsc(alCorto(a)) + (alBajaReal(a) ? ' <span class="baja">(baja ' + _gFecha(alBajaReal(a)) + ')</span>' : '') + '</td>' +
               '<td>' + pres + ' de ' + pos + '</td>' +
               '<td>' + ((fJ||fIJ) ? (fJ + ' J · ' + fIJ + ' IJ') : '—') + '</td></tr>';
           });
@@ -8097,7 +8128,9 @@
         });
         // v0.115: si el alumno tiene BAJA en este mes, su último día de
         // clase activo lleva marca de "fin de clases".
-        var baja = entry ? alBaja(entry) : '';
+        // v0.135: solo la baja REAL marca "fin de clases" (🏁); la baja
+        // automática de fin de curso no es un fin anticipado.
+        var baja = entry ? alBajaReal(entry) : '';
         var finFecha = '';
         if (baja && baja.slice(0,7) === mesISO) {
           fechasClaseEnMes(c, mesISO).forEach(function(f){
@@ -8165,7 +8198,10 @@
           (finFecha ? '<div class="galm-fin">🏁 Fin de clases · ' + parseInt(finFecha.split('-')[2],10) + '/' + (+finFecha.slice(5,7)) + '</div>' : '') +
           // v0.117: baja con FECHA a elegir (solo si sigue activo). El 🗑
           // abre un mini panel con un selector de fecha (por defecto hoy).
-          (entry && !alBaja(entry) ?
+          // v0.135: "activo" ya no es "sin fecha de baja" (todos llevan la
+          // de fin de curso), sino alActivo() hoy. Y dar de baja es
+          // EXCLUSIVO del gestor: el entrenador solo pasa lista.
+          (entry && alActivo(entry, hoyLocal()) && _esGestor ?
             '<div class="galm-baja-wrap">' +
               '<button type="button" class="galm-quitar" title="Fin de clases" aria-label="Fin de clases" onclick="var p=document.getElementById(\'galm-bajap-' + c.id + '\');p.style.display=p.style.display===\'none\'?\'flex\':\'none\';">🗑</button>' +
               '<div class="galm-baja-panel" id="galm-bajap-' + c.id + '" style="display:none;">' +
@@ -8565,7 +8601,7 @@
           if (!entry) return;
           if ((alApe(entry) || '') !== (ape || '')) return;   // debe coincidir el apellido
           tieneFull = true;
-          pts += alBaja(entry) ? 1000 : 10000;   // activo pesa más que de baja
+          pts += alBajaReal(entry) ? 1000 : 10000;   // activo pesa más que de baja
         });
         _gestorRegsLocal(d).forEach(function(r){
           if (r.sinClase) return;
@@ -13350,6 +13386,25 @@
     function alBaja(a) { return (a && typeof a === 'object') ? (a.baja || '') : ''; }
     function alApe(a)  { return (a && typeof a === 'object') ? (a.apellidos || '') : ''; }
     function alTel(a)  { return (a && typeof a === 'object') ? (a.telefono || '') : ''; }
+    // v0.135: fin de curso = 30 de julio. Todo alumno nuevo nace con esa
+    // fecha de baja (el curso se acaba); una baja MANUAL a mitad de curso
+    // la sustituye. Sirve para distinguir "se dio de baja" (amarillo, con
+    // fecha) de "terminó el curso con normalidad" (no se pinta como baja).
+    function finCursoISO(curso) {          // curso "2025-26" → "2026-07-30"
+      var y0 = parseInt(String(curso).slice(0, 4), 10);
+      return (y0 + 1) + '-07-30';
+    }
+    function esBajaFinCurso(iso) {         // ¿es la baja automática de fin de curso?
+      if (!iso) return false;
+      return iso === finCursoISO(cursoDeFecha(iso));
+    }
+    // Baja REAL (manual, a mitad de curso). Devuelve '' si la única fecha
+    // de baja es la automática de fin de curso: eso no es darse de baja.
+    // Úsese siempre que se quiera decir "este alumno se dio de baja".
+    function alBajaReal(a) {
+      var b = alBaja(a);
+      return (b && !esBajaFinCurso(b)) ? b : '';
+    }
     // Nombre corto para chips: nombre + iniciales de apellidos ("Marta G.L.")
     function alCorto(a) {
       var n = alNom(a), ap = alApe(a);
@@ -14028,17 +14083,24 @@
         // cerrado; así "Impartida por" solo aparece al cambiar el titular.
         // v0.118: orden ＋ Añadir alumno · ↩ Recuperación · 🔁 Entrenador
         // sustituto · 🚫 Sin clase. En móvil se ven SOLO los iconos.
+        // v0.135: el entrenador SOLO pasa lista → únicamente ↩ Recuperación
+        // y 🚫 Sin clase. "＋ Añadir alumno" (altas) y "🔁 Entrenador
+        // sustituto" quedan reservados al GESTOR: las altas y bajas de
+        // alumnos son competencia suya.
         var sustBtn = '';
-        if (_sb && _sbUser) {
+        if (_sb && _sbUser && _esGestor) {
           var sustOn = !!asistImpartida;
           sustBtn =
             '<button class="btn btn-sec btn-sm asist-acc-btn" style="border-color:#fde68a;color:#92400e;' +
               (sustOn ? 'background:#fffbeb;font-weight:700;' : '') + '" onclick="asistToggleSustPanel()">🔁 <span class="asist-acc-txt">' +
               (sustOn ? _gEsc(asistImpartida.nombre) : 'Entrenador sustituto') + '</span></button>';
         }
+        var altaBtn = _esGestor
+          ? '<button class="btn btn-sec btn-sm asist-acc-btn" style="border-color:#bbf7d0;color:#166534;" onclick="asistToggleAltaPanel()">＋ <span class="asist-acc-txt">Añadir alumno</span></button>'
+          : '';
         zona.innerHTML =
           '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
-            '<button class="btn btn-sec btn-sm asist-acc-btn" style="border-color:#bbf7d0;color:#166534;" onclick="asistToggleAltaPanel()">＋ <span class="asist-acc-txt">Añadir alumno</span></button>' +
+            altaBtn +
             '<button class="btn btn-sec btn-sm asist-acc-btn" style="border-color:var(--lila-claro);color:var(--lila);" onclick="asistToggleRecupPanel()">↩ <span class="asist-acc-txt">Recuperación</span></button>' +
             sustBtn +
             '<button class="btn btn-sec btn-sm asist-acc-btn" style="border-color:#e2e8f0;color:#64748b;" onclick="asistSinClase()">🚫 <span class="asist-acc-txt">Sin clase</span></button>' +
@@ -14138,7 +14200,9 @@
       (clase.alumnos||[]).forEach(function(a, i){ if (alNom(a) === nombre) idxYa = i; });
       if (idxYa >= 0) {
         var ya = clase.alumnos[idxYa];
-        if (!alBaja(ya)) { alert('"' + nombre + '" ya está de alta en esta clase.'); return; }
+        // v0.135: activo = ya está de alta (todo alumno lleva baja de fin
+        // de curso por defecto, así que ya no vale mirar solo alBaja()).
+        if (alActivo(ya, asistFechaActiva)) { alert('"' + nombre + '" ya está de alta en esta clase.'); return; }
         // v0.63: reincorporación — continúa su historial en el mismo grupo
         if (!confirm('"' + nombre + '" ya estuvo en esta clase (baja el ' + _gFecha(alBaja(ya)) + ').\n\n¿Darlo de ALTA otra vez desde el ' + _gFecha(asistFechaActiva) + '? Su historial anterior se conserva y continúa.')) return;
         // entradas antiguas como texto plano → convertir a objeto
@@ -14147,8 +14211,10 @@
         if (!ya.apellidos && ape.trim()) ya.apellidos = ape.trim();
         if (!ya.telefono  && tel.trim()) ya.telefono  = tel.trim();
       } else {
+        // v0.135: baja por defecto = 30 de julio del curso de su alta.
         clase.alumnos = (clase.alumnos||[]).concat([{ nombre:nombre, apellidos:ape.trim(), telefono:tel.trim(),
-                                                      alta:asistFechaActiva, baja:'' }]);
+                                                      alta:asistFechaActiva,
+                                                      baja:finCursoISO(cursoDeFecha(asistFechaActiva)) }]);
       }
       escribirAsistConfig(cfg);
       asistAltaPanelOn = false;
@@ -14381,6 +14447,12 @@
       document.getElementById('asist-form-btn').textContent      = clase ? 'Guardar cambios' : 'Crear clase';
       document.getElementById('asist-form-volver-btn').textContent = _gEditVolverA ? '‹ Volver' : '‹ Clases';
       document.getElementById('asist-form-borrar-zona').style.display = clase ? 'block' : 'none';
+      // v0.135: las altas/bajas de alumnos son EXCLUSIVAS del gestor. El
+      // entrenador puede seguir creando/editando la clase (día, franja,
+      // nombre), pero no toca la lista de alumnos. Ojo: asistAlumnosForm
+      // se sigue rellenando abajo, así que al guardar NO se pierden.
+      var _grAls = document.getElementById('asist-form-grupo-alumnos');
+      if (_grAls) _grAls.style.display = _esGestor ? '' : 'none';
 
       if (clase) {
         document.getElementById('asist-form-dia').value    = clase.diaSemana;
@@ -14526,7 +14598,9 @@
       if (ya) {
         // v0.63: si vuelve al mismo grupo, se CONTINÚA su historial — el
         // periodo cerrado pasa a hist y se abre uno nuevo desde hoy.
-        if (alBaja(ya)) {
+        // v0.135: se mira si está ACTIVO hoy, no si tiene fecha de baja:
+        // ahora todo alumno lleva baja de fin de curso (30/07) por defecto.
+        if (!alActivo(ya, hoyLocal())) {
           if (confirm('"' + nombre + '" ya estuvo en esta clase (baja el ' + _gFecha(alBaja(ya)) + ').\n\n¿Darlo de ALTA otra vez desde hoy? Su historial anterior se conserva y continúa.')) {
             _alReactivar(ya, hoyLocal());
             renderAlumnosForm();
@@ -14538,7 +14612,10 @@
       }
       asistAutoRellenar(nombre);
       // v0.116: alta = hoy → cuenta desde hoy y marca "comienzo de clases"
-      asistAlumnosForm.push({ nombre: nombre, apellidos: inpApe.value.trim(), telefono: inpTel.value.trim(), alta: hoyLocal(), baja: '' });
+      // v0.135: baja por defecto = 30 de julio (fin del curso). Si se le da
+      // de baja a mitad de curso, esa fecha manual sustituye a esta.
+      asistAlumnosForm.push({ nombre: nombre, apellidos: inpApe.value.trim(), telefono: inpTel.value.trim(),
+                              alta: hoyLocal(), baja: finCursoISO(cursoDeFecha(hoyLocal())) });
       input.value = ''; inpApe.value = ''; inpTel.value = '';
       renderAlumnosForm();
       input.focus();
@@ -14551,7 +14628,8 @@
       a.hist = alHist(a).slice();
       a.hist.push({ alta: alAlta(a) || '', baja: alBaja(a) || '' });
       a.alta = fecha;
-      a.baja = '';
+      // v0.135: el periodo nuevo también acaba, por defecto, al fin de curso.
+      a.baja = finCursoISO(cursoDeFecha(fecha));
     }
 
     function asistGuardarClase() {
@@ -14866,7 +14944,8 @@
         (clase.alumnos||[]).forEach(function(a){
           var n = alNom(a);
           if (alAlta(a) && alAlta(a).indexOf(mesISO) === 0) altaMes[n] = alAlta(a);
-          if (alBaja(a) && alBaja(a).indexOf(mesISO) === 0) bajaMes[n] = alBaja(a);
+          // v0.135: solo bajas REALES (la de fin de curso no es una baja)
+          if (alBajaReal(a) && alBajaReal(a).indexOf(mesISO) === 0) bajaMes[n] = alBajaReal(a);
         });
       });
       var hayAltas = Object.keys(altaMes).length, hayBajas = Object.keys(bajaMes).length;
