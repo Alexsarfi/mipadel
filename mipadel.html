@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.141.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.142.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,33 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.142.0 — El entrenador programa sus clases por recuperar (2026-07)
+    · En Asistencia, sobre "↩ Recuperar una clase", aparece el cuadro
+      "↩ Clases por recuperar" con las clases que el entrenador anuló
+      marcando "se recupera" y que aún no ha programado. Si no hay
+      ninguna, NO se pinta nada.
+    · Al tocar una, se despliega su formulario: fecha de la recuperación,
+      hora (precargada con la franja original) y los alumnos que recuperan
+      —solo los que estaban activos ese día, TODOS marcados por defecto—.
+      Quien quede sin marcar pierde esa clase; se avisa bajo la lista.
+    · Al programarla, la clase desaparece de pendientes y la recuperación
+      pasa al cuadro "↩ Recuperaciones" de siempre, para pasar lista su día.
+    · SALDO EXACTO (decisión consultada): la recuperación queda ENLAZADA a
+      la clase anulada que salda (nuevo campo recup_de = su fecha). Con eso
+      el gestor deja de estimar: el contador "clases por recuperar" cuenta
+      solo las que siguen sin programar, y el mes deja de estar en AMARILLO
+      en cuanto se salda. Sustituye a la resta aproximada de v0.137/v0.140,
+      que dejaba el mes en amarillo aunque ya se hubiera recuperado.
+    · No se puede programar la recuperación el mismo día de la clase
+      anulada (se avisa).
+    · Requiere ejecutar migracion_recup_de.sql UNA vez en Supabase ANTES de
+      usar esta versión. Sin ella se puede programar, pero el enlace no se
+      guarda en el servidor y la clase reaparecería como pendiente.
+    · Compatibilidad: las recuperaciones creadas antes de v0.142 (sin
+      enlace) siguen viéndose igual; simplemente no saldan ninguna clase
+      concreta, así que si alguna pendiente antigua ya se recuperó, basta
+      con programarla de nuevo o marcarla como perdida.
 
   v0.141.0 — La leyenda "?" pasa junto al selector de día (2026-07)
     · La leyenda de las franjas (v0.139) estaba junto al selector de MES,
@@ -2543,6 +2570,12 @@
     .asist-recup-cnt.pend { color:#92400e; background:#fef3c7; border-radius:20px; padding:2px 8px; }
     .asist-recup-del { flex-shrink:0; border:none; background:transparent; color:#991b1b; font-size:15px; cursor:pointer; padding:2px 4px; margin-left:2px; border-radius:7px; -webkit-tap-highlight-color:transparent; }
     .asist-recup-del:active { transform:scale(0.9); background:#fef2f2; }
+    /* v0.142: cuadro "Clases por recuperar" (pendientes de programar) */
+    .asist-recups-box.pend { border-color:#f59e0b; background:#fffbeb; }
+    .asist-recups-box.pend .asist-recups-tit { color:#92400e; }
+    .asist-recups-box.pend .asist-recup-row:active { background:#fef3c7; }
+    .pendrec-form { padding:8px 6px 10px; border-top:1px dashed #f59e0b; }
+    .pendrec-form .form-label { display:block; font-size:11px; margin-bottom:3px; }
     /* Resumen "Clases dadas por duración" (Resumen del mes) */
     .asist-suma-card { background:var(--blanco); border:1.5px solid var(--borde); border-radius:14px; padding:0.9rem 1rem; margin-bottom:0.85rem; }
     .asist-suma-tit { font-size:13px; font-weight:800; color:var(--texto); margin-bottom:10px; }
@@ -4314,6 +4347,7 @@
     <div class="contenido">
       <div id="asist-calendario"></div>
       <div id="asist-dias-lista"></div>
+      <div id="asist-pendientes-recup"></div>
       <button class="btn btn-sec" onclick="recupClaseToggle()">↩ Recuperar una clase</button>
       <div id="asist-recup-clase-panel"></div>
       <div id="asist-recups-mes"></div>
@@ -4567,7 +4601,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.141.0';
+    var APP_VERSION = '0.142.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -4871,7 +4905,8 @@
           sinClase:!!r.sin_clase,
           sinClaseRecup:!!r.sin_clase_recup,   // v0.137: la clase anulada se recuperará
           recupClase:!!r.recup_clase,
-          recupHora:r.recup_hora||''
+          recupHora:r.recup_hora||'',
+          recupDe:r.recup_de||''               // v0.142: fecha de la clase anulada que salda
         }; });
 
         // ── Fusionar con lo local (soloLocal=true: sin eco de subida) ──
@@ -5120,7 +5155,8 @@
         sin_clase:!!r.sinClase,
         sin_clase_recup:!!r.sinClaseRecup,  // v0.137: anulada pero pendiente de recuperar
         recup_clase:!!r.recupClase,   // v0.82: sesión de recuperación de clase
-        recup_hora:r.recupHora||null  // v0.98: hora elegida para la recuperación
+        recup_hora:r.recupHora||null, // v0.98: hora elegida para la recuperación
+        recup_de:r.recupDe||null      // v0.142: clase anulada que salda esta recuperación
       }; }
     };
 
@@ -5428,7 +5464,7 @@
                presentes:x.presentes||[], ausentes:x.ausentes||[], justificadas:x.justificadas||[],
                recups:x.recups||[], sin_clase:!!x.sinClase, sin_clase_recup:!!x.sinClaseRecup,
                recup_clase:!!x.recupClase,
-               recup_hora:x.recupHora||null };
+               recup_hora:x.recupHora||null, recup_de:x.recupDe||null };
     }
     function _gEditUpsert(tabla, filas) {
       if (!_sb || !_gEditUid || !filas.length) return;
@@ -5494,7 +5530,8 @@
                    justificadas:r.justificadas || [], recups:r.recups || [],
                    impartidaPor:r.impartida_por || null,
                    sinClase:!!r.sin_clase, sinClaseRecup:!!r.sin_clase_recup,
-                   recupClase:!!r.recup_clase, recupHora:r.recup_hora||'' };
+                   recupClase:!!r.recup_clase, recupHora:r.recup_hora||'',
+                   recupDe:r.recup_de||'' };
         });
       }
       var d = _lzGet('padel-asistencia-reg'); return d ? JSON.parse(d) : [];
@@ -5642,7 +5679,7 @@
                    fecha:r.fecha, presentes:r.presentes, ausentes:r.ausentes,
                    justificadas:r.justificadas, recups:r.recups, impartida_por:null,
                    sin_clase:r.sin_clase, sin_clase_recup:r.sin_clase_recup,
-                   recup_clase:r.recup_clase, recup_hora:r.recup_hora };
+                   recup_clase:r.recup_clase, recup_hora:r.recup_hora, recup_de:r.recup_de };
         });
         _gestorData = {
           perfiles:  res[0].data || [],
@@ -6299,9 +6336,28 @@
       _gclMesSel = (_gclMesSel === iso) ? null : iso;
       renderGestorClases();
     }
-    function _gRecupClasifica(r) {
+    // v0.142: una clase anulada "por recuperar" queda SALDADA cuando existe
+    // una recuperación enlazada a ella (misma clase y recupDe = su fecha).
+    function _recupSaldadas(regs) {
+      var set = {};
+      (regs || []).forEach(function(r){
+        if (r.recupClase && r.recupDe) set[r.claseId + '|' + r.recupDe] = true;
+      });
+      return set;
+    }
+    function _esPendienteRecup(r, saldadas) {
+      if (!r || !r.sinClase || !r.sinClaseRecup) return false;
+      return !(saldadas || {})[r.claseId + '|' + r.fecha];
+    }
+    // saldadas: mapa de _recupSaldadas() para no contar como pendiente lo ya
+    // programado. Las anuladas ya saldadas devuelven '' (no cuentan en los
+    // números del mes: quien cuenta es su recuperación, en su propio mes).
+    function _gRecupClasifica(r, saldadas) {
       if (!r) return '';
-      if (r.sinClase) return r.sinClaseRecup ? 'pend' : 'perd';
+      if (r.sinClase) {
+        if (!r.sinClaseRecup) return 'perd';
+        return _esPendienteRecup(r, saldadas) ? 'pend' : '';
+      }
       if (_regPasada(r)) return r.recupClase ? 'recup' : 'dada';
       return '';   // solo recups previstas, sin lista pasada
     }
@@ -6312,9 +6368,11 @@
       if (!d) return out;
       var mapC = {};
       _gestorClasesLocal(d).forEach(function(c){ mapC[c.id] = c; });
-      _gestorRegsLocal(d).forEach(function(r){
+      var regsTodos = _gestorRegsLocal(d);
+      var saldadas  = _recupSaldadas(regsTodos);
+      regsTodos.forEach(function(r){
         if (!r.fecha || r.fecha.slice(0,7) !== mesISO) return;
-        var k = _gRecupClasifica(r);
+        var k = _gRecupClasifica(r, saldadas);
         if (!k) return;
         var c = mapC[r.claseId] || {};
         out[k].push({ fecha:r.fecha, franja:c.franja || '', nombre:c.nombre || '' });
@@ -6324,17 +6382,19 @@
       });
       return out;
     }
-    // Saldo pendiente del CURSO en marcha (nunca negativo)
+    // Clases del CURSO que siguen pendientes de recuperar. v0.142: cuenta
+    // EXACTA — son las anuladas "por recuperar" que aún no tienen su
+    // recuperación enlazada (antes era una resta aproximada).
     function _gRecupSaldo(uid) {
       var by = _gestorAgrupar(), d = by[uid];
       if (!d) return 0;
-      var curso = cursoDeFecha(hoyLocal()), pend = 0, rec = 0;
-      _gestorRegsLocal(d).forEach(function(r){
+      var curso = cursoDeFecha(hoyLocal()), n = 0;
+      var regs = _gestorRegsLocal(d), saldadas = _recupSaldadas(regs);
+      regs.forEach(function(r){
         if (!r.fecha || cursoDeFecha(r.fecha) !== curso) return;
-        var k = _gRecupClasifica(r);
-        if (k === 'pend') pend++; else if (k === 'recup') rec++;
+        if (_esPendienteRecup(r, saldadas)) n++;
       });
-      return Math.max(0, pend - rec);
+      return n;
     }
     function _gRecupSaldoClub() {
       if (!_gestorData) return 0;
@@ -7284,7 +7344,8 @@
                  justificadas:r.justificadas || [], recups:r.recups || [],
                  impartidaPor:r.impartida_por || null,
                  sinClase:!!r.sin_clase, sinClaseRecup:!!r.sin_clase_recup,
-                 recupClase:!!r.recup_clase, recupHora:r.recup_hora||'' };
+                 recupClase:!!r.recup_clase, recupHora:r.recup_hora||'',
+                 recupDe:r.recup_de||'' };
       });
     }
 
@@ -14173,6 +14234,110 @@
       if (recEl) recEl.innerHTML = _recupsBoxHTML(clases, regs, mesISO, mesLabel,
         function(id, f){ return "asistAbrirRecup(" + id + ",'" + f + "')"; },
         function(id, f){ return "recupBorrarEntrenador(" + id + ",'" + f + "')"; });
+
+      // v0.142: clases anuladas que quedan POR RECUPERAR (todo el curso).
+      // Si no hay ninguna, no se pinta nada.
+      var pendEl = document.getElementById('asist-pendientes-recup');
+      if (pendEl) pendEl.innerHTML = _pendRecupBoxHTML();
+    }
+
+    // ── v0.142: CLASES POR RECUPERAR del entrenador ──────────────
+    // Lista las clases que anuló marcando "se recupera" y que aún no ha
+    // programado. En cada una se elige fecha, hora y qué alumnos recuperan
+    // (todos marcados por defecto); los que se desmarquen pierden la clase.
+    var _pendRecupAbierta = null;   // 'claseId|fecha' del formulario abierto
+    function _pendRecupLista() {
+      var cfg   = leerAsistConfig();
+      var clases = cfg.clases || [];
+      var regs  = leerAsistRegistros();
+      var saldadas = _recupSaldadas(regs);
+      var curso = cursoDeFecha(hoyLocal());
+      var out = [];
+      regs.forEach(function(r){
+        if (!r.fecha || cursoDeFecha(r.fecha) !== curso) return;
+        if (!_esPendienteRecup(r, saldadas)) return;
+        var c = clases.filter(function(x){ return x.id === r.claseId; })[0];
+        if (!c) return;
+        out.push({ claseId:r.claseId, fecha:r.fecha, clase:c });
+      });
+      out.sort(function(a,b){ return a.fecha.localeCompare(b.fecha); });
+      return out;
+    }
+    function _pendRecupBoxHTML() {
+      var pend = _pendRecupLista();
+      if (!pend.length) return '';   // sin pendientes → nada
+      var h = '<div class="asist-recups-box pend">' +
+        '<div class="asist-recups-tit">↩ Clases por recuperar · ' + pend.length + '</div>';
+      pend.forEach(function(p){
+        var key = p.claseId + '|' + p.fecha;
+        var nom = p.clase.nombre ||
+                  ((p.clase.diaSemana >= 0 ? DIAS_NOMBRES_A[p.clase.diaSemana] + ' · ' : '') + (p.clase.franja || 'Clase'));
+        var abierta = (_pendRecupAbierta === key);
+        h += '<div class="asist-recup-row" onclick="pendRecupToggle(\'' + key + '\')">' +
+          '<span class="asist-recup-fecha">' + _gEsc(formatFechaCorta(p.fecha)) + '</span>' +
+          '<span class="asist-recup-nom">' + _gEsc(nom) + '</span>' +
+          '<span class="asist-recup-cnt pend">' + (abierta ? '▾' : 'programar') + '</span>' +
+        '</div>';
+        if (abierta) h += _pendRecupFormHTML(p);
+      });
+      h += '</div>';
+      return h;
+    }
+    function _pendRecupFormHTML(p) {
+      var als = (p.clase.alumnos || []).filter(function(a){ return alActivo(a, p.fecha); })
+                                       .map(alNom).filter(Boolean);
+      var id  = p.claseId + '-' + p.fecha;
+      var h = '<div class="pendrec-form" onclick="event.stopPropagation();">';
+      h += '<label class="form-label">Fecha de la recuperación</label>' +
+        '<input id="pendrec-fecha-' + id + '" class="form-input" type="date" value="' + hoyLocal() + '" ' +
+          'style="margin-bottom:8px;" onclick="if(this.showPicker)this.showPicker()">';
+      h += '<label class="form-label">Hora de la recuperación</label>' +
+        '<input id="pendrec-hora-' + id + '" class="form-input" type="text" placeholder="Ej. 17:00-18:30" ' +
+          'value="' + _gEsc(p.clase.franja || '') + '" style="margin-bottom:10px;">';
+      h += '<div class="recup-als-hdr"><label class="form-label" style="margin:0;">Alumnos que recuperan</label>' +
+        '<button type="button" class="recup-als-todos" onclick="pendRecupTodos(\'' + id + '\')">Todos / ninguno</button></div>';
+      if (!als.length) {
+        h += '<p class="ajustes-desc" style="margin:2px 0 6px;">Esta clase no tiene alumnos en el cupo.</p>';
+      } else {
+        h += als.map(function(n){
+          return '<label class="recup-al-chk"><input type="checkbox" class="pendrec-al-' + id + '" value="' +
+                 _gEsc(n) + '" checked> ' + _gEsc(n) + '</label>';
+        }).join('');
+        h += '<p class="ajustes-desc" style="margin:4px 0 0;">Quien quede sin marcar pierde esta clase.</p>';
+      }
+      h += '<div style="display:flex;gap:8px;margin-top:8px;">' +
+        '<button class="btn btn-verde btn-sm" style="flex:1;" onclick="pendRecupGuardar(' + p.claseId + ',\'' + p.fecha + '\')">✚ Programar</button>' +
+        '<button class="btn btn-sec btn-sm" style="flex:1;" onclick="pendRecupToggle(null)">Cancelar</button>' +
+      '</div>';
+      h += '</div>';
+      return h;
+    }
+    function pendRecupToggle(key) {
+      _pendRecupAbierta = (_pendRecupAbierta === key) ? null : key;
+      mostrarAsistencia();
+    }
+    function pendRecupTodos(id) {
+      var cbs = document.querySelectorAll('.pendrec-al-' + id);
+      var alguno = false; cbs.forEach(function(cb){ if (!cb.checked) alguno = true; });
+      cbs.forEach(function(cb){ cb.checked = alguno; });
+    }
+    function pendRecupGuardar(claseId, fechaOrig) {
+      var id = claseId + '-' + fechaOrig;
+      var fe = document.getElementById('pendrec-fecha-' + id);
+      var ho = document.getElementById('pendrec-hora-' + id);
+      var fecha = fe ? fe.value : '';
+      if (!fecha) { alert('Elige la fecha de la recuperación'); return; }
+      if (fecha === fechaOrig) { alert('La recuperación no puede ser el mismo día que la clase anulada.'); return; }
+      var hora = ho ? ho.value.trim() : '';
+      var alumnos = [];
+      document.querySelectorAll('.pendrec-al-' + id).forEach(function(cb){ if (cb.checked) alumnos.push(cb.value); });
+      // Crea la sesión de recuperación ENLAZADA a la clase anulada (recupDe)
+      _recupCrearScheduled(claseId, fecha, alumnos, hora, fechaOrig);
+      _pendRecupAbierta = null;
+      if (typeof planToast === 'function') {
+        planToast('↩ Recuperación programada para el ' + formatFechaCorta(fecha));
+      }
+      mostrarAsistencia();
     }
 
     // Cuadro "↩ Recuperaciones · <mes>" reutilizable (entrenador y gestor).
@@ -14338,7 +14503,9 @@
     // Agenda una recuperación (sin pasar lista): registro recupClase con la
     // lista de alumnos ASIGNADOS en `recups` (los que recuperan). Aparece en
     // "Recuperaciones del mes" para pasar lista su día.
-    function _recupCrearScheduled(claseId, fecha, alumnos, hora) {
+    // recupDe (v0.142, opcional): fecha de la clase anulada que salda esta
+    // recuperación. Al llevarla, esa clase deja de figurar como pendiente.
+    function _recupCrearScheduled(claseId, fecha, alumnos, hora, recupDe) {
       alumnos = alumnos || [];
       var regs = leerAsistRegistros();
       var idx  = -1;
@@ -14347,12 +14514,13 @@
         regs[idx].recupClase = true;
         regs[idx].recups = alumnos.slice();   // alumnos asignados a la recuperación
         regs[idx].recupHora = hora || '';
+        if (recupDe) regs[idx].recupDe = recupDe;
         escribirAsistRegistros(regs, false, [regs[idx]]);
       } else {
         var newId = regs.length>0 ? Math.max.apply(null,regs.map(function(r){return r.id||0;}))+1 : 1;
         var nuevo = { id:newId, claseId:claseId, fecha:fecha, presentes:[], ausentes:[],
                       justificadas:[], recups:alumnos.slice(), impartidaPor:null, sinClase:false,
-                      recupClase:true, recupHora:hora||'' };
+                      recupClase:true, recupHora:hora||'', recupDe:recupDe||'' };
         regs.push(nuevo);
         escribirAsistRegistros(regs, false, [nuevo]);
       }
