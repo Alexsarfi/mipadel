@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.164.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.167.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,51 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.167.0 — Vista de TODA LA SEMANA en el panel del gestor (2026-07)
+    · Nuevo botón "🗓 Toda la semana · alumnos" encima de la fila de días.
+      Muestra los días de la semana uno tras otro, cada uno con sus
+      entrenadores y franjas, y dentro SOLO LOS ALUMNOS: se quitan los días
+      del mes y el contador de clases dadas. Da la foto de toda la escuela
+      de un vistazo, respetando la estructura y los colores de siempre
+      (bloque por entrenador con su color, chips de alumno con sus estados).
+    · Al pulsar cualquier día de la semana se vuelve a la vista de ese día
+      tal cual estaba (con sus días del mes, contadores y desplegables).
+    · SUSTITUYE a la regla de la v0.160: al entrar en el panel ya no se
+      despliega el día de hoy, sino esta vista de semana. Sigue siendo solo
+      al entrar: si eliges un día concreto, se respeta mientras navegas.
+    · Como en la vista de semana no hay días del mes, tampoco se generan
+      sus desplegables: es una vista de consulta, no de pasar lista.
+    · Sin cambios de datos/esquema.
+
+  v0.166.0 — Cambiar de clase: partida en verde, llegada en azul (2026-07)
+    · La fila del ENTRENADOR que le da clase ahora sale sombreada (y con 👤
+      junto a su nombre), para localizarlo de un vistazo en la parrilla.
+    · La separación entre DÍAS de la semana es ahora una línea vertical
+      clara, con más aire entre columnas.
+    · Elegir destino pasa a ser en DOS PASOS, para ver el antes y el
+      después antes de tocar nada:
+      1) Tocas una franja libre → se pinta en AZUL con la chapa "DESTINO",
+         mientras su clase actual sigue en VERDE con "ACTUAL". Así se ve de
+         un golpe cuál es la de partida y cuál la de llegada.
+      2) Aparece abajo el botón "🔄 Mover a <entrenador · franja>", que
+         pide la confirmación de siempre antes de escribir nada.
+      Tocar otra vez la franja elegida la deselecciona.
+    · Antes, el simple toque sobre una franja lanzaba ya el aviso de mover,
+      sin poder comparar visualmente origen y destino.
+    · Leyenda actualizada (colapsada tras el "?") con los dos estados
+      nuevos: clase de partida y clase de llegada.
+    · Sin cambios de datos/esquema.
+
+  v0.165.0 — Volver desde el alumno lleva a donde entraste (2026-07)
+    · Si abres un alumno desde una franja del PANEL, el botón de volver
+      pone "‹ Panel" y te lleva directo a la pantalla principal. Antes iba
+      siempre a "‹ Alumnos" y había que dar varios pasos para volver.
+    · Si lo abres desde la lista de Alumnos, sigue poniendo "‹ Alumnos" y
+      vuelve ahí, como siempre.
+    · El botón indica el destino real, así que se sabe a dónde lleva antes
+      de pulsarlo.
+    · Sin cambios de datos/esquema.
 
   v0.164.0 — Misma ficha de alumno desde la franja + parrilla más clara (2026-07)
     · (1) Al tocar un alumno en una franja del panel se abre AHORA la misma
@@ -2851,6 +2896,16 @@
     .gplan-vacio { text-align:center; color:#d1d5db; font-weight:700; padding:6px 0; }
     /* v0.87: drill-down del planning (día → entrenadores → franjas) */
     .gpplan-diarow { display:flex; gap:6px; margin:0.3rem 0 0.6rem; }
+    /* v0.167: botón de vista "toda la semana" (encima de los días) */
+    .gplan-semana { display:block; width:100%; margin:0.3rem 0 0; padding:9px 10px; border-radius:11px;
+      border:1.5px solid var(--borde); background:var(--blanco); color:var(--texto);
+      font-family:inherit; font-size:13px; font-weight:800; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .gplan-semana:active { transform:scale(0.99); }
+    .gplan-semana.sel { background:var(--verde); border-color:var(--verde); color:#fff; }
+    /* v0.167: bloque de cada día en la vista de semana */
+    .gpsem-dia { margin-bottom:0.9rem; }
+    .gpsem-dia-hdr { font-size:12.5px; font-weight:800; color:var(--verde); padding:0.35rem 2px 0.3rem;
+      border-bottom:2px solid var(--verde-suave); margin-bottom:0.4rem; }
     .gpplan-diarow .gplan-day { flex:1; min-width:0; padding:9px 2px; font-size:13px; }
     /* v0.114.1: día activo con sombreado DORADO (mismas características) */
     .gplan-day.sel { background:var(--dorado); box-shadow:0 0 0 2.5px #f4e8c8, 0 0 0 4px var(--dorado); text-transform:uppercase; }
@@ -3077,10 +3132,16 @@
     .gmv th { font-size:10.5px; font-weight:800; color:var(--gris); text-transform:uppercase; padding:0 4px 4px; }
     .gmv th.gmv-ent { text-align:left; color:var(--texto); font-size:11.5px; text-transform:none;
       white-space:nowrap; position:sticky; left:0; background:var(--blanco); padding-right:10px; vertical-align:top; }
-    .gmv td { vertical-align:top; min-width:104px; padding:8px 4px; }
+    .gmv td { vertical-align:top; min-width:104px; padding:8px 7px; }
     /* v0.164: línea divisoria entre entrenadores */
     .gmv tr + tr > th, .gmv tr + tr > td { border-top:1.5px solid var(--borde); }
     .gmv tr + tr > th.gmv-ent { padding-top:10px; }
+    /* v0.166: separación clara entre DÍAS de la semana */
+    .gmv th + th, .gmv td + td { border-left:1.5px solid var(--borde); }
+    .gmv th + th { color:var(--texto); }
+    /* v0.166: fila del entrenador que le da clase ahora, sombreada */
+    .gmv tr.ent-actual > td { background:rgba(45,106,79,0.06); }
+    .gmv tr.ent-actual > th.gmv-ent { background:var(--verde-suave); color:var(--verde); border-radius:8px 0 0 8px; }
     .gmv-fr { display:block; width:100%; text-align:left; margin-bottom:4px; border:1.5px solid var(--borde);
       background:var(--blanco); color:var(--texto); font-family:inherit; font-size:11.5px; font-weight:700;
       border-radius:9px; padding:6px 8px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
@@ -3090,19 +3151,25 @@
     .gmv-fr.actual:hover { background:var(--verde-suave); }
     .gmv-fr.movido { background:#fffbeb; border-color:#f59e0b; color:#92400e; }
     .gmv-fr.baja   { background:var(--arena); border-color:var(--borde); color:var(--gris); }
+    /* v0.166: destino elegido, aún sin confirmar → azul, para distinguir de
+       un vistazo la clase de partida (verde) de la de llegada (azul) */
+    .gmv-fr.destino { background:#dbeafe; border-color:#1e40af; color:#1e40af; border-width:2px; }
+    .gmv-fr.destino:hover { background:#dbeafe; border-color:#1e40af; }
     .gmv-nota { display:block; font-size:9.5px; font-weight:600; color:#92400e; margin-top:2px; white-space:normal; }
     /* v0.164: etiquetas NUEVA / ANTERIOR cuando ha habido traslado */
     .gmv-tag { display:inline-block; font-size:8.5px; font-weight:800; letter-spacing:.03em;
       border-radius:20px; padding:1px 6px; margin-left:5px; vertical-align:middle; }
     .gmv-tag.nueva    { background:var(--verde); color:#fff; }
     .gmv-tag.anterior { background:#f59e0b; color:#fff; }
+    .gmv-tag.destino  { background:#1e40af; color:#fff; }
     .gmv-leyenda { display:flex; flex-wrap:wrap; gap:10px; font-size:10.5px; color:var(--gris); margin-top:8px; }
     .gmv-leyenda span { display:inline-flex; align-items:center; gap:4px; }
     .gmv-leyenda i { width:11px; height:11px; border-radius:3px; display:inline-block;
       border:1.5px solid var(--borde); background:var(--blanco); }
-    .gmv-leyenda i.actual { background:var(--verde-suave); border-color:var(--verde); }
-    .gmv-leyenda i.movido { background:#fffbeb; border-color:#f59e0b; }
-    .gmv-leyenda i.baja   { background:var(--arena); }
+    .gmv-leyenda i.actual  { background:var(--verde-suave); border-color:var(--verde); }
+    .gmv-leyenda i.destino { background:#dbeafe; border-color:#1e40af; }
+    .gmv-leyenda i.movido  { background:#fffbeb; border-color:#f59e0b; }
+    .gmv-leyenda i.baja    { background:var(--arena); }
     /* v0.155: exportar el mes de todos los entrenadores */
     .gent-export { border:1.5px solid var(--borde); border-radius:12px; padding:0.7rem 0.8rem; margin-top:1rem; background:var(--blanco); }
     .gent-export-tit { font-size:12px; font-weight:800; color:var(--texto); margin-bottom:0.5rem; }
@@ -4336,7 +4403,7 @@
   <!-- ══ GESTOR — CLASES DE UN ALUMNO (GLOBAL) ══════ -->
   <div id="pantalla-gestor-todos-alumno" class="pantalla">
     <div class="cabecera">
-      <button class="btn-volver" onclick="irA('pantalla-gestor-todos-alumnos')">‹ Alumnos</button>
+      <button class="btn-volver" id="gta-al-volver" onclick="gtaVolver()">‹ Alumnos</button>
       <div class="cab-titulo" id="gta-al-nombre">Alumno</div>
       <div class="cab-sub" id="gta-al-sub">—</div>
       <!-- v0.159: las acciones viven en la cabecera, bajo el nombre -->
@@ -5053,7 +5120,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.164.0';
+    var APP_VERSION = '0.167.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -6595,17 +6662,16 @@
       var diasPlan = [1,2,3,4,5];
       if (slots[6]) diasPlan.push(6);
       if (slots[0]) diasPlan.push(0);
-      if (_gpSelDia != null && diasPlan.indexOf(_gpSelDia) < 0) { _gpSelDia = null; _gpSelEnt = null; }
-      // v0.160: al abrir el panel se despliega SOLO el día de la semana en
-      // que estamos (lo habitual: ver lo de hoy). En fin de semana no se
-      // despliega nada y queda colapsado. Solo la primera vez: si luego lo
-      // pliegas o cambias de día, se respeta tu elección.
-      if (!_gpDiaAuto) {
-        _gpDiaAuto = true;
-        var _dowHoy = new Date(+hoyLocal().slice(0,4), +hoyLocal().slice(5,7)-1, +hoyLocal().slice(8,10)).getDay();
-        if (_dowHoy >= 1 && _dowHoy <= 5 && diasPlan.indexOf(_dowHoy) >= 0) _gpSelDia = _dowHoy;
-      }
+      // ('S' = vista de toda la semana, v0.167: no es un día, no se descarta)
+      if (_gpSelDia != null && _gpSelDia !== 'S' && diasPlan.indexOf(_gpSelDia) < 0) { _gpSelDia = null; _gpSelEnt = null; }
+      // v0.167: al entrar se abre la vista de TODA LA SEMANA (sustituye a la
+      // v0.160, que desplegaba el día de hoy). Solo la primera vez: si luego
+      // eliges un día concreto, se respeta.
+      if (!_gpDiaAuto) { _gpDiaAuto = true; _gpSelDia = 'S'; }
 
+      // v0.167: botón de vista SEMANA, encima de la fila de días
+      h += '<button type="button" class="gplan-semana' + (_gpSelDia === 'S' ? ' sel' : '') +
+           '" onclick="gpSelDia(\'S\')">🗓 Toda la semana · alumnos</button>';
       // v0.87: fila horizontal de días (mismo formato de siempre) + drill-down
       h += '<div class="gpplan-diarow">';
       diasPlan.forEach(function(dia){
@@ -6614,7 +6680,49 @@
       });
       h += '</div>';
 
-      if (_gpSelDia == null) {
+      if (_gpSelDia === 'S') {
+        // ── Vista de TODA LA SEMANA: cada día con sus entrenadores y sus
+        // alumnos, sin los días del mes ni contadores. Visión de escuela.
+        h += '<div class="gpplan-panel">';
+        var huboAlgo = false;
+        diasPlan.forEach(function(dia){
+          var slotsD = slots[dia] || {};
+          var entsD = {};
+          Object.keys(slotsD).forEach(function(fr){
+            slotsD[fr].forEach(function(e){ entsD[e.uid] = e.ent; });
+          });
+          var uidsD = Object.keys(entsD).sort(function(a,b){ return entsD[a].localeCompare(entsD[b]); });
+          if (!uidsD.length) return;
+          huboAlgo = true;
+          h += '<div class="gpsem-dia">';
+          h += '<div class="gpsem-dia-hdr">' + _gEsc(_GDIASL[dia]) + '</div>';
+          h += '<div class="gpplan-cols">';
+          uidsD.forEach(function(u){
+            var dU = by[u];
+            var clasesDia = _gestorClasesLocal(dU).filter(function(c){
+              return _claseCurso(c) === cursoAct && c.diaSemana === dia && _claseVisibleEnMes(c, _gPanelMes);
+            }).sort(function(a,b){ return (a.franja||'').localeCompare(b.franja||''); });
+            if (!clasesDia.length) return;
+            var regsU = _gestorRegsLocal(dU);
+            var bloques = '';
+            clasesDia.forEach(function(c){
+              bloques += _gTramoHTML(c, regsU, _gPanelMes,
+                { hist:null, uid:u, idPref:'gps', entLabel:null,
+                  volverA:'pantalla-gestor', soloAlumnos:true }).html;
+            });
+            var col = _entColor(u);
+            h += '<div class="gpplan-entblock" style="border-left:4px solid ' + col.bar + ';">' +
+              '<div class="gpplan-ent-hdr" style="background:' + col.bg + ';">' +
+                '<span class="gpplan-ent-nom" style="color:' + col.tx + ';">👤 ' + _gEsc(entsD[u]) + '</span>' +
+              '</div>' +
+              '<div class="gpplan-franjas">' + bloques + '</div>' +
+            '</div>';
+          });
+          h += '</div></div>';
+        });
+        if (!huboAlgo) h += '<p class="ajustes-desc" style="margin:0.3rem 2px;">Ninguna clase configurada esta semana.</p>';
+        h += '</div>';
+      } else if (_gpSelDia == null) {
         h += '<p class="ajustes-desc" style="text-align:center;margin:0.2rem 0 0.4rem;">Toca un día para ver sus entrenadores.</p>';
       } else {
         // Entrenadores de ese día (únicos), con sus franjas
@@ -8488,15 +8596,18 @@
       html +=   '<div class="ghd-col-izq">' +
                   '<div class="ghd-fr" style="font-weight:800;color:var(--texto);">' + _gEsc(c.franja||'—') + '</div>' +
                   (c.nombre && c.nombre !== 'Clase' ? '<div class="ghd-fr ghd-nom">' + _gEsc(c.nombre) + '</div>' : '') +
-                  '<div class="ghd-cont-l">' + dadas + ' dada' + (dadas!==1?'s':'') + '</div>' +
-                  '<div class="ghd-dias">' + (chips || '<span class="ajustes-desc" style="margin:0;">sin días este mes</span>') + '</div>' +
+                  // v0.167: en la vista de SEMANA se ocultan los días del mes
+                  // y el contador: ahí solo interesan los alumnos.
+                  (opts.soloAlumnos ? '' :
+                    '<div class="ghd-cont-l">' + dadas + ' dada' + (dadas!==1?'s':'') + '</div>' +
+                    '<div class="ghd-dias">' + (chips || '<span class="ajustes-desc" style="margin:0;">sin días este mes</span>') + '</div>') +
                 '</div>';
       html +=   '<div class="ghd-col-der">' +
                   (hist ? '' : '<button type="button" class="ghd-edit-btn" title="Editar clase" aria-label="Editar clase" onclick="gestorEditarClaseU(\'' + uid + '\',' + c.id + ',\'' + vol + '\')">✏</button>') +
                   (alsHtml ? '<div class="ghd-als-col">' + alsHtml + '</div>' : '') +
                 '</div>';
       html += '</div>';
-      html += dets;
+      if (!opts.soloAlumnos) html += dets;   // v0.167: sin días, no hay desplegables
       html += '</div>';
       return { html: html, dadas: dadas };
     }
@@ -9817,12 +9928,18 @@
     // POR ENTRENADOR, así que: (a) la ficha de academia no se veía nunca, y
     // (b) un alumno recién creado, sin clases, no abría NADA (se salía por
     // el return al no encontrar entrenador). Ahora abre siempre su ficha.
+    // v0.165: a dónde vuelve el botón "‹" de la ficha del alumno. Si se
+    // entró desde una franja del panel, vuelve AL PANEL (antes pasaba por
+    // Alumnos y había que dar varios pasos para volver a la principal).
+    var _gtaVolver = 'pantalla-gestor-todos-alumnos';
+    function gtaVolver() { irA(_gtaVolver || 'pantalla-gestor-todos-alumnos'); }
     // v0.164: abrir la ficha del alumno desde una franja del panel
     function gtaAbrirDesdeFranja(nombre, ape) {
       if (!_gtaCache) _gtaCache = _gtaIndex();
-      abrirGestorTodosAlumno(_gtaFullKey(nombre, ape || ''));
+      abrirGestorTodosAlumno(_gtaFullKey(nombre, ape || ''), 'pantalla-gestor');
     }
-    function abrirGestorTodosAlumno(key) {
+    function abrirGestorTodosAlumno(key, volverA) {
+      _gtaVolver = volverA || 'pantalla-gestor-todos-alumnos';
       _gtaAlumno = key;
       _gtaEditOn = false;
       _gtaMesOff = 0;
@@ -10149,6 +10266,9 @@
     // solo aparece el panel abierto (editar o cambiar de clase).
     function _gtaPintarCabecera(al) {
       var d  = _gtaDatosDe(al);
+      // v0.165: el botón de volver dice a dónde va realmente
+      var vb = document.getElementById('gta-al-volver');
+      if (vb) vb.textContent = (_gtaVolver === 'pantalla-gestor') ? '‹ Panel' : '‹ Alumnos';
       var el = document.getElementById('gta-al-acciones');
       if (el) {
         el.innerHTML =
@@ -10189,7 +10309,12 @@
     // Mueve: alta en la franja nueva y BAJA en la actual. Se confirma
     // siempre antes de tocar nada, porque afecta a la matrícula real.
     var _gtaMoverOn = false;
-    function gtaCambiarClase() { _gtaMoverOn = !_gtaMoverOn; renderGestorTodosAlumno(); }
+    var _gtaDestSel = null;   // v0.166: destino elegido, aún sin confirmar
+    function gtaCambiarClase() {
+      _gtaMoverOn = !_gtaMoverOn;
+      _gtaDestSel = null;     // al abrir/cerrar el panel se limpia la elección
+      renderGestorTodosAlumno();
+    }
     // Franjas donde el alumno está ACTIVO hoy: {uid, entrenador, claseId, lbl}
     function _gtaFranjasActuales(nombre, ape) {
       var by = _gestorAgrupar(), hoy = hoyLocal(), out = [];
@@ -10249,7 +10374,13 @@
       dias.forEach(function(dw){ h += '<th>' + _GDIAS[dw] + '</th>'; });
       h += '</tr>';
       ents.forEach(function(e){
-        h += '<tr><th class="gmv-ent">' + _gEsc(e.nombre) + '</th>';
+        // v0.166: se sombrea la fila del entrenador que le da clase AHORA
+        var esSuEnt = e.clases.some(function(c){
+          var x = alumnoEnClase(c, d.nombre);
+          return x && (alApe(x)||'') === (d.apellidos||'') && alActivo(x, hoy);
+        });
+        h += '<tr class="' + (esSuEnt ? 'ent-actual' : '') + '">' +
+             '<th class="gmv-ent">' + (esSuEnt ? '👤 ' : '') + _gEsc(e.nombre) + '</th>';
         dias.forEach(function(dw){
           h += '<td>';
           e.clases.filter(function(c){ return c.diaSemana === dw; })
@@ -10257,10 +10388,15 @@
             .forEach(function(c){
               var entry = alumnoEnClase(c, d.nombre);
               if (entry && (alApe(entry)||'') !== (d.apellidos||'')) entry = null;
-              var st = '', extra = '', ico = '', click = ' onclick="gtaMoverA(\'' + e.uid + '\',' + c.id + ')"';
+              var esDest = _gtaDestSel && _gtaDestSel.uid === e.uid && _gtaDestSel.claseId === c.id;
+              var st = '', extra = '', ico = '', click = ' onclick="gtaSelDest(\'' + e.uid + '\',' + c.id + ')"';
               if (entry && alActivo(entry, hoy)) {
                 st = ' actual'; ico = '✓ '; click = '';           // donde está ahora
-                if (huboMov) extra = '<span class="gmv-tag nueva">NUEVA</span>';
+                extra = '<span class="gmv-tag nueva">' + (huboMov ? 'NUEVA' : 'ACTUAL') + '</span>';
+              } else if (esDest) {
+                // v0.166: destino elegido (aún sin confirmar) → color propio
+                st = ' destino'; ico = '➡ ';
+                extra = '<span class="gmv-tag destino">DESTINO</span>';
               } else if (entry && alMovidoA(entry)) {
                 st = ' movido'; ico = '🔄 ';                       // se le movió desde aquí
                 extra = '<span class="gmv-tag anterior">ANTERIOR</span>' +
@@ -10278,14 +10414,32 @@
       h += '</table></div>';
       // v0.164: leyenda colapsada tras el "?", como en el resto de la app
       h += _leyendaColapsableHTML('<div class="gmv-leyenda">' +
-        '<span><i class="actual"></i>Donde está ahora (NUEVA si hubo cambio)</span>' +
-        '<span><i class="movido"></i>De donde se le movió (ANTERIOR, dice a cuál)</span>' +
+        '<span><i class="actual"></i>Clase de partida · donde está ahora</span>' +
+        '<span><i class="destino"></i>Clase de llegada · la que has elegido</span>' +
+        '<span><i class="movido"></i>De donde se le movió (dice a cuál)</span>' +
         '<span><i class="baja"></i>Baja · dejó de venir</span>' +
-        '<span><i></i>Libre · toca para moverlo ahí</span>' +
+        '<span><i></i>Libre · toca para elegirla</span>' +
       '</div>');
+      // v0.166: con un destino elegido, se confirma aquí (antes el toque
+      // sobre la franja lanzaba el aviso directamente, sin ver el antes/después)
+      if (_gtaDestSel) {
+        var eSel = ents.filter(function(x){ return x.uid === _gtaDestSel.uid; })[0];
+        var cSel = eSel && eSel.clases.filter(function(c){ return c.id === _gtaDestSel.claseId; })[0];
+        if (cSel) {
+          h += '<button class="btn btn-verde btn-sm" style="width:100%;margin-top:10px;" ' +
+               'onclick="gtaMoverA(\'' + _gtaDestSel.uid + '\',' + _gtaDestSel.claseId + ')">' +
+               '🔄 Mover a ' + _gEsc(eSel.nombre + ' · ' + (cSel.franja || 'Clase')) + '</button>';
+        }
+      }
       h += '<button class="btn btn-sec btn-sm" style="width:100%;margin-top:8px;" onclick="gtaCambiarClase()">Cancelar</button>';
       h += '</div>';
       return h;
+    }
+    // v0.166: elegir/quitar el destino (sin mover todavía)
+    function gtaSelDest(uid, claseId) {
+      _gtaDestSel = (_gtaDestSel && _gtaDestSel.uid === uid && _gtaDestSel.claseId === claseId)
+        ? null : { uid: uid, claseId: claseId };
+      renderGestorTodosAlumno();
     }
     function gtaMoverA(uidDest, claseIdDest) {
       var al = (_gtaCache && _gtaCache.al[_gtaAlumno]) || {};
@@ -10341,6 +10495,7 @@
       });
 
       _gtaMoverOn = false;
+      _gtaDestSel = null;
       _gtaCache = _gtaIndex();
       planToast('🔄 ' + d.nombre + ' movido a ' + (cDest.franja || 'la nueva franja'));
       renderGestorTodosAlumno();
