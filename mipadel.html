@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.163.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.164.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,22 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.164.0 — Misma ficha de alumno desde la franja + parrilla más clara (2026-07)
+    · (1) Al tocar un alumno en una franja del panel se abre AHORA la misma
+      ficha que desde Alumnos (la del alumno de la academia), con sus datos,
+      "Editar datos", "Cambiar de clase" y su historial por curso. Antes
+      llevaba a la ficha por entrenador, que era otra pantalla distinta.
+    · (2) En la parrilla de "Cambiar de clase":
+      · LÍNEA DIVISORIA entre entrenadores, con más aire entre filas.
+      · Si ha habido traslado, se etiqueta con claridad: la franja donde
+        está ahora lleva la chapa verde "NUEVA" y la que dejó, la ámbar
+        "ANTERIOR" (que además sigue diciendo a qué clase se fue).
+      · Si no ha habido ningún traslado no se etiqueta nada, para no meter
+        ruido.
+      · La leyenda de colores pasa a estar COLAPSADA tras el "?", como en
+        el resto de la app, en vez de ocupar sitio siempre.
+    · Sin cambios de datos/esquema.
 
   v0.163.0 — La franja muestra desde cuándo está cada alumno nuevo (2026-07)
     · En el panel, dentro de la franja, el alumno que EMPIEZA ahí ese mes
@@ -3057,11 +3073,14 @@
     /* v0.161: retirado el bloque "Sus franjas" y sus estilos (.gta-franja*) */
     /* v0.162: parrilla DÍA × ENTRENADOR para cambiar de clase */
     .gmv-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
-    .gmv { border-collapse:separate; border-spacing:4px; font-size:11.5px; }
-    .gmv th { font-size:10.5px; font-weight:800; color:var(--gris); text-transform:uppercase; padding:0 2px 2px; }
+    .gmv { border-collapse:collapse; font-size:11.5px; }
+    .gmv th { font-size:10.5px; font-weight:800; color:var(--gris); text-transform:uppercase; padding:0 4px 4px; }
     .gmv th.gmv-ent { text-align:left; color:var(--texto); font-size:11.5px; text-transform:none;
-      white-space:nowrap; position:sticky; left:0; background:var(--blanco); padding-right:8px; }
-    .gmv td { vertical-align:top; min-width:96px; }
+      white-space:nowrap; position:sticky; left:0; background:var(--blanco); padding-right:10px; vertical-align:top; }
+    .gmv td { vertical-align:top; min-width:104px; padding:8px 4px; }
+    /* v0.164: línea divisoria entre entrenadores */
+    .gmv tr + tr > th, .gmv tr + tr > td { border-top:1.5px solid var(--borde); }
+    .gmv tr + tr > th.gmv-ent { padding-top:10px; }
     .gmv-fr { display:block; width:100%; text-align:left; margin-bottom:4px; border:1.5px solid var(--borde);
       background:var(--blanco); color:var(--texto); font-family:inherit; font-size:11.5px; font-weight:700;
       border-radius:9px; padding:6px 8px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
@@ -3072,6 +3091,11 @@
     .gmv-fr.movido { background:#fffbeb; border-color:#f59e0b; color:#92400e; }
     .gmv-fr.baja   { background:var(--arena); border-color:var(--borde); color:var(--gris); }
     .gmv-nota { display:block; font-size:9.5px; font-weight:600; color:#92400e; margin-top:2px; white-space:normal; }
+    /* v0.164: etiquetas NUEVA / ANTERIOR cuando ha habido traslado */
+    .gmv-tag { display:inline-block; font-size:8.5px; font-weight:800; letter-spacing:.03em;
+      border-radius:20px; padding:1px 6px; margin-left:5px; vertical-align:middle; }
+    .gmv-tag.nueva    { background:var(--verde); color:#fff; }
+    .gmv-tag.anterior { background:#f59e0b; color:#fff; }
     .gmv-leyenda { display:flex; flex-wrap:wrap; gap:10px; font-size:10.5px; color:var(--gris); margin-top:8px; }
     .gmv-leyenda span { display:inline-flex; align-items:center; gap:4px; }
     .gmv-leyenda i { width:11px; height:11px; border-radius:3px; display:inline-block;
@@ -5029,7 +5053,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.163.0';
+    var APP_VERSION = '0.164.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -8444,8 +8468,11 @@
         if (hist) {
           alsHtml += '<span class="' + cls + '">' + texto + '</span>';
         } else {
-          alsHtml += '<button type="button" class="' + cls + '" onclick="gestorAlumnoU(\'' + uid + '\',\'' +
-                     _gEsc(nom).replace(/'/g, "\\'") + '\',\'' + vol + '\')">' + texto + '</button>';
+          // v0.164: desde la franja se abre la MISMA ficha que desde
+          // Alumnos (la del alumno de la academia), no la de por entrenador.
+          alsHtml += '<button type="button" class="' + cls + '" onclick="gtaAbrirDesdeFranja(\'' +
+                     _gEsc(nom).replace(/'/g, "\\'") + '\',\'' +
+                     _gEsc(alApe(a) || '').replace(/'/g, "\\'") + '\')">' + texto + '</button>';
         }
       });
 
@@ -8664,6 +8691,10 @@
     // Historial de un alumno de cualquier entrenador (chips de los tramos)
     function gestorAlumnoU(uid, nombre, volverA) {
       if (!uid) return;
+      // v0.164: ya no se llama desde las franjas del panel (ahora abren la
+      // ficha de academia). Se conserva porque la ficha POR ENTRENADOR sigue
+      // siendo la que lleva el 🗑 de baja por franja, y se llega a ella
+      // desde: entrenador → Alumnos → un alumno (abrirGestorAlumno).
       _gestorUid    = uid;
       _gestorAlumno = nombre;
       _gAlMesOff    = 0;
@@ -9786,6 +9817,11 @@
     // POR ENTRENADOR, así que: (a) la ficha de academia no se veía nunca, y
     // (b) un alumno recién creado, sin clases, no abría NADA (se salía por
     // el return al no encontrar entrenador). Ahora abre siempre su ficha.
+    // v0.164: abrir la ficha del alumno desde una franja del panel
+    function gtaAbrirDesdeFranja(nombre, ape) {
+      if (!_gtaCache) _gtaCache = _gtaIndex();
+      abrirGestorTodosAlumno(_gtaFullKey(nombre, ape || ''));
+    }
     function abrirGestorTodosAlumno(key) {
       _gtaAlumno = key;
       _gtaEditOn = false;
@@ -10201,6 +10237,14 @@
         return h;
       }
       h += '<div class="ajustes-desc" style="margin:0 0 8px;">Toca la franja a la que quieres moverlo. Se le dará de baja hoy en la suya y de alta en la nueva.</div>';
+      // v0.164: ¿ha habido traslado? Si sí, se etiquetan ANTERIOR y NUEVA
+      // para que se vea de un golpe de dónde salió y dónde está ahora.
+      var huboMov = ents.some(function(e){
+        return e.clases.some(function(c){
+          var x = alumnoEnClase(c, d.nombre);
+          return x && (alApe(x)||'') === (d.apellidos||'') && alMovidoA(x);
+        });
+      });
       h += '<div class="gmv-wrap"><table class="gmv"><tr><th class="gmv-ent"></th>';
       dias.forEach(function(dw){ h += '<th>' + _GDIAS[dw] + '</th>'; });
       h += '</tr>';
@@ -10216,9 +10260,11 @@
               var st = '', extra = '', ico = '', click = ' onclick="gtaMoverA(\'' + e.uid + '\',' + c.id + ')"';
               if (entry && alActivo(entry, hoy)) {
                 st = ' actual'; ico = '✓ '; click = '';           // donde está ahora
+                if (huboMov) extra = '<span class="gmv-tag nueva">NUEVA</span>';
               } else if (entry && alMovidoA(entry)) {
                 st = ' movido'; ico = '🔄 ';                       // se le movió desde aquí
-                extra = '<span class="gmv-nota">→ ' + _gEsc(alMovidoA(entry)) + '</span>';
+                extra = '<span class="gmv-tag anterior">ANTERIOR</span>' +
+                        '<span class="gmv-nota">→ ' + _gEsc(alMovidoA(entry)) + '</span>';
               } else if (entry && alBaja(entry) && !alActivo(entry, hoy)) {
                 st = ' baja'; ico = '🏁 ';
               }
@@ -10230,12 +10276,13 @@
         h += '</tr>';
       });
       h += '</table></div>';
-      h += '<div class="gmv-leyenda">' +
-        '<span><i class="actual"></i>Ahora aquí</span>' +
-        '<span><i class="movido"></i>Movido a otra</span>' +
-        '<span><i class="baja"></i>Baja</span>' +
-        '<span><i></i>Disponible</span>' +
-      '</div>';
+      // v0.164: leyenda colapsada tras el "?", como en el resto de la app
+      h += _leyendaColapsableHTML('<div class="gmv-leyenda">' +
+        '<span><i class="actual"></i>Donde está ahora (NUEVA si hubo cambio)</span>' +
+        '<span><i class="movido"></i>De donde se le movió (ANTERIOR, dice a cuál)</span>' +
+        '<span><i class="baja"></i>Baja · dejó de venir</span>' +
+        '<span><i></i>Libre · toca para moverlo ahí</span>' +
+      '</div>');
       h += '<button class="btn btn-sec btn-sm" style="width:100%;margin-top:8px;" onclick="gtaCambiarClase()">Cancelar</button>';
       h += '</div>';
       return h;
