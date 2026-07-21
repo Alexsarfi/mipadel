@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.170.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.172.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,39 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.172.0 — Archivar un sustituto externo en vez de borrarlo (2026-07)
+    · Al quitar un sustituto externo ya no se borra directamente: se abre un
+      panel para elegir qué hacer.
+      · 📦 ARCHIVAR — se retira de "Todos los entrenadores" y del export,
+        pero CONSERVA todos sus datos (sus clases y las que cubrió). Queda
+        arriba, tras el botón "＋ Sustituto externo", como chip apagado con
+        📦, y se puede abrir para consultar su historial.
+      · 🗑 ELIMINAR DEL TODO — se borra del catálogo, con su confirmación
+        aparte por ser irreversible.
+    · El archivado se restaura desde su propio chip (↩), y al hacerlo vuelve
+      a contar con normalidad en la lista y en los informes.
+    · Cada sustituto activo lleva ahora su ✕ en el chip para abrir ese panel.
+    · Requiere ejecutar migracion_sustituto_archivado.sql UNA vez en
+      Supabase ANTES de usar esta versión (añade la columna archivado). Sin
+      ella, archivar avisa del error y el resto del club seguiría viéndolo
+      activo.
+    · Un archivado no cuenta ni por sus clases propias ni por las que cubrió
+      a otros: desaparece de la lista por ambos caminos.
+
+  v0.171.0 — El curso acaba el 30 de JUNIO, no el 30 de julio (2026-07)
+    · La fecha de fin de curso pasa de 30/07 a 30/06. Al dar de alta a un
+      alumno, su fecha de baja automática es ahora el 30 de junio del curso
+      correspondiente (p. ej. curso 2025-26 → 30/06/2026). Igual al
+      reincorporar a alguien o al moverlo de franja.
+    · Como antes, esa fecha NO se pinta como baja (no sale en amarillo): es
+      el final normal del curso, no que el alumno se haya ido.
+    · Compatibilidad: los alumnos dados de alta antes llevan guardado el
+      30/07. Se sigue reconociendo esa fecha como fin de curso, para que no
+      pasen de golpe a verse como bajas reales en julio.
+    · OJO: esos alumnos antiguos siguen "llegando" hasta el 30/07, así que
+      seguirán apareciendo en julio hasta que se les ajuste la fecha.
+    · Sin cambios de datos/esquema (solo cambia la fecha que se calcula).
 
   v0.170.0 — Los entrenadores EXTERNOS también salen en Entrenadores (2026-07)
     · En el gestor → Entrenadores, un entrenador externo que ha dado o
@@ -3227,6 +3260,21 @@
     .gent-export-btns .btn { flex:1; }
     /* v0.109: sustitutos externos en ámbar, a la derecha del "＋" */
     .gdet-ent-chip.ext { color:#92400e; background:#fffbeb; border-color:#f59e0b; }
+    /* v0.172: sustituto externo ARCHIVADO (conserva datos, fuera de la lista) */
+    .gdet-ent-chip.ext.arch { color:var(--gris); background:var(--arena); border-color:var(--borde); border-style:dashed; }
+    .gdet-chip-x { display:inline-block; margin-left:6px; font-size:11px; font-weight:800; opacity:.75; padding:0 2px; }
+    .gdet-chip-x:active { opacity:1; }
+    /* Panel: archivar o eliminar un sustituto externo */
+    .gsust-del { border:1.5px solid #f59e0b; background:#fffbeb; border-radius:12px; padding:0.7rem 0.8rem; margin:0 0 0.7rem; }
+    .gsust-del-tit { font-size:12.5px; font-weight:800; color:#92400e; margin-bottom:0.5rem; }
+    .gsust-opt { display:block; width:100%; text-align:left; border:1.5px solid var(--borde); background:var(--blanco);
+      color:var(--texto); font-family:inherit; font-size:12.5px; border-radius:10px; padding:8px 10px;
+      margin-bottom:6px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .gsust-opt b { display:block; font-weight:800; margin-bottom:2px; }
+    .gsust-opt span { display:block; font-size:10.5px; color:var(--gris); font-weight:600; line-height:1.4; }
+    .gsust-opt.del { border-color:#fecaca; color:#b91c1c; }
+    .gsust-opt.del span { color:#b91c1c; opacity:.8; }
+    .gsust-opt.cancel { text-align:center; color:var(--gris); font-weight:700; margin-bottom:0; }
     /* v0.109: filas de clases cubiertas del sustituto externo */
     .gsx-row { display:flex; align-items:center; gap:10px; background:var(--blanco); border:1.5px solid var(--borde); border-radius:12px; padding:0.65rem 0.8rem; margin-bottom:7px; flex-wrap:wrap; }
     .gsx-fecha { font-size:13px; font-weight:800; color:var(--texto); flex-shrink:0; }
@@ -5170,7 +5218,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.170.0';
+    var APP_VERSION = '0.172.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -7567,6 +7615,13 @@
       var cursoMes = cursoDeFecha(mesISO);
       var uids = Object.keys(by).filter(function(u){ return by[u].clases.length || by[u].regs.length; });
       uids.sort(function(a, b){ return _gestorNombre(by[a]).localeCompare(_gestorNombre(by[b])); });
+      // v0.172: los externos ARCHIVADOS no salen en "Todos los entrenadores"
+      // (ni en el export), pero sus datos siguen guardados.
+      var archIds = {}, archNoms = {};
+      ((_gestorData && _gestorData.sustitutos) || []).forEach(function(s){
+        if (s.archivado) { archIds['ext:' + s.id] = true; archNoms[s.nombre] = true; }
+      });
+      uids = uids.filter(function(u){ return !archIds[u]; });
       uids.forEach(function(u){
         var d = by[u];
         var clases  = _gestorClasesLocal(d).filter(function(c){ return _claseCurso(c) === cursoMes; });
@@ -7598,6 +7653,7 @@
         if (!r.impartida_por || r.impartida_por.uid) return;     // solo EXTERNOS
         if (!r.fecha || r.fecha.slice(0,7) !== mesISO || !_regPasada(r)) return;
         var nom = r.impartida_por.nombre || '¿?';
+        if (archNoms[nom]) return;                               // archivado
         var e = (cubExt[nom] = cubExt[nom] || { m60:0, m90:0, otras:0, total:0 });
         var dur = _duracionFranja(clasePor[r.user_id + '|' + r.clase_id] || '');
         if (dur === 60) e.m60++; else if (dur === 90) e.m90++; else e.otras++;
@@ -7677,15 +7733,27 @@
       h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Sustitutos externos</div>';
       h += '<p class="ajustes-desc" style="margin:0 0 0.5rem;">Personas ajenas al club que cubren clases puntualmente. Aparecen en el desplegable "Impartida por".</p>';
       var susts = _gestorData.sustitutos || [];
-      if (susts.length) {
+      var sActivos = susts.filter(function(s){ return !s.archivado; });
+      var sArch    = susts.filter(function(s){ return s.archivado; });
+      if (sActivos.length) {
         h += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:0.6rem;">';
-        susts.forEach(function(s){
+        sActivos.forEach(function(s){
           h += '<span class="ghd-al" style="display:inline-flex;align-items:center;gap:5px;">' + _gEsc(s.nombre) +
                '<button type="button" class="asist-chip-quitar" onclick="gestorSustDel(\'' + s.id + '\')">✕</button></span>';
         });
         h += '</div>';
       } else {
-        h += '<p class="ajustes-desc" style="margin:0 0 0.5rem;">Sin sustitutos externos todavía.</p>';
+        h += '<p class="ajustes-desc" style="margin:0 0 0.5rem;">Sin sustitutos externos activos.</p>';
+      }
+      // v0.172: archivados aparte — conservan sus datos y se pueden restaurar
+      if (sArch.length) {
+        h += '<p class="ajustes-desc" style="margin:0.4rem 0 0.3rem;">📦 Archivados · fuera de la lista, con sus datos guardados:</p>';
+        h += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:0.6rem;">';
+        sArch.forEach(function(s){
+          h += '<span class="ghd-al" style="display:inline-flex;align-items:center;gap:5px;opacity:.7;">📦 ' + _gEsc(s.nombre) +
+               '<button type="button" class="asist-chip-quitar" title="Restaurar" onclick="gestorSustArchivar(\'' + s.id + '\',false)">↩</button></span>';
+        });
+        h += '</div>';
       }
       return h;
     }
@@ -7714,14 +7782,43 @@
       var n = prompt('Nombre del sustituto externo:');
       if (n && n.trim()) gestorSustAdd(n, renderGestorEntrenadores);
     }
-    function gestorSustDel(id) {
-      if (!_sb || !confirm('¿Quitar este sustituto del catálogo?\nLas clases que ya cubrió no se tocan.')) return;
+    // v0.172: quitar un sustituto externo ofrece DOS caminos: archivarlo
+    // (se retira de la lista pero conserva su historial) o borrarlo del
+    // todo. Se elige en un panel, no a ciegas.
+    var _gSustDelId = null;
+    function gestorSustDel(id) { _gSustDelId = (_gSustDelId === id) ? null : id; renderGestorDetalle(); }
+    function _gSustNombre(id) {
+      var s = ((_gestorData && _gestorData.sustitutos) || []).filter(function(x){ return x.id === id; })[0];
+      return s ? s.nombre : '';
+    }
+    function gestorSustArchivar(id, archivar) {
+      if (!_sb) { alert('Sin conexión no se puede cambiar el catálogo.'); return; }
+      _sb.from('sustitutos').update({ archivado: !!archivar }).eq('id', id).then(function(r){
+        if (r.error) {
+          alert('⚠️ No se pudo ' + (archivar ? 'archivar' : 'restaurar') + ': ' + r.error.message +
+                '\n¿Está ejecutada la migración migracion_sustituto_archivado.sql?');
+          return;
+        }
+        ((_gestorData && _gestorData.sustitutos) || []).forEach(function(s){
+          if (s.id === id) s.archivado = !!archivar;
+        });
+        _gSustDelId = null;
+        planToast(archivar ? '📦 Sustituto archivado · datos conservados' : '↩ Sustituto restaurado');
+        renderGestorDetalle();
+      });
+    }
+    function gestorSustBorrar(id) {
+      var nom = _gSustNombre(id);
+      if (!_sb) return;
+      if (!confirm('¿ELIMINAR del todo a "' + nom + '"?\n\nSe borra del catálogo y deja de contarse en los informes. Esta acción no se puede deshacer.')) return;
       _sb.from('sustitutos').delete().eq('id', id).then(function(r){
         if (r.error) { alert('⚠️ No se pudo borrar: ' + r.error.message); return; }
         if (_gestorData) {
           _gestorData.sustitutos = (_gestorData.sustitutos || []).filter(function(s){ return s.id !== id; });
         }
-        renderGestorEntrenadores();
+        _gSustDelId = null;
+        planToast('🗑 ' + nom + ' eliminado');
+        renderGestorDetalle();
       });
     }
     // Nombre corto de un perfil (para el desplegable y el registro)
@@ -8323,11 +8420,32 @@
         // v0.112: los externos del catálogo, como chips ámbar tras el "＋".
         // Al pinchar uno se abre su detalle como el de un entrenador (sus
         // clases propias, letrero, pasar lista, editar…).
-        ((_gestorData && _gestorData.sustitutos) || []).forEach(function(sx){
+        // v0.172: los ARCHIVADOS van también aquí, tras el "＋", pero
+        // apagados: siguen accesibles y con sus datos, sin ensuciar la
+        // lista de entrenadores activos.
+        var _susts = (_gestorData && _gestorData.sustitutos) || [];
+        _susts.filter(function(sx){ return !sx.archivado; }).forEach(function(sx){
           _chipsEnt += '<button type="button" class="gdet-ent-chip ext' + (_gestorUid === ('ext:'+sx.id) ? ' sel' : '') +
-            '" onclick="abrirGestorDetalle(\'ext:' + sx.id + '\')">' + _gEsc(sx.nombre) + '</button>';
+            '" onclick="abrirGestorDetalle(\'ext:' + sx.id + '\')">' + _gEsc(sx.nombre) +
+            '<span class="gdet-chip-x" onclick="event.stopPropagation();gestorSustDel(\'' + sx.id + '\')">✕</span></button>';
+        });
+        _susts.filter(function(sx){ return sx.archivado; }).forEach(function(sx){
+          _chipsEnt += '<button type="button" class="gdet-ent-chip ext arch' + (_gestorUid === ('ext:'+sx.id) ? ' sel' : '') +
+            '" onclick="abrirGestorDetalle(\'ext:' + sx.id + '\')" title="Archivado · conserva sus datos">📦 ' + _gEsc(sx.nombre) +
+            '<span class="gdet-chip-x" onclick="event.stopPropagation();gestorSustArchivar(\'' + sx.id + '\',false)" title="Restaurar">↩</span></button>';
         });
         h += '<div class="gdet-ent-row">' + _chipsEnt + '</div>';
+        // Panel de decisión al pulsar la ✕ de un sustituto activo
+        if (_gSustDelId) {
+          h += '<div class="gsust-del">' +
+            '<div class="gsust-del-tit">Quitar a "' + _gEsc(_gSustNombre(_gSustDelId)) + '" del catálogo</div>' +
+            '<button type="button" class="gsust-opt" onclick="gestorSustArchivar(\'' + _gSustDelId + '\',true)">' +
+              '📦 <b>Archivar</b><span>Se retira de la lista de entrenadores pero CONSERVA sus datos. Queda aquí arriba, apagado, y se puede restaurar.</span></button>' +
+            '<button type="button" class="gsust-opt del" onclick="gestorSustBorrar(\'' + _gSustDelId + '\')">' +
+              '🗑 <b>Eliminar del todo</b><span>Se borra del catálogo y deja de contarse en los informes. No se puede deshacer.</span></button>' +
+            '<button type="button" class="gsust-opt cancel" onclick="gestorSustDel(\'' + _gSustDelId + '\')">Cancelar</button>' +
+          '</div>';
+        }
       }
       // v0.136: modo "Todos" → el resumen de todos los entrenadores se pinta
       // aquí mismo, debajo de los chips, en vez de abrir otra página.
@@ -15305,17 +15423,22 @@
     function alBaja(a) { return (a && typeof a === 'object') ? (a.baja || '') : ''; }
     function alApe(a)  { return (a && typeof a === 'object') ? (a.apellidos || '') : ''; }
     function alTel(a)  { return (a && typeof a === 'object') ? (a.telefono || '') : ''; }
-    // v0.135: fin de curso = 30 de julio. Todo alumno nuevo nace con esa
-    // fecha de baja (el curso se acaba); una baja MANUAL a mitad de curso
-    // la sustituye. Sirve para distinguir "se dio de baja" (amarillo, con
-    // fecha) de "terminó el curso con normalidad" (no se pinta como baja).
-    function finCursoISO(curso) {          // curso "2025-26" → "2026-07-30"
+    // v0.135/v0.171: fin de curso = 30 de JUNIO (antes era 30 de julio).
+    // Todo alumno nuevo nace con esa fecha de baja (el curso se acaba); una
+    // baja MANUAL a mitad de curso la sustituye. Sirve para distinguir "se
+    // dio de baja" (amarillo, con fecha) de "terminó el curso con
+    // normalidad" (no se pinta como baja).
+    function finCursoISO(curso) {          // curso "2025-26" → "2026-06-30"
       var y0 = parseInt(String(curso).slice(0, 4), 10);
-      return (y0 + 1) + '-07-30';
+      return (y0 + 1) + '-06-30';
     }
     function esBajaFinCurso(iso) {         // ¿es la baja automática de fin de curso?
       if (!iso) return false;
-      return iso === finCursoISO(cursoDeFecha(iso));
+      var y0 = parseInt(String(cursoDeFecha(iso)).slice(0, 4), 10);
+      // Se acepta también el 30/07 que se usó hasta la v0.170: los alumnos
+      // dados de alta antes lo llevan guardado y no deben pasar a verse
+      // como una baja real (amarillo) de golpe.
+      return iso === (y0 + 1) + '-06-30' || iso === (y0 + 1) + '-07-30';
     }
     // Baja REAL (manual, a mitad de curso). Devuelve '' si la única fecha
     // de baja es la automática de fin de curso: eso no es darse de baja.
