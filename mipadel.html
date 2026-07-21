@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.173.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.174.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,24 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.174.0 — Cambiar de clase: primero de cuál sale, luego a cuál va (2026-07)
+    · El cambio de clase pasa a hacerse en dos pasos explícitos:
+      · PASO 1 — se toca la clase de la que SALE. Si el alumno está en
+        varias, hay que decir cuál se cambia (antes se le daba de baja en
+        TODAS a la vez, que era justo el problema). Si solo está en una, se
+        elige sola y se salta este paso.
+      · PASO 2 — se toca la clase de DESTINO. Los destinos no se pueden
+        tocar mientras no se sepa de dónde sale.
+    · Al marcar el destino, la clase de origen CAMBIA DE COLOR: pasa de
+      verde "CAMBIA ESTA" a rojo "SALE DE AQUÍ", con el destino en azul
+      "DESTINO". De un vistazo se ve el antes y el después.
+    · Nuevo botón "↩ Deshacer selección" para empezar de nuevo si te has
+      equivocado, sin salir del panel ni tocar ningún dato.
+    · Al mover, ahora solo se da de baja en la clase elegida: sus otras
+      clases se quedan como están.
+    · El texto de arriba va guiando el paso en el que estás.
+    · Sin cambios de datos/esquema.
 
   v0.173.0 — Plegar entrenadores en la vista de semana (2026-07)
     · En la vista "🗓 Toda la semana", tocar el NOMBRE del entrenador pliega
@@ -3253,6 +3271,11 @@
        un vistazo la clase de partida (verde) de la de llegada (azul) */
     .gmv-fr.destino { background:#dbeafe; border-color:#1e40af; color:#1e40af; border-width:2px; }
     .gmv-fr.destino:hover { background:#dbeafe; border-color:#1e40af; }
+    /* v0.174: clase elegida como ORIGEN (paso 1) y, ya con destino, la que
+       SALE (cambia de color para verlo claro) */
+    .gmv-fr.origen { background:var(--verde-suave); border-color:var(--verde); color:var(--verde); border-width:2px; }
+    .gmv-fr.sale   { background:#fee2e2; border-color:#b91c1c; color:#b91c1c; border-width:2px; }
+    .gmv-fr.sale:hover { background:#fee2e2; border-color:#b91c1c; }
     .gmv-nota { display:block; font-size:9.5px; font-weight:600; color:#92400e; margin-top:2px; white-space:normal; }
     /* v0.164: etiquetas NUEVA / ANTERIOR cuando ha habido traslado */
     .gmv-tag { display:inline-block; font-size:8.5px; font-weight:800; letter-spacing:.03em;
@@ -3260,6 +3283,8 @@
     .gmv-tag.nueva    { background:var(--verde); color:#fff; }
     .gmv-tag.anterior { background:#f59e0b; color:#fff; }
     .gmv-tag.destino  { background:#1e40af; color:#fff; }
+    .gmv-tag.origen   { background:var(--verde); color:#fff; }
+    .gmv-tag.sale     { background:#b91c1c; color:#fff; }
     .gmv-leyenda { display:flex; flex-wrap:wrap; gap:10px; font-size:10.5px; color:var(--gris); margin-top:8px; }
     .gmv-leyenda span { display:inline-flex; align-items:center; gap:4px; }
     .gmv-leyenda i { width:11px; height:11px; border-radius:3px; display:inline-block;
@@ -5233,7 +5258,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.173.0';
+    var APP_VERSION = '0.174.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -10545,10 +10570,24 @@
     // Mueve: alta en la franja nueva y BAJA en la actual. Se confirma
     // siempre antes de tocar nada, porque afecta a la matrícula real.
     var _gtaMoverOn = false;
-    var _gtaDestSel = null;   // v0.166: destino elegido, aún sin confirmar
+    var _gtaDestSel   = null;   // v0.166: destino elegido, aún sin confirmar
+    var _gtaOrigenSel = null;   // v0.174: clase de la que SALE (si tiene varias)
     function gtaCambiarClase() {
       _gtaMoverOn = !_gtaMoverOn;
-      _gtaDestSel = null;     // al abrir/cerrar el panel se limpia la elección
+      _gtaDestSel = null; _gtaOrigenSel = null;   // se limpia la elección
+      renderGestorTodosAlumno();
+    }
+    // v0.174: elegir de QUÉ clase sale (paso 1). Al cambiar de origen se
+    // borra el destino, para no dejar una pareja a medias.
+    function gtaSelOrigen(uid, claseId) {
+      var mismo = _gtaOrigenSel && _gtaOrigenSel.uid === uid && _gtaOrigenSel.claseId === claseId;
+      _gtaOrigenSel = mismo ? null : { uid: uid, claseId: claseId };
+      _gtaDestSel = null;
+      renderGestorTodosAlumno();
+    }
+    // v0.174: deshacer la selección (origen y destino) sin salir del panel
+    function gtaDeshacerSel() {
+      _gtaOrigenSel = null; _gtaDestSel = null;
       renderGestorTodosAlumno();
     }
     // Franjas donde el alumno está ACTIVO hoy: {uid, entrenador, claseId, lbl}
@@ -10597,7 +10636,20 @@
         h += '<button class="btn btn-sec btn-sm" style="width:100%;" onclick="gtaCambiarClase()">Cerrar</button></div>';
         return h;
       }
-      h += '<div class="ajustes-desc" style="margin:0 0 8px;">Toca la franja a la que quieres moverlo. Se le dará de baja hoy en la suya y de alta en la nueva.</div>';
+      // v0.174: si está en varias clases hay que decir de CUÁL sale. Con una
+      // sola se elige sola (no tiene sentido preguntarlo).
+      var actuales = _gtaFranjasActuales(d.nombre, d.apellidos);
+      if (!_gtaOrigenSel && actuales.length === 1) {
+        _gtaOrigenSel = { uid: actuales[0].uid, claseId: actuales[0].claseId };
+      }
+      var faltaOrigen = actuales.length > 1 && !_gtaOrigenSel;
+      h += '<div class="ajustes-desc" style="margin:0 0 8px;">' +
+        (actuales.length === 0
+          ? 'No está en ninguna franja. Toca una para darle de alta hoy.'
+          : (faltaOrigen
+              ? '<b>Paso 1:</b> está en ' + actuales.length + ' clases. Toca la que quieres CAMBIAR (en verde).'
+              : '<b>Paso 2:</b> toca la franja de destino. Saldrá de la marcada en verde y entrará en la nueva, desde hoy.')) +
+        '</div>';
       // v0.164: ¿ha habido traslado? Si sí, se etiquetan ANTERIOR y NUEVA
       // para que se vea de un golpe de dónde salió y dónde está ahora.
       var huboMov = ents.some(function(e){
@@ -10624,11 +10676,25 @@
             .forEach(function(c){
               var entry = alumnoEnClase(c, d.nombre);
               if (entry && (alApe(entry)||'') !== (d.apellidos||'')) entry = null;
-              var esDest = _gtaDestSel && _gtaDestSel.uid === e.uid && _gtaDestSel.claseId === c.id;
-              var st = '', extra = '', ico = '', click = ' onclick="gtaSelDest(\'' + e.uid + '\',' + c.id + ')"';
+              var esDest   = _gtaDestSel && _gtaDestSel.uid === e.uid && _gtaDestSel.claseId === c.id;
+              var esOrigen = _gtaOrigenSel && _gtaOrigenSel.uid === e.uid && _gtaOrigenSel.claseId === c.id;
+              var st = '', extra = '', ico = '';
+              // Los destinos solo se pueden tocar cuando ya se sabe de dónde sale
+              var click = faltaOrigen ? '' : ' onclick="gtaSelDest(\'' + e.uid + '\',' + c.id + ')"';
               if (entry && alActivo(entry, hoy)) {
-                st = ' actual'; ico = '✓ '; click = '';           // donde está ahora
-                extra = '<span class="gmv-tag nueva">' + (huboMov ? 'NUEVA' : 'ACTUAL') + '</span>';
+                // Sus clases actuales: se tocan para elegir de cuál sale
+                click = ' onclick="gtaSelOrigen(\'' + e.uid + '\',' + c.id + ')"';
+                if (esOrigen && _gtaDestSel) {
+                  // v0.174: con el destino ya elegido, el origen CAMBIA de color
+                  st = ' sale'; ico = '↗ ';
+                  extra = '<span class="gmv-tag sale">SALE DE AQUÍ</span>';
+                } else if (esOrigen) {
+                  st = ' origen'; ico = '● ';
+                  extra = '<span class="gmv-tag origen">CAMBIA ESTA</span>';
+                } else {
+                  st = ' actual'; ico = '✓ ';
+                  extra = '<span class="gmv-tag nueva">' + (huboMov ? 'NUEVA' : 'ACTUAL') + '</span>';
+                }
               } else if (esDest) {
                 // v0.166: destino elegido (aún sin confirmar) → color propio
                 st = ' destino'; ico = '➡ ';
@@ -10667,6 +10733,10 @@
                '🔄 Mover a ' + _gEsc(eSel.nombre + ' · ' + (cSel.franja || 'Clase')) + '</button>';
         }
       }
+      // v0.174: deshacer la selección si te has equivocado de clase
+      if (_gtaOrigenSel || _gtaDestSel) {
+        h += '<button class="btn btn-sec btn-sm" style="width:100%;margin-top:8px;" onclick="gtaDeshacerSel()">↩ Deshacer selección</button>';
+      }
       h += '<button class="btn btn-sec btn-sm" style="width:100%;margin-top:8px;" onclick="gtaCambiarClase()">Cancelar</button>';
       h += '</div>';
       return h;
@@ -10684,7 +10754,12 @@
       var cDest = _gestorClasesLocal(by[uidDest] || {clases:[]}).filter(function(c){ return c.id === claseIdDest; })[0];
       if (!cDest) return;
       var lblDest = _gestorNombre(by[uidDest]) + ' · ' + (_GDIASL[cDest.diaSemana] || '') + ' · ' + (cDest.franja || 'Clase');
-      var act = _gtaFranjasActuales(d.nombre, d.apellidos);
+      // v0.174: sale SOLO de la clase elegida como origen (antes se le daba
+      // de baja en todas las suyas a la vez).
+      var actTodas = _gtaFranjasActuales(d.nombre, d.apellidos);
+      var act = _gtaOrigenSel
+        ? actTodas.filter(function(a){ return a.uid === _gtaOrigenSel.uid && a.claseId === _gtaOrigenSel.claseId; })
+        : actTodas;
       var hoy = hoyLocal();
       var msg = '¿Mover a "' + d.nombre + (d.apellidos ? ' ' + d.apellidos : '') + '" a:\n' + lblDest + '?\n\n';
       msg += act.length
@@ -10731,7 +10806,7 @@
       });
 
       _gtaMoverOn = false;
-      _gtaDestSel = null;
+      _gtaDestSel = null; _gtaOrigenSel = null;
       _gtaCache = _gtaIndex();
       planToast('🔄 ' + d.nombre + ' movido a ' + (cDest.franja || 'la nueva franja'));
       renderGestorTodosAlumno();
