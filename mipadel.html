@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.156.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.158.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,46 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.158.0 — FIX: la ficha de academia no se abría nunca + cambiar de clase (2026-07)
+    · FIX de la v0.156: los cambios (ficha, editar datos, "Sus franjas") no
+      se veían porque la lista de Alumnos NUNCA abría esa pantalla. Al tocar
+      un alumno, abrirGestorTodosAlumno() buscaba "el entrenador con más
+      peso" y saltaba a la ficha POR ENTRENADOR, que es otra pantalla. Y si
+      el alumno no tenía clases (recién creado), no encontraba entrenador y
+      se salía sin abrir NADA — de ahí que no pasara nada al pulsarlo.
+    · Ahora la lista abre siempre la ficha del alumno de la ACADEMIA, tenga
+      clases o no. Con eso ya se ven: sus datos, "✏️ Editar datos",
+      "🔄 Cambiar de clase" y "Sus franjas · curso" con quién dio cada una.
+    · CAMBIAR DE CLASE (ya activo): lista las franjas vivas del club
+      agrupadas por entrenador; al elegir una, PIDE CONFIRMACIÓN indicando
+      a dónde se mueve y de qué franjas se le da de baja. Al aceptar: baja
+      hoy en la actual y alta hoy en la nueva (mover), con su fecha de fin
+      de curso por defecto. Los registros anteriores no se tocan.
+    · Si el alumno ya estuvo antes en la franja destino, se reincorpora
+      continuando su historial (no se duplica).
+    · No se ofrecen como destino las franjas donde ya está ni las clases ya
+      terminadas.
+    · Sin cambios de datos/esquema.
+
+  v0.157.0 — El export de "Todos" lleva el resumen completo de cada uno (2026-07)
+    · El PDF de Entrenadores → Todos ya no es solo la tabla de recuentos:
+      ahora incluye, detrás de ella, el informe COMPLETO de cada entrenador
+      del mes — el mismo que sale al exportarlo individualmente: sus clases
+      por franja, los días dados, las asistencias de cada alumno (con sus
+      faltas J/IJ y su baja si la tiene) y las recuperaciones.
+    · Cada entrenador empieza en su propio bloque y se evita que se parta
+      entre páginas al imprimir (page-break-inside:avoid).
+    · El Excel lleva lo mismo en dos partes: arriba el RESUMEN por
+      entrenador (con totales) y debajo el DETALLE POR ALUMNO, una fila por
+      alumno y franja (entrenador · día y franja · clases dadas · días ·
+      alumno · asistencias · de · faltas J · faltas IJ · baja), listo para
+      filtrar y sumar en Excel.
+    · Ambos formatos salen de la misma función (_gResumenMesUid), que
+      replica exactamente el cálculo del informe individual: un alumno solo
+      cuenta los días en que estaba activo, y quien asiste sin ser del cupo
+      sale como recuperación.
+    · Sin cambios de datos/esquema.
 
   v0.156.0 — Ficha del alumno: datos, edición y sus franjas con entrenador (2026-07)
     · (1) Un alumno recién creado, aún SIN clase asignada, ya se puede abrir
@@ -2938,6 +2978,13 @@
     .gta-franja-ent { font-size:11px; font-weight:700; color:#1e40af; background:#eff6ff; border:1px solid #bfdbfe; border-radius:20px; padding:2px 8px; }
     .gta-franja-ent i { font-style:normal; color:var(--gris); font-weight:600; }
     .gta-franja-ent.sin { color:var(--gris); background:var(--arena); border-color:var(--borde); font-weight:600; }
+    /* v0.158: elegir franja destino al cambiar de clase */
+    .gta-destinos { display:flex; flex-direction:column; gap:4px; max-height:280px; overflow-y:auto; }
+    .gta-destino-ent { font-size:11px; font-weight:800; color:var(--gris); margin-top:6px; }
+    .gta-destino { text-align:left; border:1.5px solid var(--borde); background:var(--blanco); color:var(--texto);
+      font-family:inherit; font-size:12.5px; font-weight:700; border-radius:9px; padding:7px 10px;
+      cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .gta-destino:active { background:var(--verde-suave); border-color:var(--verde); }
     /* v0.155: exportar el mes de todos los entrenadores */
     .gent-export { border:1.5px solid var(--borde); border-radius:12px; padding:0.7rem 0.8rem; margin-top:1rem; background:var(--blanco); }
     .gent-export-tit { font-size:12px; font-weight:800; color:var(--texto); margin-bottom:0.5rem; }
@@ -4886,7 +4933,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.156.0';
+    var APP_VERSION = '0.158.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -7021,6 +7068,54 @@
     // v0.136: el resumen "Todos los entrenadores" se extrae a su propia
     // función para poder pintarlo TAMBIÉN en línea dentro del detalle
     // (chip "Todos"), sin cambiar de página.
+    // v0.157: resumen del MES de un entrenador, con el mismo detalle que su
+    // informe individual (clases por franja, días dados, asistencias por
+    // alumno y recuperaciones). Devuelve datos, no HTML, para poder volcarlo
+    // igual a PDF o a Excel.
+    function _gResumenMesUid(uid, mesISO) {
+      var d = _gestorAgrupar()[uid];
+      if (!d) return null;
+      var cursoMes = cursoDeFecha(mesISO);
+      var clases   = _gestorClasesLocal(d).filter(function(c){ return _claseCurso(c) === cursoMes; });
+      var regsAll  = _gestorRegsLocal(d);
+      var ordDia2  = function(ds){ return ds < 0 ? 8 : (ds === 0 ? 7 : ds); };
+      var out = { nombre: _gestorNombre(d), totDadas: 0, bloques: [] };
+      clases.slice().sort(function(a,b){
+        return ordDia2(a.diaSemana) - ordDia2(b.diaSemana) || (a.franja||'').localeCompare(b.franja||'');
+      }).forEach(function(c){
+        var dadas = regsAll.filter(function(r){
+          return r.claseId === c.id && (r.fecha||'').slice(0,7) === mesISO && _regPasada(r);
+        }).sort(function(a,b){ return a.fecha.localeCompare(b.fecha); });
+        out.totDadas += dadas.length;
+        var b = {
+          titulo: (_GDIASL[c.diaSemana] || '(sin día)') + ' · ' + (c.franja || '—') + (c.nombre ? ' · ' + c.nombre : ''),
+          franja: c.franja || '—',
+          dias: dadas.map(function(r){ return r.fecha; }),
+          filas: [], recups: []
+        };
+        (c.alumnos || []).forEach(function(a){
+          var n = alNom(a); if (!n) return;
+          var pres = 0, pos = 0, fJ = 0, fIJ = 0;
+          dadas.forEach(function(r){
+            if (!alActivo(a, r.fecha)) return;
+            pos++;
+            if ((r.presentes||[]).indexOf(n) !== -1) pres++;
+            else if ((r.justificadas||[]).indexOf(n) !== -1) fJ++; else fIJ++;
+          });
+          if (!pos) return;
+          b.filas.push({ alumno: alCorto(a), pres: pres, pos: pos, fJ: fJ, fIJ: fIJ, baja: alBajaReal(a) });
+        });
+        var rec = {};
+        dadas.forEach(function(r){
+          var act = alumnosActivos(c, r.fecha);
+          (r.presentes||[]).forEach(function(n){ if (act.indexOf(n) === -1) rec[n] = (rec[n]||0) + 1; });
+        });
+        Object.keys(rec).sort().forEach(function(n){ b.recups.push({ alumno: n, n: rec[n] }); });
+        out.bloques.push(b);
+      });
+      return out;
+    }
+
     // v0.155: exportación del mes de TODOS los entrenadores.
     // PDF: se abre una pestaña con el informe y su botón de imprimir/guardar
     // como PDF (mismo patrón que el resumen del entrenador, sin librerías).
@@ -7047,6 +7142,11 @@
       h += 'td.n,th.n{text-align:right;}';
       h += 'tr.tot td{font-weight:800;border-top:2px solid #16264f;background:#f8fafc;}';
       h += '.pend{color:#92400e;font-weight:700;}';
+      h += '.ent{page-break-inside:avoid;margin-top:26px;}';
+      h += '.ent h2{color:#16264f;font-size:15px;margin:0 0 6px;padding-bottom:4px;border-bottom:2px solid #16264f;}';
+      h += 'h3{color:#16264f;font-size:13px;margin:14px 0 3px;padding-bottom:2px;border-bottom:1px solid #e9ecf5;}';
+      h += '.dias{font-size:11.5px;color:#374151;margin:2px 0 6px;}';
+      h += '.baja{color:#991b1b;} .rec{color:#16264f;font-weight:700;}';
       h += '.btn-print{margin-top:18px;padding:10px 18px;font-size:14px;border:none;border-radius:8px;background:#16264f;color:#fff;cursor:pointer;}';
       h += '@media print{.btn-print{display:none;}}';
       h += '</style></head><body>';
@@ -7067,6 +7167,43 @@
         '<td class="n">' + tot.total + '</td><td class="n">' + _h(tot.horas) + '</td>' +
         '<td class="n">' + (tot.sust || '—') + '</td><td class="n">' + (tot.pend || '—') + '</td></tr>';
       h += '</table>';
+
+      // v0.157: detrás de la tabla resumen, el informe COMPLETO de cada
+      // entrenador — el mismo que sale al exportarlo individualmente:
+      // clases por franja, días dados, asistencias por alumno y recups.
+      var by = _gestorAgrupar();
+      var uids = Object.keys(by).filter(function(u){ return by[u].clases.length || by[u].regs.length; });
+      uids.sort(function(a,b){ return _gestorNombre(by[a]).localeCompare(_gestorNombre(by[b])); });
+      uids.forEach(function(u){
+        var r = _gResumenMesUid(u, mesISO);
+        if (!r) return;
+        h += '<div class="ent"><h2>' + _gEsc(r.nombre) + ' — ' + r.totDadas +
+             ' clase' + (r.totDadas !== 1 ? 's' : '') + ' dada' + (r.totDadas !== 1 ? 's' : '') + '</h2>';
+        var conAlgo = false;
+        r.bloques.forEach(function(b){
+          if (!b.dias.length) return;
+          conAlgo = true;
+          h += '<h3>' + _gEsc(b.titulo) + ' — ' + b.dias.length + ' clase' + (b.dias.length !== 1 ? 's' : '') + '</h3>';
+          h += '<div class="dias">Días: ' + b.dias.map(function(f){ return _gFecha(f); }).join(' · ') + '</div>';
+          if (b.filas.length || b.recups.length) {
+            h += '<table><tr><th>Alumno</th><th>Asistencias</th><th>Faltas</th></tr>';
+            b.filas.forEach(function(x){
+              h += '<tr><td>' + _gEsc(x.alumno) +
+                   (x.baja ? ' <span class="baja">(baja ' + _gEsc(_gFecha(x.baja)) + ')</span>' : '') + '</td>' +
+                   '<td>' + x.pres + ' de ' + x.pos + '</td>' +
+                   '<td>' + ((x.fJ || x.fIJ) ? (x.fJ + ' J · ' + x.fIJ + ' IJ') : '—') + '</td></tr>';
+            });
+            b.recups.forEach(function(x){
+              h += '<tr><td><span class="rec">↩ ' + _gEsc(x.alumno) + '</span></td>' +
+                   '<td>' + x.n + ' recuperación' + (x.n !== 1 ? 'es' : '') + '</td><td>—</td></tr>';
+            });
+            h += '</table>';
+          }
+        });
+        if (!conAlgo) h += '<p style="color:#6b7280;font-size:12px;">Sin clases dadas este mes.</p>';
+        h += '</div>';
+      });
+
       h += '<button class="btn-print" onclick="window.print()">🖨️ Imprimir / Guardar como PDF</button>';
       h += '</body></html>';
       var blob = new Blob([h], { type: 'text/html' });
@@ -7083,7 +7220,9 @@
         var s = String(v == null ? '' : v);
         return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
       }
-      var filas = [['Entrenador','Email','1h','1h30','Otras','Total clases','Horas','Cubiertas como sustituto','Clases por recuperar']];
+      // Hoja 1 — resumen por entrenador
+      var filas = [['RESUMEN · ' + mesLabel],
+                   ['Entrenador','Email','1h','1h30','Otras','Total clases','Horas','Cubiertas como sustituto','Clases por recuperar']];
       datos.forEach(function(d){
         filas.push([d.nombre, d.email, d.m60, d.m90, d.otras, d.total,
                     String(d.horas).replace('.', ','), d.sust, d.pend]);
@@ -7093,6 +7232,31 @@
         a.horas+=d.horas; a.sust+=d.sust; a.pend+=d.pend; return a;
       }, {m60:0,m90:0,otras:0,total:0,horas:0,sust:0,pend:0});
       filas.push(['TOTAL','',t.m60,t.m90,t.otras,t.total,String(t.horas).replace('.', ','),t.sust,t.pend]);
+
+      // v0.157: y debajo, el DETALLE por alumno de cada entrenador (lo mismo
+      // que lleva el PDF), para poder filtrar y sumar en Excel.
+      filas.push([]);
+      filas.push(['DETALLE POR ALUMNO · ' + mesLabel]);
+      filas.push(['Entrenador','Día y franja','Clases dadas','Días','Alumno','Asistencias','De','Faltas J','Faltas IJ','Baja']);
+      var by = _gestorAgrupar();
+      var uids = Object.keys(by).filter(function(u){ return by[u].clases.length || by[u].regs.length; });
+      uids.sort(function(a,b){ return _gestorNombre(by[a]).localeCompare(_gestorNombre(by[b])); });
+      uids.forEach(function(u){
+        var r = _gResumenMesUid(u, mesISO);
+        if (!r) return;
+        r.bloques.forEach(function(b){
+          if (!b.dias.length) return;
+          var dias = b.dias.map(function(f){ return _gFecha(f); }).join(' · ');
+          b.filas.forEach(function(x){
+            filas.push([r.nombre, b.titulo, b.dias.length, dias, x.alumno,
+                        x.pres, x.pos, x.fJ, x.fIJ, x.baja ? _gFecha(x.baja) : '']);
+          });
+          b.recups.forEach(function(x){
+            filas.push([r.nombre, b.titulo, b.dias.length, dias, '↩ ' + x.alumno + ' (recuperación)',
+                        x.n, '', '', '', '']);
+          });
+        });
+      });
 
       var csv = filas.map(function(f){ return f.map(celda).join(';'); }).join('\r\n');
       var blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -9491,33 +9655,17 @@
     // key = nombre completo (nombre + apellidos). Se abre la ficha del
     // entrenador cuyo cupo tenga a esa persona con ESE apellido, casando los
     // registros por el nombre de pila (que es como se guardan).
+    // v0.158 (fix): abre la ficha del alumno de la ACADEMIA.
+    // Antes esto buscaba "el entrenador con más peso" y saltaba a la ficha
+    // POR ENTRENADOR, así que: (a) la ficha de academia no se veía nunca, y
+    // (b) un alumno recién creado, sin clases, no abría NADA (se salía por
+    // el return al no encontrar entrenador). Ahora abre siempre su ficha.
     function abrirGestorTodosAlumno(key) {
-      var info   = _gtaCache && _gtaCache.al[key];
-      var nombre = info ? info.nombre : key;
-      var ape    = info ? info.apellidos : '';
-      var by = _gestorAgrupar();
-      var mejor = null, mejorPts = -1;
-      Object.keys(by).forEach(function(uid){
-        var d = by[uid];
-        if (!d.clases.length && !d.regs.length) return;
-        var pts = 0, tieneFull = false;
-        _gestorClasesLocal(d).forEach(function(c){
-          var entry = alumnoEnClase(c, nombre);
-          if (!entry) return;
-          if ((alApe(entry) || '') !== (ape || '')) return;   // debe coincidir el apellido
-          tieneFull = true;
-          pts += alBajaReal(entry) ? 1000 : 10000;   // activo pesa más que de baja
-        });
-        _gestorRegsLocal(d).forEach(function(r){
-          if (r.sinClase) return;
-          if ((r.presentes||[]).indexOf(nombre) !== -1 || (r.ausentes||[]).indexOf(nombre) !== -1) {
-            if (tieneFull || !ape) pts++;   // sin apellido = respaldo (visitante)
-          }
-        });
-        if (pts > mejorPts) { mejorPts = pts; mejor = uid; }
-      });
-      if (!mejor || mejorPts <= 0) return;
-      gestorAlumnoU(mejor, nombre, 'pantalla-gestor-todos-alumnos');
+      _gtaAlumno = key;
+      _gtaEditOn = false;
+      _gtaMesOff = 0;
+      if (!_gtaCache) _gtaCache = _gtaIndex();
+      irA('pantalla-gestor-todos-alumno');
     }
     function gtaMesNav(delta) { _gtaMesOff += delta; renderGestorTodosAlumno(); }
     function gtaFiltrar(v) { _gtaFiltroTxt = v || ''; if (v) _gtaLetra = null; _gtaRenderLista(); }
@@ -9837,6 +9985,7 @@
     }
     function _gtaFichaHTML(al) {
       var d = _gtaDatosDe(al);
+      if (_gtaMoverOn) return _gtaMoverHTML(al);
       if (_gtaEditOn) {
         return '<div class="gta-ficha">' +
           '<div class="gta-ficha-tit">✏️ Editar datos</div>' +
@@ -9864,11 +10013,128 @@
       '</div>';
     }
     function gtaToggleEditar() { _gtaEditOn = !_gtaEditOn; renderGestorTodosAlumno(); }
-    // v0.156: pendiente de confirmar el comportamiento del cambio de franja
-    // (mover = baja en la actual + alta en la nueva, o añadir una segunda).
-    // Se avisa en vez de dejar un botón que no hace nada.
-    function gtaCambiarClase() {
-      alert('Cambiar de clase todavía no está activo.\n\nFalta decidir si al asignarle la nueva franja se le da de BAJA en la actual (mover) o se queda en las dos (añadir).');
+    // ── v0.158: CAMBIAR DE CLASE (mover de franja) ───────────────
+    // Mueve: alta en la franja nueva y BAJA en la actual. Se confirma
+    // siempre antes de tocar nada, porque afecta a la matrícula real.
+    var _gtaMoverOn = false;
+    function gtaCambiarClase() { _gtaMoverOn = !_gtaMoverOn; renderGestorTodosAlumno(); }
+    // Franjas donde el alumno está ACTIVO hoy: {uid, entrenador, claseId, lbl}
+    function _gtaFranjasActuales(nombre, ape) {
+      var by = _gestorAgrupar(), hoy = hoyLocal(), out = [];
+      Object.keys(by).forEach(function(uid){
+        _gestorClasesLocal(by[uid]).forEach(function(c){
+          var e = alumnoEnClase(c, nombre);
+          if (!e) return;
+          if ((alApe(e) || '') !== (ape || '')) return;
+          if (!alActivo(e, hoy)) return;
+          out.push({ uid:uid, entrenador:_gestorNombre(by[uid]), claseId:c.id,
+                     lbl:(_GDIASL[c.diaSemana] || '') + ' · ' + (c.franja || 'Clase') });
+        });
+      });
+      return out;
+    }
+    // Todas las franjas del club del curso en marcha (destinos posibles)
+    function _gtaFranjasClub() {
+      var by = _gestorAgrupar(), curso = cursoDeFecha(hoyLocal()), hoy = hoyLocal(), out = [];
+      Object.keys(by).forEach(function(uid){
+        _gestorClasesLocal(by[uid]).forEach(function(c){
+          if (_claseCurso(c) !== curso) return;
+          if (c.fin && c.fin < hoy) return;
+          out.push({ uid:uid, entrenador:_gestorNombre(by[uid]), claseId:c.id,
+                     lbl:(_GDIASL[c.diaSemana] || '') + ' · ' + (c.franja || 'Clase') });
+        });
+      });
+      out.sort(function(a,b){ return a.entrenador.localeCompare(b.entrenador) || a.lbl.localeCompare(b.lbl); });
+      return out;
+    }
+    function _gtaMoverHTML(al) {
+      var d = _gtaDatosDe(al);
+      var act = _gtaFranjasActuales(d.nombre, d.apellidos);
+      var destinos = _gtaFranjasClub().filter(function(x){
+        return !act.some(function(a){ return a.uid === x.uid && a.claseId === x.claseId; });
+      });
+      var h = '<div class="gta-ficha">';
+      h += '<div class="gta-ficha-tit">🔄 Cambiar de clase</div>';
+      h += '<div class="ajustes-desc" style="margin:0 0 8px;">' +
+        (act.length
+          ? 'Ahora está en: <b>' + act.map(function(a){ return _gEsc(a.entrenador + ' · ' + a.lbl); }).join('</b>, <b>') + '</b>. ' +
+            'Al elegir otra franja se le dará de BAJA en la actual y de alta en la nueva, desde hoy.'
+          : 'No está en ninguna franja. Al elegir una, se le da de alta desde hoy.') + '</div>';
+      if (!destinos.length) {
+        h += '<p class="ajustes-desc" style="margin:0;">No hay otras franjas disponibles este curso.</p>';
+      } else {
+        var entPrev = '';
+        h += '<div class="gta-destinos">';
+        destinos.forEach(function(x){
+          if (x.entrenador !== entPrev) {
+            h += '<div class="gta-destino-ent">👤 ' + _gEsc(x.entrenador) + '</div>';
+            entPrev = x.entrenador;
+          }
+          h += '<button type="button" class="gta-destino" onclick="gtaMoverA(\'' + x.uid + '\',' + x.claseId + ')">' +
+               _gEsc(x.lbl) + '</button>';
+        });
+        h += '</div>';
+      }
+      h += '<button class="btn btn-sec btn-sm" style="width:100%;margin-top:8px;" onclick="gtaCambiarClase()">Cancelar</button>';
+      h += '</div>';
+      return h;
+    }
+    function gtaMoverA(uidDest, claseIdDest) {
+      var al = (_gtaCache && _gtaCache.al[_gtaAlumno]) || {};
+      var d  = _gtaDatosDe(al);
+      var by = _gestorAgrupar();
+      var cDest = _gestorClasesLocal(by[uidDest] || {clases:[]}).filter(function(c){ return c.id === claseIdDest; })[0];
+      if (!cDest) return;
+      var lblDest = _gestorNombre(by[uidDest]) + ' · ' + (_GDIASL[cDest.diaSemana] || '') + ' · ' + (cDest.franja || 'Clase');
+      var act = _gtaFranjasActuales(d.nombre, d.apellidos);
+      var hoy = hoyLocal();
+      var msg = '¿Mover a "' + d.nombre + (d.apellidos ? ' ' + d.apellidos : '') + '" a:\n' + lblDest + '?\n\n';
+      msg += act.length
+        ? 'Se le dará de BAJA hoy (' + _gFecha(hoy) + ') en:\n· ' +
+          act.map(function(a){ return a.entrenador + ' · ' + a.lbl; }).join('\n· ') +
+          '\n\nLos registros anteriores no se tocan.'
+        : 'Se le dará de alta hoy (' + _gFecha(hoy) + ').';
+      if (!confirm(msg)) return;
+
+      // 1) Baja en las franjas actuales (una escritura por entrenador)
+      act.forEach(function(a){
+        _gEditUid = (_sbUser && a.uid === _sbUser.id) ? null : a.uid;
+        try {
+          var cfg = leerAsistConfig();
+          (cfg.clases || []).forEach(function(c){
+            if (c.id === a.claseId) c.alumnos = (c.alumnos || []).map(_alBajaEnClase(d.nombre, hoy));
+          });
+          escribirAsistConfig(cfg);
+        } finally { _gEditUid = null; }
+        (_gestorData.clases || []).forEach(function(c){
+          if (c.user_id === a.uid && c.id === a.claseId) c.alumnos = (c.alumnos || []).map(_alBajaEnClase(d.nombre, hoy));
+        });
+      });
+
+      // 2) Alta en la franja destino (con sus datos y baja de fin de curso)
+      var nuevo = { nombre:d.nombre, apellidos:d.apellidos || '', telefono:d.telefono || '',
+                    alta:hoy, baja:finCursoISO(cursoDeFecha(hoy)) };
+      _gEditUid = (_sbUser && uidDest === _sbUser.id) ? null : uidDest;
+      try {
+        var cfg2 = leerAsistConfig();
+        (cfg2.clases || []).forEach(function(c){
+          if (c.id !== claseIdDest) return;
+          var ya = (c.alumnos || []).filter(function(a){ return alNom(a) === d.nombre; })[0];
+          if (ya) { _alReactivar(ya, hoy); }         // ya estuvo antes: continúa su historial
+          else { c.alumnos = (c.alumnos || []).concat([nuevo]); }
+        });
+        escribirAsistConfig(cfg2);
+      } finally { _gEditUid = null; }
+      (_gestorData.clases || []).forEach(function(c){
+        if (c.user_id !== uidDest || c.id !== claseIdDest) return;
+        var ya = (c.alumnos || []).filter(function(a){ return alNom(a) === d.nombre; })[0];
+        if (ya) { _alReactivar(ya, hoy); } else { c.alumnos = (c.alumnos || []).concat([nuevo]); }
+      });
+
+      _gtaMoverOn = false;
+      _gtaCache = _gtaIndex();
+      planToast('🔄 ' + d.nombre + ' movido a ' + (cDest.franja || 'la nueva franja'));
+      renderGestorTodosAlumno();
     }
     function gtaGuardarDatos() {
       var nom = (document.getElementById('gta-ed-nom') || {}).value || '';
