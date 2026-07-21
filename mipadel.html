@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.167.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.170.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,45 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.170.0 — Los entrenadores EXTERNOS también salen en Entrenadores (2026-07)
+    · En el gestor → Entrenadores, un entrenador externo que ha dado o
+      cubierto clases aparece ahora con sus datos, igual que el resto:
+      clases dadas, desglose por duración (1 h / 1 h 30 / otras) y horas.
+      Se distingue con avatar 🔁 y la etiqueta EXTERNO.
+    · Por qué no salía: cuando un externo cubre una clase, esa clase queda
+      en el registro del TITULAR con impartida_por.uid = null. El listado
+      solo miraba las clases propias de cada uno y el conteo de
+      sustituciones internas (que casan por uid), así que el externo no
+      aparecía por ningún lado.
+    · Si el externo ya tenía ficha propia (por sus clases de sustituto), lo
+      cubierto se SUMA a esa ficha en vez de crear una fila duplicada.
+    · La pantalla y el export (PDF y Excel) pasan a usar la MISMA fuente de
+      datos, así que enseñan exactamente lo mismo, externos incluidos.
+    · Cada tarjeta indica además cuántas de sus clases fueron sustituciones
+      ("🔁 N sust.").
+    · Sin cambios de datos/esquema.
+
+  v0.169.0 — El día de la semana en curso, señalado en la franja (2026-07)
+    · Al abrir un día (lunes, martes…), entre los números de día del mes de
+      esa franja se SEÑALA con un anillo dorado el que cae en la semana en
+      curso. Así se localiza al momento "lo de esta semana" sin contar.
+    · El anillo se suma al estado del día, no lo sustituye: el color sigue
+      diciendo si está dada, sin lista, anulada, sin clase del club, etc.
+    · Si el mes que estás viendo no es el actual, no se marca nada.
+    · Vale para todas las franjas: el panel del día y el detalle del
+      entrenador.
+    · Sin cambios de datos/esquema.
+
+  v0.168.0 — La vista de semana, en horizontal (2026-07)
+    · En "🗓 Toda la semana · alumnos" los días pasan de ir uno DEBAJO de
+      otro a ir uno AL LADO del otro: lunes, martes, miércoles, jueves y
+      viernes en columnas, separados por una línea vertical.
+    · Dentro de cada día, los entrenadores se apilan (la columna es
+      estrecha), cada uno con su color y sus alumnos, como estaba.
+    · Si no cabe a lo ancho, la fila se desliza en horizontal en vez de
+      romperse.
+    · Sin cambios de datos/esquema.
 
   v0.167.0 — Vista de TODA LA SEMANA en el panel del gestor (2026-07)
     · Nuevo botón "🗓 Toda la semana · alumnos" encima de la fila de días.
@@ -2902,10 +2941,18 @@
       font-family:inherit; font-size:13px; font-weight:800; cursor:pointer; -webkit-tap-highlight-color:transparent; }
     .gplan-semana:active { transform:scale(0.99); }
     .gplan-semana.sel { background:var(--verde); border-color:var(--verde); color:#fff; }
-    /* v0.167: bloque de cada día en la vista de semana */
-    .gpsem-dia { margin-bottom:0.9rem; }
+    /* v0.167: bloque de cada día en la vista de semana
+       v0.168: los días van en COLUMNAS, uno al lado del otro. En pantalla
+       estrecha se deslizan en horizontal en vez de apilarse. */
+    .gpsem-cols { display:flex; gap:10px; align-items:flex-start; overflow-x:auto;
+      -webkit-overflow-scrolling:touch; padding-bottom:4px; }
+    .gpsem-dia { flex:1 0 210px; min-width:210px; margin-bottom:0.4rem; }
+    .gpsem-dia + .gpsem-dia { border-left:1.5px solid var(--borde); padding-left:10px; }
     .gpsem-dia-hdr { font-size:12.5px; font-weight:800; color:var(--verde); padding:0.35rem 2px 0.3rem;
       border-bottom:2px solid var(--verde-suave); margin-bottom:0.4rem; }
+    /* dentro de cada día, los entrenadores se apilan (la columna es estrecha) */
+    .gpsem-dia .gpplan-cols { display:block; }
+    .gpsem-dia .gpplan-entblock { margin-bottom:8px; }
     .gpplan-diarow .gplan-day { flex:1; min-width:0; padding:9px 2px; font-size:13px; }
     /* v0.114.1: día activo con sombreado DORADO (mismas características) */
     .gplan-day.sel { background:var(--dorado); box-shadow:0 0 0 2.5px #f4e8c8, 0 0 0 4px var(--dorado); text-transform:uppercase; }
@@ -3062,6 +3109,9 @@
     button.ghd-day:active { transform:scale(0.92); }
     button.ghd-day.on { box-shadow:0 0 0 2px var(--verde); }
     .ghd-day.extra { outline:1.5px dashed #b45309; outline-offset:-1.5px; }
+    /* v0.169: el día de la SEMANA EN CURSO, señalado con anillo dorado.
+       No toca el color de estado (dada/sin lista/anulada…), solo lo resalta. */
+    .ghd-day.semana { box-shadow:0 0 0 2.5px var(--dorado); font-weight:900; }
     /* v0.66.1: el día lo dio (o lo dará) un sustituto → destacado ámbar */
     .ghd-day.sust { background:#fde68a; color:#92400e; }
     .gdd-det.sust { background:#fffbeb; border-color:#fde68a; }
@@ -5120,7 +5170,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.167.0';
+    var APP_VERSION = '0.170.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -6684,6 +6734,8 @@
         // ── Vista de TODA LA SEMANA: cada día con sus entrenadores y sus
         // alumnos, sin los días del mes ni contadores. Visión de escuela.
         h += '<div class="gpplan-panel">';
+        // v0.168: los días van uno AL LADO del otro (columnas)
+        h += '<div class="gpsem-cols">';
         var huboAlgo = false;
         diasPlan.forEach(function(dia){
           var slotsD = slots[dia] || {};
@@ -6720,6 +6772,7 @@
           });
           h += '</div></div>';
         });
+        h += '</div>';   // /gpsem-cols
         if (!huboAlgo) h += '<p class="ajustes-desc" style="margin:0.3rem 2px;">Ninguna clase configurada esta semana.</p>';
         h += '</div>';
       } else if (_gpSelDia == null) {
@@ -7522,6 +7575,8 @@
         var cub = _gestorCubiertasMes(u, mesISO);
         var n60 = s.m60 + cub.m60, n90 = s.m90 + cub.m90, nOt = s.otras + cub.otras;
         out.push({
+          uid: u,
+          ext: _esExtUid(u),
           nombre: _gestorNombre(d),
           email: (d.perfil && d.perfil.email) || '',
           m60: n60, m90: n90, otras: nOt,
@@ -7531,13 +7586,41 @@
           pend: _gRecupSaldo(u)                  // clases por recuperar del curso
         });
       });
+      // v0.170: entrenadores EXTERNOS que han cubierto clases de otros. Esas
+      // clases van en el registro del titular con impartida_por.uid = null,
+      // así que no salían por ningún lado en esta pantalla. Se suman a su
+      // ficha si ya tienen uno (por sus clases propias) o se añaden como
+      // fila nueva.
+      var clasePor = {};
+      (_gestorData.clases || []).forEach(function(c){ clasePor[c.user_id + '|' + c.id] = c.franja || ''; });
+      var cubExt = {};
+      (_gestorData.registros || []).forEach(function(r){
+        if (!r.impartida_por || r.impartida_por.uid) return;     // solo EXTERNOS
+        if (!r.fecha || r.fecha.slice(0,7) !== mesISO || !_regPasada(r)) return;
+        var nom = r.impartida_por.nombre || '¿?';
+        var e = (cubExt[nom] = cubExt[nom] || { m60:0, m90:0, otras:0, total:0 });
+        var dur = _duracionFranja(clasePor[r.user_id + '|' + r.clase_id] || '');
+        if (dur === 60) e.m60++; else if (dur === 90) e.m90++; else e.otras++;
+        e.total++;
+      });
+      Object.keys(cubExt).sort().forEach(function(nom){
+        var e  = cubExt[nom];
+        var ya = out.filter(function(x){ return x.ext && x.nombre === nom; })[0];
+        if (ya) {                       // ya tenía ficha por sus clases propias
+          ya.m60 += e.m60; ya.m90 += e.m90; ya.otras += e.otras;
+          ya.total += e.total; ya.sust += e.total;
+          ya.horas = (ya.m60 * 60 + ya.m90 * 90) / 60;
+        } else {
+          out.push({ uid:null, ext:true, nombre:nom, email:'',
+                     m60:e.m60, m90:e.m90, otras:e.otras, total:e.total,
+                     sust:e.total, horas:(e.m60 * 60 + e.m90 * 90) / 60, pend:0 });
+        }
+      });
+      out.sort(function(a,b){ return a.nombre.localeCompare(b.nombre); });
       return out;
     }
     function _gEntResumenHTML() {
       if (!_gestorData) { return '<p class="ajustes-desc">Sin datos. Vuelve al panel para cargarlos.</p>'; }
-      var by = _gestorAgrupar();
-      var uids = Object.keys(by).filter(function(u){ return by[u].clases.length || by[u].regs.length; });
-      uids.sort(function(a, b){ return _gestorNombre(by[a]).localeCompare(_gestorNombre(by[b])); });
 
       // v0.106: fuera los apartados de clases/alumnos/asistencia. Cada
       // tarjeta muestra un LETRERO con las clases dadas el mes visto,
@@ -7552,33 +7635,32 @@
         '<button class="gestor-mes-btn" onclick="gentMesNav(1)">›</button>' +
       '</div>';
       h += '<p class="ajustes-desc" style="text-align:center;margin:-2px 0 0.6rem;">Clases dadas por cada entrenador ese mes (incluye las que cubrió como sustituto).</p>';
-      uids.forEach(function(u){
-        var d = by[u], nom = _gestorNombre(d);
-        var clases  = _gestorClasesLocal(d).filter(function(c){ return _claseCurso(c) === cursoMes; });
-        var regsMes = _gestorRegsLocal(d).filter(function(r){ return r.fecha && r.fecha.slice(0,7) === mesISO; });
-        var s   = _gestorSumaMes(clases, regsMes, mesISO);
-        var cub = _gestorCubiertasMes(u, mesISO);
-        var n60 = s.m60 + cub.m60, n90 = s.m90 + cub.m90, nOt = s.otras + cub.otras;
-        var tot = n60 + n90 + nOt;
-        // v0.107: tarjeta SOLO informativa (sin enlace al detalle): esta
-        // página es el vistazo "Todos" de clases dadas por mes.
+      // v0.170: una sola fuente (_gEntDatosMes) para la pantalla y el
+      // export, e incluye a los EXTERNOS que han cubierto clases.
+      var filasEnt = _gEntDatosMes(mesISO);
+      filasEnt.forEach(function(f){
         h += '<div class="gestor-card plana">' +
-          '<div class="gestor-card-ava">' + _gEsc(nom.charAt(0).toUpperCase()) + '</div>' +
+          '<div class="gestor-card-ava"' + (f.ext ? ' style="background:#fef3c7;color:#92400e;"' : '') + '>' +
+            (f.ext ? '🔁' : _gEsc(f.nombre.charAt(0).toUpperCase())) + '</div>' +
           '<div class="gestor-card-body">' +
-            '<div class="gestor-card-nom">' + _gEsc(nom) + '</div>' +
-            '<div class="gestor-card-meta">' + (tot ? tot + ' clase' + (tot !== 1 ? 's' : '') + ' dada' + (tot !== 1 ? 's' : '') : 'Sin clases dadas') + '</div>' +
+            '<div class="gestor-card-nom">' + _gEsc(f.nombre) +
+              (f.ext ? ' <span style="font-size:10px;font-weight:700;color:#92400e;">EXTERNO</span>' : '') + '</div>' +
+            '<div class="gestor-card-meta">' +
+              (f.total ? f.total + ' clase' + (f.total !== 1 ? 's' : '') + ' dada' + (f.total !== 1 ? 's' : '') +
+                         (f.sust ? ' · <span style="color:#92400e;font-weight:700;">🔁 ' + f.sust + ' sust.</span>' : '')
+                       : 'Sin clases dadas') + '</div>' +
           '</div>' +
           '<div class="gent-mes">' +
-            '<div class="gent-dur h1"><b>' + n60 + '</b><span>1h</span></div>' +
-            '<div class="gent-dur h15"><b>' + n90 + '</b><span>1h 30</span></div>' +
-            (nOt ? '<div class="gent-dur ot"><b>' + nOt + '</b><span>otras</span></div>' : '') +
+            '<div class="gent-dur h1"><b>' + f.m60 + '</b><span>1h</span></div>' +
+            '<div class="gent-dur h15"><b>' + f.m90 + '</b><span>1h 30</span></div>' +
+            (f.otras ? '<div class="gent-dur ot"><b>' + f.otras + '</b><span>otras</span></div>' : '') +
           '</div>' +
         '</div>';
       });
-      if (!uids.length) h += '<p class="ajustes-desc" style="text-align:center;padding:1rem 0;">Aún no hay entrenadores con datos.</p>';
+      if (!filasEnt.length) h += '<p class="ajustes-desc" style="text-align:center;padding:1rem 0;">Aún no hay entrenadores con datos.</p>';
 
       // v0.155: exportar el mes de TODOS los entrenadores
-      if (uids.length) {
+      if (filasEnt.length) {
         h += '<div class="gent-export">' +
           '<div class="gent-export-tit">Exportar ' + _gEsc(mesLabel) + ' · todos los entrenadores</div>' +
           '<div class="gent-export-btns">' +
@@ -8507,17 +8589,26 @@
         if (r.claseId === c.id && r.fecha && r.fecha.slice(0,7) === mesISO) cf[r.fecha] = r;
       });
       var dadas = 0, chips = '', dets = '';
+      // v0.169: el día de esta franja que cae en la SEMANA EN CURSO se
+      // señala, para localizar rápido "lo de esta semana" entre todos los
+      // días del mes.
+      var _hISO  = hoyLocal();
+      var _hoyD  = new Date(+_hISO.slice(0,4), +_hISO.slice(5,7)-1, +_hISO.slice(8,10));
+      var _lunD  = new Date(_hoyD); _lunD.setDate(_lunD.getDate() - ((_hoyD.getDay() + 6) % 7));
+      var _domD  = new Date(_lunD); _domD.setDate(_domD.getDate() + 6);
+      var _lunISO = dateToISOLocal(_lunD), _domISO = dateToISOLocal(_domD);
       function _chip(f, st, extra) {
         // uid en el id: en el planning conviven clases de varios
         // entrenadores y sus ids locales pueden repetirse
         var did  = opts.idPref + '-' + uid + '-' + c.id + '-' + f;
+        var semana = (f >= _lunISO && f <= _domISO) ? ' semana' : '';
         // v0.66.1: día con sustituto → chip y desplegable sombreados.
         // v0.110: el ÁMBAR queda SOLO para sustitutos EXTERNOS; si cubre
         // un entrenador del club, sombreado lila (interno).
         var _ip = cf[f] && cf[f].impartidaPor;
         var sust = _ip ? (_ip.uid ? ' susti' : ' sust') : '';
         // v0.105: los días sin clase del club (gestor) llevan ✗ delante
-        chips += '<button type="button" class="ghd-day ' + st + (extra?' extra':'') + sust + '" onclick="gestorToggleDet(\'' + did + '\',this)">' +
+        chips += '<button type="button" class="ghd-day ' + st + (extra?' extra':'') + sust + semana + '" onclick="gestorToggleDet(\'' + did + '\',this)">' +
                  (st === 'dsc' ? '✗' : '') + (extra?'+':'') + parseInt(f.split('-')[2],10) + '</button>';
         dets  += '<div class="gdd-det' + sust + '" id="' + did + '" style="display:none;">' +
                  _gddDetalleHTML(c, f, cf[f] || null, extra, opts) + '</div>';
