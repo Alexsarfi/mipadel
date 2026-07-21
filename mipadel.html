@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.153.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.156.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,68 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.156.0 — Ficha del alumno: datos, edición y sus franjas con entrenador (2026-07)
+    · (1) Un alumno recién creado, aún SIN clase asignada, ya se puede abrir
+      desde la lista y ver su ficha. Antes la pantalla se cortaba con "Sin
+      registros" y no había manera de consultar ni corregir sus datos.
+    · (2) Bajo el nombre aparece su ficha (apellidos y teléfono) con dos
+      acciones: "✏️ Editar datos" y "🔄 Cambiar de clase".
+    · Editar datos cambia nombre, apellidos y teléfono. Si el alumno ya
+      tenía ficha de academia se actualiza; si solo existía dentro de
+      franjas, se le crea su ficha del club con los datos corregidos (pasa
+      a ser su registro oficial y alimenta el autocompletado).
+    · (4) Se retira el "alumno de tal entrenador". En su lugar, la sección
+      "Sus franjas · curso XXXX-XX": cada franja del alumno con QUIÉN se la
+      dio y cuántas clases. Si una misma franja la han dado varios (bajas,
+      sustituciones), salen todos con su reparto (p. ej. "Alex ×2 ·
+      Manolo ×1"). Queda por curso, con el histórico de siempre debajo.
+    · (3) "Cambiar de clase" queda a la vista pero todavía NO activo: al
+      pulsarlo avisa. Falta decidir si asignar la nueva franja debe dar de
+      BAJA en la actual (mover) o dejar al alumno en las dos (añadir), y
+      mover matrículas a ciegas puede estropear datos reales.
+    · Sin cambios de datos/esquema.
+
+  v0.155.0 — Entrenadores abre en "Todos" + exportar el mes (2026-07)
+    · Al entrar en Entrenadores (gestor) ya NO se abre el detalle del primer
+      entrenador: se abre la vista de conjunto "Todos", que es lo que se
+      quiere ver primero. Su chip queda seleccionado, en verde y con la
+      LETRA EN BLANCO (antes, aun estando activo, el texto seguía verde:
+      la regla .todos iba después de .sel y le ganaba el color).
+    · Nuevo bloque al final de "Todos" para EXPORTAR el mes visible con los
+      datos de todos los entrenadores, en dos formatos:
+      · 📄 PDF — abre el informe en una pestaña con su botón "Imprimir /
+        Guardar como PDF" (mismo sistema que el resumen del entrenador, sin
+        librerías externas).
+      · 📊 Excel — descarga un .csv con separador ; y BOM UTF-8, para que
+        Excel en español lo abra en columnas y con los acentos correctos.
+    · Qué lleva el informe, por entrenador: nombre, email, clases de 1 h,
+      de 1 h 30, otras, total de clases, HORAS, cuántas cubrió como
+      sustituto y cuántas tiene por recuperar. Con fila de TOTALES.
+    · Lo exportado sale de la misma fuente que lo que se ve en pantalla
+      (_gEntDatosMes), así que informe y pantalla nunca se contradicen.
+    · Sin cambios de datos/esquema.
+
+  v0.154.0 — El botón ATRÁS del navegador se queda dentro de la app (2026-07)
+    · Hasta ahora, pulsar la flecha de atrás del navegador SALÍA de la app.
+      La app es de una sola página: al cambiar de pantalla (irA) no se
+      tocaba el historial, así que para el navegador nunca habías navegado
+      y "atrás" te devolvía a la página anterior de tu sesión.
+    · Ahora cada pantalla deja su huella en el historial, y al retroceder se
+      vuelve a la pantalla ANTERIOR de la app: del detalle a su listado, de
+      ahí a Inicio, etc. Encadenado, tantas veces como haga falta.
+    · Si hay un vídeo o una imagen abiertos a pantalla completa, "atrás" los
+      cierra primero, en vez de cambiar de pantalla por debajo.
+    · No se apila dos veces la misma pantalla seguida (el historial no se
+      llena de entradas repetidas al refrescar una vista), y retroceder no
+      genera entradas nuevas: no hay bucles.
+    · Respeta los guardarraíles por rol de irA(): si una pantalla del
+      historial ya no está permitida para tu perfil, se redirige igual que
+      en la navegación normal.
+    · Funciona junto a la v0.134 (recordar la última pantalla al recargar):
+      una cosa es recargar (F5) y otra retroceder; ahora ambas se quedan
+      dentro de la app.
+    · Sin cambios de datos/esquema.
 
   v0.153.0 — Fuera el ✓ "trabajado": el progreso sale del trabajo real (2026-07)
     · Se RETIRA el ✓ manual de cada área de trabajo. Era un dato poco
@@ -2858,6 +2920,29 @@
     .gdet-ent-chip:active { transform:scale(0.97); }
     .gdet-ent-chip.sel { color:var(--blanco); background:var(--verde); border-color:var(--verde); }
     .gdet-ent-chip.todos { color:var(--verde); border-color:var(--verde); border-style:dashed; }
+    /* v0.155: "Todos" seleccionado → letra en BLANCO sobre verde. Hace falta
+       esta regla porque .todos va después de .sel y le ganaba el color. */
+    .gdet-ent-chip.todos.sel { color:var(--blanco); background:var(--verde); border-style:solid; }
+    /* v0.156: ficha del alumno (datos + acciones) y sus franjas */
+    .gta-ficha { background:var(--blanco); border:1.5px solid var(--borde); border-radius:12px; padding:0.7rem 0.8rem; margin-bottom:0.7rem; }
+    .gta-ficha-tit { font-size:12px; font-weight:800; color:var(--texto); margin-bottom:0.5rem; }
+    .gta-ficha-meta { font-size:12.5px; color:var(--texto); margin-bottom:0.6rem; }
+    .gta-ficha-meta.vacio { color:var(--gris); font-style:italic; }
+    .gta-ficha-btns { display:flex; gap:8px; }
+    .gta-ficha-btns .btn { flex:1; }
+    .gta-franjas { display:flex; flex-direction:column; gap:6px; margin-bottom:0.7rem; }
+    .gta-franja { border:1px solid var(--borde); border-radius:10px; padding:6px 10px; background:var(--blanco); }
+    .gta-franja-h { display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:800; color:var(--texto); }
+    .gta-franja-n { margin-left:auto; font-size:10.5px; font-weight:700; color:var(--gris); }
+    .gta-franja-ents { display:flex; flex-wrap:wrap; gap:5px; margin-top:4px; }
+    .gta-franja-ent { font-size:11px; font-weight:700; color:#1e40af; background:#eff6ff; border:1px solid #bfdbfe; border-radius:20px; padding:2px 8px; }
+    .gta-franja-ent i { font-style:normal; color:var(--gris); font-weight:600; }
+    .gta-franja-ent.sin { color:var(--gris); background:var(--arena); border-color:var(--borde); font-weight:600; }
+    /* v0.155: exportar el mes de todos los entrenadores */
+    .gent-export { border:1.5px solid var(--borde); border-radius:12px; padding:0.7rem 0.8rem; margin-top:1rem; background:var(--blanco); }
+    .gent-export-tit { font-size:12px; font-weight:800; color:var(--texto); margin-bottom:0.5rem; }
+    .gent-export-btns { display:flex; gap:8px; }
+    .gent-export-btns .btn { flex:1; }
     /* v0.109: sustitutos externos en ámbar, a la derecha del "＋" */
     .gdet-ent-chip.ext { color:#92400e; background:#fffbeb; border-color:#f59e0b; }
     /* v0.109: filas de clases cubiertas del sustituto externo */
@@ -4801,7 +4886,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.153.0';
+    var APP_VERSION = '0.156.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -6914,7 +6999,14 @@
       var by = _gestorAgrupar();
       var uids = Object.keys(by).filter(function(u){ return by[u].clases.length || by[u].regs.length; });
       uids.sort(function(a, b){ return _gestorNombre(by[a]).localeCompare(_gestorNombre(by[b])); });
-      if (uids.length) abrirGestorDetalle(uids[0]);   // días contraídos por defecto
+      if (uids.length) {
+        abrirGestorDetalle(uids[0]);   // días contraídos por defecto
+        // v0.155: al entrar en Entrenadores se abre en "Todos" (la visión de
+        // conjunto), no en el detalle del primero. abrirGestorDetalle lo pone
+        // a false, así que se activa después y se repinta.
+        _gDetTodos = true;
+        renderGestorDetalle();
+      }
       else irA('pantalla-gestor-entrenadores');
     }
     function renderGestorEntrenadores() {
@@ -6929,6 +7021,117 @@
     // v0.136: el resumen "Todos los entrenadores" se extrae a su propia
     // función para poder pintarlo TAMBIÉN en línea dentro del detalle
     // (chip "Todos"), sin cambiar de página.
+    // v0.155: exportación del mes de TODOS los entrenadores.
+    // PDF: se abre una pestaña con el informe y su botón de imprimir/guardar
+    // como PDF (mismo patrón que el resumen del entrenador, sin librerías).
+    function gentExportarPDF() {
+      var mesISO   = getMesISO_A(_gEntMesOff);
+      var mesLabel = getMesLabelA(_gEntMesOff);
+      var datos    = _gEntDatosMes(mesISO);
+      if (!datos.length) { alert('No hay datos de entrenadores para ' + mesLabel + '.'); return; }
+      var tot = { m60:0, m90:0, otras:0, total:0, horas:0, sust:0, pend:0 };
+      datos.forEach(function(d){
+        tot.m60 += d.m60; tot.m90 += d.m90; tot.otras += d.otras;
+        tot.total += d.total; tot.horas += d.horas; tot.sust += d.sust; tot.pend += d.pend;
+      });
+      function _h(n){ return (n % 1 === 0 ? n : n.toFixed(1).replace('.', ',')) + ' h'; }
+
+      var h = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">';
+      h += '<title>Entrenadores · ' + _gEsc(mesLabel) + '</title><style>';
+      h += 'body{font-family:Arial,sans-serif;padding:28px 32px;color:#1a1a2e;max-width:900px;margin:0 auto;}';
+      h += 'h1{color:#16264f;font-size:20px;margin:0 0 2px;}';
+      h += '.sub{color:#6b7280;font-size:13px;margin-bottom:20px;}';
+      h += 'table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px;}';
+      h += 'th{background:#e9ecf5;color:#16264f;padding:6px 9px;text-align:left;font-weight:700;}';
+      h += 'td{padding:6px 9px;border-bottom:1px solid #e5e7eb;}';
+      h += 'td.n,th.n{text-align:right;}';
+      h += 'tr.tot td{font-weight:800;border-top:2px solid #16264f;background:#f8fafc;}';
+      h += '.pend{color:#92400e;font-weight:700;}';
+      h += '.btn-print{margin-top:18px;padding:10px 18px;font-size:14px;border:none;border-radius:8px;background:#16264f;color:#fff;cursor:pointer;}';
+      h += '@media print{.btn-print{display:none;}}';
+      h += '</style></head><body>';
+      h += '<h1>Entrenadores · ' + _gEsc(mesLabel) + '</h1>';
+      h += '<div class="sub">Clases dadas por cada entrenador ese mes (incluye las que cubrió como sustituto). ' +
+           'Generado el ' + _gEsc(formatFechaCorta(hoyLocal())) + '.</div>';
+      h += '<table><tr><th>Entrenador</th><th class="n">1 h</th><th class="n">1 h 30</th><th class="n">Otras</th>' +
+           '<th class="n">Total</th><th class="n">Horas</th><th class="n">Sust.</th><th class="n">Por recuperar</th></tr>';
+      datos.forEach(function(d){
+        h += '<tr><td>' + _gEsc(d.nombre) + (d.email ? ' <span style="color:#9ca3af;">' + _gEsc(d.email) + '</span>' : '') + '</td>' +
+          '<td class="n">' + d.m60 + '</td><td class="n">' + d.m90 + '</td><td class="n">' + d.otras + '</td>' +
+          '<td class="n">' + d.total + '</td><td class="n">' + _h(d.horas) + '</td>' +
+          '<td class="n">' + (d.sust || '—') + '</td>' +
+          '<td class="n' + (d.pend ? ' pend' : '') + '">' + (d.pend || '—') + '</td></tr>';
+      });
+      h += '<tr class="tot"><td>TOTAL (' + datos.length + ')</td>' +
+        '<td class="n">' + tot.m60 + '</td><td class="n">' + tot.m90 + '</td><td class="n">' + tot.otras + '</td>' +
+        '<td class="n">' + tot.total + '</td><td class="n">' + _h(tot.horas) + '</td>' +
+        '<td class="n">' + (tot.sust || '—') + '</td><td class="n">' + (tot.pend || '—') + '</td></tr>';
+      h += '</table>';
+      h += '<button class="btn-print" onclick="window.print()">🖨️ Imprimir / Guardar como PDF</button>';
+      h += '</body></html>';
+      var blob = new Blob([h], { type: 'text/html' });
+      window.open(URL.createObjectURL(blob), '_blank');
+    }
+    // Excel: CSV con ; y BOM UTF-8 (así Excel en español lo abre en columnas
+    // y con los acentos bien, sin necesidad de ninguna librería).
+    function gentExportarExcel() {
+      var mesISO   = getMesISO_A(_gEntMesOff);
+      var mesLabel = getMesLabelA(_gEntMesOff);
+      var datos    = _gEntDatosMes(mesISO);
+      if (!datos.length) { alert('No hay datos de entrenadores para ' + mesLabel + '.'); return; }
+      function celda(v){
+        var s = String(v == null ? '' : v);
+        return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+      }
+      var filas = [['Entrenador','Email','1h','1h30','Otras','Total clases','Horas','Cubiertas como sustituto','Clases por recuperar']];
+      datos.forEach(function(d){
+        filas.push([d.nombre, d.email, d.m60, d.m90, d.otras, d.total,
+                    String(d.horas).replace('.', ','), d.sust, d.pend]);
+      });
+      var t = datos.reduce(function(a, d){
+        a.m60+=d.m60; a.m90+=d.m90; a.otras+=d.otras; a.total+=d.total;
+        a.horas+=d.horas; a.sust+=d.sust; a.pend+=d.pend; return a;
+      }, {m60:0,m90:0,otras:0,total:0,horas:0,sust:0,pend:0});
+      filas.push(['TOTAL','',t.m60,t.m90,t.otras,t.total,String(t.horas).replace('.', ','),t.sust,t.pend]);
+
+      var csv = filas.map(function(f){ return f.map(celda).join(';'); }).join('\r\n');
+      var blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'entrenadores-' + mesISO + '.csv';
+      document.body.appendChild(a); a.click();
+      setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 0);
+    }
+
+    // v0.155: datos del mes de TODOS los entrenadores, en una tabla lista
+    // para pintar o exportar (PDF/Excel). Una sola fuente para las dos cosas,
+    // así lo exportado es exactamente lo que se ve.
+    function _gEntDatosMes(mesISO) {
+      var out = [];
+      if (!_gestorData) return out;
+      var by = _gestorAgrupar();
+      var cursoMes = cursoDeFecha(mesISO);
+      var uids = Object.keys(by).filter(function(u){ return by[u].clases.length || by[u].regs.length; });
+      uids.sort(function(a, b){ return _gestorNombre(by[a]).localeCompare(_gestorNombre(by[b])); });
+      uids.forEach(function(u){
+        var d = by[u];
+        var clases  = _gestorClasesLocal(d).filter(function(c){ return _claseCurso(c) === cursoMes; });
+        var regsMes = _gestorRegsLocal(d).filter(function(r){ return r.fecha && r.fecha.slice(0,7) === mesISO; });
+        var s   = _gestorSumaMes(clases, regsMes, mesISO);
+        var cub = _gestorCubiertasMes(u, mesISO);
+        var n60 = s.m60 + cub.m60, n90 = s.m90 + cub.m90, nOt = s.otras + cub.otras;
+        out.push({
+          nombre: _gestorNombre(d),
+          email: (d.perfil && d.perfil.email) || '',
+          m60: n60, m90: n90, otras: nOt,
+          total: n60 + n90 + nOt,
+          sust: cub.total,                       // de esas, cubiertas a otros
+          horas: (n60 * 60 + n90 * 90) / 60,
+          pend: _gRecupSaldo(u)                  // clases por recuperar del curso
+        });
+      });
+      return out;
+    }
     function _gEntResumenHTML() {
       if (!_gestorData) { return '<p class="ajustes-desc">Sin datos. Vuelve al panel para cargarlos.</p>'; }
       var by = _gestorAgrupar();
@@ -6972,6 +7175,17 @@
         '</div>';
       });
       if (!uids.length) h += '<p class="ajustes-desc" style="text-align:center;padding:1rem 0;">Aún no hay entrenadores con datos.</p>';
+
+      // v0.155: exportar el mes de TODOS los entrenadores
+      if (uids.length) {
+        h += '<div class="gent-export">' +
+          '<div class="gent-export-tit">Exportar ' + _gEsc(mesLabel) + ' · todos los entrenadores</div>' +
+          '<div class="gent-export-btns">' +
+            '<button type="button" class="btn btn-sec btn-sm" onclick="gentExportarPDF()">📄 PDF</button>' +
+            '<button type="button" class="btn btn-sec btn-sm" onclick="gentExportarExcel()">📊 Excel</button>' +
+          '</div>' +
+        '</div>';
+      }
 
       // v0.108: el alta de sustitutos vive ahora en el chip "＋ Sustituto
       // externo" del detalle del entrenador; aquí queda solo el catálogo.
@@ -9396,14 +9610,9 @@
       return { al:map, ents:ents };
     }
 
-    // Texto "con quién": presencias por entrenador (más frecuente primero)
-    function _gtaConQuien(sesiones) {
-      var cnt = {};
-      sesiones.forEach(function(s){ if (s.presente) cnt[s.entrenador] = (cnt[s.entrenador]||0)+1; });
-      var ents = Object.keys(cnt).sort(function(a,b){ return cnt[b]-cnt[a]; });
-      if (!ents.length) return '';
-      return 'con ' + ents.map(function(e){ return e + ' ×' + cnt[e]; }).join(' · ');
-    }
+    // v0.156: se retira _gtaConQuien ("alumno de tal entrenador"). El alumno
+    // es de la academia: ahora se listan SUS FRANJAS con quién dio cada una
+    // (_gtaFranjasHTML), que es la información útil.
 
     function renderGestorTodosAlumnos() {
       var cont = document.getElementById('gta-contenido');
@@ -9608,6 +9817,130 @@
       el.innerHTML = h;
     }
 
+    // ── v0.156: ficha del alumno (datos + acciones) ──────────────
+    // Se ve siempre, tenga clase o no. Los datos salen de su ficha de
+    // academia y, si no la tiene, de lo que conste en sus franjas.
+    var _gtaEditOn = false;
+    function _gtaDatosDe(al) {
+      var f = al.ficha || null;
+      if (!f) {
+        f = _alumnosAcademia().filter(function(a){
+          return _gtaFullKey(a.nombre, a.apellidos) === _gtaAlumno;
+        })[0] || null;
+      }
+      return {
+        nombre:    (f && f.nombre)    || al.nombre    || _gtaAlumno,
+        apellidos: (f && f.apellidos) || al.apellidos || '',
+        telefono:  (f && f.telefono)  || '',
+        fichaId:   (al.ficha && al.ficha.id) || (f && f.id) || null
+      };
+    }
+    function _gtaFichaHTML(al) {
+      var d = _gtaDatosDe(al);
+      if (_gtaEditOn) {
+        return '<div class="gta-ficha">' +
+          '<div class="gta-ficha-tit">✏️ Editar datos</div>' +
+          '<div class="asist-form-add-alumno" style="flex-wrap:wrap;">' +
+            '<input id="gta-ed-nom" class="form-input" type="text" placeholder="Nombre *" style="flex:1;min-width:110px;" value="' + _gEsc(d.nombre) + '">' +
+            '<input id="gta-ed-ape" class="form-input" type="text" placeholder="Apellidos" style="flex:1;min-width:110px;" value="' + _gEsc(d.apellidos) + '">' +
+            '<input id="gta-ed-tel" class="form-input" type="tel" placeholder="Teléfono" style="flex:1;min-width:110px;" value="' + _gEsc(d.telefono) + '">' +
+          '</div>' +
+          '<div style="display:flex;gap:8px;margin-top:8px;">' +
+            '<button class="btn btn-verde btn-sm" style="flex:1;" onclick="gtaGuardarDatos()">Guardar</button>' +
+            '<button class="btn btn-sec btn-sm" style="flex:1;" onclick="gtaToggleEditar()">Cancelar</button>' +
+          '</div>' +
+        '</div>';
+      }
+      var meta = [];
+      if (d.apellidos) meta.push(_gEsc(d.apellidos));
+      if (d.telefono)  meta.push('📞 ' + _gEsc(d.telefono));
+      return '<div class="gta-ficha">' +
+        (meta.length ? '<div class="gta-ficha-meta">' + meta.join(' · ') + '</div>'
+                     : '<div class="gta-ficha-meta vacio">Sin apellidos ni teléfono</div>') +
+        '<div class="gta-ficha-btns">' +
+          '<button type="button" class="btn btn-sec btn-sm" onclick="gtaToggleEditar()">✏️ Editar datos</button>' +
+          '<button type="button" class="btn btn-sec btn-sm" onclick="gtaCambiarClase()">🔄 Cambiar de clase</button>' +
+        '</div>' +
+      '</div>';
+    }
+    function gtaToggleEditar() { _gtaEditOn = !_gtaEditOn; renderGestorTodosAlumno(); }
+    // v0.156: pendiente de confirmar el comportamiento del cambio de franja
+    // (mover = baja en la actual + alta en la nueva, o añadir una segunda).
+    // Se avisa en vez de dejar un botón que no hace nada.
+    function gtaCambiarClase() {
+      alert('Cambiar de clase todavía no está activo.\n\nFalta decidir si al asignarle la nueva franja se le da de BAJA en la actual (mover) o se queda en las dos (añadir).');
+    }
+    function gtaGuardarDatos() {
+      var nom = (document.getElementById('gta-ed-nom') || {}).value || '';
+      var ape = (document.getElementById('gta-ed-ape') || {}).value || '';
+      var tel = (document.getElementById('gta-ed-tel') || {}).value || '';
+      nom = nom.trim(); ape = ape.trim(); tel = tel.trim();
+      if (!nom) { alert('El nombre es obligatorio.'); return; }
+      var al = (_gtaCache && _gtaCache.al[_gtaAlumno]) || {};
+      var d  = _gtaDatosDe(al);
+      function tras() {
+        _gtaEditOn = false;
+        _gtaAlumno = _gtaFullKey(nom, ape);   // la clave puede cambiar
+        _gtaCache = _gtaIndex();
+        if (typeof planToast === 'function') planToast('👤 Datos guardados');
+        renderGestorTodosAlumno();
+      }
+      if (d.fichaId) {
+        // Ya tiene ficha de academia: se actualiza
+        _acInit();
+        _acLista.forEach(function(f){
+          if (f.id === d.fichaId) { f.nombre = nom; f.apellidos = ape; f.telefono = tel; }
+        });
+        _acGuardarLocal();
+        if (_sb && _sbUser && String(d.fichaId).slice(0,4) !== 'loc-') {
+          _sb.from('alumnos_club').update({ nombre:nom, apellidos:ape, telefono:tel })
+            .eq('id', d.fichaId)
+            .then(function(r){ if (r.error) console.warn('editar alumno club', r.error.message); tras(); })
+            .catch(tras);
+          return;
+        }
+        tras(); return;
+      }
+      // Solo existía dentro de franjas: se le crea su ficha de academia con
+      // los datos corregidos (pasa a ser su ficha oficial del club).
+      _acAnadir(nom, ape, tel, function(ok, err){
+        if (!ok) { alert('No se pudo guardar' + (err ? ': ' + err : '') + '.'); return; }
+        tras();
+      });
+    }
+    // Franjas del alumno en el curso, con QUIÉN se las dio (v0.156)
+    function _gtaFranjasHTML(sesCurso, cursoAct) {
+      var map = {};
+      sesCurso.forEach(function(x){
+        var k = (x.franja || x.claseNombre || 'Clase');
+        var e = (map[k] = map[k] || { franja:k, ents:{}, n:0 });
+        e.n++;
+        if (x.entrenador) e.ents[x.entrenador] = (e.ents[x.entrenador] || 0) + 1;
+      });
+      var keys = Object.keys(map).sort();
+      if (!keys.length) return '';
+      var h = '<div class="grupo-titulo" style="margin-top:0.2rem;">Sus franjas · curso ' + _gEsc(cursoAct) + '</div>';
+      h += '<div class="gta-franjas">';
+      keys.forEach(function(k){
+        var e = map[k];
+        var ents = Object.keys(e.ents).sort(function(a,b){ return e.ents[b] - e.ents[a]; });
+        h += '<div class="gta-franja">' +
+          '<div class="gta-franja-h">' + _gEsc(e.franja) +
+            '<span class="gta-franja-n">' + e.n + ' clase' + (e.n !== 1 ? 's' : '') + '</span></div>' +
+          '<div class="gta-franja-ents">' +
+            (ents.length
+              ? ents.map(function(n){
+                  return '<span class="gta-franja-ent">👤 ' + _gEsc(n) +
+                         (ents.length > 1 ? ' <i>×' + e.ents[n] + '</i>' : '') + '</span>';
+                }).join('')
+              : '<span class="gta-franja-ent sin">sin entrenador anotado</span>') +
+          '</div>' +
+        '</div>';
+      });
+      h += '</div>';
+      return h;
+    }
+
     // Detalle global de un alumno: curso en curso (sep–jun) con navegación
     // mes a mes, y cursos anteriores plegados (solo si tienen clases).
     function renderGestorTodosAlumno() {
@@ -9615,11 +9948,17 @@
       if (!cont) return;
       if (!_gtaAlumno) { irA('pantalla-gestor-todos-alumnos'); return; }
       if (!_gtaCache) _gtaCache = _gtaIndex();
-      var al = _gtaCache.al[_gtaAlumno];
+      var al = _gtaCache.al[_gtaAlumno] || { sesiones:[], nombre:_gtaAlumno, apellidos:'' };
       document.getElementById('gta-al-nombre').textContent = _gtaAlumno;
-      if (!al || !al.sesiones.length) {
-        document.getElementById('gta-al-sub').textContent = 'Sin registros';
-        cont.innerHTML = '<div class="vacio"><div class="vacio-icono">📅</div><p>Sin registros de asistencia para este alumno.</p></div>';
+      // v0.156: la ficha (datos + acciones) se ve SIEMPRE, aunque el alumno
+      // todavía no tenga clase asignada. Antes la pantalla se cortaba aquí
+      // con "Sin registros" y no había forma de ver ni editar sus datos.
+      var fichaHTML = _gtaFichaHTML(al);
+      if (!al.sesiones.length) {
+        document.getElementById('gta-al-sub').textContent = 'Sin clase asignada todavía';
+        cont.innerHTML = fichaHTML +
+          '<div class="vacio" style="padding:1.2rem 0;"><div class="vacio-icono">📅</div>' +
+          '<p>Todavía no está en ninguna franja.<br>Usa «Cambiar de clase» para asignarle entrenador y horario.</p></div>';
         return;
       }
       var cursoAct = _cursoActual();
@@ -9631,10 +9970,9 @@
                   (sc.recups ? ' · +' + sc.recups + ' recup' : '')
                 : 'sin clases este curso');
 
-      var conQuien = _gtaConQuien(sesCurso);
-
       // ── Tarjeta del curso en curso ──
-      var h = '<div class="asist-global-card" style="margin-bottom:10px;">' +
+      var h = fichaHTML;
+      h += '<div class="asist-global-card" style="margin-bottom:10px;">' +
         '<div class="asist-global-num">' + (sc.pct==null?'—':sc.pct+'%') + '</div>' +
         '<div class="asist-global-info">' +
           '<div class="asist-global-titulo">Curso ' + cursoAct + '</div>' +
@@ -9643,10 +9981,13 @@
                       ((sc.fJ||sc.fIJ) ? ' · faltas: ' + sc.fJ + ' J · ' + sc.fIJ + ' IJ' : '') +
                       (sc.recups ? ' · ' + sc.recups + ' recuperación' + (sc.recups!==1?'es':'') : '')
                     : 'sin clases este curso') +
-            (conQuien ? '<br>' + _gEsc(conQuien) : '') +
           '</div>' +
           '<div class="asist-progreso" style="margin-top:8px;"><div class="asist-progreso-fill" style="width:' + (sc.pct||0) + '%"></div></div>' +
         '</div></div>';
+      // v0.156: el alumno es de la ACADEMIA, así que en vez de "alumno de
+      // tal entrenador" se listan SUS FRANJAS del curso, y en cada una quién
+      // se la dio. Si una franja la han dado varios, salen todos.
+      h += _gtaFranjasHTML(sesCurso, cursoAct);
 
       // ── Mes seleccionado, con navegación ‹ › (el curso va sep–jun) ──
       var mesISO   = getMesISO_A(_gtaMesOff);
@@ -11412,6 +11753,31 @@
       return false;
     }
 
+    // ── v0.154: el botón ATRÁS del navegador se queda DENTRO de la app ──
+    // La app es de una sola página: irA() cambia de pantalla sin tocar el
+    // historial, así que "atrás" salía del sitio. Ahora cada pantalla deja
+    // su huella en el historial y al retroceder se vuelve a la anterior.
+    var _navPop = false;   // true mientras navegamos POR el botón atrás
+    function _pantallaActiva() {
+      var el = document.querySelector('.pantalla.activa');
+      return el ? el.id : null;
+    }
+    function _histInit() {
+      try {
+        var act = _pantallaActiva();
+        if (act) history.replaceState({ pantalla: act }, '');
+      } catch (e) {}
+    }
+    window.addEventListener('popstate', function(ev){
+      var id = ev.state && ev.state.pantalla;
+      // Si hay un vídeo/imagen abierto, atrás lo cierra primero
+      var lb = document.getElementById('lightbox');
+      if (lb && lb.classList.contains('activa')) cerrarLightbox();
+      if (!id || !document.getElementById(id)) return;
+      _navPop = true;
+      try { irA(id); } finally { _navPop = false; }
+    });
+
     function irA(id) {
       // Salir de las pantallas de asistencia/panel apaga el modo gestión
       if (_gEditUid && GESTION_ASIST_OK.indexOf(id) < 0) { _gEditUid = null; }
@@ -11473,6 +11839,16 @@
       }
       updateBottomNav(id);
       _navGuardar(id);   // v0.134: recuerda la pantalla actual (id ya resuelto)
+      // v0.154: deja huella en el historial del navegador (salvo si venimos
+      // justo de pulsar "atrás", que si no entraría en bucle). No se apila
+      // dos veces la misma pantalla seguida.
+      if (!_navPop) {
+        try {
+          if (!history.state || history.state.pantalla !== id) {
+            history.pushState({ pantalla: id }, '');
+          }
+        } catch (e) {}
+      }
       window.scrollTo(0, 0);
     }
 
@@ -16145,6 +16521,7 @@
     _migrarStorage(); // comprime datos viejos en localStorage (una sola vez)
     _marcRestaurar(); // recupera un partido en curso tras recarga/cierre
     actualizarInicio();
+    _histInit();     // v0.154: base del historial (atrás no saca de la app)
     _initSupabase(); // arranca Supabase (redirige a login si hay credenciales)
     if (marcadorEst.activo) irA('pantalla-marcador'); // volver al partido en curso
     // v0.134: sin Supabase (uso solo-local) no hay login que decida pantalla,
