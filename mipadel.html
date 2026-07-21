@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.159.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.163.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,66 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.163.0 — La franja muestra desde cuándo está cada alumno nuevo (2026-07)
+    · En el panel, dentro de la franja, el alumno que EMPIEZA ahí ese mes
+      sale con 🚩 y su fecha de inicio (p. ej. "🚩 Ana R. · 02/03"), en
+      verde. Es justo lo que pasa al moverlo de clase: su alta en la nueva
+      franja es el día del cambio, así que se ve desde cuándo está.
+    · Solo en el MES en que entra: en los siguientes ya sale normal, sin
+      marca ni fecha. Simétrico a la baja (❌ con su fecha, v0.135).
+    · Si un alumno entra y se va el mismo mes, manda la baja (es el dato
+      relevante para el entrenador).
+    · Vale para cualquier alta, no solo para los traslados: un alumno nuevo
+      también enseña desde qué día está en esa franja.
+    · Añadido a la leyenda "?" de la franja.
+    · Sin cambios de datos/esquema (usa la fecha de alta que ya se guardaba).
+
+  v0.162.0 — Cambiar de clase: parrilla día × entrenador con estados (2026-07)
+    · "Cambiar de clase" deja de ser una lista vertical y pasa a ser una
+      PARRILLA: los días de la semana en horizontal (columnas) y un
+      entrenador por fila. Cada celda son sus franjas de ese día. Se ve de
+      un vistazo todo el club y dónde encaja el alumno.
+    · Cada franja va SOMBREADA según su estado:
+      · verde con ✓ — donde está ahora (no se puede pulsar).
+      · ámbar con 🔄 — de donde se le movió, indicando ADEMÁS a qué clase
+        se fue ("→ Manolo · Viernes · 19:00-20:00").
+      · gris con 🏁 — baja normal (dejó de venir, no fue un traslado).
+      · blanca — libre: se pulsa para moverlo ahí.
+      Con leyenda de colores debajo.
+    · Para que la franja de origen pueda decir a dónde se fue, al mover se
+      anota el destino en el propio alumno (campo movidoA dentro del jsonb
+      de la clase). Sin migración de Supabase.
+    · Si más adelante se le vuelve a dar de alta en esa misma franja, la
+      nota de "movido a…" se borra sola (ya no aplica).
+    · La parrilla se desliza en horizontal si hay muchos días, y la columna
+      del entrenador queda fija a la izquierda para no perder la referencia.
+    · Sin cambios de esquema.
+
+  v0.161.0 — Ficha del alumno: fuera "Sus franjas", historial por curso (2026-07)
+    · Se RETIRA el bloque "Sus franjas · curso" que iba encima del mes (era
+      de la v0.156). No aportaba: el entrenador de cada día ya se ve en los
+      chips del mes y el reparto del curso, en el historial de abajo.
+    · El historial de abajo pasa a llamarse "Historial por curso" e incluye
+      también el CURSO EN CURSO (marcado con "· en curso"), no solo los
+      anteriores. Va PLEGADO; al abrir un curso salen los MESES en que dio
+      clase, cada uno con sus presencias, faltas, recuperaciones y su
+      porcentaje.
+    · Solo aparecen los meses con clases, en orden de curso (sep → ago).
+    · El navegador de mes con sus chips sigue igual encima, para el detalle
+      día a día del mes que elijas.
+    · Sin cambios de datos/esquema.
+
+  v0.160.0 — El panel del gestor abre desplegado en el día de hoy (2026-07)
+    · Al abrir el panel, el planning se despliega solo en el DÍA DE LA
+      SEMANA en curso, con sus entrenadores y franjas. Antes había que
+      tocar el día siempre ("Toca un día para ver sus entrenadores").
+    · En FIN DE SEMANA no despliega nada: queda colapsado, como antes.
+    · Si ese día no hay clases en el club, tampoco fuerza el despliegue.
+    · Es solo el arranque: si pliegas el día o eliges otro, se respeta tu
+      elección y no se vuelve a abrir al repintar la pantalla (marcar
+      asistencia, cambiar de mes…).
+    · Sin cambios de datos/esquema.
 
   v0.159.0 — Ficha del alumno: acciones en la cabecera y fuera el letrero (2026-07)
     · "✏️ Editar datos" y "🔄 Cambiar de clase" pasan de estar en el cuerpo
@@ -2896,6 +2956,8 @@
     .ghd-al { font-size:11px; font-weight:700; color:#1e40af; background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:20px; padding:3px 9px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
     button.ghd-al:active { transform:scale(0.96); }
     .ghd-al.baja { color:#92400e; background:#fef9c3; border-color:#fde68a; }
+    /* v0.163: alumno que EMPIEZA en esta franja este mes (alta o traslado) */
+    .ghd-al.alta { color:#166534; background:#dcfce7; border-color:#bbf7d0; }
     /* v0.149: se retira .ghd-al.fut (⏳ "empieza más adelante"): el alumno
        ya no se lista antes de su fecha de entrada, así que no hace falta. */
     /* Historial del alumno: alta/baja por clase */
@@ -2992,21 +3054,31 @@
     .gta-ficha-meta.vacio { color:var(--gris); font-style:italic; }
     .gta-ficha-btns { display:flex; gap:8px; }
     .gta-ficha-btns .btn { flex:1; }
-    .gta-franjas { display:flex; flex-direction:column; gap:6px; margin-bottom:0.7rem; }
-    .gta-franja { border:1px solid var(--borde); border-radius:10px; padding:6px 10px; background:var(--blanco); }
-    .gta-franja-h { display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:800; color:var(--texto); }
-    .gta-franja-n { margin-left:auto; font-size:10.5px; font-weight:700; color:var(--gris); }
-    .gta-franja-ents { display:flex; flex-wrap:wrap; gap:5px; margin-top:4px; }
-    .gta-franja-ent { font-size:11px; font-weight:700; color:#1e40af; background:#eff6ff; border:1px solid #bfdbfe; border-radius:20px; padding:2px 8px; }
-    .gta-franja-ent i { font-style:normal; color:var(--gris); font-weight:600; }
-    .gta-franja-ent.sin { color:var(--gris); background:var(--arena); border-color:var(--borde); font-weight:600; }
-    /* v0.158: elegir franja destino al cambiar de clase */
-    .gta-destinos { display:flex; flex-direction:column; gap:4px; max-height:280px; overflow-y:auto; }
-    .gta-destino-ent { font-size:11px; font-weight:800; color:var(--gris); margin-top:6px; }
-    .gta-destino { text-align:left; border:1.5px solid var(--borde); background:var(--blanco); color:var(--texto);
-      font-family:inherit; font-size:12.5px; font-weight:700; border-radius:9px; padding:7px 10px;
-      cursor:pointer; -webkit-tap-highlight-color:transparent; }
-    .gta-destino:active { background:var(--verde-suave); border-color:var(--verde); }
+    /* v0.161: retirado el bloque "Sus franjas" y sus estilos (.gta-franja*) */
+    /* v0.162: parrilla DÍA × ENTRENADOR para cambiar de clase */
+    .gmv-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .gmv { border-collapse:separate; border-spacing:4px; font-size:11.5px; }
+    .gmv th { font-size:10.5px; font-weight:800; color:var(--gris); text-transform:uppercase; padding:0 2px 2px; }
+    .gmv th.gmv-ent { text-align:left; color:var(--texto); font-size:11.5px; text-transform:none;
+      white-space:nowrap; position:sticky; left:0; background:var(--blanco); padding-right:8px; }
+    .gmv td { vertical-align:top; min-width:96px; }
+    .gmv-fr { display:block; width:100%; text-align:left; margin-bottom:4px; border:1.5px solid var(--borde);
+      background:var(--blanco); color:var(--texto); font-family:inherit; font-size:11.5px; font-weight:700;
+      border-radius:9px; padding:6px 8px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .gmv-fr:active { transform:scale(0.97); }
+    .gmv-fr:hover { border-color:var(--verde); background:var(--verde-suave); }
+    .gmv-fr.actual { background:var(--verde-suave); border-color:var(--verde); color:var(--verde); cursor:default; }
+    .gmv-fr.actual:hover { background:var(--verde-suave); }
+    .gmv-fr.movido { background:#fffbeb; border-color:#f59e0b; color:#92400e; }
+    .gmv-fr.baja   { background:var(--arena); border-color:var(--borde); color:var(--gris); }
+    .gmv-nota { display:block; font-size:9.5px; font-weight:600; color:#92400e; margin-top:2px; white-space:normal; }
+    .gmv-leyenda { display:flex; flex-wrap:wrap; gap:10px; font-size:10.5px; color:var(--gris); margin-top:8px; }
+    .gmv-leyenda span { display:inline-flex; align-items:center; gap:4px; }
+    .gmv-leyenda i { width:11px; height:11px; border-radius:3px; display:inline-block;
+      border:1.5px solid var(--borde); background:var(--blanco); }
+    .gmv-leyenda i.actual { background:var(--verde-suave); border-color:var(--verde); }
+    .gmv-leyenda i.movido { background:#fffbeb; border-color:#f59e0b; }
+    .gmv-leyenda i.baja   { background:var(--arena); }
     /* v0.155: exportar el mes de todos los entrenadores */
     .gent-export { border:1.5px solid var(--borde); border-radius:12px; padding:0.7rem 0.8rem; margin-top:1rem; background:var(--blanco); }
     .gent-export-tit { font-size:12px; font-weight:800; color:var(--texto); margin-bottom:0.5rem; }
@@ -4957,7 +5029,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.159.0';
+    var APP_VERSION = '0.163.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -6500,6 +6572,15 @@
       if (slots[6]) diasPlan.push(6);
       if (slots[0]) diasPlan.push(0);
       if (_gpSelDia != null && diasPlan.indexOf(_gpSelDia) < 0) { _gpSelDia = null; _gpSelEnt = null; }
+      // v0.160: al abrir el panel se despliega SOLO el día de la semana en
+      // que estamos (lo habitual: ver lo de hoy). En fin de semana no se
+      // despliega nada y queda colapsado. Solo la primera vez: si luego lo
+      // pliegas o cambias de día, se respeta tu elección.
+      if (!_gpDiaAuto) {
+        _gpDiaAuto = true;
+        var _dowHoy = new Date(+hoyLocal().slice(0,4), +hoyLocal().slice(5,7)-1, +hoyLocal().slice(8,10)).getDay();
+        if (_dowHoy >= 1 && _dowHoy <= 5 && diasPlan.indexOf(_dowHoy) >= 0) _gpSelDia = _dowHoy;
+      }
 
       // v0.87: fila horizontal de días (mismo formato de siempre) + drill-down
       h += '<div class="gpplan-diarow">';
@@ -7694,6 +7775,9 @@
     // Tocar un día → lista de entrenadores; tocar un entrenador → sus
     // franjas de ese día. Todo en línea, sin cambiar de pantalla.
     var _gpSelDia = null, _gpSelEnt = null;
+    // v0.160: ¿ya se ha hecho el despliegue automático del día de hoy?
+    // Se hace una sola vez por carga, para no reabrirlo al repintar.
+    var _gpDiaAuto = false;
     function gpSelDia(dia) {
       _gpSelDia = (_gpSelDia === dia) ? null : dia;
       _gpSelEnt = null;   // al cambiar de día se cierra el entrenador abierto
@@ -8346,9 +8430,16 @@
         if (mesBaja && mesBaja < mesISO) return;
         // Baja real DENTRO de este mes → amarillo con su fecha.
         var baja  = !!bajaEf && mesBaja === mesISO && !esBajaFinCurso(bajaEf);
-        var cls   = 'ghd-al' + (baja ? ' baja' : '');
-        var texto = (baja ? '❌ ' : '') + _gEsc(alCorto(a)) +
-                    (baja ? ' · ' + bajaEf.slice(8, 10) + '/' + bajaEf.slice(5, 7) : '');
+        // v0.163: ALTA dentro de este mes → 🚩 con su fecha de inicio, solo
+        // en el mes en que entró (los siguientes ya sale normal). Es lo que
+        // pasa al mover a un alumno a esta franja: su alta es el día del
+        // cambio, así que se ve desde cuándo está aquí.
+        var mesAlta = alta ? alta.slice(0, 7) : '';
+        var nuevo   = !baja && mesAlta === mesISO;
+        var cls   = 'ghd-al' + (baja ? ' baja' : (nuevo ? ' alta' : ''));
+        var texto = (baja ? '❌ ' : (nuevo ? '🚩 ' : '')) + _gEsc(alCorto(a)) +
+                    (baja  ? ' · ' + bajaEf.slice(8, 10) + '/' + bajaEf.slice(5, 7) :
+                    (nuevo ? ' · ' + alta.slice(8, 10) + '/' + alta.slice(5, 7) : ''));
         nAls++;
         if (hist) {
           alsHtml += '<span class="' + cls + '">' + texto + '</span>';
@@ -9169,6 +9260,7 @@
           '<span class="ghd-day dada sust">15</span> la cubrió un sustituto externo') +
         grupo('Alumnos',
           '<span class="ghd-al">Marta G.</span> activo' +
+          '<span class="ghd-al alta">🚩 Ana R. · 02/03</span> empieza aquí, con su fecha (solo ese mes)' +
           '<span class="ghd-al baja">❌ Luis P. · 14/03</span> baja, con su fecha (solo ese mes)')
       );
     }
@@ -9332,13 +9424,23 @@
     // hoy (fin de clases). No se borra nada: los meses y registros
     // anteriores quedan intactos; deja de aparecer SOLO a partir de hoy y
     // se marca el "fin de clases" en su último día.
-    function _alBajaEnClase(alu, hoy) {
+    // destino (v0.162, opcional): si la baja es porque se le ha MOVIDO a otra
+    // franja, se anota aquí a dónde. Va dentro del propio alumno (jsonb), sin
+    // migración, y permite pintar esa franja distinta en "Cambiar de clase".
+    function _alBajaEnClase(alu, hoy, destino) {
       return function(a){
         if (alNom(a) !== alu) return a;
-        if (typeof a === 'object') { a.baja = hoy; return a; }
-        return { nombre: a, baja: hoy };   // formato antiguo (string) → objeto
+        if (typeof a === 'object') {
+          a.baja = hoy;
+          if (destino) a.movidoA = destino;
+          return a;
+        }
+        var o = { nombre: a, baja: hoy };   // formato antiguo (string) → objeto
+        if (destino) o.movidoA = destino;
+        return o;
       };
     }
+    function alMovidoA(a) { return (a && typeof a === 'object' && a.movidoA) || ''; }
     function gestorAlQuitarFranja(claseId, fecha) {
       var alu = _gestorAlumno, uid = _gestorUid;
       if (!alu || !_gestorData) return;
@@ -10067,48 +10169,73 @@
       });
       return out;
     }
-    // Todas las franjas del club del curso en marcha (destinos posibles)
-    function _gtaFranjasClub() {
-      var by = _gestorAgrupar(), curso = cursoDeFecha(hoyLocal()), hoy = hoyLocal(), out = [];
-      Object.keys(by).forEach(function(uid){
-        _gestorClasesLocal(by[uid]).forEach(function(c){
-          if (_claseCurso(c) !== curso) return;
-          if (c.fin && c.fin < hoy) return;
-          out.push({ uid:uid, entrenador:_gestorNombre(by[uid]), claseId:c.id,
-                     lbl:(_GDIASL[c.diaSemana] || '') + ' · ' + (c.franja || 'Clase') });
-        });
-      });
-      out.sort(function(a,b){ return a.entrenador.localeCompare(b.entrenador) || a.lbl.localeCompare(b.lbl); });
-      return out;
-    }
+    // v0.162: se retira _gtaFranjasClub (la lista vertical de destinos): la
+    // parrilla recorre directamente los entrenadores y sus clases.
+    // v0.162: parrilla DÍA × ENTRENADOR. Cada celda es una franja, con su
+    // sombreado según el estado: verde = donde está ahora · ámbar 🔄 = de
+    // donde se le movió (dice a dónde) · gris = baja normal · blanco =
+    // disponible para moverlo ahí.
     function _gtaMoverHTML(al) {
-      var d = _gtaDatosDe(al);
-      var act = _gtaFranjasActuales(d.nombre, d.apellidos);
-      var destinos = _gtaFranjasClub().filter(function(x){
-        return !act.some(function(a){ return a.uid === x.uid && a.claseId === x.claseId; });
+      var d   = _gtaDatosDe(al);
+      var hoy = hoyLocal();
+      var by  = _gestorAgrupar();
+      var curso = cursoDeFecha(hoy);
+      // Entrenadores con clases vivas este curso y días con clase
+      var ents = [], diasSet = {};
+      Object.keys(by).forEach(function(uid){
+        var cls = _gestorClasesLocal(by[uid]).filter(function(c){
+          return _claseCurso(c) === curso && !(c.fin && c.fin < hoy);
+        });
+        if (!cls.length) return;
+        cls.forEach(function(c){ diasSet[c.diaSemana] = true; });
+        ents.push({ uid:uid, nombre:_gestorNombre(by[uid]), clases:cls });
       });
+      ents.sort(function(a,b){ return a.nombre.localeCompare(b.nombre); });
+      var dias = [1,2,3,4,5,6,0].filter(function(x){ return diasSet[x]; });
+
       var h = '<div class="gta-ficha">';
       h += '<div class="gta-ficha-tit">🔄 Cambiar de clase</div>';
-      h += '<div class="ajustes-desc" style="margin:0 0 8px;">' +
-        (act.length
-          ? 'Ahora está en: <b>' + act.map(function(a){ return _gEsc(a.entrenador + ' · ' + a.lbl); }).join('</b>, <b>') + '</b>. ' +
-            'Al elegir otra franja se le dará de BAJA en la actual y de alta en la nueva, desde hoy.'
-          : 'No está en ninguna franja. Al elegir una, se le da de alta desde hoy.') + '</div>';
-      if (!destinos.length) {
-        h += '<p class="ajustes-desc" style="margin:0;">No hay otras franjas disponibles este curso.</p>';
-      } else {
-        var entPrev = '';
-        h += '<div class="gta-destinos">';
-        destinos.forEach(function(x){
-          if (x.entrenador !== entPrev) {
-            h += '<div class="gta-destino-ent">👤 ' + _gEsc(x.entrenador) + '</div>';
-            entPrev = x.entrenador;
-          }
-          h += '<button type="button" class="gta-destino" onclick="gtaMoverA(\'' + x.uid + '\',' + x.claseId + ')">' +
-               _gEsc(x.lbl) + '</button>';
-        });
-        h += '</div>';
+      if (!ents.length || !dias.length) {
+        h += '<p class="ajustes-desc" style="margin:0 0 8px;">No hay franjas disponibles este curso.</p>';
+        h += '<button class="btn btn-sec btn-sm" style="width:100%;" onclick="gtaCambiarClase()">Cerrar</button></div>';
+        return h;
       }
+      h += '<div class="ajustes-desc" style="margin:0 0 8px;">Toca la franja a la que quieres moverlo. Se le dará de baja hoy en la suya y de alta en la nueva.</div>';
+      h += '<div class="gmv-wrap"><table class="gmv"><tr><th class="gmv-ent"></th>';
+      dias.forEach(function(dw){ h += '<th>' + _GDIAS[dw] + '</th>'; });
+      h += '</tr>';
+      ents.forEach(function(e){
+        h += '<tr><th class="gmv-ent">' + _gEsc(e.nombre) + '</th>';
+        dias.forEach(function(dw){
+          h += '<td>';
+          e.clases.filter(function(c){ return c.diaSemana === dw; })
+            .sort(function(a,b){ return (a.franja||'').localeCompare(b.franja||''); })
+            .forEach(function(c){
+              var entry = alumnoEnClase(c, d.nombre);
+              if (entry && (alApe(entry)||'') !== (d.apellidos||'')) entry = null;
+              var st = '', extra = '', ico = '', click = ' onclick="gtaMoverA(\'' + e.uid + '\',' + c.id + ')"';
+              if (entry && alActivo(entry, hoy)) {
+                st = ' actual'; ico = '✓ '; click = '';           // donde está ahora
+              } else if (entry && alMovidoA(entry)) {
+                st = ' movido'; ico = '🔄 ';                       // se le movió desde aquí
+                extra = '<span class="gmv-nota">→ ' + _gEsc(alMovidoA(entry)) + '</span>';
+              } else if (entry && alBaja(entry) && !alActivo(entry, hoy)) {
+                st = ' baja'; ico = '🏁 ';
+              }
+              h += '<button type="button" class="gmv-fr' + st + '"' + click + '>' +
+                   ico + _gEsc(c.franja || 'Clase') + extra + '</button>';
+            });
+          h += '</td>';
+        });
+        h += '</tr>';
+      });
+      h += '</table></div>';
+      h += '<div class="gmv-leyenda">' +
+        '<span><i class="actual"></i>Ahora aquí</span>' +
+        '<span><i class="movido"></i>Movido a otra</span>' +
+        '<span><i class="baja"></i>Baja</span>' +
+        '<span><i></i>Disponible</span>' +
+      '</div>';
       h += '<button class="btn btn-sec btn-sm" style="width:100%;margin-top:8px;" onclick="gtaCambiarClase()">Cancelar</button>';
       h += '</div>';
       return h;
@@ -10130,18 +10257,19 @@
         : 'Se le dará de alta hoy (' + _gFecha(hoy) + ').';
       if (!confirm(msg)) return;
 
-      // 1) Baja en las franjas actuales (una escritura por entrenador)
+      // 1) Baja en las franjas actuales, anotando A DÓNDE se le mueve
+      //    (v0.162: así esa franja se pinta distinta y dice su destino)
       act.forEach(function(a){
         _gEditUid = (_sbUser && a.uid === _sbUser.id) ? null : a.uid;
         try {
           var cfg = leerAsistConfig();
           (cfg.clases || []).forEach(function(c){
-            if (c.id === a.claseId) c.alumnos = (c.alumnos || []).map(_alBajaEnClase(d.nombre, hoy));
+            if (c.id === a.claseId) c.alumnos = (c.alumnos || []).map(_alBajaEnClase(d.nombre, hoy, lblDest));
           });
           escribirAsistConfig(cfg);
         } finally { _gEditUid = null; }
         (_gestorData.clases || []).forEach(function(c){
-          if (c.user_id === a.uid && c.id === a.claseId) c.alumnos = (c.alumnos || []).map(_alBajaEnClase(d.nombre, hoy));
+          if (c.user_id === a.uid && c.id === a.claseId) c.alumnos = (c.alumnos || []).map(_alBajaEnClase(d.nombre, hoy, lblDest));
         });
       });
 
@@ -10208,38 +10336,9 @@
         tras();
       });
     }
-    // Franjas del alumno en el curso, con QUIÉN se las dio (v0.156)
-    function _gtaFranjasHTML(sesCurso, cursoAct) {
-      var map = {};
-      sesCurso.forEach(function(x){
-        var k = (x.franja || x.claseNombre || 'Clase');
-        var e = (map[k] = map[k] || { franja:k, ents:{}, n:0 });
-        e.n++;
-        if (x.entrenador) e.ents[x.entrenador] = (e.ents[x.entrenador] || 0) + 1;
-      });
-      var keys = Object.keys(map).sort();
-      if (!keys.length) return '';
-      var h = '<div class="grupo-titulo" style="margin-top:0.2rem;">Sus franjas · curso ' + _gEsc(cursoAct) + '</div>';
-      h += '<div class="gta-franjas">';
-      keys.forEach(function(k){
-        var e = map[k];
-        var ents = Object.keys(e.ents).sort(function(a,b){ return e.ents[b] - e.ents[a]; });
-        h += '<div class="gta-franja">' +
-          '<div class="gta-franja-h">' + _gEsc(e.franja) +
-            '<span class="gta-franja-n">' + e.n + ' clase' + (e.n !== 1 ? 's' : '') + '</span></div>' +
-          '<div class="gta-franja-ents">' +
-            (ents.length
-              ? ents.map(function(n){
-                  return '<span class="gta-franja-ent">👤 ' + _gEsc(n) +
-                         (ents.length > 1 ? ' <i>×' + e.ents[n] + '</i>' : '') + '</span>';
-                }).join('')
-              : '<span class="gta-franja-ent sin">sin entrenador anotado</span>') +
-          '</div>' +
-        '</div>';
-      });
-      h += '</div>';
-      return h;
-    }
+    // v0.161: se retira _gtaFranjasHTML ("Sus franjas"). El entrenador de
+    // cada día ya se ve en los chips del mes, y el reparto por curso en el
+    // historial de abajo, así que ese bloque solo ocupaba sitio.
 
     // Detalle global de un alumno: curso en curso (sep–jun) con navegación
     // mes a mes, y cursos anteriores plegados (solo si tienen clases).
@@ -10267,10 +10366,8 @@
       // las faltas. No aportaba al abrir la ficha; lo útil es dónde da clase
       // y su mes, que van justo debajo.
       var h = fichaHTML;
-      // v0.156: el alumno es de la ACADEMIA, así que en vez de "alumno de
-      // tal entrenador" se listan SUS FRANJAS del curso, y en cada una quién
-      // se la dio. Si una franja la han dado varios, salen todos.
-      h += _gtaFranjasHTML(sesCurso, cursoAct);
+      // v0.161: se retira el bloque "Sus franjas" que iba sobre el mes: no
+      // aportaba (esa información ya se ve en el mes y en el historial).
 
       // ── Mes seleccionado, con navegación ‹ › (el curso va sep–jun) ──
       var mesISO   = getMesISO_A(_gtaMesOff);
@@ -10288,22 +10385,23 @@
         h += _alMesLeyenda();
       }
 
-      // ── Cursos anteriores (sep–jun), plegados; solo si tuvieron clases ──
+      // ── Historial por curso, plegado. Al abrirlo salen los MESES en que
+      // dio clase ese curso (v0.161: el curso EN CURSO también entra aquí;
+      // antes solo estaban los anteriores). ──
       var porCurso = {};
       al.sesiones.forEach(function(x){
         var c = _cursoDe(x.fecha);
-        if (c === cursoAct) return;   // el actual ya está arriba
         (porCurso[c] = porCurso[c] || []).push(x);
       });
       var cursos = Object.keys(porCurso).sort().reverse();
       if (cursos.length) {
         var ORDEN_MESES_CURSO = [9,10,11,12,1,2,3,4,5,6,7,8];   // sep→jun (+verano por si acaso)
-        h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Cursos anteriores</div>';
+        h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Historial por curso</div>';
         cursos.forEach(function(curso){
           var items = porCurso[curso];
           var s = _histStats(items);
           h += '<details class="gas-clase"><summary class="gas-sum">' +
-            '<span class="gas-dia">Curso ' + curso + '</span>' +
+            '<span class="gas-dia">Curso ' + curso + (curso === cursoAct ? ' · en curso' : '') + '</span>' +
             '<span class="gas-meta" style="color:' + _pctColor(s.pct) + '">' + s.pres + '/' + s.tot +
               ((s.fJ||s.fIJ) ? ' · ' + s.fJ + 'J/' + s.fIJ + 'IJ' : '') +
               (s.pct!=null ? ' · ' + s.pct + '%' : '') + '</span>' +
@@ -16301,6 +16399,8 @@
       a.alta = fecha;
       // v0.135: el periodo nuevo también acaba, por defecto, al fin de curso.
       a.baja = finCursoISO(cursoDeFecha(fecha));
+      // v0.162: vuelve a estar aquí, así que la nota de "movido a…" ya no vale
+      if (a.movidoA) delete a.movidoA;
     }
 
     function asistGuardarClase() {
