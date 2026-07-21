@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.172.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.173.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,16 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.173.0 — Plegar entrenadores en la vista de semana (2026-07)
+    · En la vista "🗓 Toda la semana", tocar el NOMBRE del entrenador pliega
+      o despliega sus franjas de ESE día. Sirve para dejar a la vista solo
+      lo que interesa cuando hay muchos entrenadores por día.
+    · El plegado es por día Y entrenador: plegar a alguien el miércoles no
+      le afecta el viernes, ni afecta a los demás de ese día.
+    · La cabecera lleva su flecha (⌄ abierto · › plegado) y se mantiene
+      mientras navegas; al recargar vuelve a salir todo desplegado.
+    · Sin cambios de datos/esquema.
 
   v0.172.0 — Archivar un sustituto externo en vez de borrarlo (2026-07)
     · Al quitar un sustituto externo ya no se borra directamente: se abre un
@@ -2986,6 +2996,11 @@
     /* dentro de cada día, los entrenadores se apilan (la columna es estrecha) */
     .gpsem-dia .gpplan-cols { display:block; }
     .gpsem-dia .gpplan-entblock { margin-bottom:8px; }
+    /* v0.173: cabecera del entrenador plegable en la vista de semana */
+    .gpsem-hdr { cursor:pointer; -webkit-tap-highlight-color:transparent; user-select:none; }
+    .gpsem-hdr:active { filter:brightness(0.96); }
+    .gpsem-chev { margin-left:auto; font-size:13px; font-weight:800; opacity:.8; }
+    .gpplan-entblock.plegado { opacity:.85; }
     .gpplan-diarow .gplan-day { flex:1; min-width:0; padding:9px 2px; font-size:13px; }
     /* v0.114.1: día activo con sombreado DORADO (mismas características) */
     .gplan-day.sel { background:var(--dorado); box-shadow:0 0 0 2.5px #f4e8c8, 0 0 0 4px var(--dorado); text-transform:uppercase; }
@@ -5218,7 +5233,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.172.0';
+    var APP_VERSION = '0.173.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -6810,12 +6825,18 @@
                 { hist:null, uid:u, idPref:'gps', entLabel:null,
                   volverA:'pantalla-gestor', soloAlumnos:true }).html;
             });
+            // v0.173: tocar el nombre del entrenador pliega/despliega SUS
+            // franjas de ESE día, para poder limpiar la vista de semana.
             var col = _entColor(u);
-            h += '<div class="gpplan-entblock" style="border-left:4px solid ' + col.bar + ';">' +
-              '<div class="gpplan-ent-hdr" style="background:' + col.bg + ';">' +
+            var kCol = dia + '|' + u;
+            var plegado = !!_gpSemCol[kCol];
+            h += '<div class="gpplan-entblock' + (plegado ? ' plegado' : '') + '" style="border-left:4px solid ' + col.bar + ';">' +
+              '<div class="gpplan-ent-hdr gpsem-hdr" style="background:' + col.bg + ';" ' +
+                   'onclick="gpSemToggle(\'' + kCol + '\')" title="Tocar para plegar o desplegar">' +
                 '<span class="gpplan-ent-nom" style="color:' + col.tx + ';">👤 ' + _gEsc(entsD[u]) + '</span>' +
+                '<span class="gpsem-chev" style="color:' + col.tx + ';">' + (plegado ? '›' : '⌄') + '</span>' +
               '</div>' +
-              '<div class="gpplan-franjas">' + bloques + '</div>' +
+              (plegado ? '' : '<div class="gpplan-franjas">' + bloques + '</div>') +
             '</div>';
           });
           h += '</div></div>';
@@ -8089,6 +8110,12 @@
     // v0.160: ¿ya se ha hecho el despliegue automático del día de hoy?
     // Se hace una sola vez por carga, para no reabrirlo al repintar.
     var _gpDiaAuto = false;
+    // v0.173: entrenadores plegados en la vista de semana ('dia|uid' → true)
+    var _gpSemCol = {};
+    function gpSemToggle(k) {
+      if (_gpSemCol[k]) delete _gpSemCol[k]; else _gpSemCol[k] = true;
+      renderGestor();
+    }
     function gpSelDia(dia) {
       _gpSelDia = (_gpSelDia === dia) ? null : dia;
       _gpSelEnt = null;   // al cambiar de día se cierra el entrenador abierto
