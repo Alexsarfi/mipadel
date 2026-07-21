@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.158.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.159.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,22 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.159.0 — Ficha del alumno: acciones en la cabecera y fuera el letrero (2026-07)
+    · "✏️ Editar datos" y "🔄 Cambiar de clase" pasan de estar en el cuerpo
+      a la CABECERA, justo debajo del nombre, como dos botones en línea.
+      Se ven nada más entrar, sin bajar.
+    · El subtítulo de la cabecera deja de ser estadísticas y pasa a ser SU
+      FICHA: apellidos y teléfono (o "Sin apellidos ni teléfono").
+    · Se RETIRA el letrero grande con el porcentaje del curso, las
+      presencias, las faltas y la barra de progreso: al abrir un alumno lo
+      útil es su ficha, dónde da clase y su mes, no ese bloque.
+    · El cuerpo queda más limpio: solo el panel que abras (editar o cambiar
+      de clase), sus franjas con el entrenador de cada una, el mes con sus
+      chips y los cursos anteriores.
+    · El detalle por mes y el histórico de cursos anteriores siguen igual:
+      no se pierde ningún dato, solo deja de mostrarse el resumen de arriba.
+    · Sin cambios de datos/esquema.
 
   v0.158.0 — FIX: la ficha de academia no se abría nunca + cambiar de clase (2026-07)
     · FIX de la v0.156: los cambios (ficha, editar datos, "Sus franjas") no
@@ -2963,6 +2979,12 @@
     /* v0.155: "Todos" seleccionado → letra en BLANCO sobre verde. Hace falta
        esta regla porque .todos va después de .sel y le ganaba el color. */
     .gdet-ent-chip.todos.sel { color:var(--blanco); background:var(--verde); border-style:solid; }
+    /* v0.159: acciones del alumno en la CABECERA, bajo el nombre */
+    .gta-cab-btns { display:flex; gap:6px; margin-top:8px; }
+    .gta-cab-btn { flex:1; border:1.5px solid rgba(255,255,255,0.45); background:rgba(255,255,255,0.14);
+      color:#fff; font-family:inherit; font-size:11.5px; font-weight:700; border-radius:9px;
+      padding:6px 8px; cursor:pointer; -webkit-tap-highlight-color:transparent; white-space:nowrap; }
+    .gta-cab-btn:active { background:rgba(255,255,255,0.28); }
     /* v0.156: ficha del alumno (datos + acciones) y sus franjas */
     .gta-ficha { background:var(--blanco); border:1.5px solid var(--borde); border-radius:12px; padding:0.7rem 0.8rem; margin-bottom:0.7rem; }
     .gta-ficha-tit { font-size:12px; font-weight:800; color:var(--texto); margin-bottom:0.5rem; }
@@ -4221,6 +4243,8 @@
       <button class="btn-volver" onclick="irA('pantalla-gestor-todos-alumnos')">‹ Alumnos</button>
       <div class="cab-titulo" id="gta-al-nombre">Alumno</div>
       <div class="cab-sub" id="gta-al-sub">—</div>
+      <!-- v0.159: las acciones viven en la cabecera, bajo el nombre -->
+      <div id="gta-al-acciones" class="gta-cab-btns"></div>
     </div>
     <div class="contenido">
       <div id="gta-al-contenido"></div>
@@ -4933,7 +4957,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.158.0';
+    var APP_VERSION = '0.159.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -9983,6 +10007,26 @@
         fichaId:   (al.ficha && al.ficha.id) || (f && f.id) || null
       };
     }
+    // v0.159: las acciones van en la CABECERA, bajo el nombre. En el cuerpo
+    // solo aparece el panel abierto (editar o cambiar de clase).
+    function _gtaPintarCabecera(al) {
+      var d  = _gtaDatosDe(al);
+      var el = document.getElementById('gta-al-acciones');
+      if (el) {
+        el.innerHTML =
+          '<button type="button" class="gta-cab-btn" onclick="gtaToggleEditar()">✏️ Editar datos</button>' +
+          '<button type="button" class="gta-cab-btn" onclick="gtaCambiarClase()">🔄 Cambiar de clase</button>';
+      }
+      // El subtítulo pasa a ser SU FICHA (apellidos y teléfono), no las
+      // estadísticas: es el dato que interesa al abrir un alumno.
+      var sub = document.getElementById('gta-al-sub');
+      if (sub) {
+        var meta = [];
+        if (d.apellidos) meta.push(d.apellidos);
+        if (d.telefono)  meta.push('📞 ' + d.telefono);
+        sub.textContent = meta.length ? meta.join(' · ') : 'Sin apellidos ni teléfono';
+      }
+    }
     function _gtaFichaHTML(al) {
       var d = _gtaDatosDe(al);
       if (_gtaMoverOn) return _gtaMoverHTML(al);
@@ -10000,17 +10044,7 @@
           '</div>' +
         '</div>';
       }
-      var meta = [];
-      if (d.apellidos) meta.push(_gEsc(d.apellidos));
-      if (d.telefono)  meta.push('📞 ' + _gEsc(d.telefono));
-      return '<div class="gta-ficha">' +
-        (meta.length ? '<div class="gta-ficha-meta">' + meta.join(' · ') + '</div>'
-                     : '<div class="gta-ficha-meta vacio">Sin apellidos ni teléfono</div>') +
-        '<div class="gta-ficha-btns">' +
-          '<button type="button" class="btn btn-sec btn-sm" onclick="gtaToggleEditar()">✏️ Editar datos</button>' +
-          '<button type="button" class="btn btn-sec btn-sm" onclick="gtaCambiarClase()">🔄 Cambiar de clase</button>' +
-        '</div>' +
-      '</div>';
+      return '';   // v0.159: sin panel abierto, el cuerpo no lleva ficha
     }
     function gtaToggleEditar() { _gtaEditOn = !_gtaEditOn; renderGestorTodosAlumno(); }
     // ── v0.158: CAMBIAR DE CLASE (mover de franja) ───────────────
@@ -10216,12 +10250,11 @@
       if (!_gtaCache) _gtaCache = _gtaIndex();
       var al = _gtaCache.al[_gtaAlumno] || { sesiones:[], nombre:_gtaAlumno, apellidos:'' };
       document.getElementById('gta-al-nombre').textContent = _gtaAlumno;
-      // v0.156: la ficha (datos + acciones) se ve SIEMPRE, aunque el alumno
-      // todavía no tenga clase asignada. Antes la pantalla se cortaba aquí
-      // con "Sin registros" y no había forma de ver ni editar sus datos.
+      // v0.159: las acciones (editar / cambiar de clase) y sus datos van en
+      // la CABECERA, bajo el nombre. El cuerpo solo lleva el panel abierto.
+      _gtaPintarCabecera(al);
       var fichaHTML = _gtaFichaHTML(al);
       if (!al.sesiones.length) {
-        document.getElementById('gta-al-sub').textContent = 'Sin clase asignada todavía';
         cont.innerHTML = fichaHTML +
           '<div class="vacio" style="padding:1.2rem 0;"><div class="vacio-icono">📅</div>' +
           '<p>Todavía no está en ninguna franja.<br>Usa «Cambiar de clase» para asignarle entrenador y horario.</p></div>';
@@ -10229,27 +10262,11 @@
       }
       var cursoAct = _cursoActual();
       var sesCurso = al.sesiones.filter(function(x){ return _cursoDe(x.fecha) === cursoAct; });
-      var sc = _histStats(sesCurso);
-      document.getElementById('gta-al-sub').textContent =
-        (sc.tot ? sc.pres + '/' + sc.tot + ' este curso' +
-                  ((sc.fJ||sc.fIJ) ? ' · faltas: ' + sc.fJ + ' J · ' + sc.fIJ + ' IJ' : '') +
-                  (sc.recups ? ' · +' + sc.recups + ' recup' : '')
-                : 'sin clases este curso');
 
-      // ── Tarjeta del curso en curso ──
+      // v0.159: fuera el letrero grande con el % del curso, las presencias y
+      // las faltas. No aportaba al abrir la ficha; lo útil es dónde da clase
+      // y su mes, que van justo debajo.
       var h = fichaHTML;
-      h += '<div class="asist-global-card" style="margin-bottom:10px;">' +
-        '<div class="asist-global-num">' + (sc.pct==null?'—':sc.pct+'%') + '</div>' +
-        '<div class="asist-global-info">' +
-          '<div class="asist-global-titulo">Curso ' + cursoAct + '</div>' +
-          '<div class="asist-global-sub">' +
-            (sc.tot ? sc.pres + ' presencias de ' + sc.tot + ' clases' +
-                      ((sc.fJ||sc.fIJ) ? ' · faltas: ' + sc.fJ + ' J · ' + sc.fIJ + ' IJ' : '') +
-                      (sc.recups ? ' · ' + sc.recups + ' recuperación' + (sc.recups!==1?'es':'') : '')
-                    : 'sin clases este curso') +
-          '</div>' +
-          '<div class="asist-progreso" style="margin-top:8px;"><div class="asist-progreso-fill" style="width:' + (sc.pct||0) + '%"></div></div>' +
-        '</div></div>';
       // v0.156: el alumno es de la ACADEMIA, así que en vez de "alumno de
       // tal entrenador" se listan SUS FRANJAS del curso, y en cada una quién
       // se la dio. Si una franja la han dado varios, salen todos.
