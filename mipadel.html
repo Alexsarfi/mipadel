@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.178.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.181.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,71 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.181.0 — Botón "Borrar datos locales" en cada dispositivo (2026-07)
+    · Por qué: cuando se limpia algo en Supabase, cualquier dispositivo que
+      abra la app con su copia local antigua la vuelve a SUBIR y deshace el
+      borrado. Hasta ahora la única forma de evitarlo era rebuscar en los
+      ajustes del navegador de cada móvil ("Datos de sitios web"), que
+      además cierra la sesión. Con tres dispositivos y dos entrenadores,
+      eso era el punto débil de todo el proceso.
+    · Ahora: Perfil → "Este dispositivo" → 🧹 Borrar datos locales. En el
+      gestor, en el menú 👤 de la cabecera. Vacía la copia local y recarga,
+      con lo que la app se descarga otra vez lo que haya en el servidor.
+    · Qué NO hace: no toca absolutamente nada del servidor. Si alguien lo
+      pulsa por error, lo único que pasa es que su móvil vuelve a bajarse
+      los datos de la nube. Por eso es seguro dárselo a los entrenadores:
+      no es un botón de borrar alumnos (eso sigue siendo solo del gestor).
+    · Se conservan el perfil, el modo monitor y las marcas internas de
+      almacenamiento. La SESIÓN no se toca (las claves de sesión no llevan
+      el prefijo padel-), así que no hay que volver a iniciar sesión.
+    · Requiere conexión al recargar: sin internet la app se queda vacía
+      hasta que vuelva la cobertura. Se avisa en la confirmación.
+    · Sin cambios de datos/esquema.
+
+  v0.180.0 — Eliminar un alumno desde la lista, con dos salidas (2026-07)
+    · En Alumnos de la academia, cada alumno llevaba a la derecha su
+      PORCENTAJE de asistencia. Se retira: no servía para decidir nada y
+      la fracción "5/7 este curso" que va debajo ya dice lo mismo mejor.
+    · Ese hueco lo ocupa una ✕. Al pulsarla se abre un panel con la
+      pregunta, porque hay dos cosas muy distintas que se pueden querer:
+        · 📦 SACAR DEL CLUB — se le da de BAJA hoy en todas sus franjas y
+          desaparece de la lista, pero NO se borra nada. Su asistencia
+          sigue en la base de datos y sigue contando en los resúmenes de
+          cada entrenador. Reversible.
+        · 🗑 BORRAR DEL TODO — desaparece de verdad: su ficha, su sitio en
+          todas las clases y sus registros de asistencia. Pide dos
+          confirmaciones porque no se puede deshacer.
+    · Para devolver a alguien al club, sus chips salen bajo "＋ Añadir
+      alumno", en "📦 Fuera del club". Vuelve con todo su historial; la
+      franja se le asigna otra vez desde 🔄 Cambiar de clase.
+    · Cuidado con los homónimos: los registros guardan solo el nombre de
+      pila. Al borrar del todo, si en una clase hay otro alumno que se
+      llama igual, esa clase se deja intacta (no hay forma de saber cuál
+      de los dos es) y se avisa al terminar con el número de clases.
+    · Requiere ejecutar migracion_alumnos_archivados.sql UNA vez en
+      Supabase ANTES de usar esta versión (añade alumnos_club.archivado).
+      Sin ella, sacar del club avisa del error y solo vale en ese
+      dispositivo. Borrar del todo funciona igual sin la migración.
+    · Solo el gestor: los entrenadores no tienen esta pantalla ni ningún
+      botón de borrado de alumnos.
+
+  v0.179.0 — Exportar en PDF todos los alumnos del club (2026-07)
+    · Por qué: antes de vaciar la base de datos para empezar de cero en
+      septiembre hacía falta poder llevarse los alumnos en papel. Y, en
+      general, el gestor necesita una lista imprimible del club sin tener
+      que ir entrenador por entrenador.
+    · Dónde: perfil de gestor → Alumnos, al final de la lista.
+    · Dos botones, según lo que se necesite:
+        · "📄 Solo datos" → una tabla con nombre, apellidos, teléfono y la
+          franja o franjas en las que está ahora cada alumno (con su
+          entrenador). Para tenerla a mano o para volver a darlos de alta.
+        · "📄 Datos + asistencia" → lo anterior más, por cada alumno, su
+          asistencia del curso (clases asistidas de las que hubo, faltas
+          justificadas y sin justificar) y el desglose mes a mes.
+    · Se abre en una pestaña nueva con el botón "Imprimir / Guardar como
+      PDF", igual que los demás informes. Sin librerías externas.
+    · Solo el gestor: los entrenadores no tienen esta pantalla.
 
   v0.178.0 — FIX: un alumno dado de alta en julio/agosto no aparecía (2026-07)
     · Síntoma: al mover a un alumno (p. ej. de miércoles a jueves), en la
@@ -2833,6 +2898,26 @@
     .gestor-card-meta { font-size:12px; color:var(--gris); margin-top:3px; }
     .gestor-card-pct { flex-shrink:0; font-size:15px; font-weight:800; color:var(--verde); }
     .gestor-card-arr { font-size:20px; color:var(--lila); flex-shrink:0; }
+    /* v0.180: ✕ eliminar alumno, en el sitio que ocupaba el porcentaje */
+    .gta-del { flex-shrink:0; width:30px; height:30px; border-radius:50%; border:1.5px solid #fecaca;
+               background:#fef2f2; color:#b91c1c; font-size:14px; font-weight:800; line-height:1;
+               cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; }
+    .gta-del:active { background:#fee2e2; }
+    .gta-del-panel { background:var(--blanco); border:1.5px solid #fecaca; border-radius:12px;
+                     padding:12px; margin:-4px 0 10px; }
+    .gta-del-tit { font-size:13px; font-weight:800; color:var(--texto); margin-bottom:2px; }
+    .gta-del-btns { display:flex; gap:8px; flex-wrap:wrap; }
+    .gta-del-btns .btn { flex:1; min-width:140px; line-height:1.25; }
+    .gta-del-btns small { font-weight:600; opacity:.75; font-size:10px; }
+    /* v0.180: alumnos sacados del club, para devolverlos */
+    .gta-arch { margin:-2px 0 10px; }
+    .gta-arch-tit { font-size:11px; font-weight:700; color:var(--gris); margin-bottom:5px; }
+    .gta-arch-tit small { font-weight:600; opacity:.8; }
+    .gta-arch-chips { display:flex; gap:6px; flex-wrap:wrap; }
+    .gta-arch-chip { border:1.5px dashed var(--borde); background:var(--arena); color:var(--gris);
+                     border-radius:999px; padding:5px 11px; font-size:12px; font-weight:700;
+                     font-family:inherit; cursor:pointer; }
+    .gta-arch-chip:active { background:#e5e7eb; }
     /* v0.106: letrero mensual por entrenador (clases dadas por duración) */
     .gent-mes { display:flex; gap:6px; align-items:stretch; flex-shrink:0; margin-left:auto; }
     .gent-dur { display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:10px; padding:4px 9px; min-width:50px; }
@@ -4508,6 +4593,15 @@
         <button class="btn btn-verde" onclick="guardarPerfil()" style="width:100%;">Guardar datos</button>
         <p class="ajustes-desc">Estos datos se usan en la exportación del PDF de asistencia.</p>
       </div>
+
+      <!-- v0.181: limpiar la copia local del dispositivo -->
+      <div class="grupo-titulo">Este dispositivo</div>
+      <div class="form-card" style="gap:0.6rem;">
+        <button class="btn btn-sec" onclick="borrarDatosLocales()" style="width:100%;">🧹 Borrar datos locales</button>
+        <p class="ajustes-desc">Vacía la copia que la app guarda en este móvil u ordenador y vuelve
+          a descargarla del servidor. <b>No borra nada del servidor</b> y no hace falta volver a
+          iniciar sesión. Úsalo si te dicen que este dispositivo tiene datos antiguos.</p>
+      </div>
     </div>
   </div>
 
@@ -4525,6 +4619,7 @@
     <div class="gest-hdr-menu" id="gest-hdr-menu" style="display:none;">
       <div class="ghm-email"><span>👤</span><span id="gestor-email">—</span></div>
       <button class="ghm-item" onclick="gestorSetPerfil(false);cargarDatosGestor();">↻ Actualizar datos</button>
+      <button class="ghm-item" onclick="gestorSetPerfil(false);borrarDatosLocales();">🧹 Borrar datos locales</button>
       <button class="ghm-item salir" onclick="gestorSetPerfil(false);authLogout();">Salir</button>
     </div>
     <div class="contenido">
@@ -5349,7 +5444,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.178.0';
+    var APP_VERSION = '0.181.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -5558,6 +5653,39 @@
        'padel-asistencia-cfg','padel-asistencia-reg','padel-asist-historico','padel-plan'].forEach(function(k){
         try { localStorage.removeItem(k); } catch(e){}
       });
+    }
+
+    // ── v0.181: borrar los datos locales de ESTE dispositivo ─────
+    // Vacía la copia que la app guarda en el navegador y recarga desde
+    // Supabase. NO borra nada del servidor: lo que haya en la nube vuelve a
+    // bajar intacto. Sirve para que un dispositivo no resucite datos viejos
+    // después de una limpieza hecha en Supabase (si no, al abrir la app
+    // vuelve a subir su copia local y deshace el borrado).
+    // Se conservan el perfil, el modo monitor y las marcas internas de
+    // almacenamiento; la sesión NO se toca (no lleva el prefijo padel-).
+    var _LOCAL_CONSERVAR = { 'padel-perfil':1, 'padel-monitor':1, 'padel-uid':1,
+                             'padel-lz-migrado':1, 'padel-lz-migrado-v2':1,
+                             'padel-lz-v3':1, 'padel-lz-v4':1 };
+    function borrarDatosLocales() {
+      if (!confirm('¿Borrar los datos guardados en este dispositivo?\n\n' +
+                   'NO se borra nada del servidor: al recargar, la app vuelve a ' +
+                   'descargar lo que haya en la nube.\n\n' +
+                   'No hace falta volver a iniciar sesión. Necesitas conexión a ' +
+                   'internet para que se descarguen los datos.')) return;
+      var fuera = [];
+      try {
+        for (var i = 0; i < localStorage.length; i++) {
+          var k = localStorage.key(i);
+          if (k && k.slice(0, 6) === 'padel-' && !_LOCAL_CONSERVAR[k]) fuera.push(k);
+        }
+        fuera.forEach(function(k){ try { localStorage.removeItem(k); } catch(e){} });
+      } catch (e) {
+        alert('⚠️ No se pudieron borrar los datos locales: ' + (e && e.message || e));
+        return;
+      }
+      alert('🧹 Datos locales borrados (' + fuera.length + ' apartado' + (fuera.length!==1?'s':'') + ').\n\n' +
+            'La app se va a recargar y descargará de nuevo lo que haya en el servidor.');
+      location.reload();
     }
 
     function _syncDownload() {
@@ -6661,7 +6789,8 @@
           _acCargado = true;
           if (!r.error && r.data) {
             _acLista = r.data.map(function(a){
-              return { id:a.id, nombre:a.nombre||'', apellidos:a.apellidos||'', telefono:a.telefono||'' };
+              return { id:a.id, nombre:a.nombre||'', apellidos:a.apellidos||'', telefono:a.telefono||'',
+                       archivado: !!a.archivado };   // v0.180
             });
             _acGuardarLocal();
           }
@@ -6700,6 +6829,46 @@
         .catch(function(){ if (cb) cb(); });
     }
     function _acFichas(){ return _acInit(); }
+
+    // ── v0.180: sacar del club sin borrar ────────────────────────
+    // Un alumno archivado desaparece de "Alumnos de la academia" y de su
+    // export, pero NO se borra nada: sus registros de asistencia siguen
+    // en la base de datos y en los resúmenes de cada entrenador. Se puede
+    // recuperar cuando se quiera.
+    // Necesita la columna alumnos_club.archivado (migracion_alumnos_archivados.sql).
+    function _acArchivados(){
+      var set = {};
+      _acInit().forEach(function(a){
+        if (a.archivado) set[_gtaFullKey(a.nombre, a.apellidos)] = true;
+      });
+      return set;
+    }
+    // Marca/desmarca una ficha como archivada. cb(ok, msg).
+    function _acArchivar(id, on, cb){
+      _acInit();
+      _acLista.forEach(function(a){ if (a.id === id) a.archivado = !!on; });
+      _acGuardarLocal();
+      if (!_sb || !_sbUser || String(id).slice(0,4) === 'loc-') { if (cb) cb(true, 'local'); return; }
+      _sb.from('alumnos_club').update({ archivado: !!on }).eq('id', id)
+        .then(function(r){
+          if (r.error) { console.warn('archivar alumno club', r.error && r.error.message); if (cb) cb(false, r.error && r.error.message); return; }
+          if (cb) cb(true);
+        }).catch(function(e){ if (cb) cb(false, e && e.message); });
+    }
+    // Devuelve por callback el id de ficha del alumno, creándola si no la
+    // tiene (un alumno que solo existe dentro de franjas no tiene ficha, y
+    // sin ficha no hay dónde marcar el archivado).
+    function _acAsegurarFicha(nombre, apellidos, telefono, cb){
+      _acInit();
+      var key = _gtaFullKey(nombre, apellidos);
+      var ya  = _acLista.filter(function(a){ return _gtaFullKey(a.nombre, a.apellidos) === key; })[0];
+      if (ya) { cb(ya.id); return; }
+      _acAnadir(nombre, apellidos, telefono, function(ok){
+        if (!ok) { cb(null); return; }
+        var nueva = _acLista.filter(function(a){ return _gtaFullKey(a.nombre, a.apellidos) === key; })[0];
+        cb(nueva ? nueva.id : null);
+      });
+    }
 
     function abrirGestorCalendario(){
       _dscInit();
@@ -10304,6 +10473,82 @@
     // POR ENTRENADOR, así que: (a) la ficha de academia no se veía nunca, y
     // (b) un alumno recién creado, sin clases, no abría NADA (se salía por
     // el return al no encontrar entrenador). Ahora abre siempre su ficha.
+    // ── v0.179: exportar los alumnos del club en PDF ─────────────
+    // conAsistencia=false → solo la ficha (datos personales y sus franjas).
+    // conAsistencia=true  → además, su asistencia por curso y por mes.
+    function gtaExportarPDF(conAsistencia) {
+      if (!_gtaCache) _gtaCache = _gtaIndex();
+      var claves = Object.keys(_gtaCache.al).sort(_gtaCmp);
+      if (!claves.length) { alert('No hay alumnos que exportar.'); return; }
+      var cursoAct = _cursoActual();
+      var acad = {};
+      _alumnosAcademia().forEach(function(a){ acad[_gtaFullKey(a.nombre, a.apellidos)] = a; });
+
+      var h = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">';
+      h += '<title>Alumnos del club</title><style>';
+      h += 'body{font-family:Arial,sans-serif;padding:28px 32px;color:#1a1a2e;max-width:900px;margin:0 auto;}';
+      h += 'h1{color:#16264f;font-size:20px;margin:0 0 2px;}';
+      h += '.sub{color:#6b7280;font-size:13px;margin-bottom:20px;}';
+      h += 'table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px;}';
+      h += 'th{background:#e9ecf5;color:#16264f;padding:6px 9px;text-align:left;font-weight:700;}';
+      h += 'td{padding:6px 9px;border-bottom:1px solid #e5e7eb;vertical-align:top;}';
+      h += 'h2{color:#16264f;font-size:14px;margin:18px 0 4px;padding-bottom:3px;border-bottom:1px solid #e9ecf5;}';
+      h += '.al{page-break-inside:avoid;margin-top:14px;}';
+      h += '.mes{font-size:12px;color:#374151;margin:2px 0 0 12px;}';
+      h += '.btn-print{margin-top:18px;padding:10px 18px;font-size:14px;border:none;border-radius:8px;background:#16264f;color:#fff;cursor:pointer;}';
+      h += '@media print{.btn-print{display:none;}}';
+      h += '</style></head><body>';
+      h += '<h1>Alumnos del club</h1>';
+      h += '<div class="sub">' + claves.length + ' alumno' + (claves.length !== 1 ? 's' : '') +
+           ' · curso ' + _gEsc(cursoAct) + ' · generado el ' + _gEsc(formatFechaCorta(hoyLocal())) +
+           (conAsistencia ? ' · con asistencia' : ' · solo datos') + '</div>';
+
+      // Tabla de datos personales (siempre)
+      h += '<table><tr><th>Alumno</th><th>Apellidos</th><th>Teléfono</th><th>Franja(s) actual(es)</th></tr>';
+      claves.forEach(function(k){
+        var al  = _gtaCache.al[k];
+        var f   = acad[k] || {};
+        var fr  = _gtaFranjasActuales(al.nombre, al.apellidos);
+        h += '<tr><td>' + _gEsc(al.nombre) + '</td>' +
+             '<td>' + _gEsc(al.apellidos || f.apellidos || '') + '</td>' +
+             '<td>' + _gEsc(f.telefono || '') + '</td>' +
+             '<td>' + (fr.length
+                        ? fr.map(function(x){ return _gEsc(x.entrenador + ' · ' + x.lbl); }).join('<br>')
+                        : '<span style="color:#9ca3af;">sin franja</span>') + '</td></tr>';
+      });
+      h += '</table>';
+
+      // Asistencia por alumno (opcional)
+      if (conAsistencia) {
+        var ORDEN = [9,10,11,12,1,2,3,4,5,6,7,8];
+        h += '<h2>Asistencia por alumno</h2>';
+        claves.forEach(function(k){
+          var al = _gtaCache.al[k];
+          var ses = (al.sesiones || []).filter(function(x){ return _cursoDe(x.fecha) === cursoAct; });
+          var s = _histStats(ses);
+          h += '<div class="al"><b>' + _gEsc(k) + '</b> — ' +
+               (s.tot ? s.pres + ' de ' + s.tot + ' clases' +
+                        ((s.fJ || s.fIJ) ? ' · faltas: ' + s.fJ + ' J · ' + s.fIJ + ' IJ' : '') +
+                        (s.recups ? ' · +' + s.recups + ' recup' : '')
+                      : 'sin clases este curso');
+          var porMes = {};
+          ses.forEach(function(x){ var mm = +x.fecha.split('-')[1]; (porMes[mm] = porMes[mm] || []).push(x); });
+          ORDEN.forEach(function(mm){
+            if (!porMes[mm]) return;
+            var sm = _histStats(porMes[mm]);
+            h += '<div class="mes">' + MESES_NOMBRES_A[mm-1] + ': ' + sm.pres + ' de ' + sm.tot +
+                 ((sm.fJ || sm.fIJ) ? ' · ' + sm.fJ + 'J/' + sm.fIJ + 'IJ' : '') +
+                 (sm.recups ? ' · +' + sm.recups + '↩' : '') + '</div>';
+          });
+          h += '</div>';
+        });
+      }
+      h += '<button class="btn-print" onclick="window.print()">🖨️ Imprimir / Guardar como PDF</button>';
+      h += '</body></html>';
+      var blob = new Blob([h], { type: 'text/html' });
+      window.open(URL.createObjectURL(blob), '_blank');
+    }
+
     // v0.165: a dónde vuelve el botón "‹" de la ficha del alumno. Si se
     // entró desde una franja del panel, vuelve AL PANEL (antes pasaba por
     // Alumnos y había que dar varios pasos para volver a la principal).
@@ -10400,15 +10645,20 @@
       _acFichas().forEach(function(f){
         if (!f.nombre) return;
         var key = _gtaFullKey(f.nombre, f.apellidos);
+        if (f.archivado) return;                       // v0.180: fuera del club
         var e = ensA(key, f.nombre, f.apellidos);
         e.ficha = f;                                   // permite borrarla
         if (!e.apellidos && f.apellidos) e.apellidos = f.apellidos;
       });
+      // v0.180: los archivados se caen de la lista aunque tengan registros o
+      // sigan en el cupo de alguna clase. Sus datos NO se tocan.
+      var arch = _acArchivados();
+      Object.keys(map).forEach(function(key){ if (arch[key]) delete map[key]; });
       Object.keys(map).forEach(function(key){
         map[key].sesiones.sort(function(a,b){ return b.fecha.localeCompare(a.fecha); });
       });
       var ents = Object.keys(porEnt).sort().map(function(e){
-        return { nombre:e, alumnos:Object.keys(porEnt[e]).sort() };
+        return { nombre:e, alumnos:Object.keys(porEnt[e]).filter(function(k){ return !arch[k]; }).sort() };
       });
       return { al:map, ents:ents };
     }
@@ -10437,7 +10687,14 @@
         '<div id="gta-alta"></div>' +
         '<div id="gta-abc"></div>' +
         '<p class="ajustes-desc" id="gta-count" style="margin:0.15rem 0 0.6rem;"></p>' +
-        '<div id="gta-lista"></div>';
+        '<div id="gta-lista"></div>' +
+        // v0.179: exportar la lista de alumnos del club
+        (lista.length ? '<div class="gent-export" style="margin-top:1rem;">' +
+          '<div class="gent-export-tit">Exportar alumnos del club · ' + lista.length + '</div>' +
+          '<div class="gent-export-btns">' +
+            '<button type="button" class="btn btn-sec btn-sm" onclick="gtaExportarPDF(false)">📄 Solo datos</button>' +
+            '<button type="button" class="btn btn-sec btn-sm" onclick="gtaExportarPDF(true)">📄 Datos + asistencia</button>' +
+          '</div></div>' : '');
       _gtaRenderAlta();
       if (!lista.length) {
         document.getElementById('gta-lista').innerHTML =
@@ -10455,7 +10712,21 @@
       var el = document.getElementById('gta-alta');
       if (!el) return;
       if (!_gtaAltaOn) {
-        el.innerHTML = '<button type="button" class="btn btn-verde btn-sm" style="margin-bottom:0.6rem;" onclick="gtaToggleAlta()">＋ Añadir alumno</button>';
+        // v0.180: tras el alta, los alumnos sacados del club (archivados),
+        // para poder devolverlos con un toque.
+        var arch = _acFichas().filter(function(a){ return a.archivado; })
+                              .sort(function(a,b){ return _gtaCmp(_gtaFullKey(a.nombre,a.apellidos), _gtaFullKey(b.nombre,b.apellidos)); });
+        el.innerHTML = '<button type="button" class="btn btn-verde btn-sm" style="margin-bottom:0.6rem;" onclick="gtaToggleAlta()">＋ Añadir alumno</button>' +
+          (arch.length
+            ? '<div class="gta-arch">' +
+                '<div class="gta-arch-tit">📦 Fuera del club · ' + arch.length + ' <small>(sus datos siguen guardados)</small></div>' +
+                '<div class="gta-arch-chips">' + arch.map(function(a){
+                  return '<button type="button" class="gta-arch-chip" onclick="gtaRestaurarAlumno(\'' +
+                         _gEsc(a.id).replace(/'/g,"\\'") + '\')">↩ ' +
+                         _gEsc(_gtaFullKey(a.nombre, a.apellidos)) + '</button>';
+                }).join('') + '</div>' +
+              '</div>'
+            : '');
         return;
       }
       el.innerHTML =
@@ -10476,6 +10747,23 @@
           '</div>' +
         '</div>';
       var i = document.getElementById('gta-nom'); if (i) i.focus();
+    }
+    // v0.180: devolver al club a un alumno archivado. Vuelve a la lista con
+    // todo su historial; sus franjas hay que asignárselas otra vez (salió de
+    // ellas con una baja), desde su ficha → 🔄 Cambiar de clase.
+    function gtaRestaurarAlumno(id){
+      var f = _acFichas().filter(function(a){ return a.id === id; })[0];
+      if (!f) return;
+      var nom = _gtaFullKey(f.nombre, f.apellidos);
+      if (!confirm('¿Devolver a "' + nom + '" al club?\n\n' +
+                   'Vuelve a la lista con todo su historial. Tendrás que ' +
+                   'asignarle franja desde su ficha (🔄 Cambiar de clase).')) return;
+      _acArchivar(id, false, function(ok, m){
+        if (!ok) alert('⚠️ No se pudo guardar en el servidor: ' + (m || ''));
+        _gtaCache = _gtaIndex();
+        if (typeof planToast === 'function') planToast('↩ ' + nom + ' de vuelta en el club');
+        renderGestorTodosAlumnos();
+      });
     }
     function gtaGuardarAlumno(){
       var iN = document.getElementById('gta-nom');
@@ -10554,15 +10842,18 @@
         var extra = nombres.length > 3 ? ' +' + (nombres.length-3) : '';
         conTxt = '👤 ' + nombres.slice(0,3).join(' · ') + extra;
       }
-      var pctTxt = s.pct == null ? '—' : s.pct + '%';
-      return '<div class="gestor-card" onclick="abrirGestorTodosAlumno(\'' + _gEsc(n).replace(/'/g,"\\'") + '\')">' +
+      // v0.180: el porcentaje se va de aquí (ya no se usaba para decidir
+      // nada) y su sitio lo ocupa la ✕ de eliminar alumno.
+      var nEsc = _gEsc(n).replace(/'/g,"\\'");
+      return '<div class="gestor-card" onclick="abrirGestorTodosAlumno(\'' + nEsc + '\')">' +
         '<div class="gestor-card-ava">' + _gEsc(n.charAt(0).toUpperCase()) + '</div>' +
         '<div class="gestor-card-body">' +
           '<div class="gestor-card-nom">' + _gEsc(n) + '</div>' +
           '<div class="gestor-card-meta">' + _gEsc(meta) + '</div>' +
           (conTxt ? '<div class="gestor-card-con">' + _gEsc(conTxt) + '</div>' : '') +
         '</div>' +
-        '<div class="gestor-card-pct" style="color:' + _pctColor(s.pct) + '">' + pctTxt + '</div>' +
+        '<button type="button" class="gta-del" title="Eliminar alumno" ' +
+          'onclick="event.stopPropagation();gtaPedirBorrar(\'' + nEsc + '\')">✕</button>' +
         '<div class="gestor-card-arr">›</div>' +
       '</div>';
     }
@@ -10616,8 +10907,205 @@
         if (!/[A-ZÑ]/.test(c)) c = '#';
         if (c !== letraPrev) { h += '<div class="gta-az">' + c + '</div>'; letraPrev = c; }
         h += _gtaCard(n);
+        if (_gtaDelKey === n) h += _gtaDelPanelHTML(n);   // v0.180
       });
       el.innerHTML = h;
+    }
+
+    // ── v0.180: eliminar un alumno desde la lista (✕) ────────────
+    // Dos salidas muy distintas, por eso se pregunta en vez de borrar
+    // directamente:
+    //   · 📦 Sacar del club → se le da de BAJA hoy en sus franjas y deja de
+    //     aparecer en la lista, pero NO se borra nada. Reversible.
+    //   · 🗑 Borrar del todo → desaparece de la base de datos con toda su
+    //     asistencia. No se puede deshacer.
+    var _gtaDelKey = null;   // alumno con el panel de borrado abierto
+    function gtaPedirBorrar(n){ _gtaDelKey = (_gtaDelKey === n) ? null : n; _gtaRenderLista(); }
+    function gtaCancelarBorrar(){ _gtaDelKey = null; _gtaRenderLista(); }
+    function _gtaDelPanelHTML(n){
+      var nEsc = _gEsc(n).replace(/'/g,"\\'");
+      var al   = (_gtaCache && _gtaCache.al[n]) || { sesiones: [] };
+      var nSes = (al.sesiones || []).length;
+      return '<div class="gta-del-panel">' +
+        '<div class="gta-del-tit">✕ Eliminar a ' + _gEsc(n) + '</div>' +
+        '<div class="ajustes-desc" style="margin:0 0 8px;">' +
+          (nSes ? 'Tiene ' + nSes + ' clase' + (nSes!==1?'s':'') + ' registrada' + (nSes!==1?'s':'') + '. '
+                : 'No tiene clases registradas. ') +
+          '¿Qué quieres hacer con sus datos?</div>' +
+        '<div class="gta-del-btns">' +
+          '<button type="button" class="btn btn-sec btn-sm" style="border-color:#fde68a;color:#92400e;background:#fffbeb;font-weight:700;" ' +
+            'onclick="gtaArchivarAlumno(\'' + nEsc + '\')">📦 Sacar del club<br><small>conserva sus datos</small></button>' +
+          '<button type="button" class="btn btn-sec btn-sm" style="border-color:#fecaca;color:#b91c1c;background:#fef2f2;font-weight:700;" ' +
+            'onclick="gtaBorrarAlumnoTodo(\'' + nEsc + '\')">🗑 Borrar del todo<br><small>sin vuelta atrás</small></button>' +
+        '</div>' +
+        '<button type="button" class="btn btn-sec btn-sm" style="margin-top:8px;width:100%;" onclick="gtaCancelarBorrar()">Cancelar</button>' +
+      '</div>';
+    }
+    // Datos de un alumno por su clave, sin depender del alumno abierto.
+    function _gtaDatosDeKey(key){
+      var al = (_gtaCache && _gtaCache.al[key]) || {};
+      var f  = al.ficha || _alumnosAcademia().filter(function(a){
+        return _gtaFullKey(a.nombre, a.apellidos) === key;
+      })[0] || null;
+      return {
+        nombre:    (f && f.nombre)    || al.nombre    || key,
+        apellidos: (f && f.apellidos) || al.apellidos || '',
+        telefono:  (f && f.telefono)  || '',
+        fichaId:   (f && f.id) || null
+      };
+    }
+    // 📦 SACAR DEL CLUB: baja hoy en todas sus franjas + ficha archivada.
+    // No se borra ni un registro: por eso se puede deshacer.
+    function gtaArchivarAlumno(key){
+      var d   = _gtaDatosDeKey(key);
+      var hoy = hoyLocal();
+      var act = _gtaFranjasActuales(d.nombre, d.apellidos);
+      var msg = '¿Sacar del club a "' + key + '"?\n\n';
+      msg += act.length
+        ? 'Se le dará de BAJA hoy (' + _gFecha(hoy) + ') en:\n· ' +
+          act.map(function(a){ return a.entrenador + ' · ' + a.lbl; }).join('\n· ') + '\n\n'
+        : 'Ahora mismo no está en ninguna franja.\n\n';
+      msg += 'Sus datos y su asistencia NO se borran: siguen contando en los ' +
+             'resúmenes de cada entrenador. Deja de aparecer en esta lista y ' +
+             'puedes recuperarlo cuando quieras.';
+      if (!confirm(msg)) return;
+
+      act.forEach(function(a){
+        _gEditUid = (_sbUser && a.uid === _sbUser.id) ? null : a.uid;
+        try {
+          var cfg = leerAsistConfig();
+          (cfg.clases || []).forEach(function(c){
+            if (c.id === a.claseId) c.alumnos = (c.alumnos || []).map(_alBajaEnClase(d.nombre, hoy, ''));
+          });
+          escribirAsistConfig(cfg);
+        } finally { _gEditUid = null; }
+        (_gestorData.clases || []).forEach(function(c){
+          if (c.user_id === a.uid && c.id === a.claseId) c.alumnos = (c.alumnos || []).map(_alBajaEnClase(d.nombre, hoy, ''));
+        });
+      });
+
+      _acAsegurarFicha(d.nombre, d.apellidos, d.telefono, function(id){
+        if (!id) { alert('⚠️ No se pudo crear la ficha para archivar al alumno. No se ha archivado.'); return; }
+        _acArchivar(id, true, function(ok, m){
+          if (!ok) {
+            alert('⚠️ No se pudo archivar en el servidor: ' + (m || '') +
+                  '\n¿Está ejecutada la migración migracion_alumnos_archivados.sql?');
+          }
+          _gtaDelKey = null;
+          _gtaCache = _gtaIndex();
+          if (typeof planToast === 'function') planToast('📦 ' + d.nombre + ' fuera del club (datos conservados)');
+          renderGestorTodosAlumnos();
+        });
+      });
+    }
+    // 🗑 BORRAR DEL TODO: fuera del cupo de sus clases, fuera de los
+    // registros de asistencia y fuera del catálogo de fichas.
+    // Ojo: los registros guardan solo el NOMBRE de pila. Si en una clase hay
+    // dos alumnos que se llaman igual, no se toca esa clase (no hay forma de
+    // saber cuál de los dos es) y se avisa al final.
+    function gtaBorrarAlumnoTodo(key){
+      var d = _gtaDatosDeKey(key);
+      var al = (_gtaCache && _gtaCache.al[key]) || { sesiones: [] };
+      var nSes = (al.sesiones || []).length;
+      if (!confirm('¿BORRAR DEL TODO a "' + key + '"?\n\n' +
+                   'Se eliminan su ficha, su sitio en todas las clases y ' +
+                   (nSes ? 'sus ' + nSes + ' clase' + (nSes!==1?'s':'') + ' de asistencia'
+                         : 'su asistencia') + '.\n\n' +
+                   'ESTO NO SE PUEDE DESHACER.')) return;
+      if (!confirm('Última confirmación: "' + key + '" desaparecerá de la base de datos.')) return;
+
+      // ¿Hay más alumnos del club con el mismo nombre de pila? Si los hay,
+      // solo se limpian los registros de clases donde él está en el cupo.
+      var homon = Object.keys(_gtaCache.al).filter(function(k){
+        return _gtaCache.al[k].nombre === d.nombre;
+      }).length;
+      var by = _gestorAgrupar(), ambiguas = 0;
+
+      Object.keys(by).forEach(function(uid){
+        var clases = _gestorClasesLocal(by[uid]);
+        var regs   = _gestorRegsLocal(by[uid]);
+        var idsLimpiar = {}, idsCupo = {}, tocaClases = false;
+        clases.forEach(function(c){
+          var mismos = (c.alumnos || []).filter(function(a){ return alNom(a) === d.nombre; });
+          if (!mismos.length) return;
+          var mio = mismos.filter(function(a){ return (alApe(a) || '') === (d.apellidos || ''); });
+          if (mio.length) { idsCupo[c.id] = true; tocaClases = true; }
+          // Se limpian sus registros solo si en esa clase su nombre es único
+          if (mismos.length === 1 && mio.length) idsLimpiar[c.id] = true;
+          else if (mismos.length > 1) ambiguas++;
+        });
+        // Clases sin nadie con ese nombre en el cupo pero con el nombre en los
+        // registros (recuperaciones en otro grupo): solo si no hay homónimos.
+        if (homon <= 1) clases.forEach(function(c){
+          if (idsCupo[c.id]) return;
+          if ((c.alumnos || []).some(function(a){ return alNom(a) === d.nombre; })) return;
+          idsLimpiar[c.id] = true;
+        });
+
+        // 1) Fuera del cupo de sus clases
+        if (tocaClases) {
+          _gEditUid = (_sbUser && uid === _sbUser.id) ? null : uid;
+          try {
+            var cfg = leerAsistConfig();
+            (cfg.clases || []).forEach(function(c){
+              if (!idsCupo[c.id]) return;
+              c.alumnos = (c.alumnos || []).filter(function(a){
+                return !(alNom(a) === d.nombre && (alApe(a) || '') === (d.apellidos || ''));
+              });
+            });
+            escribirAsistConfig(cfg);
+          } finally { _gEditUid = null; }
+          (_gestorData.clases || []).forEach(function(c){
+            if (c.user_id !== uid || !idsCupo[c.id]) return;
+            c.alumnos = (c.alumnos || []).filter(function(a){
+              return !(alNom(a) === d.nombre && (alApe(a) || '') === (d.apellidos || ''));
+            });
+          });
+        }
+
+        // 2) Fuera de los registros de asistencia de esas clases
+        var quita = function(arr){ return (arr || []).filter(function(x){ return x !== d.nombre; }); };
+        var afectados = regs.filter(function(r){
+          if (!idsLimpiar[r.claseId]) return false;
+          return (r.presentes || []).indexOf(d.nombre) !== -1 ||
+                 (r.ausentes  || []).indexOf(d.nombre) !== -1 ||
+                 (r.justificadas || []).indexOf(d.nombre) !== -1 ||
+                 (r.recups || []).indexOf(d.nombre) !== -1;
+        });
+        if (!afectados.length) return;
+        _gEditUid = (_sbUser && uid === _sbUser.id) ? null : uid;
+        try {
+          var todos = leerAsistRegistros();
+          var cambiadas = [];
+          todos.forEach(function(r){
+            if (!idsLimpiar[r.claseId]) return;
+            var antes = JSON.stringify([r.presentes, r.ausentes, r.justificadas, r.recups]);
+            r.presentes = quita(r.presentes); r.ausentes = quita(r.ausentes);
+            r.justificadas = quita(r.justificadas); r.recups = quita(r.recups);
+            if (JSON.stringify([r.presentes, r.ausentes, r.justificadas, r.recups]) !== antes) cambiadas.push(r);
+          });
+          if (cambiadas.length) escribirAsistRegistros(todos, false, cambiadas);
+        } finally { _gEditUid = null; }
+        (_gestorData.registros || []).forEach(function(r){
+          if (r.user_id !== uid || !idsLimpiar[r.clase_id]) return;
+          r.presentes = quita(r.presentes); r.ausentes = quita(r.ausentes);
+          r.justificadas = quita(r.justificadas); r.recups = quita(r.recups);
+        });
+      });
+
+      function fin(){
+        _gtaDelKey = null;
+        _gtaCache = _gtaIndex();
+        if (ambiguas) {
+          alert('Borrado hecho.\n\nAviso: en ' + ambiguas + ' clase' + (ambiguas!==1?'s':'') +
+                ' hay otro alumno que también se llama "' + d.nombre + '", así que su ' +
+                'asistencia de esas clases se ha dejado intacta para no borrar la de otro.');
+        } else if (typeof planToast === 'function') {
+          planToast('🗑 ' + key + ' borrado');
+        }
+        renderGestorTodosAlumnos();
+      }
+      if (d.fichaId) _acBorrar(d.fichaId, fin); else fin();
     }
 
     // ── v0.156: ficha del alumno (datos + acciones) ──────────────
