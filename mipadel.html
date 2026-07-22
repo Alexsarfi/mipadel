@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.174.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.176.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,36 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.176.0 — Aviso del cambio de grupo en la franja de ORIGEN (2026-07)
+    · Cuando el gestor mueve a un alumno de franja (que muchas veces implica
+      cambiar de entrenador), en la franja de ORIGEN aparece ahora el aviso
+      del cambio: su nombre, la FECHA en que se fue y el GRUPO al que ha
+      pasado — p. ej. "🔄 Ana R. · 18/03 → Manolo · Viernes · 19:00-20:00".
+    · Se pinta con MARCO DISCONTINUO y fondo transparente, para que se lea
+      como "ya no está aquí" sin pesar visualmente ni confundirse con un
+      alumno del grupo.
+    · Solo aparece durante la SEMANA en que se produce el cambio: pasada esa
+      semana, el alumno desaparece del grupo de origen. Así el entrenador se
+      entera del cambio, pero la franja no arrastra el aviso.
+    · Se distingue de una baja normal (dejó de venir), que sigue saliendo en
+      amarillo con ❌ y su fecha durante todo su mes.
+    · Tocando el aviso se abre la ficha del alumno, como el resto de chips.
+    · Sin cambios de datos/esquema (usa el destino que ya se anotaba al
+      mover, v0.162).
+
+  v0.175.0 — Historial del alumno: fuera el %, y los días de cada mes (2026-07)
+    · Se RETIRA el porcentaje (y su barra) del historial por curso: no
+      aportaba nada útil. En su lugar, la FRACCIÓN con valor real:
+      "2 de 4 clases" — a cuántas asistió de las que hubo ese mes.
+    · Las recuperaciones van aparte (+1↩), no se mezclan con sus clases.
+    · Cada MES se despliega ahora y muestra sus DÍAS uno a uno, con lo que
+      pasó en cada uno: ✓ asistió · ✗ falta justificada · ✗ falta
+      injustificada · ↩ recuperación. Cada día lleva su fecha, su día de la
+      semana y la franja, con un color al margen según el estado.
+    · Los días salen ordenados por fecha.
+    · La cabecera de cada curso también cambia el % por "N de M clases".
+    · Sin cambios de datos/esquema.
 
   v0.174.0 — Cambiar de clase: primero de cuál sale, luego a cuál va (2026-07)
     · El cambio de clase pasa a hacerse en dos pasos explícitos:
@@ -3142,6 +3172,12 @@
     .ghd-al.baja { color:#92400e; background:#fef9c3; border-color:#fde68a; }
     /* v0.163: alumno que EMPIEZA en esta franja este mes (alta o traslado) */
     .ghd-al.alta { color:#166534; background:#dcfce7; border-color:#bbf7d0; }
+    /* v0.176: se le MOVIÓ a otro grupo — aviso solo durante esa semana en la
+       franja de origen: marco discontinuo y fondo transparente, para que se
+       lea como "ya no está aquí" sin pesar visualmente. */
+    .ghd-al.movido { color:var(--gris); background:transparent; border:1.5px dashed var(--borde);
+      text-align:left; line-height:1.3; }
+    .ghd-al-mov { display:block; font-size:9.5px; font-weight:700; color:#92400e; margin-top:2px; white-space:normal; }
     /* v0.149: se retira .ghd-al.fut (⏳ "empieza más adelante"): el alumno
        ya no se lista antes de su fecha de entrada, así que no hace falta. */
     /* Historial del alumno: alta/baja por clase */
@@ -3228,6 +3264,27 @@
     /* v0.155: "Todos" seleccionado → letra en BLANCO sobre verde. Hace falta
        esta regla porque .todos va después de .sel y le ganaba el color. */
     .gdet-ent-chip.todos.sel { color:var(--blanco); background:var(--verde); border-style:solid; }
+    /* v0.175: historial del alumno — mes desplegable con sus días */
+    .gas-mes { border-top:1px solid var(--borde); }
+    .gas-mes:first-of-type { border-top:none; }
+    .gas-mes-sum { display:flex; align-items:center; gap:8px; padding:8px 4px; cursor:pointer;
+      list-style:none; -webkit-tap-highlight-color:transparent; }
+    .gas-mes-sum::-webkit-details-marker { display:none; }
+    .gas-mes-nom { font-size:12.5px; font-weight:800; color:var(--texto); }
+    .gas-mes-frac { margin-left:auto; font-size:11.5px; color:var(--gris); }
+    .gas-mes-frac b { color:var(--texto); font-weight:800; }
+    .gas-mes-frac i { font-style:normal; color:var(--lila); font-weight:700; }
+    .gas-mes[open] .gas-chev { transform:rotate(180deg); }
+    .gas-mes-body { padding:2px 4px 8px; display:flex; flex-direction:column; gap:3px; }
+    .gas-dia-row { display:flex; align-items:center; gap:8px; font-size:11.5px;
+      border-left:3px solid var(--borde); padding:4px 8px; background:var(--arena); border-radius:0 8px 8px 0; }
+    .gas-dia-row.ok  { border-left-color:var(--verde); }
+    .gas-dia-row.fj  { border-left-color:#f59e0b; }
+    .gas-dia-row.fij { border-left-color:#b91c1c; }
+    .gas-dia-row.rec { border-left-color:var(--lila); }
+    .gas-dia-f { font-weight:800; color:var(--texto); flex-shrink:0; min-width:56px; }
+    .gas-dia-est { color:var(--gris); }
+    .gas-dia-fr { margin-left:auto; color:var(--gris); font-size:10.5px; white-space:nowrap; }
     /* v0.159: acciones del alumno en la CABECERA, bajo el nombre */
     .gta-cab-btns { display:flex; gap:6px; margin-top:8px; }
     .gta-cab-btn { flex:1; border:1.5px solid rgba(255,255,255,0.45); background:rgba(255,255,255,0.14);
@@ -5258,7 +5315,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.174.0';
+    var APP_VERSION = '0.176.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -8821,6 +8878,25 @@
         var mesBaja = bajaEf ? bajaEf.slice(0, 7) : '';
         // Baja anterior a este mes → ya no pertenece al grupo: no se lista.
         if (mesBaja && mesBaja < mesISO) return;
+        // v0.176: se le MOVIÓ a otra franja. En la de ORIGEN se avisa del
+        // cambio (con su fecha y el grupo al que fue) SOLO durante la semana
+        // en que ocurre; la semana siguiente ya no aparece aquí.
+        var movDest = alMovidoA(a);
+        if (movDest && bajaEf) {
+          if (!(bajaEf >= _lunISO && bajaEf <= _domISO)) return;   // pasó su semana
+          var txtMov = _gEsc(alCorto(a)) +
+            '<span class="ghd-al-mov">' + bajaEf.slice(8,10) + '/' + bajaEf.slice(5,7) +
+            ' → ' + _gEsc(movDest) + '</span>';
+          nAls++;
+          if (hist) {
+            alsHtml += '<span class="ghd-al movido">🔄 ' + txtMov + '</span>';
+          } else {
+            alsHtml += '<button type="button" class="ghd-al movido" onclick="gtaAbrirDesdeFranja(\'' +
+              _gEsc(nom).replace(/'/g, "\\'") + '\',\'' + _gEsc(alApe(a) || '').replace(/'/g, "\\'") + '\')" ' +
+              'title="Cambiado de grupo el ' + bajaEf.slice(8,10) + '/' + bajaEf.slice(5,7) + '">🔄 ' + txtMov + '</button>';
+          }
+          return;
+        }
         // Baja real DENTRO de este mes → amarillo con su fecha.
         var baja  = !!bajaEf && mesBaja === mesISO && !esBajaFinCurso(bajaEf);
         // v0.163: ALTA dentro de este mes → 🚩 con su fecha de inicio, solo
@@ -10915,24 +10991,40 @@
           var s = _histStats(items);
           h += '<details class="gas-clase"><summary class="gas-sum">' +
             '<span class="gas-dia">Curso ' + curso + (curso === cursoAct ? ' · en curso' : '') + '</span>' +
-            '<span class="gas-meta" style="color:' + _pctColor(s.pct) + '">' + s.pres + '/' + s.tot +
-              ((s.fJ||s.fIJ) ? ' · ' + s.fJ + 'J/' + s.fIJ + 'IJ' : '') +
-              (s.pct!=null ? ' · ' + s.pct + '%' : '') + '</span>' +
+            // v0.175: sin porcentaje; la fracción asistidas/dadas y las faltas
+            '<span class="gas-meta">' + s.pres + ' de ' + s.tot + ' clases' +
+              ((s.fJ||s.fIJ) ? ' · ' + s.fJ + 'J/' + s.fIJ + 'IJ' : '') + '</span>' +
             '<span class="gas-chev">▾</span></summary><div class="gas-body">';
           var porMes = {};
           items.forEach(function(x){ var m = +x.fecha.split('-')[1]; (porMes[m] = porMes[m] || []).push(x); });
+          // v0.175: cada MES se despliega y enseña sus DÍAS con lo que pasó.
+          // Fuera el porcentaje y la barra: se sustituyen por la fracción
+          // "asistió / clases que hubo", que es el dato con valor real.
           ORDEN_MESES_CURSO.forEach(function(m){
             if (!porMes[m]) return;
             var sm = _histStats(porMes[m]);
-            var pctM = sm.pct == null ? '—' : sm.pct + '%';
-            h += '<div class="gestor-alum-row">' +
-              '<div class="gestor-alum-nom">' + MESES_NOMBRES_A[m-1] + '</div>' +
-              '<div class="gestor-alum-det">' + sm.pres + '/' + sm.tot +
-                ((sm.fJ||sm.fIJ) ? ' · ' + sm.fJ + 'J/' + sm.fIJ + 'IJ' : '') +
-                (sm.recups ? ' +' + sm.recups + '↩' : '') + '</div>' +
-              '<div class="gestor-alum-bar"><div class="gestor-alum-fill" style="width:' + (sm.pct||0) + '%;background:' + _pctColor(sm.pct) + '"></div></div>' +
-              '<div class="gestor-alum-pct" style="color:' + _pctColor(sm.pct) + '">' + pctM + '</div>' +
-            '</div>';
+            h += '<details class="gas-mes"><summary class="gas-mes-sum">' +
+              '<span class="gas-mes-nom">' + MESES_NOMBRES_A[m-1] + '</span>' +
+              '<span class="gas-mes-frac"><b>' + sm.pres + '</b> de <b>' + sm.tot + '</b> clases' +
+                (sm.recups ? ' <i>+' + sm.recups + '↩</i>' : '') + '</span>' +
+              '<span class="gas-chev">▾</span></summary>';
+            h += '<div class="gas-mes-body">';
+            porMes[m].slice().sort(function(a,b){ return a.fecha.localeCompare(b.fecha); })
+              .forEach(function(x){
+                var dow = new Date(+x.fecha.slice(0,4), +x.fecha.slice(5,7)-1, +x.fecha.slice(8,10)).getDay();
+                var est, cls;
+                if (x.recup)         { est = '↩ recuperación'; cls = 'rec'; }
+                else if (x.presente) { est = '✓ asistió';      cls = 'ok';  }
+                else if (x.justif)   { est = '✗ falta justificada';   cls = 'fj'; }
+                else                 { est = '✗ falta injustificada'; cls = 'fij'; }
+                h += '<div class="gas-dia-row ' + cls + '">' +
+                  '<span class="gas-dia-f">' + DIAS_NOMBRES_A[dow].slice(0,3) + ' ' +
+                    parseInt(x.fecha.slice(8,10), 10) + '/' + x.fecha.slice(5,7) + '</span>' +
+                  '<span class="gas-dia-est">' + est + '</span>' +
+                  (x.franja ? '<span class="gas-dia-fr">' + _gEsc(x.franja) + '</span>' : '') +
+                '</div>';
+              });
+            h += '</div></details>';
           });
           h += '</div></details>';
         });
