@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.176.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.178.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,38 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.178.0 — FIX: un alumno dado de alta en julio/agosto no aparecía (2026-07)
+    · Síntoma: al mover a un alumno (p. ej. de miércoles a jueves), en la
+      franja de destino NO aparecía. El entrenador nuevo no lo veía.
+    · Causa: la v0.171 pasó el fin de curso al 30 de JUNIO, pero julio y
+      agosto siguen perteneciendo al curso que acaba de terminar. Así que a
+      un alumno dado de alta en julio se le calculaba una baja del 30/06
+      ANTERIOR a su propia alta: nacía ya "fuera", y por eso no salía en
+      ninguna franja.
+    · Arreglo: si el alta cae después del fin de curso (julio o agosto), el
+      alumno se asigna al curso SIGUIENTE (baja 30/06 del año que viene),
+      que es lo lógico: quien se apunta en verano es para la temporada que
+      empieza. Dentro del curso (sep–jun) el cálculo no cambia.
+    · Afecta a los cuatro sitios donde se da de alta: mover de clase, alta
+      rápida al pasar lista, alta desde el formulario de clase y
+      reincorporación de un alumno.
+    · Si moviste o diste de alta a alguien estos días y "desapareció",
+      vuelve a hacerlo con esta versión y ya quedará bien.
+    · Sin cambios de datos/esquema.
+
+  v0.177.0 — La baja también en marco discontinuo y solo su semana (2026-07)
+    · El alumno de baja pasa a mostrarse con MARCO DISCONTINUO, igual que el
+      cambio de grupo (v0.176): en los dos casos deja de estar en la franja.
+    · El aviso de baja (❌ con su fecha) aparece SOLO durante la semana en
+      que se produce; pasada esa semana el alumno desaparece de la franja.
+      Antes se arrastraba todo el mes.
+    · Matiz importante: si la baja está puesta para MÁS ADELANTE, el alumno
+      sigue apareciendo como uno más hasta que llegue su semana — porque
+      hasta ese día sigue viniendo a clase. Solo se oculta cuando su semana
+      ya ha pasado.
+    · El fin de curso (30/06) no se ve afectado: no es una baja.
+    · Sin cambios de datos/esquema.
 
   v0.176.0 — Aviso del cambio de grupo en la franja de ORIGEN (2026-07)
     · Cuando el gestor mueve a un alumno de franja (que muchas veces implica
@@ -3169,7 +3201,9 @@
     .ghd-ent-chip:active { transform:scale(0.96); }
     .ghd-al { font-size:11px; font-weight:700; color:#1e40af; background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:20px; padding:3px 9px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
     button.ghd-al:active { transform:scale(0.96); }
-    .ghd-al.baja { color:#92400e; background:#fef9c3; border-color:#fde68a; }
+    /* v0.177: baja — marco discontinuo, como el cambio de grupo: en ambos
+       casos el alumno deja de estar en la franja. */
+    .ghd-al.baja { color:#92400e; background:#fef9c3; border:1.5px dashed #f59e0b; }
     /* v0.163: alumno que EMPIEZA en esta franja este mes (alta o traslado) */
     .ghd-al.alta { color:#166534; background:#dcfce7; border-color:#bbf7d0; }
     /* v0.176: se le MOVIÓ a otro grupo — aviso solo durante esa semana en la
@@ -5315,7 +5349,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.176.0';
+    var APP_VERSION = '0.178.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -8897,8 +8931,13 @@
           }
           return;
         }
-        // Baja real DENTRO de este mes → amarillo con su fecha.
-        var baja  = !!bajaEf && mesBaja === mesISO && !esBajaFinCurso(bajaEf);
+        // v0.177: la BAJA se avisa solo durante SU SEMANA (antes, todo el
+        // mes). Pasada esa semana el alumno desaparece de la franja; antes
+        // de ella (baja programada más adelante) sale como uno más, porque
+        // todavía viene a clase.
+        var esBajaReal = !!bajaEf && !esBajaFinCurso(bajaEf);
+        if (esBajaReal && bajaEf < _lunISO) return;        // su semana ya pasó
+        var baja = esBajaReal && bajaEf >= _lunISO && bajaEf <= _domISO;
         // v0.163: ALTA dentro de este mes → 🚩 con su fecha de inicio, solo
         // en el mes en que entró (los siguientes ya sale normal). Es lo que
         // pasa al mover a un alumno a esta franja: su alta es el día del
@@ -10863,7 +10902,7 @@
 
       // 2) Alta en la franja destino (con sus datos y baja de fin de curso)
       var nuevo = { nombre:d.nombre, apellidos:d.apellidos || '', telefono:d.telefono || '',
-                    alta:hoy, baja:finCursoISO(cursoDeFecha(hoy)) };
+                    alta:hoy, baja:finCursoDeAlta(hoy) };
       _gEditUid = (_sbUser && uidDest === _sbUser.id) ? null : uidDest;
       try {
         var cfg2 = leerAsistConfig();
@@ -15626,6 +15665,17 @@
       var y0 = parseInt(String(curso).slice(0, 4), 10);
       return (y0 + 1) + '-06-30';
     }
+    // v0.178 (fix): fin de curso que corresponde a un ALTA. En julio y agosto
+    // el curso vigente YA ha terminado (30/06), así que un alumno dado de alta
+    // esos meses pertenece al curso SIGUIENTE. Sin esto se le ponía una baja
+    // ANTERIOR a su alta y el alumno no aparecía en ninguna parte.
+    function finCursoDeAlta(fechaAlta) {
+      var curso = cursoDeFecha(fechaAlta);
+      var fin   = finCursoISO(curso);
+      if (fechaAlta <= fin) return fin;
+      var y0 = parseInt(String(curso).slice(0, 4), 10) + 1;   // curso siguiente
+      return (y0 + 1) + '-06-30';
+    }
     function esBajaFinCurso(iso) {         // ¿es la baja automática de fin de curso?
       if (!iso) return false;
       var y0 = parseInt(String(cursoDeFecha(iso)).slice(0, 4), 10);
@@ -16583,7 +16633,7 @@
         // v0.135: baja por defecto = 30 de julio del curso de su alta.
         clase.alumnos = (clase.alumnos||[]).concat([{ nombre:nombre, apellidos:ape.trim(), telefono:tel.trim(),
                                                       alta:asistFechaActiva,
-                                                      baja:finCursoISO(cursoDeFecha(asistFechaActiva)) }]);
+                                                      baja:finCursoDeAlta(asistFechaActiva) }]);
       }
       escribirAsistConfig(cfg);
       asistAltaPanelOn = false;
@@ -16994,7 +17044,7 @@
       // v0.135: baja por defecto = 30 de julio (fin del curso). Si se le da
       // de baja a mitad de curso, esa fecha manual sustituye a esta.
       asistAlumnosForm.push({ nombre: nombre, apellidos: inpApe.value.trim(), telefono: inpTel.value.trim(),
-                              alta: hoyLocal(), baja: finCursoISO(cursoDeFecha(hoyLocal())) });
+                              alta: hoyLocal(), baja: finCursoDeAlta(hoyLocal()) });
       input.value = ''; inpApe.value = ''; inpTel.value = '';
       renderAlumnosForm();
       input.focus();
@@ -17008,7 +17058,7 @@
       a.hist.push({ alta: alAlta(a) || '', baja: alBaja(a) || '' });
       a.alta = fecha;
       // v0.135: el periodo nuevo también acaba, por defecto, al fin de curso.
-      a.baja = finCursoISO(cursoDeFecha(fecha));
+      a.baja = finCursoDeAlta(fecha);
       // v0.162: vuelve a estar aquí, así que la nota de "movido a…" ya no vale
       if (a.movidoA) delete a.movidoA;
     }
