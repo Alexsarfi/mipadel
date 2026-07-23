@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.182.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.183.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,29 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.183.0 — El gestor puede crear franjas desde cero a cada entrenador (2026-07)
+    · Problema: el panel solo mostraba entrenadores que YA tenían franjas o
+      asistencia. Al empezar un curso desde cero (tras vaciar la base de
+      datos), ningún entrenador tenía franjas, así que ninguno aparecía y
+      el gestor no tenía por dónde entrar a crearles el horario.
+    · Ahora, en "Entrenadores" hay una sección nueva "Entrenadores del
+      club" que lista TODAS las cuentas de entrenador, tengan o no franjas.
+      Las que no tienen llevan la etiqueta "＋ franjas". Al tocar una, se
+      abre su detalle, donde "＋ Añadir clase" crea las franjas (día, hora,
+      nombre); los alumnos los mete el gestor dentro de cada franja.
+      (Las franjas y los alumnos siguen siendo cosa EXCLUSIVA del gestor;
+      el entrenador solo pasa lista.)
+    · El botón "Entrenadores" del panel ahora cuenta las cuentas del club
+      (el plantel), no solo las que tienen datos ese mes. Y al pulsarlo, si
+      algún entrenador aún no tiene franjas este curso, abre directamente la
+      lista para poder creárselas; si ya están todos montados, se abre la
+      visión "Todos" como hasta ahora.
+    · Cómo sabe la app quién es entrenador: los gestores no suben perfil,
+      así que la tabla 'perfiles' contiene justo las cuentas de entrenador.
+      Cada entrenador tiene que haber iniciado sesión al menos una vez para
+      aparecer en la lista.
+    · Sin cambios de datos/esquema.
 
   v0.182.0 — La asistencia local ya NO resucita tras un borrado (2026-07)
     · El problema de raíz: cuando se vaciaba algo en Supabase, cualquier
@@ -2925,6 +2948,10 @@
     .gestor-card-meta { font-size:12px; color:var(--gris); margin-top:3px; }
     .gestor-card-pct { flex-shrink:0; font-size:15px; font-weight:800; color:var(--verde); }
     .gestor-card-arr { font-size:20px; color:var(--lila); flex-shrink:0; }
+    /* v0.183: aviso "sin franjas" en la lista de entrenadores del club */
+    .gent-sinfr { flex-shrink:0; font-size:11px; font-weight:800; color:#166534;
+                  background:#dcfce7; border:1px solid #86efac; border-radius:999px;
+                  padding:3px 9px; white-space:nowrap; }
     /* v0.180: ✕ eliminar alumno, en el sitio que ocupaba el porcentaje */
     .gta-del { flex-shrink:0; width:30px; height:30px; border-radius:50%; border:1.5px solid #fecaca;
                background:#fef2f2; color:#b91c1c; font-size:14px; font-weight:800; line-height:1;
@@ -5471,7 +5498,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.182.0';
+    var APP_VERSION = '0.183.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -7034,7 +7061,7 @@
       // viven ahora en la cabecera verde, como pills glassy (toque pro).
       var hdrEl = document.getElementById('gest-hdr-acts');
       if (hdrEl) hdrEl.innerHTML =
-        '<button type="button" class="gest-hdr-btn" onclick="abrirGestorEntrenadoresDirecto()"><span class="ghb-ic">👥</span>Entrenadores<b>' + uids.length + '</b></button>' +
+        '<button type="button" class="gest-hdr-btn" onclick="abrirGestorEntrenadoresDirecto()"><span class="ghb-ic">👥</span>Entrenadores<b>' + _gNumEntrenadores() + '</b></button>' +
         '<button type="button" class="gest-hdr-btn" onclick="abrirGestorTodosAlumnos()"><span class="ghb-ic">👤</span>Alumnos<b>' + totAlumnos + '</b></button>' +
         '<button type="button" class="gest-hdr-btn" onclick="abrirGestorClasesMes()"><span class="ghb-ic">↩</span>Clases por recuperar<b>' + _gRecupSaldoClub() + '</b></button>' +
         '<button type="button" class="gest-hdr-btn" onclick="abrirGestorCalendario()"><span class="ghb-ic">📅</span>Días sin clase</button>';
@@ -7726,7 +7753,17 @@
       var by = _gestorAgrupar();
       var uids = Object.keys(by).filter(function(u){ return by[u].clases.length || by[u].regs.length; });
       uids.sort(function(a, b){ return _gestorNombre(by[a]).localeCompare(_gestorNombre(by[b])); });
-      if (uids.length) {
+      // v0.183: si algún entrenador del club NO tiene franjas este curso,
+      // se abre la pantalla-lista (donde está "Entrenadores del club" con
+      // todos, para poder crearles las franjas). Solo cuando TODOS ya tienen
+      // franjas se salta directo a la visión "Todos" (comportamiento v0.155).
+      var cursoHoy = cursoDeFecha(hoyLocal());
+      var faltanFranjas = (_gestorData.perfiles || []).some(function(p){
+        if (!p.user_id || (_sbUser && p.user_id === _sbUser.id)) return false;
+        var d2 = by[p.user_id] || { clases:[] };
+        return !_gestorClasesLocal(d2).some(function(c){ return _claseCurso(c) === cursoHoy; });
+      });
+      if (uids.length && !faltanFranjas) {
         abrirGestorDetalle(uids[0]);   // días contraídos por defecto
         // v0.155: al entrar en Entrenadores se abre en "Todos" (la visión de
         // conjunto), no en el detalle del primero. abrirGestorDetalle lo pone
@@ -7736,13 +7773,19 @@
       }
       else irA('pantalla-gestor-entrenadores');
     }
+    // v0.183: nº de cuentas de entrenador del club (perfiles = no gestores).
+    function _gNumEntrenadores() {
+      if (!_gestorData) return 0;
+      return (_gestorData.perfiles || []).filter(function(p){
+        return p.user_id && !(_sbUser && p.user_id === _sbUser.id);
+      }).length;
+    }
     function renderGestorEntrenadores() {
       var cont = document.getElementById('gent-contenido');
       if (!cont) return;
-      var _by0 = _gestorData ? _gestorAgrupar() : {};
-      var _u0  = Object.keys(_by0).filter(function(u){ return _by0[u].clases.length || _by0[u].regs.length; });
+      var n = _gNumEntrenadores();
       var sub = document.getElementById('gent-sub');
-      if (sub) sub.textContent = _u0.length + ' entrenador' + (_u0.length !== 1 ? 'es' : '') + ' con datos';
+      if (sub) sub.textContent = n + ' entrenador' + (n !== 1 ? 'es' : '') + ' en el club';
       cont.innerHTML = _gEntResumenHTML();
     }
     // v0.136: el resumen "Todos los entrenadores" se extrae a su propia
@@ -8066,6 +8109,45 @@
             '<button type="button" class="btn btn-sec btn-sm" onclick="gentExportarExcel()">📊 Excel</button>' +
           '</div>' +
         '</div>';
+      }
+
+      // ── v0.183: TODOS los entrenadores del club (con y sin franjas) ──
+      // El resumen de arriba solo muestra a quien ha dado clases ese mes,
+      // así que un entrenador SIN franjas todavía (p. ej. al empezar el
+      // curso tras vaciar la base de datos) no aparecía por ningún sitio y
+      // el gestor no podía entrar a crearle sus franjas. Aquí se listan
+      // TODAS las cuentas de entrenador del club para poder gestionarlas.
+      // (Los gestores no suben perfil, así que 'perfiles' son entrenadores.)
+      var _byAll = _gestorAgrupar();
+      var cursoHoy = cursoDeFecha(hoyLocal());
+      var perfsEnt = (_gestorData.perfiles || []).filter(function(p){
+        return p.user_id && !(_sbUser && p.user_id === _sbUser.id);   // no el propio gestor
+      }).sort(function(a,b){
+        return _gestorNombre(_byAll[a.user_id] || {perfil:a}).localeCompare(_gestorNombre(_byAll[b.user_id] || {perfil:b}));
+      });
+      h += '<div class="grupo-titulo" style="margin-top:1.2rem;">Entrenadores del club</div>';
+      h += '<p class="ajustes-desc" style="margin:0 0 0.5rem;">Toca un entrenador para gestionar sus franjas horarias: crearlas, editarlas y meter sus alumnos. Aparecen todos, tengan o no franjas todavía.</p>';
+      if (!perfsEnt.length) {
+        h += '<p class="ajustes-desc" style="text-align:center;padding:0.6rem 0;">Aún no hay ninguna cuenta de entrenador. Cada entrenador tiene que haber iniciado sesión al menos una vez para aparecer aquí.</p>';
+      } else {
+        perfsEnt.forEach(function(p){
+          var uid = p.user_id;
+          var d2  = _byAll[uid] || { uid:uid, clases:[], regs:[], perfil:p };
+          var nom = _gestorNombre(d2);
+          var nFr = _gestorClasesLocal(d2).filter(function(c){ return _claseCurso(c) === cursoHoy; }).length;
+          var meta = nFr ? (nFr + ' franja' + (nFr!==1?'s':'') + ' · curso ' + cursoHoy)
+                         : 'sin franjas todavía';
+          h += '<div class="gestor-card" onclick="abrirGestorDetalle(\'' + _gEsc(uid).replace(/'/g,"\\'") + '\')">' +
+            '<div class="gestor-card-ava">' + _gEsc(nom.charAt(0).toUpperCase()) + '</div>' +
+            '<div class="gestor-card-body">' +
+              '<div class="gestor-card-nom">' + _gEsc(nom) + '</div>' +
+              '<div class="gestor-card-meta">' + _gEsc(meta) +
+                (p.email ? ' · ' + _gEsc(p.email) : '') + '</div>' +
+            '</div>' +
+            (nFr ? '' : '<span class="gent-sinfr">＋ franjas</span>') +
+            '<div class="gestor-card-arr">›</div>' +
+          '</div>';
+        });
       }
 
       // v0.108: el alta de sustitutos vive ahora en el chip "＋ Sustituto
