@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.181.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.182.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,33 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.182.0 — La asistencia local ya NO resucita tras un borrado (2026-07)
+    · El problema de raíz: cuando se vaciaba algo en Supabase, cualquier
+      móvil que abriese la app con su copia local antigua la volvía a
+      SUBIR, y el borrado se deshacía. Pasaba porque la fusión de datos
+      (_mergeListas) propagaba los borrados del servidor a categorías,
+      ejercicios, clases y partidos, pero NO a la asistencia (alumnos,
+      franjas y registros). Esas dos tablas se fusionaban sin el 4º
+      parámetro, así que lo borrado en el servidor seguía vivo en local.
+    · Arreglo: la asistencia se fusiona ahora igual que el resto. Al
+      descargar, cada franja y cada registro se etiqueta con _ownerUid
+      (su user_id en el servidor). La fusión usa esa etiqueta para
+      distinguir lo bajado del servidor (se puede borrar si el servidor
+      ya no lo tiene) de lo creado en local sin conexión y aún sin subir
+      (se conserva siempre). Así un borrado en Supabase se propaga solo,
+      sin cargarse una franja recién creada. _upMap ignora _ownerUid al
+      subir, así que no cambia nada de lo que se guarda en el servidor.
+    · Efecto secundario bueno: si el gestor quita una franja de un
+      entrenador, ahora desaparece también del móvil del entrenador al
+      sincronizar (antes se quedaba y podía volver a subirla).
+    · IMPORTANTE para el borrado de septiembre: cada dispositivo debe
+      abrir la app con esta versión y sincronizar UNA vez CON los datos
+      todavía presentes, para que sus filas queden etiquetadas. A partir
+      de ahí, el borrado en Supabase se limpia solo en el siguiente
+      sync. El botón "Borrar datos locales" (v0.181) sigue estando como
+      refuerzo.
+    · Sin cambios de datos/esquema (solo una etiqueta interna en local).
 
   v0.181.0 — Botón "Borrar datos locales" en cada dispositivo (2026-07)
     · Por qué: cuando se limpia algo en Supabase, cualquier dispositivo que
@@ -5444,7 +5471,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.181.0';
+    var APP_VERSION = '0.182.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -5764,12 +5791,18 @@
           };
         });
 
+        // v0.182: se etiqueta cada fila con _ownerUid (su user_id en el
+        // servidor). Así la fusión distingue lo BAJADO del servidor (lleva
+        // _ownerUid) de lo CREADO en local sin conexión y aún sin subir (no
+        // lo lleva), y puede propagar los borrados del servidor sin cargarse
+        // una franja recién creada. _upMap ignora _ownerUid al subir.
         var asistServ = (results[4].data || []).map(function(c){ return {
           id:c.id, nombre:c.nombre,
           diaSemana:c.dia_semana||'', franja:c.franja||'',
           alumnos:c.alumnos||[],
           curso:c.curso||'',
-          fin:c.fin||'', finMotivo:c.fin_motivo||''   // v0.102
+          fin:c.fin||'', finMotivo:c.fin_motivo||'',   // v0.102
+          _ownerUid:c.user_id                          // v0.182
         }; });
 
         var regsServ = (results[5].data || []).map(function(r){ return {
@@ -5782,7 +5815,8 @@
           sinClaseRecup:!!r.sin_clase_recup,   // v0.137: la clase anulada se recuperará
           recupClase:!!r.recup_clase,
           recupHora:r.recup_hora||'',
-          recupDe:r.recup_de||''               // v0.142: fecha de la clase anulada que salda
+          recupDe:r.recup_de||'',              // v0.142: fecha de la clase anulada que salda
+          _ownerUid:r.user_id                  // v0.182
         }; });
 
         // ── Fusionar con lo local (soloLocal=true: sin eco de subida) ──
@@ -5792,8 +5826,10 @@
         escribirEjercicios(_mergeListas(leerEjercicios(), ejsServ, 'ejercicios', !results[1].error), true);
         escribirClases(_mergeListas(leerClases(), clasesServ, 'clases', !results[2].error), true);
         escribirPartidos(_mergeListas(leerPartidos(), partsServ, 'partidos', !results[3].error), true);
-        escribirAsistConfig({ clases: _mergeListas(leerAsistConfig().clases||[], asistServ, 'asistencia_clases') }, true);
-        escribirAsistRegistros(_mergeListas(leerAsistRegistros(), regsServ, 'asistencia_registros'), true);
+        // v0.182: la asistencia también propaga borrados (antes no, y por eso
+        // un móvil resucitaba alumnos y franjas tras un borrado en Supabase).
+        escribirAsistConfig({ clases: _mergeListas(leerAsistConfig().clases||[], asistServ, 'asistencia_clases', !results[4].error) }, true);
+        escribirAsistRegistros(_mergeListas(leerAsistRegistros(), regsServ, 'asistencia_registros', !results[5].error), true);
         // v0.55: estampar el curso en las clases que aún no lo tengan
         // (con los datos recién fusionados; la escritura lo sube al servidor)
         _asistStampCurso();
