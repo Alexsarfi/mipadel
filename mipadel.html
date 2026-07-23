@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.183.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.184.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,21 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.184.0 — Visión de semanas: nombre + inicial del PRIMER apellido (2026-07)
+    · En la visión de la semana completa del gestor, cada alumno se muestra
+      como "Nombre A." (nombre + la inicial de su primer apellido). Antes se
+      mostraban las iniciales de TODOS los apellidos ("Marta G.L."), que con
+      dos apellidos ensuciaba. Nuevo helper alCorto1() usado solo ahí; el
+      resto de pantallas mantienen alCorto() (todas las iniciales).
+    · Los alumnos se guardan con sus dos apellidos en el campo "Apellidos"
+      (a no ser que solo tengan uno); la inicial de la semana sale del
+      primero.
+    · NOTA: el "identificador interno único" para la asistencia (que dos
+      alumnos con el mismo nombre no se pisen nunca) es un cambio grande
+      aparte, planificado para AGOSTO sobre la base de datos ya vacía. Ver
+      PLAN_IDS_ALUMNOS.md. Esta versión solo toca lo que se ve en pantalla.
+    · Sin cambios de datos/esquema.
 
   v0.183.0 — El gestor puede crear franjas desde cero a cada entrenador (2026-07)
     · Problema: el panel solo mostraba entrenadores que YA tenían franjas o
@@ -5498,7 +5513,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.183.0';
+    var APP_VERSION = '0.184.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -9232,7 +9247,10 @@
         var mesAlta = alta ? alta.slice(0, 7) : '';
         var nuevo   = !baja && mesAlta === mesISO;
         var cls   = 'ghd-al' + (baja ? ' baja' : (nuevo ? ' alta' : ''));
-        var texto = (baja ? '❌ ' : (nuevo ? '🚩 ' : '')) + _gEsc(alCorto(a)) +
+        // v0.184: en la visión de semanas (soloAlumnos), nombre + inicial del
+        // PRIMER apellido ("Marta G."). En el resto, iniciales de todos.
+        var _cortoAl = opts.soloAlumnos ? alCorto1(a) : alCorto(a);
+        var texto = (baja ? '❌ ' : (nuevo ? '🚩 ' : '')) + _gEsc(_cortoAl) +
                     (baja  ? ' · ' + bajaEf.slice(8, 10) + '/' + bajaEf.slice(5, 7) :
                     (nuevo ? ' · ' + alta.slice(8, 10) + '/' + alta.slice(5, 7) : ''));
         nAls++;
@@ -16303,6 +16321,15 @@
       if (!ap) return n;
       var ini = ap.split(/\s+/).filter(Boolean).map(function(w){ return w.charAt(0).toUpperCase() + '.'; }).join('');
       return n + (ini ? ' ' + ini : '');
+    }
+    // v0.184: nombre + inicial SOLO del primer apellido ("Marta G."), para la
+    // visión de semanas del gestor. Con dos apellidos, alCorto mostraría dos
+    // iniciales ("Marta G.L."); aquí se deja solo la del primero.
+    function alCorto1(a) {
+      var n = alNom(a), ap = alApe(a);
+      if (!ap) return n;
+      var p1 = ap.split(/\s+/).filter(Boolean)[0] || '';
+      return n + (p1 ? ' ' + p1.charAt(0).toUpperCase() + '.' : '');
     }
     // Periodos ANTERIORES de alta/baja del alumno en la clase (v0.63):
     // cuando se reincorpora al mismo grupo, el periodo cerrado se guarda
