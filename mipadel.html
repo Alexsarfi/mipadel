@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.184.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.185.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,22 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.185.0 — Varias sesiones el mismo día sin pisarse (clave fecha+nombre) (2026-07)
+    · Problema: al importar/sincronizar dos sesiones DISTINTAS con la misma
+      fecha (p. ej. dos individuales de dos alumnos el mismo día), la segunda
+      MACHACABA a la primera y no se podía subir. Causa: la deduplicación
+      identificaba la sesión por "fecha + ejercicios" con un fallback a
+      "fecha SOLA", y ese fallback asumía una única sesión por día.
+    · Ahora la clave es "fecha + NOMBRE": dos sesiones el mismo día conviven
+      si tienen nombre distinto, y una sesión ya subida se sigue reconociendo
+      aunque le edites los ejercicios (mismo día + mismo nombre = la misma).
+    · Refuerzo de compatibilidad: si una sesión antigua no tiene nombre en el
+      servidor, se sigue reconociendo por "fecha + ejercicios" exactos, así
+      que nada de lo ya subido se duplica al pasar a esta versión.
+    · Mismo criterio aplicado en sync_padel.py (subida directa a Supabase),
+      para que importar el JSON y sincronizar por terminal se comporten igual.
+    · Sin cambios de esquema: la columna clases.nombre ya existía.
 
   v0.184.0 — Visión de semanas: nombre + inicial del PRIMER apellido (2026-07)
     · En la visión de la semana completa del gestor, cada alumno se muestra
@@ -5513,7 +5529,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.184.0';
+    var APP_VERSION = '0.185.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -16102,18 +16118,25 @@
       var clases = leerClases();
       function maxIdClase() { return clases.length > 0 ? Math.max.apply(null, clases.map(function(c){return c.id;})) : 0; }
 
-      // Clave de deduplicación: fecha + IDs de ejercicios ordenados
-      // Permite múltiples sesiones el mismo día si tienen ejercicios distintos
-      function claveSesion(fecha, ejIds) {
-        return fecha + ':' + (ejIds||[]).slice().sort().join(',');
+      // Clave de deduplicación: fecha + NOMBRE (desde v0.185).
+      // Antes era fecha + ejercicios, con fallback a fecha SOLA — pero ese
+      // fallback hacía que dos sesiones DISTINTAS del mismo día se pisaran
+      // (la segunda machacaba a la primera). Ahora dos sesiones el mismo día
+      // conviven si tienen NOMBRE distinto, y una sesión ya subida se sigue
+      // reconociendo aunque le edites los ejercicios (mismo día + mismo nombre).
+      function claveSesion(fecha, nombre) {
+        return (fecha || '') + '\n' + (nombre || '').trim().toLowerCase();
       }
-      var clavesExistentes = clases.map(function(c){ return claveSesion(c.fecha, c.ejercicioIds); });
-
-      // Mapa fecha → índices en clases (para actualizar metadata de sesiones existentes)
-      var fechaIdxMap = {};
+      // Clave antigua (fecha + ejercicios) — se mantiene como refuerzo para
+      // reconocer sesiones subidas ANTES de v0.185 que aún no tengan nombre.
+      function claveEjs(fecha, ejIds) {
+        return (fecha || '') + ':' + (ejIds||[]).slice().sort().join(',');
+      }
+      var claveNombreMap = {};   // fecha+nombre → índice en clases
+      var claveEjsMap    = {};   // fecha+ejercicios → índice en clases
       clases.forEach(function(c, i) {
-        if (!fechaIdxMap[c.fecha]) fechaIdxMap[c.fecha] = [];
-        fechaIdxMap[c.fecha].push(i);
+        claveNombreMap[claveSesion(c.fecha, c.nombre)] = i;
+        claveEjsMap[claveEjs(c.fecha, c.ejercicioIds)]  = i;
       });
 
       (data.sesiones || []).forEach(function(sesData) {
@@ -16121,34 +16144,33 @@
           .map(findEjId)
           .filter(function(id){ return id !== null; });
 
-        // Una sesión = todos sus ejercicios (sin trocear en bloques de 3).
-        var chunks = [ejIds];
+        var nombre = sesData.nombre || '';
+        var claveN = claveSesion(sesData.fecha, nombre);
+        var matchIdx = claveNombreMap.hasOwnProperty(claveN) ? claveNombreMap[claveN] : -1;
 
-        chunks.forEach(function(chunk, chunkIdx) {
-          var sufijo  = chunkIdx === 0 ? '' : ' · ' + (chunkIdx + 1);
-          var nombre  = (sesData.nombre || '') + sufijo;
-          var clave   = claveSesion(sesData.fecha, chunk);
-          var exactIdx = clavesExistentes.indexOf(clave);
-          var matchIdx = exactIdx;
+        // Refuerzo: si no hay match por nombre pero sí por fecha+ejercicios
+        // exactos (sesión antigua sin nombre), la reconocemos igual.
+        if (matchIdx === -1) {
+          var claveE = claveEjs(sesData.fecha, ejIds);
+          if (claveEjsMap.hasOwnProperty(claveE)) matchIdx = claveEjsMap[claveE];
+        }
 
-          // Solo el bloque principal (chunkIdx=0) puede hacer fallback por fecha
-          if (matchIdx === -1 && chunkIdx === 0 && fechaIdxMap[sesData.fecha]) {
-            matchIdx = fechaIdxMap[sesData.fecha][0];
-          }
+        if (matchIdx !== -1) {
+          clases[matchIdx].nombre       = nombre || clases[matchIdx].nombre || '';
+          clases[matchIdx].tematica     = sesData.tipo     || clases[matchIdx].tematica || '';
+          clases[matchIdx].objetivo     = sesData.objetivo || clases[matchIdx].objetivo || '';
+          if (ejIds.length > 0) clases[matchIdx].ejercicioIds = ejIds;
+          // Actualizar los mapas por si el nombre cambió
+          claveNombreMap[claveSesion(clases[matchIdx].fecha, clases[matchIdx].nombre)] = matchIdx;
+          return;
+        }
 
-          if (matchIdx !== -1) {
-            clases[matchIdx].nombre       = nombre || clases[matchIdx].nombre || '';
-            clases[matchIdx].tematica     = sesData.tipo     || clases[matchIdx].tematica || '';
-            clases[matchIdx].objetivo     = sesData.objetivo || clases[matchIdx].objetivo || '';
-            if (chunk.length > 0) clases[matchIdx].ejercicioIds = chunk;
-            return;
-          }
-
-          clases.push({ id: maxIdClase() + 1, fecha: sesData.fecha, ejercicioIds: chunk,
-            nombre: nombre, tematica: sesData.tipo || '', objetivo: sesData.objetivo || '' });
-          clavesExistentes.push(clave);
-          resultado.sesiones++;
-        });
+        var nueva = { id: maxIdClase() + 1, fecha: sesData.fecha, ejercicioIds: ejIds,
+          nombre: nombre, tematica: sesData.tipo || '', objetivo: sesData.objetivo || '' };
+        clases.push(nueva);
+        claveNombreMap[claveN] = clases.length - 1;
+        claveEjsMap[claveEjs(sesData.fecha, ejIds)] = clases.length - 1;
+        resultado.sesiones++;
       });
       escribirClases(clases);
 
