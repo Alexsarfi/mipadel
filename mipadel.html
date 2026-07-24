@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.186.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.187.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,22 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.187.0 — Iniciación estrena la vista mensual del plan (como Avanzado) (2026-07)
+    · Hasta ahora la vista de "meses por semanas + marcar lo trabajado cada
+      día" (con el desplegable del día para elegir qué se trabajó) la tenían
+      solo Competición y Avanzado. Iniciación mostraba únicamente las etapas.
+    · Ahora Iniciación también la muestra, con SU catálogo: al abrir un día
+      salen las áreas/bloques de Iniciación (no los de otro nivel). El marcado
+      por día es privado de cada entrenador (plan_dias_usuario), igual que en
+      los otros niveles, y solo cuenta las filas del nivel activo.
+    · Cambios: 'iniciacion' entra en COMP_NIVELES (activa contador "N× este
+      curso" y el registro por días) y se renderiza _compListaMesHTML también
+      cuando el nivel es iniciacion. Las etapas en secuencia se mantienen
+      debajo, como antes.
+    · Sin cambios de datos/esquema. Nota: al ser Iniciación el nivel que ve el
+      EN1, ahora este también vería esa vista mensual en su plan de solo
+      lectura; si se quiere ocultar al EN1, es un ajuste aparte.
 
   v0.186.0 — Enlazar sesiones al plan desde Obsidian (apartado + bloque) (2026-07)
     · Nuevo: una sesión puede declarar en su ficha de Obsidian a qué APARTADO
@@ -5550,7 +5566,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.186.0';
+    var APP_VERSION = '0.187.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -12880,7 +12896,7 @@
     // con vídeos) la usan Competición y Avanzado. El NIVEL activo decide de
     // qué catálogo salen las áreas de trabajo, así que cada uno enseña y
     // marca lo suyo aunque compartan el mismo registro por fecha.
-    var COMP_NIVELES = ['competicion', 'avanzado'];
+    var COMP_NIVELES = ['competicion', 'avanzado', 'iniciacion'];
     function _compNivel() {
       var n = leerPlan().nivel;
       return COMP_NIVELES.indexOf(n) >= 0 ? n : 'competicion';
@@ -13349,9 +13365,9 @@
       } else {
         // v0.152: AVANZADO usa la misma estructura de trabajo que Competición
         // (vista del mes por semanas + marcar lo trabajado cada día), pero con
-        // SU catálogo: al abrir un día salen las áreas de trabajo de Avanzado,
-        // no las de Competición. Iniciación se queda como estaba.
-        if (!edit && nivel === 'avanzado') h += _compListaMesHTML(p);
+        // SU catálogo: al abrir un día salen las áreas de trabajo de ese nivel.
+        // v0.187: INICIACIÓN también usa esa vista mensual, con su catálogo.
+        if (!edit && (nivel === 'avanzado' || nivel === 'iniciacion')) h += _compListaMesHTML(p);
         // Iniciación / Avanzado: etapas en secuencia. Sin "en curso" automático;
         // el progreso lo marca el usuario con el ✓ "trabajado" de cada bloque.
         etapas.forEach(function(et, idx){
