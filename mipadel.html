@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.185.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.186.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,27 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.186.0 — Enlazar sesiones al plan desde Obsidian (apartado + bloque) (2026-07)
+    · Nuevo: una sesión puede declarar en su ficha de Obsidian a qué APARTADO
+      (etapa del plan, p. ej. "Consolidación de fondo") y a qué BLOQUE dentro
+      de él (p. ej. "Profundidad y ritmo") pertenece, con los campos
+      `apartado:` y `bloque:` del frontmatter. Al sincronizar, la sesión
+      aparece AUTOMÁTICAMENTE enlazada en ese bloque de la Planificación para
+      todos los entrenadores del grupo, sin marcarla a mano.
+    · En la app, cada bloque del plan muestra ahora la UNIÓN de: las sesiones
+      enlazadas a mano (sesInc, como siempre) + las que traen apartado+bloque
+      coincidentes en su ficha. Las automáticas se marcan "· desde ficha" y en
+      el editor aparecen ya marcadas (no hace falta tocarlas). El emparejado
+      exige además que el nivel de la sesión coincida con el del apartado.
+    · NO toca la fila compartida plan_grupo (el enlace viaja como dato propio
+      de la sesión en la tabla clases), así que no hay riesgo de pisar el plan
+      del grupo. El marcado manual sigue funcionando igual que antes.
+    · Requiere ejecutar migracion_clases_apartado.sql UNA vez en Supabase
+      ANTES de usar esta versión (añade las columnas apartado y bloque a
+      clases). Sin ella, el sync de esos campos falla en silencio.
+    · Mismo criterio en sync_padel.py: lee apartado/bloque del frontmatter y
+      los sube (y los mete en el JSON para el import manual).
 
   v0.185.0 — Varias sesiones el mismo día sin pisarse (clave fecha+nombre) (2026-07)
     · Problema: al importar/sincronizar dos sesiones DISTINTAS con la misma
@@ -5529,7 +5550,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.185.0';
+    var APP_VERSION = '0.186.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -5830,6 +5851,7 @@
           id:c.id, fecha:c.fecha, trabajada:!!c.trabajada,
           ejercicioIds:c.ejercicio_ids||[],
           nombre:c.nombre||'', tematica:c.tematica||'', objetivo:c.objetivo||'',
+          apartado:c.apartado||'', bloque:c.bloque||'',
           _ownerUid:c.user_id
         }; });
 
@@ -5983,6 +6005,8 @@
             nombre:      x.nombre   || prev.nombre   || '',
             tematica:    x.tematica || prev.tematica || '',
             objetivo:    x.objetivo || prev.objetivo || '',
+            apartado:    x.apartado || prev.apartado || '',
+            bloque:      x.bloque   || prev.bloque   || '',
             _ownerUid:   x._ownerUid  || prev._ownerUid,
           };
         } else {
@@ -6089,7 +6113,8 @@
         var r = {
           id:c.id, user_id:c._ownerUid||uid, fecha:c.fecha,
           trabajada:!!c.trabajada, ejercicio_ids:c.ejercicioIds||[],
-          nombre:c.nombre||'', tematica:c.tematica||'', objetivo:c.objetivo||''
+          nombre:c.nombre||'', tematica:c.tematica||'', objetivo:c.objetivo||'',
+          apartado:c.apartado||'', bloque:c.bloque||''
         };
         if (gid) r.grupo_id = gid; return r;
       },
@@ -12555,30 +12580,34 @@
         if (!sesNivel.length) {
           h += '<div class="plan-ses-intro">Aún no tienes sesiones de ' + planNivelLabel(ctx.nivel) + '.</div>';
         } else {
-          h += '<div class="plan-intro">✏️ <strong>Marca</strong> las sesiones que quieres enlazar a este apartado.</div>';
+          h += '<div class="plan-intro">✏️ <strong>Marca</strong> las sesiones que quieres enlazar a este apartado. Las marcadas «desde ficha» ya vienen enlazadas desde Obsidian (apartado + bloque) y no necesitan tocarse.</div>';
           sesNivel.forEach(function(c){
-            var on = inc.indexOf(c.id) >= 0;
+            var auto = _sesEsAuto(c, ctx.nivel, ctx.mes, it);
+            var on = inc.indexOf(c.id) >= 0 || auto;
             var nEj = (c.ejercicioIds||[]).length;
+            var metaExtra = (c.tematica ? c.tematica + ' · ' : '') + nEj + ' ejercicio' + (nEj!==1?'s':'') + (auto ? ' · <em>desde ficha</em>' : '');
             h += '<div class="plan-ses-card plansel' + (on ? ' on' : '') + '" onclick="planSesToggleSesion(' + c.id + ')">' +
                    '<span class="plansel-check">' + (on ? '✓' : '') + '</span>' +
                    '<div class="plan-ses-card-body">' +
                      '<div class="plan-ses-card-nom">' + nombreSesion(c) + '</div>' +
-                     '<div class="plan-ses-card-meta">' + (c.tematica ? c.tematica + ' · ' : '') + nEj + ' ejercicio' + (nEj!==1?'s':'') + '</div>' +
+                     '<div class="plan-ses-card-meta">' + metaExtra + '</div>' +
                    '</div></div>';
           });
         }
       } else {
-        var vis = sesNivel.filter(function(c){ return inc.indexOf(c.id) >= 0; });
+        var vis = _sesionesDeBloqueUnion(ctx.nivel, ctx.mes, it);
         if (!vis.length) {
           h += '<div class="plan-ses-intro">Este apartado no tiene sesiones enlazadas. Pulsa «Añadir / quitar sesiones» para enlazar las que quieras.</div>';
         } else {
           h += '<div class="plan-ses-intro">' + vis.length + ' sesión' + (vis.length!==1?'es':'') + ' enlazada' + (vis.length!==1?'s':'') + ' · toca para verla.</div>';
           vis.forEach(function(c){
+            var auto = _sesEsAuto(c, ctx.nivel, ctx.mes, it);
             var nEj = (c.ejercicioIds||[]).length;
+            var metaExtra = (c.tematica ? c.tematica + ' · ' : '') + nEj + ' ejercicio' + (nEj!==1?'s':'') + (auto ? ' · <em>desde ficha</em>' : '');
             h += '<div class="plan-ses-card" onclick="verSesion(' + c.id + ',\'plan\')">' +
                    '<div class="plan-ses-card-body">' +
                      '<div class="plan-ses-card-nom">' + nombreSesion(c) + '</div>' +
-                     '<div class="plan-ses-card-meta">' + (c.tematica ? c.tematica + ' · ' : '') + nEj + ' ejercicio' + (nEj!==1?'s':'') + '</div>' +
+                     '<div class="plan-ses-card-meta">' + metaExtra + '</div>' +
                    '</div><span class="plan-ses-card-arr">›</span></div>';
           });
         }
@@ -12593,6 +12622,42 @@
       if (!inc.length) return [];
       if (!_planSesCache) _planSesCache = { clases:leerClases() };
       return _planSesCache.clases.filter(function(c){ return inc.indexOf(c.id) >= 0; });
+    }
+
+    // Nombre del apartado (etapa) a partir de su clave (a1, a2…) y el nivel.
+    function _apartadoNombre(nivel, etapaKey) {
+      var ets = PLAN_ETAPAS[nivel] || [];
+      var e = ets.filter(function(x){ return x.key === etapaKey; })[0];
+      return e ? e.nombre : '';
+    }
+
+    // v0.186 — Sesiones que caen en un bloque: las enlazadas A MANO (sesInc)
+    // MÁS las que traen apartado+bloque en su ficha (auto, desde Obsidian),
+    // enlazadas para todo el grupo sin marcarlas una a una. `etapaKey` es la
+    // clave del apartado (a1…); `it` es el bloque. Deduplica por id.
+    function _sesionesDeBloqueUnion(nivel, etapaKey, it) {
+      var manual = (it && it.sesInc) ? it.sesInc : [];
+      var etNom  = _apartadoNombre(nivel, etapaKey).trim().toLowerCase();
+      var bloqT  = (it && it.t) ? it.t.trim().toLowerCase() : '';
+      var mapEj  = _ejsById();
+      var res = [], vistos = {};
+      leerClases().forEach(function(c){
+        var enManual = manual.indexOf(c.id) >= 0;
+        var enAuto = etNom && bloqT && c.apartado && c.bloque &&
+                     String(c.apartado).trim().toLowerCase() === etNom &&
+                     String(c.bloque).trim().toLowerCase()   === bloqT &&
+                     nivelDeSesion(c, mapEj) === nivel;
+        if ((enManual || enAuto) && !vistos[c.id]) { vistos[c.id] = true; res.push(c); }
+      });
+      return res;
+    }
+    // ¿Esta sesión llega al bloque por su ficha (apartado+bloque) y no por sesInc?
+    function _sesEsAuto(c, nivel, etapaKey, it) {
+      var etNom = _apartadoNombre(nivel, etapaKey).trim().toLowerCase();
+      var bloqT = (it && it.t) ? it.t.trim().toLowerCase() : '';
+      return !!(etNom && bloqT && c.apartado && c.bloque &&
+                String(c.apartado).trim().toLowerCase() === etNom &&
+                String(c.bloque).trim().toLowerCase()   === bloqT);
     }
 
     // v0.119 (POC Competición) — Ejercicios enlazados a una fila (solo los que
@@ -12675,7 +12740,7 @@
           }
         }
       } else {
-        var ses = _planSesionesDeBloque(nivel, it);
+        var ses = _sesionesDeBloqueUnion(nivel, mes, it);
         if (ses.length) {
           h2 += '<div class="plan-item-ses">';
           ses.forEach(function(c){
@@ -16159,6 +16224,8 @@
           clases[matchIdx].nombre       = nombre || clases[matchIdx].nombre || '';
           clases[matchIdx].tematica     = sesData.tipo     || clases[matchIdx].tematica || '';
           clases[matchIdx].objetivo     = sesData.objetivo || clases[matchIdx].objetivo || '';
+          clases[matchIdx].apartado     = sesData.apartado !== undefined ? sesData.apartado : (clases[matchIdx].apartado || '');
+          clases[matchIdx].bloque       = sesData.bloque   !== undefined ? sesData.bloque   : (clases[matchIdx].bloque   || '');
           if (ejIds.length > 0) clases[matchIdx].ejercicioIds = ejIds;
           // Actualizar los mapas por si el nombre cambió
           claveNombreMap[claveSesion(clases[matchIdx].fecha, clases[matchIdx].nombre)] = matchIdx;
@@ -16166,7 +16233,8 @@
         }
 
         var nueva = { id: maxIdClase() + 1, fecha: sesData.fecha, ejercicioIds: ejIds,
-          nombre: nombre, tematica: sesData.tipo || '', objetivo: sesData.objetivo || '' };
+          nombre: nombre, tematica: sesData.tipo || '', objetivo: sesData.objetivo || '',
+          apartado: sesData.apartado || '', bloque: sesData.bloque || '' };
         clases.push(nueva);
         claveNombreMap[claveN] = clases.length - 1;
         claveEjsMap[claveEjs(sesData.fecha, ejIds)] = clases.length - 1;
