@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.187.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.188.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,12 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.188.0 — Apartado desplegado sombreado en el plan (2026-07)
+    · Al abrir un apartado (etapa) en Planificación, ahora se sombrea con un
+      fondo suave y borde dorado para verlo mejor de un vistazo en el móvil.
+    · No afecta al apartado "en curso" (.actual), que conserva su cian.
+    · Solo CSS, sin cambios de datos/lógica.
 
   v0.187.0 — Iniciación estrena la vista mensual del plan (como Avanzado) (2026-07)
     · Hasta ahora la vista de "meses por semanas + marcar lo trabajado cada
@@ -4255,6 +4261,9 @@
     .plan-etapa-prog { font-size:12px; font-weight:800; color:var(--gris); flex-shrink:0; }
     .plan-etapa-chev { font-size:13px; color:var(--gris); flex-shrink:0; transition:transform .18s; }
     .plan-etapa.abierto .plan-etapa-chev { transform:rotate(90deg); }
+    /* v0.188: apartado desplegado sombreado (mejor lectura en móvil). No pisa
+       el cian del apartado "en curso" (.actual). */
+    .plan-etapa.abierto:not(.actual) { background:var(--lila-suave); border-color:var(--lila-claro); box-shadow:0 3px 12px rgba(22,38,79,.08); }
     .plan-etapa-body { display:none; padding:0 11px 10px; flex-direction:column; gap:7px; }
     .plan-etapa.abierto .plan-etapa-body { display:flex; }
     /* v0.123 — Vista mensual de Competición agrupada por día de la semana
@@ -5566,7 +5575,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.187.0';
+    var APP_VERSION = '0.188.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
