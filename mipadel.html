@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.189.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.190.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,16 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.190.0 — Ver el ID técnico del alumno en su ficha (2026-08)
+    · En la ficha del alumno (gestor → Alumnos → un alumno → "✏️ Editar
+      datos") se muestra abajo, pequeño y en gris, su ID interno (el de
+      asistencia de cada franja y, si tiene, el de su ficha de academia).
+    · Es solo informativo: sirve para comprobar, por ejemplo, que dos
+      alumnos con el mismo nombre tienen ids distintos. Se puede seleccionar
+      para copiarlo. Si el alumno aún no está en ninguna franja, indica que
+      no tiene ID todavía (se le asigna al meterlo en una franja).
+    · Sin cambios de datos/esquema.
 
   v0.189.0 — Identificador interno único por alumno (asistencia por ID) (2026-08)
     · Antes, la asistencia se guardaba por NOMBRE. Dos alumnos con el mismo
@@ -3562,6 +3572,9 @@
     /* v0.156: ficha del alumno (datos + acciones) y sus franjas */
     .gta-ficha { background:var(--blanco); border:1.5px solid var(--borde); border-radius:12px; padding:0.7rem 0.8rem; margin-bottom:0.7rem; }
     .gta-ficha-tit { font-size:12px; font-weight:800; color:var(--texto); margin-bottom:0.5rem; }
+    /* v0.190: id técnico del alumno, discreto y seleccionable para copiar */
+    .gta-ficha-id { margin-top:8px; font-size:10px; color:var(--gris); font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+                    word-break:break-all; -webkit-user-select:text; user-select:text; opacity:0.85; }
     .gta-ficha-meta { font-size:12.5px; color:var(--texto); margin-bottom:0.6rem; }
     .gta-ficha-meta.vacio { color:var(--gris); font-style:italic; }
     .gta-ficha-btns { display:flex; gap:8px; }
@@ -5596,7 +5609,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.189.0';
+    var APP_VERSION = '0.190.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -11369,10 +11382,32 @@
         sub.textContent = meta.length ? meta.join(' · ') : 'Sin apellidos ni teléfono';
       }
     }
+    // v0.190: ids técnicos del alumno (los de asistencia de cada franja +,
+    // si tiene, el de su ficha de academia). Solo informativo.
+    function _gtaIdsTecnicos(d) {
+      var ids = [];
+      var by = _gestorAgrupar();
+      Object.keys(by).forEach(function(uid){
+        _gestorClasesLocal(by[uid]).forEach(function(c){
+          (c.alumnos || []).forEach(function(a){
+            if (alNom(a) === d.nombre && (alApe(a) || '') === (d.apellidos || '')) {
+              var id = alId(a);
+              if (id && ids.indexOf(id) === -1) ids.push(id);
+            }
+          });
+        });
+      });
+      if (d.fichaId && ids.indexOf(d.fichaId) === -1) ids.push(d.fichaId);
+      return ids;
+    }
     function _gtaFichaHTML(al) {
       var d = _gtaDatosDe(al);
       if (_gtaMoverOn) return _gtaMoverHTML(al);
       if (_gtaEditOn) {
+        var ids = _gtaIdsTecnicos(d);
+        var idLinea = ids.length
+          ? '<div class="gta-ficha-id">ID' + (ids.length !== 1 ? 's' : '') + ': ' + _gEsc(ids.join(' · ')) + '</div>'
+          : '<div class="gta-ficha-id">Sin ID todavía (se asigna al meterlo en una franja)</div>';
         return '<div class="gta-ficha">' +
           '<div class="gta-ficha-tit">✏️ Editar datos</div>' +
           '<div class="asist-form-add-alumno" style="flex-wrap:wrap;">' +
@@ -11384,6 +11419,7 @@
             '<button class="btn btn-verde btn-sm" style="flex:1;" onclick="gtaGuardarDatos()">Guardar</button>' +
             '<button class="btn btn-sec btn-sm" style="flex:1;" onclick="gtaToggleEditar()">Cancelar</button>' +
           '</div>' +
+          idLinea +
         '</div>';
       }
       return '';   // v0.159: sin panel abierto, el cuerpo no lleva ficha
