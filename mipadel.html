@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.191.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.192.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,25 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.192.0 — Subgrupos por combinación de golpes dentro de "Combinada" (2026-07)
+    · Nuevo campo de vault `combo:` (lista, p.ej. [volea, fondo]) para los
+      ejercicios de golpe=mixto que combinan roles/golpes reales de forma
+      equilibrada (no tienen un golpe dominante único).
+    · En Ejercicios, dentro del grupo "🔀 Combinada", ahora se subagrupa por
+      esa combinación (p.ej. "Volea + Fondo", "Globo + Bandeja + Volea") en
+      vez de mostrar todo en una lista plana. Los que no tengan `combo:`
+      caen en un subgrupo "Otros combinados".
+    · sync_padel.py: lee `combo:` del frontmatter y lo mete en `facetas`
+      (jsonb ya existente) — sin migración SQL, no es columna nueva.
+    · Reclasificados de mixto → golpe real (tenían un dominante claro, no
+      eran verdaderamente combinados): "Chanquetazo tras volea a los pies",
+      "Formato competitivo en diagonal (parte A)" y "(parte B)" → volea.
+    · Aplicado `combo:` en 4 ejercicios de técnica combinada que sí son
+      genuinamente mixtos: "Fondo con volea", "Red contra fondo (voleas vs
+      defensa en círculo)", "Red contra fondo con subida a volear
+      (transición)" → [volea, fondo]; "Secuencia cruzada globo-bandeja y
+      volea-volea" → [globo, bandeja, volea].
 
   v0.191.0 — Un único ID estable por persona (las franjas cuelgan de él) (2026-08)
     · Antes cada franja generaba su propio id para el alumno, así que una
@@ -3757,6 +3776,7 @@
     /* ── GRUPOS ── */
     .grupo { margin-bottom:1.25rem; }
     .grupo-titulo { font-size:11px; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:0.08em; padding:0.25rem 0 0.5rem; border-bottom:1px solid var(--borde); margin-bottom:8px; }
+    .subgrupo-titulo { font-size:12px; font-weight:700; color:var(--gris); margin:10px 0 6px; padding-left:2px; }
 
     /* ── CUADRÍCULA DE EJERCICIOS (v0.70) — miniatura de vídeo ── */
     .grid-ejercicios { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
@@ -5623,7 +5643,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.191.0';
+    var APP_VERSION = '0.192.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -14008,6 +14028,19 @@
     }
     function ejGolpe(ej) { return golpeCanonico(ejFaceta(ej, 'golpe')); }
 
+    // Combinación de golpes dentro de un ejercicio "Combinada" (v0.192).
+    // Devuelve array de claves de golpe (p.ej. ['volea','fondo']) o [] si no se declaró.
+    function ejCombo(ej) {
+      var c = ejFaceta(ej, 'combo');
+      return Array.isArray(c) ? c.filter(Boolean) : [];
+    }
+    function comboLabel(combo) {
+      return combo.map(function(k){ return GOLPE_LABEL[k] || k; }).join(' + ');
+    }
+    function comboClave(combo) {
+      return combo.slice().sort().join('+');
+    }
+
     // ── Intención táctica (matriz Anular / Dominar / Definir) ──
     var INTENCION_CANON = [
       { key: 'anular',  icono: '🛡️', label: 'Anular'  },
@@ -14273,9 +14306,44 @@
                   '<span style="font-size:12px;color:var(--gris);font-weight:600;">' + grupoG.length + '</span>' +
                 '</div>';
         if (abierto) {
-          html += '<div class="grid-ejercicios">';
-          grupoG.forEach(function(ej){ html += ejercicioCardHTML(ej, 'ejercicios'); });
-          html += '</div>';
+          if (g === 'mixto') {
+            // v0.192: dentro de "Combinada", subagrupar por combinación real de
+            // golpes (campo combo: en el vault), en vez de una lista plana.
+            var comboMap = {}, sinCombo = [];
+            grupoG.forEach(function(e) {
+              var combo = ejCombo(e);
+              if (combo.length) {
+                var k = comboClave(combo);
+                if (!comboMap[k]) comboMap[k] = { label: comboLabel(combo), ejercicios: [] };
+                comboMap[k].ejercicios.push(e);
+              } else {
+                sinCombo.push(e);
+              }
+            });
+            var comboOrden = function(a, b) {
+              var d = (b.valoracion || 0) - (a.valoracion || 0);
+              return d !== 0 ? d : (a.nombre || '').localeCompare(b.nombre || '');
+            };
+            Object.keys(comboMap).sort(function(a, b){ return comboMap[a].label.localeCompare(comboMap[b].label); }).forEach(function(k) {
+              var sub = comboMap[k];
+              sub.ejercicios.sort(comboOrden);
+              html += '<div class="subgrupo-titulo">' + sub.label + '</div>';
+              html += '<div class="grid-ejercicios">';
+              sub.ejercicios.forEach(function(ej){ html += ejercicioCardHTML(ej, 'ejercicios'); });
+              html += '</div>';
+            });
+            if (sinCombo.length) {
+              sinCombo.sort(comboOrden);
+              html += '<div class="subgrupo-titulo">Otros combinados</div>';
+              html += '<div class="grid-ejercicios">';
+              sinCombo.forEach(function(ej){ html += ejercicioCardHTML(ej, 'ejercicios'); });
+              html += '</div>';
+            }
+          } else {
+            html += '<div class="grid-ejercicios">';
+            grupoG.forEach(function(ej){ html += ejercicioCardHTML(ej, 'ejercicios'); });
+            html += '</div>';
+          }
         }
         html += '</div>';
       });
