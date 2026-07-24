@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.188.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.189.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,27 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.189.0 — Identificador interno único por alumno (asistencia por ID) (2026-08)
+    · Antes, la asistencia se guardaba por NOMBRE. Dos alumnos con el mismo
+      nombre (sobre todo en la misma franja) se pisaban: al marcar a uno se
+      marcaba al otro, y sus estadísticas se mezclaban.
+    · Ahora cada alumno lleva un ID interno estable (alId/_alKey). La
+      asistencia (presentes, ausentes, faltas, recuperaciones) se guarda por
+      ese ID, no por el nombre. El nombre pasa a ser solo lo que se ve: se
+      puede corregir o cambiar de apellidos sin romper el historial.
+    · Se estampa un id al AÑADIR un alumno a una franja (formulario, alta
+      rápida y al mover de franja). Los registros antiguos sin id siguen
+      funcionando por compatibilidad (_alKey cae al nombre si no hay id),
+      pero al empezar el curso desde cero todos nacen con id.
+    · Migrado todo el motor: pasar lista, recuperaciones, historial por mes
+      y curso, matrices, panel del gestor y los exports (PDF/Excel). El cupo
+      de cada clase va por ID; las recuperaciones tecleadas por nombre siguen
+      por nombre (son de otra franja, sin colisión real).
+    · Borrar un alumno "del todo" ya es exacto por ID: se elimina justo a ese
+      alumno aunque otro se llame igual. Desaparece el aviso de homónimos.
+    · Sin cambios de esquema en Supabase: presentes/ausentes/recups siguen
+      siendo listas de texto; ahora contienen ids en vez de nombres.
 
   v0.188.0 — Apartado desplegado sombreado en el plan (2026-07)
     · Al abrir un apartado (etapa) en Planificación, ahora se sombrea con un
@@ -5575,7 +5596,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.188.0';
+    var APP_VERSION = '0.189.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -7899,22 +7920,23 @@
         };
         (c.alumnos || []).forEach(function(a){
           var n = alNom(a); if (!n) return;
+          var k = _alKey(a);                       // v0.189: identidad por key
           var pres = 0, pos = 0, fJ = 0, fIJ = 0;
           dadas.forEach(function(r){
             if (!alActivo(a, r.fecha)) return;
             pos++;
-            if ((r.presentes||[]).indexOf(n) !== -1) pres++;
-            else if ((r.justificadas||[]).indexOf(n) !== -1) fJ++; else fIJ++;
+            if ((r.presentes||[]).indexOf(k) !== -1) pres++;
+            else if ((r.justificadas||[]).indexOf(k) !== -1) fJ++; else fIJ++;
           });
           if (!pos) return;
           b.filas.push({ alumno: alCorto(a), pres: pres, pos: pos, fJ: fJ, fIJ: fIJ, baja: alBajaReal(a) });
         });
         var rec = {};
         dadas.forEach(function(r){
-          var act = alumnosActivos(c, r.fecha);
-          (r.presentes||[]).forEach(function(n){ if (act.indexOf(n) === -1) rec[n] = (rec[n]||0) + 1; });
+          var act = alumnosActivosKeys(c, r.fecha);   // v0.189: keys
+          (r.presentes||[]).forEach(function(k){ if (act.indexOf(k) === -1) rec[k] = (rec[k]||0) + 1; });
         });
-        Object.keys(rec).sort().forEach(function(n){ b.recups.push({ alumno: n, n: rec[n] }); });
+        Object.keys(rec).sort().forEach(function(k){ b.recups.push({ alumno: _alClaveNom(c, k), n: rec[k] }); });
         out.bloques.push(b);
       });
       return out;
@@ -9000,22 +9022,22 @@
         var regsClase = regsMes.filter(function(r){ return r.claseId===clase.id; });
         var regPorFecha = {}; regsClase.forEach(function(r){ regPorFecha[r.fecha]=r; });
         (clase.alumnos||[]).forEach(function(a){
-          var nombre=alNom(a), dat=ensure(nombre);
+          var k=_alKey(a), dat=ensure(k);   // v0.189: identidad por key
           fechas.forEach(function(f){
             if(!alActivo(a,f)) return;
             var reg=regPorFecha[f]; if(reg&&reg.sinClase) return;
             if(!_regPasada(reg)) reg=null;   // solo recups previstas = sin lista
             fechasSet[f]=true; dat.totalClases+=1;
-            var ok = reg && (reg.presentes||[]).indexOf(nombre)!==-1;
+            var ok = reg && (reg.presentes||[]).indexOf(k)!==-1;
             if(ok) dat.presencias+=1;
             dat.cells[f]= reg ? (ok?'pres':'falta') : 'nolist';
           });
         });
         regsClase.forEach(function(r){
           if(r.sinClase) return;
-          var activos = alumnosActivos(clase, r.fecha);
-          (r.presentes||[]).forEach(function(n){
-            if(activos.indexOf(n)===-1){ var dd=ensure(n); dd.recups+=1; fechasSet[r.fecha]=true; if(!dd.cells[r.fecha]) dd.cells[r.fecha]='recup'; }
+          var activos = alumnosActivosKeys(clase, r.fecha);   // v0.189: keys
+          (r.presentes||[]).forEach(function(k){
+            if(activos.indexOf(k)===-1){ var dd=ensure(k); dd.recups+=1; fechasSet[r.fecha]=true; if(!dd.cells[r.fecha]) dd.cells[r.fecha]='recup'; }
           });
         });
       });
@@ -9431,21 +9453,24 @@
         }).join('') + '</div>';
         return s + btnsExtra;
       }
-      var activos2 = alumnosActivos(clase, f);
-      s += ' <span class="gad-estado ok">' + (reg.presentes||[]).length + '/' + activos2.length + '</span>' + sustChip + btnLista + '</div>';
+      // v0.189: se itera sobre las ENTRADAS para casar por key y pintar por nombre.
+      var actEnt = (clase.alumnos||[]).filter(function(a){ return alActivo(a, f); });
+      var actKeys = actEnt.map(_alKey);
+      s += ' <span class="gad-estado ok">' + (reg.presentes||[]).length + '/' + actEnt.length + '</span>' + sustChip + btnLista + '</div>';
       var chips = '';
-      activos2.forEach(function(n){
-        var ok = (reg.presentes||[]).indexOf(n) !== -1;
-        var jj = !ok && (reg.justificadas||[]).indexOf(n) !== -1;
-        chips += '<span class="gad-al ' + (ok?'si':'no') + '">' + (ok?'✓ ':'✗ ') + _gEsc(n) + (ok?'':' · ' + (jj?'J':'IJ')) + '</span>';
+      actEnt.forEach(function(a){
+        var k = _alKey(a);
+        var ok = (reg.presentes||[]).indexOf(k) !== -1;
+        var jj = !ok && (reg.justificadas||[]).indexOf(k) !== -1;
+        chips += '<span class="gad-al ' + (ok?'si':'no') + '">' + (ok?'✓ ':'✗ ') + _gEsc(alNom(a)) + (ok?'':' · ' + (jj?'J':'IJ')) + '</span>';
       });
       // Recuperaciones: presentes que no son alumnos activos de la clase
-      (reg.presentes||[]).forEach(function(n){
-        if (activos2.indexOf(n) === -1) chips += '<span class="gad-al rec">↩ ' + _gEsc(n) + '</span>';
+      (reg.presentes||[]).forEach(function(k){
+        if (actKeys.indexOf(k) === -1) chips += '<span class="gad-al rec">↩ ' + _gEsc(_alClaveNom(clase, k)) + '</span>';
       });
       // Recuperaciones previstas que finalmente no acudieron
-      (reg.recups||[]).forEach(function(n){
-        if ((reg.presentes||[]).indexOf(n) === -1) chips += '<span class="gad-al rec" style="opacity:.55;">↩ ' + _gEsc(n) + ' · no vino</span>';
+      (reg.recups||[]).forEach(function(k){
+        if ((reg.presentes||[]).indexOf(k) === -1) chips += '<span class="gad-al rec" style="opacity:.55;">↩ ' + _gEsc(_alClaveNom(clase, k)) + ' · no vino</span>';
       });
       if (chips) s += '<div class="gad-alumnos">' + chips + '</div>';
       return s + btnsExtra;
@@ -9656,12 +9681,13 @@
           var filas = '';
           (c.alumnos || []).forEach(function(a){
             var n = alNom(a); if (!n) return;
+            var k = _alKey(a);                       // v0.189
             var pres = 0, pos = 0, fJ = 0, fIJ = 0;
             dadas.forEach(function(r){
               if (!alActivo(a, r.fecha)) return;
               pos++;
-              if ((r.presentes||[]).indexOf(n) !== -1) pres++;
-              else if ((r.justificadas||[]).indexOf(n) !== -1) fJ++; else fIJ++;
+              if ((r.presentes||[]).indexOf(k) !== -1) pres++;
+              else if ((r.justificadas||[]).indexOf(k) !== -1) fJ++; else fIJ++;
             });
             if (!pos) return;
             filas += '<tr><td>' + _gEsc(alCorto(a)) + (alBajaReal(a) ? ' <span class="baja">(baja ' + _gFecha(alBajaReal(a)) + ')</span>' : '') + '</td>' +
@@ -9671,11 +9697,11 @@
           // Recuperaciones que asistieron
           var recups = {};
           dadas.forEach(function(r){
-            var act = alumnosActivos(c, r.fecha);
-            (r.presentes||[]).forEach(function(n){ if (act.indexOf(n) === -1) recups[n] = (recups[n]||0) + 1; });
+            var act = alumnosActivosKeys(c, r.fecha);   // v0.189
+            (r.presentes||[]).forEach(function(k){ if (act.indexOf(k) === -1) recups[k] = (recups[k]||0) + 1; });
           });
-          Object.keys(recups).sort().forEach(function(n){
-            filas += '<tr><td><span class="rec">↩ ' + _gEsc(n) + '</span></td><td>' + recups[n] + ' recuperación' + (recups[n]!==1?'es':'') + '</td><td>—</td></tr>';
+          Object.keys(recups).sort().forEach(function(k){
+            filas += '<tr><td><span class="rec">↩ ' + _gEsc(_alClaveNom(c, k)) + '</span></td><td>' + recups[k] + ' recuperación' + (recups[k]!==1?'es':'') + '</td><td>—</td></tr>';
           });
           if (filas) bloques += '<table><tr><th>Alumno</th><th>Asistencias</th><th>Faltas</th></tr>' + filas + '</table>';
         });
@@ -10038,19 +10064,25 @@
       if (!d) return [];
       var clases = _gestorClasesLocal(d);
       var regs   = _gestorRegsLocal(d);
+      // v0.189: los registros guardan KEYS (id). Recojo las keys de las
+      // entradas de este alumno (por nombre) + su propio nombre como key
+      // (recuperaciones tecleadas por nombre).
+      var keys = {}; keys[nombre] = true;
+      clases.forEach(function(c){ (c.alumnos||[]).forEach(function(a){ if (alNom(a) === nombre) keys[_alKey(a)] = true; }); });
+      function tiene(arr){ return (arr||[]).some(function(k){ return keys[k]; }); }
       var out = [];
       regs.forEach(function(r){
         if (r.sinClase) return;
         var clase = clases.filter(function(c){ return c.id===r.claseId; })[0];
         if (!clase) return;
-        var enP = (r.presentes||[]).indexOf(nombre)!==-1;
-        var enA = (r.ausentes||[]).indexOf(nombre)!==-1;
+        var enP = tiene(r.presentes);
+        var enA = tiene(r.ausentes);
         if (!enP && !enA) return;
         var entry   = alumnoEnClase(clase, nombre);
         var esRecup = enP && (r.recupClase || !entry || !alActivo(entry, r.fecha));
         out.push({ fecha:r.fecha, franja:clase.franja||'', claseNombre:clase.nombre||'',
                    presente:enP, recup:esRecup,
-                   justif: !enP && (r.justificadas||[]).indexOf(nombre)!==-1 });
+                   justif: !enP && tiene(r.justificadas) });
       });
       out.sort(function(a,b){ return b.fecha.localeCompare(a.fecha); });
       return out;
@@ -10177,6 +10209,11 @@
       var clasesLoc = _gestorClasesLocal(d);
       var regsLoc   = _gestorRegsLocal(d);
       var bloques = '', totPrev = 0, totQuedan = 0, hayClases = false;
+      // v0.189: los registros guardan KEYS. Conjunto de keys de este alumno
+      // (por nombre) + su nombre (recuperaciones tecleadas).
+      var _alKeys = {}; _alKeys[nombre] = true;
+      clasesLoc.forEach(function(c){ (c.alumnos||[]).forEach(function(a){ if (alNom(a) === nombre) _alKeys[_alKey(a)] = true; }); });
+      function _tieneAl(arr){ return (arr||[]).some(function(k){ return _alKeys[k]; }); }
 
       // v0.104: además de las clases del curso del mes con el alumno en el
       // cupo, se incluyen las clases donde el alumno tiene ALGÚN registro
@@ -10186,7 +10223,7 @@
       var regClaseIds = {};
       regsLoc.forEach(function(r){
         if (!r.fecha || r.fecha.slice(0,7) !== mesISO || r.sinClase) return;
-        if ((r.presentes||[]).indexOf(nombre) === -1 && (r.ausentes||[]).indexOf(nombre) === -1) return;
+        if (!_tieneAl(r.presentes) && !_tieneAl(r.ausentes)) return;
         regClaseIds[r.claseId] = true;
       });
       clasesLoc.filter(function(c){
@@ -10235,10 +10272,10 @@
           if (_dscEsSinClase(f)) { cls = 'sc'; pref = '✗'; }
           else if (reg && reg.sinClase) { cls = 'sinlista'; }
           else if (_regPasada(reg)) {
-            var pres = (reg.presentes||[]).indexOf(nombre) !== -1;
-            var aus  = (reg.ausentes ||[]).indexOf(nombre) !== -1;
+            var pres = _tieneAl(reg.presentes);
+            var aus  = _tieneAl(reg.ausentes);
             if (pres)      cls = 'pres';
-            else if (aus)  cls = (reg.justificadas||[]).indexOf(nombre) !== -1 ? 'faltaj' : 'falta';
+            else if (aus)  cls = _tieneAl(reg.justificadas) ? 'faltaj' : 'falta';
             else           cls = 'sinlista';   // lista pasada sin este alumno
           }
           else if (f >= hoy) { cls = 'pend'; quedan++; }
@@ -10324,7 +10361,7 @@
           if (destino) a.movidoA = destino;
           return a;
         }
-        var o = { nombre: a, baja: hoy };   // formato antiguo (string) → objeto
+        var o = { id: _nuevoAlId(), nombre: a, baja: hoy };   // formato antiguo (string) → objeto (con id, v0.189)
         if (destino) o.movidoA = destino;
         return o;
       };
@@ -10825,20 +10862,25 @@
           if (!clase) return;
           var clNom = clase.nombre ||
                       (((clase.diaSemana>=0 ? DIAS_NOMBRES_A[clase.diaSemana] : '') + ' ' + (clase.franja||'')).trim() || 'Clase');
-          function push(n, presente){
-            var entry = alumnoEnClase(clase, n);
-            var ape   = alApe(entry);           // apellido del cupo de ESA clase
-            var key   = _gtaFullKey(n, ape);
-            entAl[key] = true;
+          // v0.189: presentes/ausentes guardan KEYS (id). Se resuelve la
+          // entrada (y su nombre/apellidos) por key; para recuperaciones
+          // tecleadas la key ya es el nombre.
+          function push(k, presente){
+            var entry = alumnoEnClase(clase, k);
+            var nombre = entry ? alNom(entry) : _alNomGlobal(k);
+            if (!nombre || (nombre === k && String(k).slice(0,3) === 'al-')) return;  // id sin resolver
+            var ape   = entry ? alApe(entry) : '';
+            var fkey  = _gtaFullKey(nombre, ape);
+            entAl[fkey] = true;
             var esRecup = presente && (r.recupClase || !entry || !alActivo(entry, r.fecha));
-            ensA(key, n, ape).sesiones.push({
+            ensA(fkey, nombre, ape).sesiones.push({
               fecha:r.fecha, claseNombre:clNom, franja:clase.franja||'',
               entrenador:entrenador, presente:presente, recup:esRecup,
-              justif: !presente && (r.justificadas||[]).indexOf(n)!==-1
+              justif: !presente && (r.justificadas||[]).indexOf(k)!==-1
             });
           }
-          (r.presentes||[]).forEach(function(n){ if(n) push(n, true); });
-          (r.ausentes ||[]).forEach(function(n){ if(n) push(n, false); });
+          (r.presentes||[]).forEach(function(k){ if(k) push(k, true); });
+          (r.ausentes ||[]).forEach(function(k){ if(k) push(k, false); });
         });
       });
       // v0.138: fichas de academia sin franja todavía. Se mezclan con los
@@ -11202,9 +11244,8 @@
     }
     // 🗑 BORRAR DEL TODO: fuera del cupo de sus clases, fuera de los
     // registros de asistencia y fuera del catálogo de fichas.
-    // Ojo: los registros guardan solo el NOMBRE de pila. Si en una clase hay
-    // dos alumnos que se llaman igual, no se toca esa clase (no hay forma de
-    // saber cuál de los dos es) y se avisa al final.
+    // v0.189: los registros van por ID único, así que se borra exactamente a
+    // este alumno aunque otro se llame igual (ya no hay ambigüedad).
     function gtaBorrarAlumnoTodo(key){
       var d = _gtaDatosDeKey(key);
       var al = (_gtaCache && _gtaCache.al[key]) || { sesiones: [] };
@@ -11216,63 +11257,47 @@
                    'ESTO NO SE PUEDE DESHACER.')) return;
       if (!confirm('Última confirmación: "' + key + '" desaparecerá de la base de datos.')) return;
 
-      // ¿Hay más alumnos del club con el mismo nombre de pila? Si los hay,
-      // solo se limpian los registros de clases donde él está en el cupo.
-      var homon = Object.keys(_gtaCache.al).filter(function(k){
-        return _gtaCache.al[k].nombre === d.nombre;
-      }).length;
-      var by = _gestorAgrupar(), ambiguas = 0;
+      // v0.189: identidad por ID. Recojo las KEYS (id) de este alumno en
+      // TODAS las franjas (por nombre + apellidos). Ya no hay ambigüedad de
+      // homónimos: cada entrada tiene su id único.
+      var by = _gestorAgrupar();
+      var esMio = function(a){ return alNom(a) === d.nombre && (alApe(a) || '') === (d.apellidos || ''); };
+      var borrar = {};   // keys (id) a eliminar de los registros
+      Object.keys(by).forEach(function(uid){
+        _gestorClasesLocal(by[uid]).forEach(function(c){
+          (c.alumnos || []).forEach(function(a){ if (esMio(a)) borrar[_alKey(a)] = true; });
+        });
+      });
+      var quita = function(arr){ return (arr || []).filter(function(x){ return !borrar[x]; }); };
 
       Object.keys(by).forEach(function(uid){
         var clases = _gestorClasesLocal(by[uid]);
         var regs   = _gestorRegsLocal(by[uid]);
-        var idsLimpiar = {}, idsCupo = {}, tocaClases = false;
-        clases.forEach(function(c){
-          var mismos = (c.alumnos || []).filter(function(a){ return alNom(a) === d.nombre; });
-          if (!mismos.length) return;
-          var mio = mismos.filter(function(a){ return (alApe(a) || '') === (d.apellidos || ''); });
-          if (mio.length) { idsCupo[c.id] = true; tocaClases = true; }
-          // Se limpian sus registros solo si en esa clase su nombre es único
-          if (mismos.length === 1 && mio.length) idsLimpiar[c.id] = true;
-          else if (mismos.length > 1) ambiguas++;
-        });
-        // Clases sin nadie con ese nombre en el cupo pero con el nombre en los
-        // registros (recuperaciones en otro grupo): solo si no hay homónimos.
-        if (homon <= 1) clases.forEach(function(c){
-          if (idsCupo[c.id]) return;
-          if ((c.alumnos || []).some(function(a){ return alNom(a) === d.nombre; })) return;
-          idsLimpiar[c.id] = true;
-        });
 
         // 1) Fuera del cupo de sus clases
+        var tocaClases = clases.some(function(c){ return (c.alumnos || []).some(esMio); });
         if (tocaClases) {
           _gEditUid = (_sbUser && uid === _sbUser.id) ? null : uid;
           try {
             var cfg = leerAsistConfig();
             (cfg.clases || []).forEach(function(c){
-              if (!idsCupo[c.id]) return;
-              c.alumnos = (c.alumnos || []).filter(function(a){
-                return !(alNom(a) === d.nombre && (alApe(a) || '') === (d.apellidos || ''));
-              });
+              c.alumnos = (c.alumnos || []).filter(function(a){ return !esMio(a); });
             });
             escribirAsistConfig(cfg);
           } finally { _gEditUid = null; }
           (_gestorData.clases || []).forEach(function(c){
-            if (c.user_id !== uid || !idsCupo[c.id]) return;
-            c.alumnos = (c.alumnos || []).filter(function(a){
-              return !(alNom(a) === d.nombre && (alApe(a) || '') === (d.apellidos || ''));
-            });
+            if (c.user_id !== uid) return;
+            c.alumnos = (c.alumnos || []).filter(function(a){ return !esMio(a); });
           });
         }
 
-        // 2) Fuera de los registros de asistencia de esas clases
-        var quita = function(arr){ return (arr || []).filter(function(x){ return x !== d.nombre; }); };
+        // 2) Fuera de los registros de asistencia (por key; la key es única,
+        //    así que no puede tocar a otro alumno aunque se llame igual)
         var afectados = regs.filter(function(r){
-          if (!idsLimpiar[r.claseId]) return false;
-          return (r.presentes || []).indexOf(d.nombre) !== -1 ||
-                 (r.ausentes  || []).indexOf(d.nombre) !== -1 ||
-                 (r.justificadas || []).indexOf(d.nombre) !== -1 ||
-                 (r.recups || []).indexOf(d.nombre) !== -1;
+          return quita(r.presentes).length    !== (r.presentes||[]).length ||
+                 quita(r.ausentes).length     !== (r.ausentes||[]).length ||
+                 quita(r.justificadas).length !== (r.justificadas||[]).length ||
+                 quita(r.recups).length       !== (r.recups||[]).length;
         });
         if (!afectados.length) return;
         _gEditUid = (_sbUser && uid === _sbUser.id) ? null : uid;
@@ -11280,7 +11305,6 @@
           var todos = leerAsistRegistros();
           var cambiadas = [];
           todos.forEach(function(r){
-            if (!idsLimpiar[r.claseId]) return;
             var antes = JSON.stringify([r.presentes, r.ausentes, r.justificadas, r.recups]);
             r.presentes = quita(r.presentes); r.ausentes = quita(r.ausentes);
             r.justificadas = quita(r.justificadas); r.recups = quita(r.recups);
@@ -11289,7 +11313,7 @@
           if (cambiadas.length) escribirAsistRegistros(todos, false, cambiadas);
         } finally { _gEditUid = null; }
         (_gestorData.registros || []).forEach(function(r){
-          if (r.user_id !== uid || !idsLimpiar[r.clase_id]) return;
+          if (r.user_id !== uid) return;
           r.presentes = quita(r.presentes); r.ausentes = quita(r.ausentes);
           r.justificadas = quita(r.justificadas); r.recups = quita(r.recups);
         });
@@ -11298,13 +11322,7 @@
       function fin(){
         _gtaDelKey = null;
         _gtaCache = _gtaIndex();
-        if (ambiguas) {
-          alert('Borrado hecho.\n\nAviso: en ' + ambiguas + ' clase' + (ambiguas!==1?'s':'') +
-                ' hay otro alumno que también se llama "' + d.nombre + '", así que su ' +
-                'asistencia de esas clases se ha dejado intacta para no borrar la de otro.');
-        } else if (typeof planToast === 'function') {
-          planToast('🗑 ' + key + ' borrado');
-        }
+        if (typeof planToast === 'function') planToast('🗑 ' + key + ' borrado');
         renderGestorTodosAlumnos();
       }
       if (d.fichaId) _acBorrar(d.fichaId, fin); else fin();
@@ -11591,7 +11609,8 @@
       });
 
       // 2) Alta en la franja destino (con sus datos y baja de fin de curso)
-      var nuevo = { nombre:d.nombre, apellidos:d.apellidos || '', telefono:d.telefono || '',
+      // v0.189: id propio en la franja destino (identidad de asistencia).
+      var nuevo = { id:_nuevoAlId(), nombre:d.nombre, apellidos:d.apellidos || '', telefono:d.telefono || '',
                     alta:hoy, baja:finCursoDeAlta(hoy) };
       _gEditUid = (_sbUser && uidDest === _sbUser.id) ? null : uidDest;
       try {
@@ -16208,7 +16227,7 @@
       var clases = leerClases();
       function maxIdClase() { return clases.length > 0 ? Math.max.apply(null, clases.map(function(c){return c.id;})) : 0; }
 
-      // Clave de deduplicación: fecha + NOMBRE (desde v0.185).
+      // Clave de deduplicación: fecha + NOMBRE (desde v0.189).
       // Antes era fecha + ejercicios, con fallback a fecha SOLA — pero ese
       // fallback hacía que dos sesiones DISTINTAS del mismo día se pisaran
       // (la segunda machacaba a la primera). Ahora dos sesiones el mismo día
@@ -16218,7 +16237,7 @@
         return (fecha || '') + '\n' + (nombre || '').trim().toLowerCase();
       }
       // Clave antigua (fecha + ejercicios) — se mantiene como refuerzo para
-      // reconocer sesiones subidas ANTES de v0.185 que aún no tengan nombre.
+      // reconocer sesiones subidas ANTES de v0.189 que aún no tengan nombre.
       function claveEjs(fecha, ejIds) {
         return (fecha || '') + ':' + (ejIds||[]).slice().sort().join(',');
       }
@@ -16391,6 +16410,16 @@
 
     // ── Alumno: compat string | {nombre, alta, baja} ──────────
     function alNom(a)  { return (a && typeof a === 'object') ? (a.nombre || '') : (a || ''); }
+    // ── v0.189: IDENTIFICADOR INTERNO del alumno ─────────────────
+    // La asistencia se guarda por este id, NO por el nombre, para que dos
+    // alumnos con el mismo nombre (incluso en la misma franja) no se pisen.
+    // alId(a): id estable de la entrada; _alKey(a): id si lo tiene, si no el
+    // nombre (compatibilidad con datos viejos sin id). _nuevoAlId(): id nuevo.
+    function alId(a)   { return (a && typeof a === 'object' && a.id) ? a.id : ''; }
+    function _alKey(a) { return alId(a) || alNom(a); }
+    function _nuevoAlId() {
+      return 'al-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+    }
     function alAlta(a) { return (a && typeof a === 'object') ? (a.alta || '') : ''; }
     function alBaja(a) { return (a && typeof a === 'object') ? (a.baja || '') : ''; }
     function alApe(a)  { return (a && typeof a === 'object') ? (a.apellidos || '') : ''; }
@@ -16510,12 +16539,44 @@
     }
 
     function alumnosNombres(clase) { return (clase.alumnos || []).map(alNom); }
-    function alumnosActivos(clase, fecha) {
+    function alumnosActivos(clase, fecha) {   // NOMBRES de los activos (display)
       return (clase.alumnos || []).filter(function(a){ return alActivo(a, fecha); }).map(alNom);
     }
-    function alumnoEnClase(clase, nombre) {  // devuelve la entrada (obj/str) o null
-      var r = (clase.alumnos || []).filter(function(a){ return alNom(a) === nombre; });
+    // v0.189: KEYS (id) de los activos, para casar contra los registros (que
+    // ahora guardan keys, no nombres).
+    function alumnosActivosKeys(clase, fecha) {
+      return (clase.alumnos || []).filter(function(a){ return alActivo(a, fecha); }).map(_alKey);
+    }
+    // v0.189: casa por _alKey (id) y, como respaldo, por nombre (datos viejos).
+    // Devuelve la entrada (obj) o null.
+    function alumnoEnClase(clase, x) {
+      var als = clase.alumnos || [];
+      var r = als.filter(function(a){ return _alKey(a) === x; });
+      if (!r.length) r = als.filter(function(a){ return alNom(a) === x; });
       return r.length ? r[0] : null;
+    }
+    // v0.189: resuelve una key (id) al NOMBRE del alumno. Primero en la clase
+    // dada; si no está (recuperación de otra franja), busca en todas las
+    // franjas conocidas; y si aun así no aparece (recup tecleada por nombre),
+    // devuelve la key tal cual (que en ese caso YA es el nombre).
+    function _alClaveNom(clase, key) {
+      if (!key) return '';
+      var e = clase ? alumnoEnClase(clase, key) : null;
+      if (e && _alKey(e) === key) return alNom(e);
+      return _alNomGlobal(key);
+    }
+    function _alNomGlobal(key) {
+      if (!key) return '';
+      var fuentes = [];
+      try { fuentes = (leerAsistConfig().clases) || []; } catch (e) {}
+      if (typeof _gestorData !== 'undefined' && _gestorData && _gestorData.clases) {
+        try { fuentes = fuentes.concat(_gestorClasesLocal({ clases: _gestorData.clases })); } catch (e) {}
+      }
+      for (var i = 0; i < fuentes.length; i++) {
+        var en = alumnoEnClase(fuentes[i], key);
+        if (en && _alKey(en) === key) return alNom(en);
+      }
+      return key;   // recup tecleada: la key ya es el nombre
     }
     // Fechas ISO en las que cae el día de la clase dentro de un mes
     function fechasClaseEnMes(clase, mesISO) {
@@ -16987,10 +17048,12 @@
       // Hora por defecto = franja original de la clase (editable)
       var horaEl = document.getElementById('recup-clase-hora');
       if (horaEl && clase) horaEl.value = clase.franja || '';
-      var als = clase ? (clase.alumnos || []).map(alNom).filter(Boolean) : [];
+      // v0.189: el checkbox lleva la KEY (id) del alumno; se muestra el nombre.
+      var als = clase ? (clase.alumnos || []).filter(function(a){ return alNom(a); }) : [];
       if (!als.length) { cont.innerHTML = '<p class="ajustes-desc" style="margin:2px 0 6px;">Esta clase no tiene alumnos en el cupo.</p>'; return; }
-      cont.innerHTML = als.map(function(n){
-        return '<label class="recup-al-chk"><input type="checkbox" class="recup-al-cb" value="' + _gEsc(n) + '" checked> ' + _gEsc(n) + '</label>';
+      cont.innerHTML = als.map(function(a){
+        var key = _alKey(a), nom = alNom(a);
+        return '<label class="recup-al-chk"><input type="checkbox" class="recup-al-cb" value="' + _gEsc(key) + '" checked> ' + _gEsc(nom) + '</label>';
       }).join('');
     }
     function recupClaseAlsTodos() {
@@ -17118,7 +17181,8 @@
       // Solo alumnos ACTIVOS en esa fecha. v0.96: si el registro existe pero
       // aún NO se ha pasado la lista (p. ej. una recuperación recién agendada,
       // sin presentes ni ausentes), se abre con todos PRESENTES por defecto.
-      var activos   = alumnosActivos(clase, asistFechaActiva);
+      // v0.189: el cupo se maneja por KEY (id); el nombre solo para pintar.
+      var activos   = alumnosActivosKeys(clase, asistFechaActiva);
       // v0.97: recuperación POR ALUMNO → mostrar solo los alumnos asignados
       // (guardados en recups del registro de recuperación). v0.98.1: se guarda
       // en _asistRecupAls para que renderToggleAlumnos aplique el mismo filtro.
@@ -17179,13 +17243,16 @@
         var cfg = leerAsistConfig();
         clase = (cfg.clases||[]).filter(function(c){ return c.id===asistClaseActivaId; })[0];
       }
-      var activos = clase ? alumnosActivos(clase, asistFechaActiva) : [];
+      var activos = clase ? alumnosActivosKeys(clase, asistFechaActiva) : [];
       // v0.98.1: recuperación por alumno → solo los asignados
       if (_asistRecupAls) activos = activos.filter(function(n){ return _asistRecupAls.indexOf(n) !== -1; });
 
-      function fila(nombre, esRecup) {
-        var presente = asistEstadoLista[nombre] !== false;
-        var safe = _gEsc(nombre).replace(/'/g,"\\'");   // v0.61: escapado HTML + comillas
+      // v0.189: `key` es el id del alumno (o el nombre en recups tecleadas).
+      // El estado y los callbacks van por key; el nombre solo para pintar.
+      function fila(key, esRecup) {
+        var nombre = _alClaveNom(clase, key);
+        var presente = asistEstadoLista[key] !== false;
+        var safe = _gEsc(key).replace(/'/g,"\\'");   // v0.61: escapado HTML + comillas
         var h = '<div class="asist-al-toggle ' + (presente?'presente':'ausente') + (esRecup?' recup':'') +
                 '" onclick="asistToggleAlumno(\'' + safe + '\')">';
         h += '<div class="asist-al-icono">' + (presente ? '✓' : '✗') + '</div>';
@@ -17196,7 +17263,7 @@
           h += '<span class="asist-al-estado">Presente</span>';
         } else {
           // Ausente: elegir J (justificada) o IJ (injustificada, por defecto)
-          var esJ = !!asistJustifs[nombre];
+          var esJ = !!asistJustifs[key];
           h += '<span class="asist-jij">' +
                '<button type="button" class="asist-jij-btn j' + (esJ?' on':'') + '" onclick="event.stopPropagation();asistSetJustif(\'' + safe + '\',true)">J</button>' +
                '<button type="button" class="asist-jij-btn ij' + (!esJ?' on':'') + '" onclick="event.stopPropagation();asistSetJustif(\'' + safe + '\',false)">IJ</button>' +
@@ -17372,14 +17439,16 @@
         if (alActivo(ya, asistFechaActiva)) { alert('"' + nombre + '" ya está de alta en esta clase.'); return; }
         // v0.63: reincorporación — continúa su historial en el mismo grupo
         if (!confirm('"' + nombre + '" ya estuvo en esta clase (baja el ' + _gFecha(alBaja(ya)) + ').\n\n¿Darlo de ALTA otra vez desde el ' + _gFecha(asistFechaActiva) + '? Su historial anterior se conserva y continúa.')) return;
-        // entradas antiguas como texto plano → convertir a objeto
-        if (typeof ya !== 'object') ya = clase.alumnos[idxYa] = { nombre: nombre, alta: '', baja: '' };
+        // entradas antiguas como texto plano → convertir a objeto (con id)
+        if (typeof ya !== 'object') ya = clase.alumnos[idxYa] = { id: _nuevoAlId(), nombre: nombre, alta: '', baja: '' };
+        if (!ya.id) ya.id = _nuevoAlId();   // v0.189: id si no lo tenía
         _alReactivar(ya, asistFechaActiva);
         if (!ya.apellidos && ape.trim()) ya.apellidos = ape.trim();
         if (!ya.telefono  && tel.trim()) ya.telefono  = tel.trim();
       } else {
         // v0.135: baja por defecto = 30 de julio del curso de su alta.
-        clase.alumnos = (clase.alumnos||[]).concat([{ nombre:nombre, apellidos:ape.trim(), telefono:tel.trim(),
+        // v0.189: id propio (identidad de asistencia).
+        clase.alumnos = (clase.alumnos||[]).concat([{ id:_nuevoAlId(), nombre:nombre, apellidos:ape.trim(), telefono:tel.trim(),
                                                       alta:asistFechaActiva,
                                                       baja:finCursoDeAlta(asistFechaActiva) }]);
       }
@@ -17424,7 +17493,7 @@
         // si se quitó una recup que estaba marcada presente, sale de presentes
         var cfg = leerAsistConfig();
         var clase = (cfg.clases||[]).filter(function(c){ return c.id===asistClaseActivaId; })[0];
-        var cupo = clase ? alumnosActivos(clase, asistFechaActiva) : [];
+        var cupo = clase ? alumnosActivosKeys(clase, asistFechaActiva) : [];   // v0.189: keys
         r.presentes = (r.presentes||[]).filter(function(n){
           return cupo.indexOf(n) !== -1 || asistRecups.indexOf(n) !== -1;
         });
@@ -17636,8 +17705,11 @@
         document.getElementById('asist-form-franja').value = clase.franja || '';
         document.getElementById('asist-form-nombre').value = clase.nombre || '';
         asistAlumnosForm = (clase.alumnos||[]).map(function(a){
-          return { nombre: alNom(a), apellidos: alApe(a), telefono: alTel(a),
-                   alta: alAlta(a), baja: alBaja(a), hist: alHist(a).slice() };
+          // v0.189: conserva el id (identidad de asistencia); si no tenía, uno nuevo.
+          return { id: alId(a) || _nuevoAlId(),
+                   nombre: alNom(a), apellidos: alApe(a), telefono: alTel(a),
+                   alta: alAlta(a), baja: alBaja(a), hist: alHist(a).slice(),
+                   movidoA: alMovidoA(a) };
         });
       } else {
         document.getElementById('asist-form-dia').value    = (_gPrefillDia != null) ? String(_gPrefillDia) : '1';
@@ -17791,7 +17863,7 @@
       // v0.116: alta = hoy → cuenta desde hoy y marca "comienzo de clases"
       // v0.135: baja por defecto = 30 de julio (fin del curso). Si se le da
       // de baja a mitad de curso, esa fecha manual sustituye a esta.
-      asistAlumnosForm.push({ nombre: nombre, apellidos: inpApe.value.trim(), telefono: inpTel.value.trim(),
+      asistAlumnosForm.push({ id: _nuevoAlId(), nombre: nombre, apellidos: inpApe.value.trim(), telefono: inpTel.value.trim(),
                               alta: hoyLocal(), baja: finCursoDeAlta(hoyLocal()) });
       input.value = ''; inpApe.value = ''; inpTel.value = '';
       renderAlumnosForm();
@@ -17905,8 +17977,8 @@
         regsClase.forEach(function(r){ regPorFecha[r.fecha]=r; });
         // Alumnos del cupo: posibles solo en fechas activas y con clase
         (clase.alumnos||[]).forEach(function(a) {
-          var nombre = alNom(a);
-          var dat = ensure(nombre);
+          var k = _alKey(a);                       // v0.189: identidad por key
+          var dat = ensure(k);
           fechas.forEach(function(f){
             if (!alActivo(a, f)) return;
             var reg = regPorFecha[f];
@@ -17914,15 +17986,15 @@
             if (!_regPasada(reg)) reg = null;   // solo recups previstas = sin lista
             fechasSet[f] = true;
             dat.totalClases += 1;
-            var ok = reg && (reg.presentes||[]).indexOf(nombre)!==-1;
+            var ok = reg && (reg.presentes||[]).indexOf(k)!==-1;
             if (ok) dat.presencias += 1;
-            dat.cells[f] = reg ? (ok ? 'pres' : (((reg.justificadas||[]).indexOf(nombre)!==-1) ? 'faltaJ' : 'falta')) : 'nolist';
+            dat.cells[f] = reg ? (ok ? 'pres' : (((reg.justificadas||[]).indexOf(k)!==-1) ? 'faltaJ' : 'falta')) : 'nolist';
           });
         });
         // Recuperaciones: presentes que NO son del cupo activo esa fecha
         regsClase.forEach(function(r){
           if (r.sinClase) return;
-          var activos = alumnosActivos(clase, r.fecha);
+          var activos = alumnosActivosKeys(clase, r.fecha);   // v0.189: keys
           (r.presentes||[]).forEach(function(n){
             if (activos.indexOf(n)===-1) {
               var d = ensure(n);
@@ -17992,17 +18064,21 @@
       var clases = cfg.clases || [];
       var regs   = leerAsistRegistros();
 
+      // v0.189: los registros guardan KEYS. Conjunto de keys de este alumno.
+      var _hKeys = {}; _hKeys[alumno] = true;
+      clases.forEach(function(c){ (c.alumnos||[]).forEach(function(a){ if (alNom(a) === alumno) _hKeys[_alKey(a)] = true; }); });
+      function _hTiene(arr){ return (arr||[]).some(function(k){ return _hKeys[k]; }); }
       var historial = [];
       regs.forEach(function(r) {
         var clase = clases.filter(function(c){ return c.id===r.claseId; })[0];
         if (!clase) return;
-        var enPresentes = (r.presentes||[]).indexOf(alumno)!==-1;
-        var enAusentes  = (r.ausentes||[]).indexOf(alumno)!==-1;
+        var enPresentes = _hTiene(r.presentes);
+        var enAusentes  = _hTiene(r.ausentes);
         if (!enPresentes && !enAusentes) return;
         var entry   = alumnoEnClase(clase, alumno);
         var esRecup = enPresentes && (r.recupClase || !entry || !alActivo(entry, r.fecha));
         historial.push({ fecha:r.fecha, clase:clase, presente:enPresentes, recup:esRecup,
-                         justif: !enPresentes && (r.justificadas||[]).indexOf(alumno)!==-1 });
+                         justif: !enPresentes && _hTiene(r.justificadas) });
       });
 
       historial.sort(function(a,b){ return b.fecha.localeCompare(a.fecha); });
@@ -18087,28 +18163,29 @@
       var occ    = ocurrenciasDiaEnMes(mesISO);
 
       var alumnosMap = {};
-      function ensureP(n){ if(!alumnosMap[n]) alumnosMap[n]={totalClases:0,presencias:0,recups:0,fJ:0,fIJ:0}; return alumnosMap[n]; }
+      // v0.189: alumnosMap va por KEY (id); guarda el nombre para mostrarlo.
+      function ensureP(k, nombre){ if(!alumnosMap[k]) alumnosMap[k]={nombre:nombre||k,totalClases:0,presencias:0,recups:0,fJ:0,fIJ:0}; else if(nombre && (alumnosMap[k].nombre===k)) alumnosMap[k].nombre=nombre; return alumnosMap[k]; }
       clases.forEach(function(clase) {
         var fechasMes = fechasClaseEnMes(clase, mesISO);
         var regsClase = regs.filter(function(r){ return r.claseId===clase.id; });
         var regPorFecha = {}; regsClase.forEach(function(r){ regPorFecha[r.fecha]=r; });
         (clase.alumnos||[]).forEach(function(a) {
-          var nombre = alNom(a), dat = ensureP(nombre);
+          var k = _alKey(a), dat = ensureP(k, alNom(a));   // v0.189: identidad por key
           fechasMes.forEach(function(f){
             if (!alActivo(a, f)) return;
             var reg = regPorFecha[f];
             if (reg && reg.sinClase) return;
             if (!_regPasada(reg)) reg = null;   // solo recups previstas = sin lista
             dat.totalClases += 1;
-            if (reg && (reg.presentes||[]).indexOf(nombre)!==-1) dat.presencias += 1;
-            else if (reg) { if ((reg.justificadas||[]).indexOf(nombre)!==-1) dat.fJ += 1; else dat.fIJ += 1; }
+            if (reg && (reg.presentes||[]).indexOf(k)!==-1) dat.presencias += 1;
+            else if (reg) { if ((reg.justificadas||[]).indexOf(k)!==-1) dat.fJ += 1; else dat.fIJ += 1; }
           });
         });
         // Recuperaciones: presentes que no son del cupo activo
         regsClase.forEach(function(r){
           if (r.sinClase) return;
-          var act = alumnosActivos(clase, r.fecha);
-          (r.presentes||[]).forEach(function(n){ if (act.indexOf(n)===-1) ensureP(n).recups += 1; });
+          var act = alumnosActivosKeys(clase, r.fecha);   // v0.189: keys
+          (r.presentes||[]).forEach(function(n){ if (act.indexOf(n)===-1) ensureP(n, _alClaveNom(clase, n)).recups += 1; });
         });
       });
 
@@ -18204,8 +18281,11 @@
 
             h += '<h3>' + clasNom + ' · ' + vecesEnMes + ' clase' + (vecesEnMes!==1?'s':'') + ' en el mes</h3>';
 
-            var nombresClase = alumnosNombres(clase);
-            if (!nombresClase.length) { h += '<p style="color:#6b7280;font-size:12px;">Sin alumnos</p>'; return; }
+            // v0.189: se itera sobre las ENTRADAS del cupo (cada una con su
+            // key), casando la asistencia por key y mostrando el nombre.
+            var entradasClase = (clase.alumnos||[]);
+            var cupoKeys = entradasClase.map(_alKey);
+            if (!entradasClase.length) { h += '<p style="color:#6b7280;font-size:12px;">Sin alumnos</p>'; return; }
 
             var fechas = regsClase.map(function(r){ return r.fecha; }).sort();
             h += '<table><thead><tr><th>Alumno</th>';
@@ -18215,8 +18295,8 @@
             });
             h += '<th style="text-align:center">Total</th><th style="text-align:center">%</th></tr></thead><tbody>';
 
-            nombresClase.forEach(function(nombre) {
-              var entry = alumnoEnClase(clase, nombre);
+            entradasClase.forEach(function(entry) {
+              var nombre = alNom(entry), key = _alKey(entry);
               h += '<tr><td>' + nombrePDF(nombre) + '</td>';
               var pres = 0, posibles = 0;
               fechas.forEach(function(f) {
@@ -18228,8 +18308,8 @@
                   h += '<td style="text-align:center;color:#9ca3af">—</td>';
                 } else {
                   posibles++;
-                  var ok = reg && reg.presentes.indexOf(nombre)!==-1;
-                  var jj = reg && !ok && (reg.justificadas||[]).indexOf(nombre)!==-1;
+                  var ok = reg && (reg.presentes||[]).indexOf(key)!==-1;
+                  var jj = reg && !ok && (reg.justificadas||[]).indexOf(key)!==-1;
                   h += '<td style="text-align:center;font-weight:700;color:' + (reg?(ok?'#166534':(jj?'#b45309':'#991b1b')):'#9ca3af') + '">' + (reg?(ok?'✓':(jj?'J':'✗')):'—') + '</td>';
                   if (ok) pres++;
                 }
@@ -18244,15 +18324,16 @@
             var guests = {};
             regsClase.forEach(function(r){
               if (r.sinClase) return;
-              (r.presentes||[]).forEach(function(n){
-                if (nombresClase.indexOf(n) === -1) { (guests[n] = guests[n] || []).push(r.fecha); }
+              (r.presentes||[]).forEach(function(k){
+                if (cupoKeys.indexOf(k) === -1) { (guests[k] = guests[k] || []).push(r.fecha); }
               });
             });
-            Object.keys(guests).sort().forEach(function(g){
-              h += '<tr><td><span class="recup-pdf">' + g + '</span> <span class="tag-recup">↩ recup</span></td>';
+            Object.keys(guests).sort().forEach(function(gk){
+              var g = _alClaveNom(clase, gk);
+              h += '<tr><td><span class="recup-pdf">' + _gEsc(g) + '</span> <span class="tag-recup">↩ recup</span></td>';
               var cnt = 0;
               fechas.forEach(function(f){
-                if (guests[g].indexOf(f) !== -1) { h += '<td style="text-align:center;font-weight:700;color:#16264f">↩</td>'; cnt++; }
+                if (guests[gk].indexOf(f) !== -1) { h += '<td style="text-align:center;font-weight:700;color:#16264f">↩</td>'; cnt++; }
                 else h += '<td style="text-align:center;color:#d1d5db">·</td>';
               });
               h += '<td style="text-align:center;font-weight:700;color:#16264f">' + cnt + '</td>';
@@ -18272,7 +18353,7 @@
           var pct = dat.totalClases>0 ? Math.round(dat.presencias/dat.totalClases*100) : 0;
           var cls = pct>=80 ? 'verde' : pct>=60 ? 'ambar' : 'rojo';
           var niv = pct>=80 ? '● Buena' : pct>=60 ? '● Regular' : '● Baja';
-          h += '<tr><td>' + nombrePDF(a) + (dat.recups ? ' <span class="tag-recup">↩ +' + dat.recups + '</span>' : '') + '</td><td style="text-align:center">' + dat.presencias + '</td><td style="text-align:center">' + dat.totalClases + '</td>';
+          h += '<tr><td>' + nombrePDF(dat.nombre) + (dat.recups ? ' <span class="tag-recup">↩ +' + dat.recups + '</span>' : '') + '</td><td style="text-align:center">' + dat.presencias + '</td><td style="text-align:center">' + dat.totalClases + '</td>';
           h += '<td style="text-align:center">' + ((dat.fJ||dat.fIJ) ? ('<span class="ambar">' + dat.fJ + ' J</span> · <span class="rojo">' + dat.fIJ + ' IJ</span>') : '—') + '</td>';
           h += '<td><span class="' + cls + '">' + pct + '%</span><span class="barra-wrap"><span class="barra-fill" style="width:' + pct + '%"></span></span></td>';
           h += '<td class="' + cls + '">' + niv + '</td></tr>';
