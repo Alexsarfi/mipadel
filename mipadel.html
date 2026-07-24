@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.190.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.191.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,20 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.191.0 — Un único ID estable por persona (las franjas cuelgan de él) (2026-08)
+    · Antes cada franja generaba su propio id para el alumno, así que una
+      misma persona podía tener varios ids (uno por franja). Ahora tiene UN
+      solo id en todas sus franjas.
+    · Al añadir un alumno a una franja, el id se REUTILIZA por este orden:
+      (1) el id que ya tenga en otra franja, (2) el id de su ficha de
+      academia, (3) uno nuevo si es la primera vez. Helper _alIdPersona().
+    · Al mover de franja se conserva su id (y por tanto su historial queda
+      unido bajo la misma identidad, no partido por franjas).
+    · La ficha del alumno (v0.190) muestra ahora ese id único.
+    · Dos alumnos con el mismo nombre siguen sin pisarse: son personas
+      distintas (nombre+apellidos distintos → ids distintos).
+    · Sin cambios de datos/esquema.
 
   v0.190.0 — Ver el ID técnico del alumno en su ficha (2026-08)
     · En la ficha del alumno (gestor → Alumnos → un alumno → "✏️ Editar
@@ -5609,7 +5623,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.190.0';
+    var APP_VERSION = '0.191.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -10374,7 +10388,7 @@
           if (destino) a.movidoA = destino;
           return a;
         }
-        var o = { id: _nuevoAlId(), nombre: a, baja: hoy };   // formato antiguo (string) → objeto (con id, v0.189)
+        var o = { id: _alIdPersona(a, ''), nombre: a, baja: hoy };   // formato antiguo (string) → objeto (id de persona, v0.191)
         if (destino) o.movidoA = destino;
         return o;
       };
@@ -11645,8 +11659,9 @@
       });
 
       // 2) Alta en la franja destino (con sus datos y baja de fin de curso)
-      // v0.189: id propio en la franja destino (identidad de asistencia).
-      var nuevo = { id:_nuevoAlId(), nombre:d.nombre, apellidos:d.apellidos || '', telefono:d.telefono || '',
+      // v0.191: MISMA id de persona en la franja destino (su historial se
+      // mantiene bajo el mismo id al cambiar de franja).
+      var nuevo = { id:_alIdPersona(d.nombre, d.apellidos), nombre:d.nombre, apellidos:d.apellidos || '', telefono:d.telefono || '',
                     alta:hoy, baja:finCursoDeAlta(hoy) };
       _gEditUid = (_sbUser && uidDest === _sbUser.id) ? null : uidDest;
       try {
@@ -16456,6 +16471,30 @@
     function _nuevoAlId() {
       return 'al-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
     }
+    // v0.191: ID ESTABLE DE PERSONA. Un alumno tiene UN solo id en todas sus
+    // franjas (las franjas "cuelgan" de él). Al añadirlo a una franja se
+    // reutiliza: (1) el id que ya tenga en cualquier otra franja, si no
+    // (2) el id de su ficha de academia, y si no (3) uno nuevo. Así mover de
+    // franja conserva su identidad y su historial bajo el mismo id.
+    function _alIdPersona(nombre, ape) {
+      ape = ape || '';
+      var fuentes = [];
+      try { fuentes = (leerAsistConfig().clases) || []; } catch (e) {}
+      if (typeof _gestorData !== 'undefined' && _gestorData && _gestorData.clases) {
+        try { fuentes = fuentes.concat(_gestorClasesLocal({ clases: _gestorData.clases })); } catch (e) {}
+      }
+      for (var i = 0; i < fuentes.length; i++) {
+        var als = fuentes[i].alumnos || [];
+        for (var j = 0; j < als.length; j++) {
+          if (alNom(als[j]) === nombre && (alApe(als[j]) || '') === ape && alId(als[j])) return alId(als[j]);
+        }
+      }
+      try {
+        var f = _alumnosAcademia().filter(function(a){ return a.nombre === nombre && (a.apellidos || '') === ape; })[0];
+        if (f && f.id) return f.id;
+      } catch (e) {}
+      return _nuevoAlId();
+    }
     function alAlta(a) { return (a && typeof a === 'object') ? (a.alta || '') : ''; }
     function alBaja(a) { return (a && typeof a === 'object') ? (a.baja || '') : ''; }
     function alApe(a)  { return (a && typeof a === 'object') ? (a.apellidos || '') : ''; }
@@ -17476,15 +17515,15 @@
         // v0.63: reincorporación — continúa su historial en el mismo grupo
         if (!confirm('"' + nombre + '" ya estuvo en esta clase (baja el ' + _gFecha(alBaja(ya)) + ').\n\n¿Darlo de ALTA otra vez desde el ' + _gFecha(asistFechaActiva) + '? Su historial anterior se conserva y continúa.')) return;
         // entradas antiguas como texto plano → convertir a objeto (con id)
-        if (typeof ya !== 'object') ya = clase.alumnos[idxYa] = { id: _nuevoAlId(), nombre: nombre, alta: '', baja: '' };
-        if (!ya.id) ya.id = _nuevoAlId();   // v0.189: id si no lo tenía
+        if (typeof ya !== 'object') ya = clase.alumnos[idxYa] = { id: _alIdPersona(nombre, ape.trim()), nombre: nombre, alta: '', baja: '' };
+        if (!ya.id) ya.id = _alIdPersona(nombre, alApe(ya) || ape.trim());   // v0.191: id de persona
         _alReactivar(ya, asistFechaActiva);
         if (!ya.apellidos && ape.trim()) ya.apellidos = ape.trim();
         if (!ya.telefono  && tel.trim()) ya.telefono  = tel.trim();
       } else {
         // v0.135: baja por defecto = 30 de julio del curso de su alta.
-        // v0.189: id propio (identidad de asistencia).
-        clase.alumnos = (clase.alumnos||[]).concat([{ id:_nuevoAlId(), nombre:nombre, apellidos:ape.trim(), telefono:tel.trim(),
+        // v0.191: id ESTABLE de persona (una sola id en todas sus franjas).
+        clase.alumnos = (clase.alumnos||[]).concat([{ id:_alIdPersona(nombre, ape.trim()), nombre:nombre, apellidos:ape.trim(), telefono:tel.trim(),
                                                       alta:asistFechaActiva,
                                                       baja:finCursoDeAlta(asistFechaActiva) }]);
       }
@@ -17741,8 +17780,8 @@
         document.getElementById('asist-form-franja').value = clase.franja || '';
         document.getElementById('asist-form-nombre').value = clase.nombre || '';
         asistAlumnosForm = (clase.alumnos||[]).map(function(a){
-          // v0.189: conserva el id (identidad de asistencia); si no tenía, uno nuevo.
-          return { id: alId(a) || _nuevoAlId(),
+          // v0.191: conserva su id; si no tenía, el id ESTABLE de persona.
+          return { id: alId(a) || _alIdPersona(alNom(a), alApe(a)),
                    nombre: alNom(a), apellidos: alApe(a), telefono: alTel(a),
                    alta: alAlta(a), baja: alBaja(a), hist: alHist(a).slice(),
                    movidoA: alMovidoA(a) };
@@ -17899,7 +17938,7 @@
       // v0.116: alta = hoy → cuenta desde hoy y marca "comienzo de clases"
       // v0.135: baja por defecto = 30 de julio (fin del curso). Si se le da
       // de baja a mitad de curso, esa fecha manual sustituye a esta.
-      asistAlumnosForm.push({ id: _nuevoAlId(), nombre: nombre, apellidos: inpApe.value.trim(), telefono: inpTel.value.trim(),
+      asistAlumnosForm.push({ id: _alIdPersona(nombre, inpApe.value.trim()), nombre: nombre, apellidos: inpApe.value.trim(), telefono: inpTel.value.trim(),
                               alta: hoyLocal(), baja: finCursoDeAlta(hoyLocal()) });
       input.value = ''; inpApe.value = ''; inpTel.value = '';
       renderAlumnosForm();
