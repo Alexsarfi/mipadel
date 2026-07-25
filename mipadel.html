@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.192.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.193.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,13 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.193.0 — "Editar plan" abajo también en Iniciación y Avanzado (2026-08)
+    · El botón "✏️ Editar plan" de la planificación anual ya no va arriba de
+      la pantalla en Iniciación y Avanzado: pasa al FINAL (bajo las etapas),
+      igual que ya estaba en Competición. Así es coherente en los tres
+      niveles y queda junto a lo que se edita.
+    · Sin cambios de datos/esquema.
 
   v0.192.0 — Subgrupos por combinación de golpes dentro de "Combinada" (2026-07)
     · Nuevo campo de vault `combo:` (lista, p.ej. [volea, fondo]) para los
@@ -5643,7 +5650,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.192.0';
+    var APP_VERSION = '0.193.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -13383,11 +13390,9 @@
         ? _compContadorTrabajo(p, cursoDeFecha(hoyLocal())) : null;
 
       // Botón editar (oculto para EN1: el plan es de solo lectura).
-      // v0.126: en Competición se mueve al final de "Áreas de trabajo"
-      // (contextual, donde se edita realmente); en el resto de niveles
-      // se mantiene arriba, como siempre.
-      if (!esEN1Cuenta() && !esComp) h += '<button class="plan-edit-toggle' + (edit ? ' on' : '') + '" onclick="planToggleEdit()">' +
-           (edit ? '✓ Terminar de editar' : '✏️ Editar plan') + '</button>';
+      // v0.126: en Competición va al final de "Áreas de trabajo".
+      // v0.193: en Iniciación y Avanzado también se mueve ABAJO (al final de
+      // las etapas), igual que en Competición. Ya no hay botón arriba.
       // v0.119/v0.123: en Competición (vista normal) el texto informativo +
       // banner del ciclo se sustituyen por la vista mensual agrupada por
       // día de la semana (_compListaMesHTML). En edición, o en el resto de
@@ -13472,6 +13477,10 @@
         etapas.forEach(function(et, idx){
           h += _planEtapaCard(et, { ico:(idx + 1) });
         });
+        // v0.193: botón "Editar plan" AL FINAL (como en Competición), en vez
+        // de arriba de la pantalla.
+        if (!esEN1Cuenta()) h += '<button class="plan-edit-toggle' + (edit ? ' on' : '') + '" style="margin:0.6rem 0 0;" onclick="planToggleEdit()">' +
+             (edit ? '✓ Terminar de editar' : '✏️ Editar plan') + '</button>';
       }
 
       // ── Análisis de planificación (solo en modo consulta) ──
@@ -14028,7 +14037,7 @@
     }
     function ejGolpe(ej) { return golpeCanonico(ejFaceta(ej, 'golpe')); }
 
-    // Combinación de golpes dentro de un ejercicio "Combinada" (v0.192).
+    // Combinación de golpes dentro de un ejercicio "Combinada" (v0.193).
     // Devuelve array de claves de golpe (p.ej. ['volea','fondo']) o [] si no se declaró.
     function ejCombo(ej) {
       var c = ejFaceta(ej, 'combo');
@@ -14307,7 +14316,7 @@
                 '</div>';
         if (abierto) {
           if (g === 'mixto') {
-            // v0.192: dentro de "Combinada", subagrupar por combinación real de
+            // v0.193: dentro de "Combinada", subagrupar por combinación real de
             // golpes (campo combo: en el vault), en vez de una lista plana.
             var comboMap = {}, sinCombo = [];
             grupoG.forEach(function(e) {
