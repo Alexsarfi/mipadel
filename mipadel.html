@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.205.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.206.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,22 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.206.0 — Arreglado: los bloques del archivo no se abrían ni cerraban (2026-08)
+    · En el 📦 Archivo de la ruta, los cursos y sus trimestres salían todos
+      desplegados y su cabecera parecía no responder.
+    · Causa: el CSS de los acordeones usaba un selector DESCENDIENTE
+      (.plan-otros.abierto .plan-otros-body), así que un acordeón abierto
+      forzaba a visible TODOS los cuerpos anidados dentro de él, sin mirar
+      si ellos estaban abiertos. Al anidar (archivo → curso → trimestre)
+      el estado de los de dentro se ignoraba.
+    · Fix: combinador HIJO (.plan-otros.abierto > .plan-otros-body), igual
+      para el chevrón. Arregla de paso el mismo problema en Competición con
+      Ciclo y Análisis dentro de Áreas de trabajo (v0.201).
+    · Ahora cada curso y cada trimestre del archivo se abre y se cierra por
+      su cuenta, y varios a la vez.
+    · Los acordeones del archivo ya no repintan la pantalla entera: cambian
+      su propia clase, así que no salta el scroll al pulsar algo del final.
 
   v0.205.0 — Ruta: planificar el curso que viene + archivo por curso (2026-08)
     · Selector de CURSO en la cabecera de la ruta (‹ Curso 2026-27 ›): se
@@ -4455,9 +4471,14 @@
     .plan-otros { border:1px solid var(--borde); border-radius:14px; overflow:hidden; background:var(--blanco); }
     .plan-otros-hdr { display:flex; align-items:center; gap:8px; padding:12px 14px; cursor:pointer; user-select:none; font-size:13px; font-weight:700; color:var(--texto); }
     .plan-otros-hdr .chev { margin-left:auto; font-size:13px; color:var(--gris); transition:transform .18s; }
-    .plan-otros.abierto .plan-otros-hdr .chev { transform:rotate(90deg); }
+    /* v0.206: combinador HIJO (>) a propósito. Con el selector descendiente
+       de antes, un acordeón abierto forzaba a display:flex TODOS los
+       .plan-otros-body anidados dentro (archivo por curso → trimestre, y
+       Ciclo/Análisis dentro de Áreas de trabajo), así que los de dentro
+       salían siempre abiertos y su cabecera parecía no responder. */
+    .plan-otros.abierto > .plan-otros-hdr .chev { transform:rotate(90deg); }
     .plan-otros-body { display:none; padding:0 10px 8px; flex-direction:column; gap:8px; }
-    .plan-otros.abierto .plan-otros-body { display:flex; }
+    .plan-otros.abierto > .plan-otros-body { display:flex; }
     /* Mes (colapsable) dentro de otros */
     .plan-mes { border:1px solid var(--borde); border-radius:12px; overflow:hidden; background:var(--arena); }
     .plan-mes-cab { display:flex; align-items:center; gap:8px; padding:10px 12px; cursor:pointer; user-select:none; }
@@ -5933,7 +5954,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.205.0';
+    var APP_VERSION = '0.206.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -13380,19 +13401,15 @@
     }
     function _rutaTriActivo() { return _rutaTri || _rutaBloqueDefecto(); }
     function rutaTriSel(key) { _rutaTri = key; mostrarPlanificacion(); }
-    function rutaArchivoToggle() { _rutaArchivoOpen = !_rutaArchivoOpen; mostrarPlanificacion(); }
-    // v0.205: dentro del archivo, un curso abierto y un bloque abierto a la vez.
-    var _rutaArchCurso = '';   // curso desplegado dentro del archivo
-    var _rutaArchTri   = '';   // clave "curso|bloque" desplegada
-    function rutaArchCursoToggle(c) {
-      _rutaArchCurso = (_rutaArchCurso === c) ? '' : c;
-      _rutaArchTri = '';
-      mostrarPlanificacion();
-    }
-    function rutaArchTriToggle(k) {
-      _rutaArchTri = (_rutaArchTri === k) ? '' : k;
-      mostrarPlanificacion();
-    }
+    // v0.206: sin repintar la pantalla (lo hace el classList de la cabecera).
+    function rutaArchivoToggle() { _rutaArchivoOpen = !_rutaArchivoOpen; }
+    // v0.206: dentro del archivo, cada curso y cada bloque se abre y se cierra
+    // por su cuenta (varios a la vez). El repintado se hace en el propio DOM
+    // (classList.toggle en la cabecera pulsada), como el resto de acordeones
+    // del plan: así no se rehace la pantalla ni salta el scroll al pulsar algo
+    // que está al final de la página.
+    var _rutaArchAbierto = {};   // { 'curso': true, 'curso|bloque': true }
+    function rutaArchToggle(k) { _rutaArchAbierto[k] = !_rutaArchAbierto[k]; }
     // v0.203: un mes se archiva cuando su fecha YA PASÓ (mes natural anterior
     // al de hoy). Nada de estados manuales: arriba lo que viene, abajo lo dado.
     function _rutaMesPasado(y, m) {
@@ -13731,7 +13748,7 @@
 
       var totalMeses = fichas.reduce(function(n, f){ return n + f.meses.length; }, 0);
       var h = '<div class="plan-otros' + (_rutaArchivoOpen ? ' abierto' : '') + '" style="margin-top:1rem;">';
-      h += '<div class="plan-otros-hdr" onclick="rutaArchivoToggle()">' +
+      h += '<div class="plan-otros-hdr" onclick="rutaArchivoToggle();this.parentNode.classList.toggle(\'abierto\')">' +
         '<span style="flex:1;">📦 Archivo <span class="ruta-panel-nota">(' + totalMeses + ' meses cerrados)</span></span>' +
         '<span class="chev">›</span></div>';
       h += '<div class="plan-otros-body">';
@@ -13740,9 +13757,9 @@
         var hechasC = f.meses.reduce(function(n, m){
           return n + m.sems.filter(function(w){ return f.data[w.idx] && f.data[w.idx].trab; }).length; }, 0);
         var totalC  = f.meses.reduce(function(n, m){ return n + m.sems.length; }, 0);
-        var abiertoC = (_rutaArchCurso === f.curso);
+        var abiertoC = !!_rutaArchAbierto[f.curso];
         h += '<div class="plan-otros' + (abiertoC ? ' abierto' : '') + '">';
-        h += '<div class="plan-otros-hdr" onclick="rutaArchCursoToggle(\'' + f.curso + '\')">' +
+        h += '<div class="plan-otros-hdr" onclick="rutaArchToggle(\'' + f.curso + '\');this.parentNode.classList.toggle(\'abierto\')">' +
           '<span style="flex:1;">🗓️ Curso ' + f.curso + '</span>' +
           '<span class="plan-etapa-prog">' + hechasC + '/' + totalC + '</span>' +
           '<span class="chev">›</span></div>';
@@ -13755,9 +13772,9 @@
             return n + m.sems.filter(function(w){ return f.data[w.idx] && f.data[w.idx].trab; }).length; }, 0);
           var totalB  = mesesB.reduce(function(n, m){ return n + m.sems.length; }, 0);
           var kB = f.curso + '|' + bl.key;
-          var abiertoB = (_rutaArchTri === kB);
+          var abiertoB = !!_rutaArchAbierto[kB];
           h += '<div class="plan-otros' + (abiertoB ? ' abierto' : '') + '">';
-          h += '<div class="plan-otros-hdr" onclick="rutaArchTriToggle(\'' + kB + '\')">' +
+          h += '<div class="plan-otros-hdr" onclick="rutaArchToggle(\'' + kB + '\');this.parentNode.classList.toggle(\'abierto\')">' +
             '<span style="flex:1;">' + bl.label + '</span>' +
             '<span class="plan-etapa-prog">' + hechasB + '/' + totalB + '</span>' +
             '<span class="chev">›</span></div>';
