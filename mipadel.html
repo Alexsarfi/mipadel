@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.196.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.197.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,22 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.197.0 — Gesto técnico alimentado por el sync del vault (2026-08)
+    · El módulo de Sesiones → Técnica (EN3) deja de usar datos de prueba: se
+      alimenta del apartado del vault "08 DETALLES DEL GESTO TÉCNICO" a
+      través de la tabla nueva gestos_tecnicos de Supabase.
+    · sync_padel.py ahora lee ese apartado y sube, por cada golpe, sus
+      VÍDEOS (notas con propiedad video:) y sus NOTAS de gesto (texto). La
+      app lo lee en _cargarGestos() (solo EN3) por su ámbito (scope_id).
+    · En la app, cada golpe muestra sus vídeos reproducibles y sus notas de
+      gesto como acordeones colapsados (markdown). Nuevo golpe "Común" para
+      los fundamentos (empuñadura, manos).
+    · Requiere ejecutar migraciones/migracion_gestos_tecnicos.sql UNA vez en
+      Supabase ANTES de usar esta versión, y volver a ejecutar sync_padel.py
+      (cuenta nivel3) para que suba el gesto técnico.
+    · Los datos de prueba (revés/volea a mano) se retiran; ahora salen del
+      vault.
 
   v0.196.0 — Gesto técnico: sembrado el vídeo de Volea (prototipo) (2026-08)
     · Se añade a los datos de prueba el vídeo "Volea derecha sentado en
@@ -5687,7 +5703,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.196.0';
+    var APP_VERSION = '0.197.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -5839,6 +5855,7 @@
                        ? { id: r.data.grupo_id, rol: rol } : null;
           _authActualizarBadge();
           renderBottomNav();   // v0.69: barra según rol (nivel3 lleva Ejercicios)
+          _cargarGestos();     // v0.197: gesto técnico del vault (solo EN3)
           // El perfil (correo/nombre) se guarda en Supabase para que un gestor
           // pueda identificar a cada entrenador. El gestor no aporta datos.
           if (!_esGestor) { _subirPerfil(); }
@@ -14960,16 +14977,17 @@
     function irClasesGrupo(key)   { grupoClasesSel = key;   irA('pantalla-clases-grupo'); }
 
     // ══════════════════════════════════════════
-    // v0.194 (prototipo) — GESTO TÉCNICO por golpe (solo EN3)
+    // v0.194+ — GESTO TÉCNICO por golpe (Sesiones → Técnica, solo EN3)
     // ------------------------------------------------------------
-    // Dentro de Sesiones → Técnica, cada golpe muestra sus vídeos de gesto
-    // técnico (miniaturas reproducibles) y sus matices (colapsados). De
-    // momento con DATOS DE PRUEBA; luego llegará por el sync del vault
-    // (apartado "08 DETALLES DEL GESTO TÉCNICO"). Solo lo ve la cuenta EN3.
-    // Incluye Derecha y Revés como golpes propios (en el vault van separados).
+    // Cada golpe muestra sus vídeos de gesto (miniaturas reproducibles) y sus
+    // notas (colapsadas). El contenido llega del sync del vault (apartado
+    // "08 DETALLES DEL GESTO TÉCNICO") → tabla gestos_tecnicos de Supabase
+    // (v0.197). _gtGesto se rellena en _cargarGestos(). Derecha y Revés van
+    // separados y hay un golpe "Común" para los fundamentos.
     var GT_GOLPES = [
+      { key:'comun',   label:'Común (fundamentos)', icono:'🖐️' },
       { key:'derecha', label:'Derecha', icono:'🎾' },
-      { key:'reves',   label:'Revés',   icono:'🖐️' },
+      { key:'reves',   label:'Revés',   icono:'🤚' },
       { key:'volea',   label:'Volea',   icono:'🎯' },
       { key:'bandeja', label:'Bandeja', icono:'🪃' },
       { key:'remate',  label:'Remate',  icono:'💥' },
@@ -14978,26 +14996,33 @@
       { key:'pared',   label:'Salida de pared', icono:'🧱' },
       { key:'saque',   label:'Saque',   icono:'🚀' },
     ];
-    // Datos de prueba (se sustituirán por los del sync). matices = texto;
-    // videos = [{ titulo, video (url), visto }].
-    var _gtGesto = {
-      reves: {
-        matices: 'Elevar la punta: flexión lateral de la empuñadura para llegar al golpeo con más firmeza.\n' +
-                 'Mano no dominante hacia extensión palmar en la preparación → mejor elasticidad en el impacto.',
-        videos: [ { titulo:'Revés con limitaciones', video:'https://youtube.com/shorts/duJDNTbjUmQ', visto:false } ]
-      },
-      volea: {
-        matices: 'Volea de derecha: el movimiento nace de la cintura escapular, sin depender de las piernas.',
-        videos: [ { titulo:'Volea derecha sentado en silla', video:'https://youtube.com/shorts/eyhQ0TRh_Mo', visto:false } ]
-      }
-    };
+    // { golpe: { videos:[{titulo,video}], notas:[{titulo,texto}] } }
+    var _gtGesto = {};
     function _gtEsN3() { try { return !!(_sbGrupo && _sbGrupo.rol === 'nivel3'); } catch(e){ return false; } }
-    function _gtDe(key) { return _gtGesto[key] || { matices:'', videos:[] }; }
+    function _gtDe(key) { return _gtGesto[key] || { videos:[], notas:[] }; }
+    // v0.197: carga el gesto técnico desde Supabase (solo EN3) y repinta si
+    // la pantalla de Técnica está abierta.
+    function _cargarGestos() {
+      if (!_sb || !_sbUser || !_gtEsN3()) return;
+      var scope = (_sbGrupo && _sbGrupo.id) || _sbUser.id;
+      _sb.from('gestos_tecnicos').select('golpe,data').eq('scope_id', scope).then(function(r){
+        if (r.error || !r.data) return;
+        var m = {};
+        r.data.forEach(function(row){ m[row.golpe] = row.data || {}; });
+        _gtGesto = m;
+        var act = document.querySelector('.pantalla.activa');
+        if (act && act.id === 'pantalla-clases' && nivelClasesSel === 'tecnica') mostrarClases();
+        else if (act && act.id === 'pantalla-clases-grupo' && nivelClasesSel === 'tecnica') mostrarClasesGrupo();
+      }).catch(function(){});
+    }
     function _gtGolpeCardsHTML() {
-      var h = '<p class="ajustes-desc" style="margin:0 0 0.7rem;">🎯 Gesto técnico por golpe — vídeos y matices. Toca un golpe.</p>';
+      var h = '<p class="ajustes-desc" style="margin:0 0 0.7rem;">🎯 Gesto técnico por golpe — vídeos y notas. Toca un golpe.</p>';
       GT_GOLPES.forEach(function(g){
-        var d = _gtDe(g.key), n = (d.videos||[]).length;
-        var cnt = n ? (n + ' vídeo' + (n!==1?'s':'')) : 'sin vídeos';
+        var d = _gtDe(g.key), nv = (d.videos||[]).length, nn = (d.notas||[]).length;
+        var partes = [];
+        if (nv) partes.push(nv + ' vídeo' + (nv!==1?'s':''));
+        if (nn) partes.push(nn + ' nota' + (nn!==1?'s':''));
+        var cnt = partes.length ? partes.join(' · ') : '—';
         h += '<div class="clase-grupo-btn" onclick="irClasesGrupo(\'' + g.key + '\')">' +
           '<span class="clase-grupo-ico">' + g.icono + '</span>' +
           '<span class="clase-grupo-lbl">' + g.label + '</span>' +
@@ -15011,6 +15036,7 @@
       var g = GT_GOLPES.filter(function(x){ return x.key === key; })[0] || { label:'', icono:'🎾' };
       var d = _gtDe(key);
       var h = '';
+      // Vídeos (miniaturas reproducibles)
       if ((d.videos||[]).length) {
         h += '<div class="detalle-seccion-titulo">Vídeos</div><div class="gt-videos">';
         d.videos.forEach(function(v){
@@ -15026,17 +15052,17 @@
           '</div>';
         });
         h += '</div>';
-      } else {
-        h += '<p class="ajustes-desc">Aún no hay vídeos de gesto técnico de este golpe.</p>';
       }
-      // Matices, colapsado (mismo acordeón que Áreas de trabajo)
-      h += '<div class="plan-otros" style="margin-top:0.9rem;">' +
-        '<div class="plan-otros-hdr" onclick="this.parentNode.classList.toggle(\'abierto\')">📝 Matices del gesto<span class="chev">›</span></div>' +
-        '<div class="plan-otros-body">' +
-          (d.matices ? '<p class="ajustes-desc" style="white-space:pre-wrap;margin:0;">' + _gEsc(d.matices) + '</p>'
-                     : '<p class="ajustes-desc" style="margin:0;">Sin matices todavía.</p>') +
-        '</div>' +
-      '</div>';
+      // Notas de gesto (colapsadas, mismo acordeón que Áreas de trabajo)
+      (d.notas||[]).forEach(function(n){
+        h += '<div class="plan-otros" style="margin-top:0.7rem;">' +
+          '<div class="plan-otros-hdr" onclick="this.parentNode.classList.toggle(\'abierto\')">📝 ' + _gEsc(n.titulo||'Nota') + '<span class="chev">›</span></div>' +
+          '<div class="plan-otros-body"><div class="md-contenido">' + renderMd(n.texto||'') + '</div></div>' +
+        '</div>';
+      });
+      if (!(d.videos||[]).length && !(d.notas||[]).length) {
+        h += '<p class="ajustes-desc">Aún no hay contenido de gesto técnico de este golpe. Añádelo en el vault (apartado «Detalles del gesto técnico») y ejecuta el sync.</p>';
+      }
       return { titulo: g.icono + ' ' + g.label, html: h };
     }
 
@@ -15057,6 +15083,7 @@
       // v0.194: Técnica, para EN3, es el módulo de GESTO TÉCNICO por golpe
       // (vídeos + matices), no las sesiones. Rejilla de golpes.
       if (nivelClasesSel === 'tecnica' && _gtEsN3()) {
+        if (!Object.keys(_gtGesto).length) _cargarGestos();   // aún no cargado → lo trae y repinta
         subClases.textContent = GT_GOLPES.length + ' golpes';
         hub.innerHTML = _gtGolpeCardsHTML();
         return;
