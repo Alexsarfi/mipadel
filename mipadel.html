@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.203.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.205.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,32 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.205.0 — Ruta: planificar el curso que viene + archivo por curso (2026-08)
+    · Selector de CURSO en la cabecera de la ruta (‹ Curso 2026-27 ›): se
+      puede adelantar y dejar planificado septiembre del curso siguiente sin
+      esperar a que llegue. El curso de hoy sale marcado "actual" y desde
+      cualquier otro hay un atajo "ir al actual".
+    · Cada curso guarda su ruta aparte (padel-ruta-<curso>), así que
+      planificar el 26-27 no toca nada del 25-26.
+    · El archivo pasa a organizarse POR CURSO: 📦 Archivo › 🗓️ Curso 25-26 ›
+      🧭 Preparación / 1er / 2º / 3er trimestre › meses. Entra lo de
+      cualquier curso que tenga algo planificado, no solo el que se mira.
+    · MÓVIL: al tocar un bloque en el panel de la semana, sus sesiones se
+      despliegan justo debajo (acordeón) para marcarlas ahí mismo; volver a
+      tocarlo lo pliega. En el ordenador se mantiene la columna derecha.
+
+  v0.204.0 — Ruta: al planificar, solo las sesiones de ESE área (2026-08)
+    · Al elegir un área en el panel de la semana ya NO se cae a toda la
+      biblioteca cuando el área no tiene sesiones enlazadas: se muestran
+      SOLO las suyas. Si no tiene ninguna, se dice claramente y no se
+      enseña nada más (antes el fallback metía ruido).
+    · "Las suyas" = las enlazadas a mano (sesInc) MÁS las que traen
+      apartado + bloque en su ficha desde Obsidian — el mismo criterio que
+      usa el resto del plan (_sesionesDeBloqueUnion), no solo sesInc.
+    · Cada bloque de la lista de áreas lleva al lado CUÁNTAS sesiones
+      tiene, y los que no tienen ninguna salen atenuados con "—". Así se
+      ve de un vistazo dónde hay material sin entrar a mirar.
 
   v0.203.0 — Ruta de la temporada: tablero para planificar en el ordenador (2026-08)
     · La ruta pasa de lista vertical a TABLERO, pensado para planificar
@@ -4545,6 +4571,13 @@
     .ruta-toggle button { flex:1; font-family:inherit; font-size:13px; font-weight:700; padding:8px; border-radius:10px;
                           border:1.5px solid var(--borde); background:var(--blanco); color:var(--gris); cursor:pointer; }
     .ruta-toggle button.on { background:#0891b2; border-color:#0891b2; color:#fff; }
+    /* v0.205: navegador de curso (‹ Curso 2026-27 ›) */
+    .ruta-curso-nav { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+    .ruta-curso-nav > button { flex-shrink:0; width:34px; height:34px; border-radius:10px; border:1.5px solid var(--borde);
+      background:var(--blanco); color:var(--texto); font-size:17px; font-weight:800; line-height:1; cursor:pointer; }
+    .ruta-curso-nav > button:hover { border-color:#0891b2; color:#0e7490; }
+    .ruta-curso-lbl { flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
+      font-size:13.5px; font-weight:800; color:var(--texto); }
     .ruta-hdr { margin-bottom:12px; }
     .ruta-prog-txt { font-size:12px; color:var(--gris); margin-bottom:4px; }
     .ruta-prog-bar { height:6px; background:var(--arena); border-radius:999px; overflow:hidden; }
@@ -4608,8 +4641,13 @@
       font-family:inherit; font-size:12.5px; font-weight:600; color:var(--texto); cursor:pointer; }
     .ruta-area-row:hover { border-color:#0891b2; }
     .ruta-area-row.on { border-color:#0891b2; background:#ecfeff; color:#0e7490; }
+    .ruta-area-row.sinses { opacity:.55; }
     .ruta-area-ico { font-size:13px; color:#0891b2; flex-shrink:0; }
     .ruta-area-t { min-width:0; }
+    /* v0.204: nº de sesiones que tiene el bloque, al final de su fila */
+    .ruta-area-n { margin-left:auto; flex-shrink:0; min-width:20px; text-align:center; font-size:10.5px; font-weight:800;
+      color:#1e40af; background:#eff6ff; border-radius:999px; padding:1px 6px; }
+    .ruta-area-row.sinses .ruta-area-n { color:var(--gris); background:var(--arena); }
     .ruta-chip-sel { display:inline-block; font-size:12px; font-weight:700; color:#1e40af;
       background:#eff6ff; padding:5px 11px; border-radius:999px; margin-bottom:10px; }
     .ruta-chip-x { margin-left:auto; font-family:inherit; font-size:11px; font-weight:700; color:var(--gris);
@@ -4630,6 +4668,10 @@
     .ruta-ses-meta { font-size:10.5px; color:var(--gris); }
     .ruta-panel-borrar { display:block; width:100%; margin-top:14px; font-family:inherit; font-size:12px; font-weight:700;
       color:#b91c1c; background:none; border:1px dashed #fca5a5; border-radius:10px; padding:8px; cursor:pointer; }
+    /* v0.205 — MÓVIL: al tocar un bloque, sus sesiones se despliegan justo
+       debajo (acordeón). La columna de sesiones de la derecha se oculta,
+       porque en pantalla estrecha esa segunda columna quedaba lejos. */
+    .ruta-area-inline { padding:2px 0 10px 10px; margin-bottom:6px; border-left:2px solid #cffafe; }
     /* ORDENADOR: trimestres en fila de 4, meses en columnas, panel centrado
        en dos columnas (áreas | sesiones). Es donde se planifica de verdad. */
     @media (min-width:760px){
@@ -4642,6 +4684,10 @@
       .ruta-modal-ses { flex:1; min-width:0; max-height:60vh; overflow-y:auto; }
       .ruta-ses-grid { grid-template-columns:repeat(2,1fr); }
       .ruta-ses-thumb { width:96px; }
+      .ruta-area-inline { display:none; }   /* en ancho manda la columna derecha */
+    }
+    @media (max-width:759px){
+      .ruta-modal-ses { display:none; }     /* en móvil manda el desplegable */
     }
     .comp-resumen-videos { display:flex; flex-wrap:nowrap; gap:6px; align-items:flex-start; }
     .comp-resumen-videos .ejcard { flex:1 1 0; min-width:0; }
@@ -5887,7 +5933,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.203.0';
+    var APP_VERSION = '0.205.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -13297,18 +13343,56 @@
     ];
     var _rutaTri = null;       // trimestre seleccionado; null = el de la semana en curso
     var _rutaArchivoOpen = false;
+    // v0.205 — CURSO que se está mirando en la ruta. null = el de hoy. Permite
+    // adelantarse y planificar el curso que viene (26-27, 27-28…).
+    var _rutaCursoSel = null;
+    function _rutaCurso() { return _rutaCursoSel || _cursoActual(); }
+    function _rutaCursoDesplaza(curso, delta) {
+      var y = parseInt(String(curso).slice(0,4), 10) + delta;
+      return y + '-' + ('0' + ((y + 1) % 100)).slice(-2);
+    }
+    function rutaCursoNav(delta) {
+      _rutaCursoSel = _rutaCursoDesplaza(_rutaCurso(), delta);
+      _rutaTri = null;                 // al cambiar de curso, volver a su bloque por defecto
+      rutaCerrarModal();
+      mostrarPlanificacion();
+    }
+    function rutaCursoHoy() { _rutaCursoSel = null; _rutaTri = null; mostrarPlanificacion(); }
+    // Cursos que ya tienen algo planificado (una clave padel-ruta-<curso>).
+    function _rutaCursosConDatos() {
+      var out = [];
+      try {
+        for (var i = 0; i < localStorage.length; i++) {
+          var k = localStorage.key(i);
+          if (k && k.indexOf('padel-ruta-') === 0) out.push(k.slice(11));
+        }
+      } catch (e) {}
+      return out;
+    }
     function _rutaBloqueDeMes(mes) {
       for (var i = 0; i < _RUTA_BLOQUES.length; i++) if (_RUTA_BLOQUES[i].meses.indexOf(mes) >= 0) return _RUTA_BLOQUES[i].key;
       return _RUTA_BLOQUES[0].key;
     }
     function _rutaBloqueDefecto() {
-      var curso = _cursoActual(), act = _rutaSemActual(curso);
-      if (act < 0) return _RUTA_BLOQUES[0].key;
+      var curso = _rutaCurso(), act = _rutaSemActual(curso);
+      if (act < 0) return _RUTA_BLOQUES[0].key;   // curso futuro/pasado → empieza por Preparación
       return _rutaBloqueDeMes(_rutaSemanas(curso)[act].mes);
     }
     function _rutaTriActivo() { return _rutaTri || _rutaBloqueDefecto(); }
     function rutaTriSel(key) { _rutaTri = key; mostrarPlanificacion(); }
     function rutaArchivoToggle() { _rutaArchivoOpen = !_rutaArchivoOpen; mostrarPlanificacion(); }
+    // v0.205: dentro del archivo, un curso abierto y un bloque abierto a la vez.
+    var _rutaArchCurso = '';   // curso desplegado dentro del archivo
+    var _rutaArchTri   = '';   // clave "curso|bloque" desplegada
+    function rutaArchCursoToggle(c) {
+      _rutaArchCurso = (_rutaArchCurso === c) ? '' : c;
+      _rutaArchTri = '';
+      mostrarPlanificacion();
+    }
+    function rutaArchTriToggle(k) {
+      _rutaArchTri = (_rutaArchTri === k) ? '' : k;
+      mostrarPlanificacion();
+    }
     // v0.203: un mes se archiva cuando su fecha YA PASÓ (mes natural anterior
     // al de hoy). Nada de estados manuales: arriba lo que viene, abajo lo dado.
     function _rutaMesPasado(y, m) {
@@ -13353,10 +13437,11 @@
       return (idx >= 0 && idx < 40) ? idx : -1;
     }
     function _rutaKey(curso) { return 'padel-ruta-' + curso; }
-    function _rutaData() {
-      try { return JSON.parse(_lzGet(_rutaKey(_cursoActual())) || '{}'); } catch(e){ return {}; }
+    function _rutaDataDe(curso) {
+      try { return JSON.parse(_lzGet(_rutaKey(curso)) || '{}'); } catch(e){ return {}; }
     }
-    function _rutaGuardar(d) { _lzSet(_rutaKey(_cursoActual()), JSON.stringify(d)); }
+    function _rutaData() { return _rutaDataDe(_rutaCurso()); }
+    function _rutaGuardar(d) { _lzSet(_rutaKey(_rutaCurso()), JSON.stringify(d)); }
     // ── Panel grande de planificación de una semana (v0.203) ──
     // Sustituye al panel en línea de v0.202: al planificar en el ordenador
     // interesa VER las sesiones (miniatura + nº de ejercicios), no una lista
@@ -13370,7 +13455,11 @@
       if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; }
     }
     // Paso 1 → elige área: se guarda ya y se pasa al paso 2 (sesiones de esa área).
+    // v0.205: si se vuelve a tocar el área ya abierta, se pliega (en móvil el
+    // bloque funciona como acordeón); lo guardado no se toca.
     function rutaElegirArea(idx, areaId) {
+      var abierta = (_rutaModalArea !== null) ? _rutaModalArea : ((_rutaData()[idx] || {}).area || '');
+      if (abierta === areaId) { _rutaModalArea = ''; _rutaModalRender(); return; }
       var d = _rutaData(); d[idx] = d[idx] || {}; d[idx].area = areaId; _rutaGuardar(d);
       _rutaModalArea = areaId;
       mostrarPlanificacion(); _rutaModalRender();
@@ -13392,6 +13481,32 @@
       rutaCerrarModal();
       mostrarPlanificacion();
     }
+    // v0.204 — Sesiones que tiene CADA área del catálogo: las enlazadas a
+    // mano (sesInc) MÁS las que traen apartado+bloque en su ficha desde
+    // Obsidian (mismo criterio que _sesionesDeBloqueUnion, pero indexando
+    // las clases UNA sola vez para todo el catálogo).
+    function _rutaSesPorArea(areas) {
+      var nivel  = _compNivel();
+      var mapEj  = _ejsById();
+      var clases = leerClases();
+      var out = {};
+      areas.forEach(function(a){
+        var manual = a.sesInc || [];
+        var etNom  = (a.apartado || '').trim().toLowerCase();
+        var bloqT  = (a.t || '').trim().toLowerCase();
+        var res = [], vistos = {};
+        clases.forEach(function(c){
+          var enManual = manual.indexOf(c.id) >= 0;
+          var enAuto = etNom && bloqT && c.apartado && c.bloque &&
+                       String(c.apartado).trim().toLowerCase() === etNom &&
+                       String(c.bloque).trim().toLowerCase()   === bloqT &&
+                       nivelDeSesion(c, mapEj) === nivel;
+          if ((enManual || enAuto) && !vistos[c.id]) { vistos[c.id] = true; res.push(c); }
+        });
+        out[a.id] = res;
+      });
+      return out;
+    }
     // Miniatura de una sesión: primer ejercicio suyo que tenga vídeo o imagen.
     function _rutaSesThumb(s) {
       var ejs = _compEjerciciosDeSesiones([s]);
@@ -13402,17 +13517,29 @@
       }
       return null;
     }
+    // Tarjeta de una sesión dentro del panel (miniatura + nombre + nº ejercicios).
+    function _rutaSesCardHTML(s, idx, sesActual) {
+      var th  = _rutaSesThumb(s);
+      var nEj = (s.ejercicioIds || []).length;
+      return '<button type="button" class="ruta-ses-card' + (sesActual === s.id ? ' on' : '') + '" onclick="rutaElegirSesion(' + idx + ',' + s.id + ')">' +
+        '<span class="ruta-ses-thumb">' + (th ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="ruta-ses-noimg">🎾</span>') + '</span>' +
+        '<span class="ruta-ses-info">' +
+          '<span class="ruta-ses-nom">' + _gEsc(s.nombre || s.fecha || ('Sesión ' + s.id)) + '</span>' +
+          '<span class="ruta-ses-meta">' + (nEj ? nEj + ' ejercicio' + (nEj !== 1 ? 's' : '') : 'sin ejercicios') +
+            (s.fecha ? ' · ' + formatFechaDiaMes(s.fecha) : '') + '</span>' +
+        '</span></button>';
+    }
     function _rutaModalRender() {
       var ov = document.getElementById('ruta-plan-ov');
       if (!ov) return;
       if (_rutaModalIdx === null) { ov.style.display = 'none'; ov.innerHTML = ''; return; }
       var idx   = _rutaModalIdx;
-      var curso = _cursoActual();
+      var curso = _rutaCurso();
       var w     = _rutaSemanas(curso)[idx];
       var wd    = _rutaData()[idx] || {};
       var areas = _compTodasFilas(leerPlan());
       var areaN = {}; areas.forEach(function(a){ areaN[a.id] = a.t; });
-      var ses   = leerClases().slice().sort(function(a,b){ return (b.fecha||'').localeCompare(a.fecha||''); });
+      var sesDe = _rutaSesPorArea(areas);   // v0.204: sesiones de cada área
       // areaSel: '' fuerza el paso 1; null usa la guardada; un id viene de elegirla ahora.
       var areaSel = (_rutaModalArea !== null) ? _rutaModalArea : (wd.area || '');
       var rango = w.lun.getDate() + ' ' + _MESES_R[w.lun.getMonth()].slice(0,3) +
@@ -13436,42 +13563,50 @@
         Object.keys(porApartado).forEach(function(ap){
           h += '<div class="ruta-area-grupo">' + _gEsc(ap) + '</div>';
           porApartado[ap].forEach(function(a){
-            h += '<button type="button" class="ruta-area-row' + (areaSel === a.id ? ' on' : '') + '" onclick="rutaElegirArea(' + idx + ',\'' + a.id + '\')">' +
-              '<span class="ruta-area-ico">◆</span><span class="ruta-area-t">' + _gEsc(a.t) + '</span></button>';
+            // v0.204: cada bloque lleva al lado CUÁNTAS sesiones tiene, para
+            // saber de un vistazo dónde hay material sin entrar a mirar.
+            var n    = (sesDe[a.id] || []).length;
+            var abto = (areaSel === a.id);
+            h += '<button type="button" class="ruta-area-row' + (abto ? ' on' : '') + (n ? '' : ' sinses') + '" onclick="rutaElegirArea(' + idx + ',\'' + a.id + '\')">' +
+              '<span class="ruta-area-ico">◆</span><span class="ruta-area-t">' + _gEsc(a.t) + '</span>' +
+              '<span class="ruta-area-n">' + (n || '—') + '</span></button>';
+            // v0.205 — MÓVIL: las sesiones del área se despliegan aquí mismo,
+            // justo debajo del bloque tocado (en el ordenador salen en la
+            // columna de la derecha; el CSS oculta una u otra según el ancho).
+            if (abto) {
+              h += '<div class="ruta-area-inline">';
+              if (!n) {
+                h += '<div class="ruta-panel-nota" style="padding:4px 2px 8px;">Este bloque todavía no tiene ninguna sesión enlazada.</div>';
+              } else {
+                h += '<div class="ruta-ses-grid">';
+                (sesDe[a.id] || []).forEach(function(s){ h += _rutaSesCardHTML(s, idx, wd.sesion); });
+                h += '</div>';
+              }
+              h += '</div>';
+            }
           });
         });
       }
       h += '</div>';
 
-      // ── Columna derecha: sesiones de esa área, con miniatura ──
+      // ── Columna derecha: SOLO las sesiones de esa área (ordenador) ──
       h += '<div class="ruta-modal-ses">';
       if (!areaSel) {
         h += '<div class="ruta-modal-vacio">👈 Elige primero un área de trabajo<br>' +
              '<span class="ruta-panel-nota">Te mostraré solo sus sesiones.</span></div>';
       } else {
-        var areaObj = areas.filter(function(a){ return a.id === areaSel; })[0];
-        var idsLig  = (areaObj && areaObj.sesInc) || [];
-        var sesFil  = ses.filter(function(s){ return idsLig.indexOf(s.id) >= 0; });
-        var lista   = sesFil.length ? sesFil : ses;
+        var lista = sesDe[areaSel] || [];
         h += '<div class="ruta-panel-paso">2 · Sesión ' +
           '<button type="button" class="ruta-chip-x" onclick="rutaCambiarArea()">cambiar área</button></div>';
         h += '<div class="ruta-chip-sel">' + _gEsc(areaN[areaSel] || 'Área') + '</div>';
-        if (!sesFil.length) h += '<div class="ruta-panel-nota" style="margin-bottom:8px;">Esta área aún no tiene sesiones enlazadas — te muestro toda la biblioteca.</div>';
         if (!lista.length) {
-          h += '<div class="ruta-modal-vacio">Todavía no hay sesiones en la biblioteca.</div>';
+          // v0.204: si el área no tiene sesiones, NO se cae a toda la
+          // biblioteca (era ruido). Se dice claramente que no hay.
+          h += '<div class="ruta-modal-vacio">Esta área todavía no tiene ninguna sesión enlazada.<br>' +
+               '<span class="ruta-panel-nota">Enlázalas desde Áreas de trabajo (o con apartado + bloque en la ficha de la sesión).</span></div>';
         } else {
           h += '<div class="ruta-ses-grid">';
-          lista.forEach(function(s){
-            var th = _rutaSesThumb(s);
-            var nEj = (s.ejercicioIds || []).length;
-            h += '<button type="button" class="ruta-ses-card' + (wd.sesion === s.id ? ' on' : '') + '" onclick="rutaElegirSesion(' + idx + ',' + s.id + ')">' +
-              '<span class="ruta-ses-thumb">' + (th ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="ruta-ses-noimg">🎾</span>') + '</span>' +
-              '<span class="ruta-ses-info">' +
-                '<span class="ruta-ses-nom">' + _gEsc(s.nombre || s.fecha || ('Sesión ' + s.id)) + '</span>' +
-                '<span class="ruta-ses-meta">' + (nEj ? nEj + ' ejercicio' + (nEj !== 1 ? 's' : '') : 'sin ejercicios') +
-                  (s.fecha ? ' · ' + formatFechaDiaMes(s.fecha) : '') + '</span>' +
-              '</span></button>';
-          });
+          lista.forEach(function(s){ h += _rutaSesCardHTML(s, idx, wd.sesion); });
           h += '</div>';
         }
       }
@@ -13517,7 +13652,7 @@
     }
 
     function _rutaHTML() {
-      var curso = _cursoActual();
+      var curso = _rutaCurso();
       var sems  = _rutaSemanas(curso);
       var act   = _rutaSemActual(curso);
       var data  = _rutaData();
@@ -13527,8 +13662,18 @@
       var ses   = leerClases();
       var sesN  = {}; ses.forEach(function(s){ sesN[s.id] = s.nombre || (s.fecha || 'Sesión'); });
       var hechas = sems.filter(function(w){ return data[w.idx] && data[w.idx].trab; }).length;
+      var esHoy  = (curso === _cursoActual());
 
-      var h = '<div class="ruta-hdr">' +
+      // ── Selector de CURSO: permite adelantarse y planificar el que viene ──
+      var h = '<div class="ruta-curso-nav">' +
+        '<button type="button" onclick="rutaCursoNav(-1)" title="Curso anterior">‹</button>' +
+        '<div class="ruta-curso-lbl">Curso ' + curso +
+          (esHoy ? ' <span class="ruta-badge">actual</span>'
+                 : ' <button type="button" class="ruta-chip-x" onclick="rutaCursoHoy()">ir al actual</button>') +
+        '</div>' +
+        '<button type="button" onclick="rutaCursoNav(1)" title="Curso siguiente">›</button>' +
+      '</div>';
+      h += '<div class="ruta-hdr">' +
         '<div class="ruta-prog-txt"><b>' + hechas + '</b> / 40 semanas trabajadas · sep–jun</div>' +
         '<div class="ruta-prog-bar"><span style="width:' + Math.round(hechas/40*100) + '%;"></span></div>' +
       '</div>';
@@ -13562,23 +13707,69 @@
         h += '</div>';
       }
 
-      // ── Archivo: TODOS los meses de la temporada cuya fecha ya pasó ──
-      var pasados = _rutaMeses(sems).filter(function(m){ return _rutaMesPasado(m.y, m.m); });
-      if (pasados.length) {
-        var hechasP = pasados.reduce(function(n, m){
-          return n + m.sems.filter(function(w){ return data[w.idx] && data[w.idx].trab; }).length; }, 0);
-        var totalP = pasados.reduce(function(n, m){ return n + m.sems.length; }, 0);
-        h += '<div class="plan-otros' + (_rutaArchivoOpen ? ' abierto' : '') + '" style="margin-top:1rem;">';
-        h += '<div class="plan-otros-hdr" onclick="rutaArchivoToggle()">' +
-          '<span style="flex:1;">📦 Meses cerrados <span class="ruta-panel-nota">(' + pasados.length + ')</span></span>' +
-          '<span class="plan-etapa-prog">' + hechasP + '/' + totalP + '</span>' +
-          '<span class="chev">›</span></div>';
-        h += '<div class="plan-otros-body"><div class="ruta-mes-cols">';
-        pasados.forEach(function(m){ h += _rutaMesColHTML(m, act, data, areaN, sesN); });
-        h += '</div></div></div>';
-      }
-
+      h += _rutaArchivoHTML(areaN, sesN);
       h += '<div class="ruta-leyenda">✓ trabajada · ◉ esta semana · ● planificada · ○ vacía</div>';
+      return h;
+    }
+
+    // ── v0.205 — ARCHIVO por CURSO y, dentro, por bloque ──
+    // Un nivel más: 📦 Archivo › Curso 25-26 › 🧭 Preparación / 1er / 2º / 3er
+    // trimestre › meses. Solo entra lo que YA PASÓ, de cualquier curso que
+    // tenga algo planificado (no solo el que se está mirando).
+    function _rutaArchivoHTML(areaN, sesN) {
+      // Cursos candidatos: los que tienen datos + el actual + el que se mira.
+      var cursos = _rutaCursosConDatos();
+      [_cursoActual(), _rutaCurso()].forEach(function(c){ if (cursos.indexOf(c) < 0) cursos.push(c); });
+      // Cada curso, con solo sus meses ya cerrados; se descartan los vacíos.
+      var fichas = [];
+      cursos.forEach(function(c){
+        var pasados = _rutaMeses(_rutaSemanas(c)).filter(function(m){ return _rutaMesPasado(m.y, m.m); });
+        if (pasados.length) fichas.push({ curso:c, meses:pasados, data:_rutaDataDe(c) });
+      });
+      if (!fichas.length) return '';
+      fichas.sort(function(a, b){ return b.curso.localeCompare(a.curso); });   // el más reciente arriba
+
+      var totalMeses = fichas.reduce(function(n, f){ return n + f.meses.length; }, 0);
+      var h = '<div class="plan-otros' + (_rutaArchivoOpen ? ' abierto' : '') + '" style="margin-top:1rem;">';
+      h += '<div class="plan-otros-hdr" onclick="rutaArchivoToggle()">' +
+        '<span style="flex:1;">📦 Archivo <span class="ruta-panel-nota">(' + totalMeses + ' meses cerrados)</span></span>' +
+        '<span class="chev">›</span></div>';
+      h += '<div class="plan-otros-body">';
+
+      fichas.forEach(function(f){
+        var hechasC = f.meses.reduce(function(n, m){
+          return n + m.sems.filter(function(w){ return f.data[w.idx] && f.data[w.idx].trab; }).length; }, 0);
+        var totalC  = f.meses.reduce(function(n, m){ return n + m.sems.length; }, 0);
+        var abiertoC = (_rutaArchCurso === f.curso);
+        h += '<div class="plan-otros' + (abiertoC ? ' abierto' : '') + '">';
+        h += '<div class="plan-otros-hdr" onclick="rutaArchCursoToggle(\'' + f.curso + '\')">' +
+          '<span style="flex:1;">🗓️ Curso ' + f.curso + '</span>' +
+          '<span class="plan-etapa-prog">' + hechasC + '/' + totalC + '</span>' +
+          '<span class="chev">›</span></div>';
+        h += '<div class="plan-otros-body">';
+        // Dentro del curso: Preparación / 1er / 2º / 3er trimestre
+        _RUTA_BLOQUES.forEach(function(bl){
+          var mesesB = f.meses.filter(function(m){ return bl.meses.indexOf(m.m) >= 0; });
+          if (!mesesB.length) return;
+          var hechasB = mesesB.reduce(function(n, m){
+            return n + m.sems.filter(function(w){ return f.data[w.idx] && f.data[w.idx].trab; }).length; }, 0);
+          var totalB  = mesesB.reduce(function(n, m){ return n + m.sems.length; }, 0);
+          var kB = f.curso + '|' + bl.key;
+          var abiertoB = (_rutaArchTri === kB);
+          h += '<div class="plan-otros' + (abiertoB ? ' abierto' : '') + '">';
+          h += '<div class="plan-otros-hdr" onclick="rutaArchTriToggle(\'' + kB + '\')">' +
+            '<span style="flex:1;">' + bl.label + '</span>' +
+            '<span class="plan-etapa-prog">' + hechasB + '/' + totalB + '</span>' +
+            '<span class="chev">›</span></div>';
+          h += '<div class="plan-otros-body"><div class="ruta-mes-cols">';
+          // act = -1: en el archivo nunca hay "semana de hoy" que resaltar.
+          mesesB.forEach(function(m){ h += _rutaMesColHTML(m, -1, f.data, areaN, sesN); });
+          h += '</div></div></div>';
+        });
+        h += '</div></div>';
+      });
+
+      h += '</div></div>';
       return h;
     }
 
