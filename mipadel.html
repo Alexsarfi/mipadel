@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.194.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.195.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,11 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.195.0 — Gesto técnico: fuera el "por ver" (2026-08)
+    · Se retira el contador "· N por ver" de cada golpe y la marca 🔲/✅ de
+      cada vídeo: no había función de marcar como visto, así que no aportaba.
+    · Cada golpe sigue mostrando cuántos vídeos tiene ("2 vídeos").
 
   v0.194.0 — Gesto técnico por golpe en Sesiones → Técnica (solo EN3) (PROTOTIPO) (2026-08)
     · Dentro de Sesiones → Técnica, para la cuenta EN3, aparece el módulo de
@@ -5676,7 +5681,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.194.0';
+    var APP_VERSION = '0.195.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -14982,8 +14987,7 @@
       var h = '<p class="ajustes-desc" style="margin:0 0 0.7rem;">🎯 Gesto técnico por golpe — vídeos y matices. Toca un golpe.</p>';
       GT_GOLPES.forEach(function(g){
         var d = _gtDe(g.key), n = (d.videos||[]).length;
-        var porVer = (d.videos||[]).filter(function(v){ return !v.visto; }).length;
-        var cnt = n ? (n + ' vídeo' + (n!==1?'s':'') + (porVer ? ' · ' + porVer + ' por ver' : '')) : 'sin vídeos';
+        var cnt = n ? (n + ' vídeo' + (n!==1?'s':'')) : 'sin vídeos';
         h += '<div class="clase-grupo-btn" onclick="irClasesGrupo(\'' + g.key + '\')">' +
           '<span class="clase-grupo-ico">' + g.icono + '</span>' +
           '<span class="clase-grupo-lbl">' + g.label + '</span>' +
@@ -15008,7 +15012,7 @@
               (thumb ? '<img src="' + thumb + '" loading="lazy" alt="" onerror="this.style.display=\'none\'">' : '') +
               '<span class="gt-vid-play">▶</span>' +
             '</div>' +
-            '<div class="gt-vid-tit">' + (v.visto ? '✅ ' : '🔲 ') + _gEsc(v.titulo || 'Vídeo') + '</div>' +
+            '<div class="gt-vid-tit">' + _gEsc(v.titulo || 'Vídeo') + '</div>' +
           '</div>';
         });
         h += '</div>';
