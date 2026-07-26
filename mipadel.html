@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.200.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.201.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,17 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.201.0 — Orden y ruido visual en Sesiones/Planificación (2026-08)
+    · Sesiones: el botón "Técnica" pasa a llamarse "Aspectos técnicos" (mismo
+      contenido, EN3 sigue viendo ahí el gesto técnico por golpe).
+    · Competición: "Ciclo · competir y evaluar" y "Análisis de planificación"
+      pasan a vivir DENTRO del acordeón "Áreas de trabajo", debajo del botón
+      "Editar plan" — antes eran 3 cajas sueltas; ahora solo se ve una hasta
+      que la abres. (Iniciación/Avanzado no cambian: mantienen su propio
+      "Análisis de planificación" al final, fuera de áreas.)
+    · Competición: los meses con las clases configuradas se muestran ANTES
+      del interruptor 📅 Mensual | 🗺️ Semanas, no después.
 
   v0.200.0 — Ruta de la temporada: planificación por semanas (EN3) (PROTOTIPO) (2026-08)
     · Segunda "lente" de la planificación de Competición, solo para EN3. En
@@ -5763,7 +5774,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.200.0';
+    var APP_VERSION = '0.201.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -13662,6 +13673,13 @@
       }
 
       if (esComp) {
+        // v0.201: los meses con las clases configuradas van ANTES del
+        // interruptor Mensual/Semanas (contexto de un vistazo, sea cual sea
+        // la lente elegida después).
+        // v0.123: vista mensual agrupada por día de la semana (sustituye al
+        // banner informativo del ciclo, al calendario-cuadrícula de v0.121
+        // y a la lista semanal de v0.122). Solo en modo consulta.
+        if (!edit) h += _compListaMesHTML(p);
         // v0.200: para EN3, interruptor entre las dos lentes de la
         // planificación: Mensual (la de siempre) y Semanas (ruta de la
         // temporada). En modo Semanas se renderiza la ruta y se sale.
@@ -13672,10 +13690,6 @@
           '</div>';
           if (_rutaOn) { h += _rutaHTML(); cont.innerHTML = h; return; }
         }
-        // v0.123: vista mensual agrupada por día de la semana (sustituye al
-        // banner informativo del ciclo, al calendario-cuadrícula de v0.121
-        // y a la lista semanal de v0.122). Solo en modo consulta.
-        if (!edit) h += _compListaMesHTML(p);
         // Catálogo de áreas (sin secuencia, ◆). v0.124: colapsado por
         // defecto (acordeón, mismo patrón que "Análisis de planificación")
         // para quitar ruido visual; el texto "elige según el último
@@ -13691,10 +13705,10 @@
         // iba arriba de toda la pantalla) — contextual, junto a lo que edita.
         if (!esEN1Cuenta()) h += '<button class="plan-edit-toggle' + (edit ? ' on' : '') + '" style="margin:0.6rem 0 0;" onclick="planToggleEdit()">' +
              (edit ? '✓ Terminar de editar' : '✏️ Editar plan') + '</button>';
-        h += '</div></div>';
-        // Eventos del ciclo (Competir y evaluar). v0.128: misma franja
-        // blanca colapsable que Áreas de trabajo y Análisis de planificación
-        // (antes era solo un título + tarjetas sueltas, sin acordeón).
+        // v0.201: Ciclo · competir y evaluar y Análisis de planificación se
+        // meten DENTRO de Áreas de trabajo, debajo de "Editar plan", para no
+        // tener 3 acordeones sueltos (ruido visual). Antes de v0.201 eran
+        // cajas independientes a la altura de Áreas de trabajo.
         var cicloEtapas = etapas.filter(function(et){ return et.tipo === 'ciclo'; });
         if (cicloEtapas.length) {
           var cicloOpen = edit || !!p.cicloAbierto;
@@ -13706,6 +13720,14 @@
           });
           h += '</div></div>';
         }
+        if (!edit) {
+          var anOpenComp = p.analisisAbierto;
+          h += '<div class="plan-otros' + (anOpenComp ? ' abierto' : '') + '" style="margin-top:0.6rem;">';
+          h += '<div class="plan-otros-hdr" onclick="planToggleAnalisis();this.parentNode.classList.toggle(\'abierto\')">📊 Análisis de planificación<span class="chev">›</span></div>';
+          h += '<div class="plan-otros-body">' + _planAnalisisHTML(p, nivel) + '</div>';
+          h += '</div>';
+        }
+        h += '</div></div>';
       } else {
         // v0.152: AVANZADO usa la misma estructura de trabajo que Competición
         // (vista del mes por semanas + marcar lo trabajado cada día), pero con
@@ -13721,15 +13743,17 @@
         // de arriba de la pantalla.
         if (!esEN1Cuenta()) h += '<button class="plan-edit-toggle' + (edit ? ' on' : '') + '" style="margin:0.6rem 0 0;" onclick="planToggleEdit()">' +
              (edit ? '✓ Terminar de editar' : '✏️ Editar plan') + '</button>';
-      }
 
-      // ── Análisis de planificación (solo en modo consulta) ──
-      if (!edit) {
-        var anOpen = p.analisisAbierto;
-        h += '<div class="plan-otros' + (anOpen ? ' abierto' : '') + '">';
-        h += '<div class="plan-otros-hdr" onclick="planToggleAnalisis();this.parentNode.classList.toggle(\'abierto\')">📊 Análisis de planificación<span class="chev">›</span></div>';
-        h += '<div class="plan-otros-body">' + _planAnalisisHTML(p, nivel) + '</div>';
-        h += '</div>';
+        // ── Análisis de planificación (solo en modo consulta). v0.201: en
+        // Competición esta caja vive dentro de "Áreas de trabajo" (arriba);
+        // aquí solo se muestra para Iniciación/Avanzado. ──
+        if (!edit) {
+          var anOpen = p.analisisAbierto;
+          h += '<div class="plan-otros' + (anOpen ? ' abierto' : '') + '">';
+          h += '<div class="plan-otros-hdr" onclick="planToggleAnalisis();this.parentNode.classList.toggle(\'abierto\')">📊 Análisis de planificación<span class="chev">›</span></div>';
+          h += '<div class="plan-otros-body">' + _planAnalisisHTML(p, nivel) + '</div>';
+          h += '</div>';
+        }
       }
 
       h += '<div class="plan-link-hint">' + (edit
@@ -15102,7 +15126,7 @@
     var NIV_HOME = NIVELES_CLASES.concat([
       { key:'equipo',     icono:'🤝', label:'Equipo' },
       { key:'individual', icono:'👤', label:'Individual' },
-      { key:'tecnica',    icono:'🎯', label:'Técnica' }
+      { key:'tecnica',    icono:'🎯', label:'Aspectos técnicos' }
     ]);
 
     function _clasesPorNivel() {
@@ -15325,7 +15349,7 @@
       if (nivelClasesSel === 'tecnica' && _gtEsN3()) {
         var g = GT_GOLPES.filter(function(x){ return x.key === grupoClasesSel; })[0] || { label:'', icono:'🎾' };
         var det = _gtGolpeDetalleHTML(grupoClasesSel);
-        document.getElementById('clases-grupo-volver').textContent = '‹ Técnica';
+        document.getElementById('clases-grupo-volver').textContent = '‹ Aspectos técnicos';
         document.getElementById('clases-grupo-titulo').textContent = det.titulo;
         document.getElementById('clases-grupo-sub').textContent    = 'Gesto técnico';
         lista.innerHTML = det.html;
