@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.197.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.199.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,20 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.199.0 — "Importar desde Obsidian" también carga el gesto técnico (2026-08)
+    · Ya no hace falta el Terminal para el gesto técnico: al importar el
+      padel-sync.json desde la app, si trae el campo `gestos` y la cuenta es
+      EN3, se sube a la tabla gestos_tecnicos de Supabase y el módulo de
+      Técnica se refresca solo.
+    · La vista previa de la importación muestra cuántos golpes de gesto
+      técnico trae. Si falta la migración, avisa.
+    · Requiere haber ejecutado migracion_gestos_tecnicos.sql una vez.
+
+  v0.198.0 — Gesto técnico: aviso claro cuando aún no hay datos (2026-08)
+    · Si la tabla gestos_tecnicos está vacía (falta la migración o el sync),
+      Técnica ya no muestra una rejilla de golpes con "—" sin explicación:
+      sale un aviso indicando que hay que ejecutar la migración y el sync.
 
   v0.197.0 — Gesto técnico alimentado por el sync del vault (2026-08)
     · El módulo de Sesiones → Técnica (EN3) deja de usar datos de prueba: se
@@ -5703,7 +5717,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.197.0';
+    var APP_VERSION = '0.199.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -15016,7 +15030,10 @@
       }).catch(function(){});
     }
     function _gtGolpeCardsHTML() {
-      var h = '<p class="ajustes-desc" style="margin:0 0 0.7rem;">🎯 Gesto técnico por golpe — vídeos y notas. Toca un golpe.</p>';
+      var vacio = !Object.keys(_gtGesto).length;   // aún sin datos del sync
+      var h = vacio
+        ? '<div class="plan-intro" style="margin:0 0 0.8rem;">🎯 <strong>Gesto técnico.</strong> Aún no hay contenido sincronizado. Ejecuta la migración <code>gestos_tecnicos</code> y <code>sync_padel.py</code> (cuenta nivel3) para que aparezcan los vídeos y notas del vault.</div>'
+        : '<p class="ajustes-desc" style="margin:0 0 0.7rem;">🎯 Gesto técnico por golpe — vídeos y notas. Toca un golpe.</p>';
       GT_GOLPES.forEach(function(g){
         var d = _gtDe(g.key), nv = (d.videos||[]).length, nn = (d.notas||[]).length;
         var partes = [];
@@ -16397,6 +16414,28 @@
       reader.readAsText(input.files[0]);
     }
 
+    // v0.199: al importar el padel-sync.json, sube también el gesto técnico
+    // (campo `gestos`) a la tabla gestos_tecnicos. Solo para EN3 (es quien lo
+    // ve). cb(n) = nº de golpes subidos.
+    function _importarGestos(gestos, cb) {
+      cb = cb || function(){};
+      var esN3 = false; try { esN3 = !!(_sbGrupo && _sbGrupo.rol === 'nivel3'); } catch(e){}
+      if (!gestos || !_sb || !_sbUser || !esN3) { cb(0); return; }
+      var scope = (_sbGrupo && _sbGrupo.id) || _sbUser.id;
+      var filas = Object.keys(gestos).map(function(golpe){
+        return { scope_id: scope, golpe: golpe, data: gestos[golpe] || {} };
+      });
+      if (!filas.length) { cb(0); return; }
+      _sb.from('gestos_tecnicos').upsert(filas, { onConflict: 'scope_id,golpe' }).then(function(r){
+        if (r.error) {
+          alert('⚠️ El gesto técnico no se importó: ' + r.error.message +
+                '\n¿Ejecutaste la migración gestos_tecnicos.sql en Supabase?');
+          cb(0); return;
+        }
+        cb(filas.length);
+      }).catch(function(e){ alert('⚠️ El gesto técnico no se importó: ' + (e && e.message || e)); cb(0); });
+    }
+
     function mostrarPreviewImport(data) {
       // Calcular cuántos son nuevos (no existen todavía en la app)
       var catsActuales = leerCategorias().map(function(c){ return c.nombre.toLowerCase(); });
@@ -16418,6 +16457,10 @@
       html += fila('🔄 Ejercicios a actualizar', ejsUpdate, ejsUpdate === 0);
       html += fila('📋 Sesiones nuevas', sesNuevas, sesNuevas === 0);
       html += fila('🏆 Partidos nuevos', partsNuevos, partsNuevos === 0);
+      // v0.199: gesto técnico (solo EN3)
+      var esN3 = false; try { esN3 = !!(_sbGrupo && _sbGrupo.rol === 'nivel3'); } catch(e){}
+      var gGolpes = (esN3 && data.gestos) ? Object.keys(data.gestos).length : 0;
+      if (esN3) html += fila('🎯 Golpes de gesto técnico', gGolpes, gGolpes === 0);
 
       document.getElementById('import-resumen').innerHTML = html;
       document.getElementById('import-drop').style.display        = 'none';
@@ -16436,7 +16479,8 @@
     function confirmarImport() {
       if (!importDatos) return;
       try {
-        var res = ejecutarImport(importDatos);
+        var datos = importDatos;
+        var res = ejecutarImport(datos);
         // Mostrar resultado
         document.getElementById('import-preview').style.display   = 'none';
         document.getElementById('import-resultado').style.display = 'flex';
@@ -16446,6 +16490,14 @@
         actualizarInicio();
         importDatos = null;
         if (typeof _syncUpload === 'function') _syncUpload();   // empuja los cambios (p. ej. imágenes quitadas) a Supabase
+        // v0.199: gesto técnico → Supabase (solo EN3), y refresca el módulo
+        _importarGestos(datos.gestos, function(n){
+          if (n) {
+            var sub = document.getElementById('import-result-sub');
+            if (sub) sub.textContent += ' · ' + n + ' golpes de gesto técnico';
+            _cargarGestos();
+          }
+        });
       } catch(err) {
         alert('Error durante la importación: ' + err.message);
       }
