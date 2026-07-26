@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.199.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.200.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,21 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.200.0 — Ruta de la temporada: planificación por semanas (EN3) (PROTOTIPO) (2026-08)
+    · Segunda "lente" de la planificación de Competición, solo para EN3. En
+      la cabecera del plan hay un interruptor 📅 Mensual | 🗺️ Semanas.
+    · Semanas: línea temporal vertical de las 40 semanas de sep a jun,
+      agrupadas por mes. Cada semana lleva un ÁREA de trabajo (del catálogo)
+      y una SESIÓN (de la biblioteca). La semana en curso se resalta y las
+      dadas se marcan como "trabajada". Barra de progreso (N/40).
+    · Al tocar una semana se abre su panel: elegir área, elegir sesión y
+      marcar trabajada. La semana actual se calcula sola desde el primer
+      lunes de septiembre del curso.
+    · PROTOTIPO: se guarda en local (padel-ruta-<curso>). El siguiente paso
+      es COMPARTIR datos con la vista mensual (que un área/sesión de una
+      semana cuente también en la mensual y viceversa).
+    · Solo EN3: el resto de cuentas no ven el interruptor ni la ruta.
 
   v0.199.0 — "Importar desde Obsidian" también carga el gesto técnico (2026-08)
     · Ya no hace falta el Terminal para el gesto técnico: al importar el
@@ -4476,6 +4491,37 @@
                    color:#fff; font-size:26px; text-shadow:0 1px 6px rgba(0,0,0,.6); pointer-events:none; }
     .gt-vid-tit { font-size:12px; font-weight:600; color:var(--texto); margin-top:5px; line-height:1.25; }
     @media (max-width:400px){ .gt-videos { grid-template-columns:1fr; } }
+    /* v0.200: RUTA DE LA TEMPORADA (semanas, EN3) */
+    .ruta-toggle { display:flex; gap:6px; margin:0 0 0.8rem; }
+    .ruta-toggle button { flex:1; font-family:inherit; font-size:13px; font-weight:700; padding:8px; border-radius:10px;
+                          border:1.5px solid var(--borde); background:var(--blanco); color:var(--gris); cursor:pointer; }
+    .ruta-toggle button.on { background:#0891b2; border-color:#0891b2; color:#fff; }
+    .ruta-hdr { margin-bottom:12px; }
+    .ruta-prog-txt { font-size:12px; color:var(--gris); margin-bottom:4px; }
+    .ruta-prog-bar { height:6px; background:var(--arena); border-radius:999px; overflow:hidden; }
+    .ruta-prog-bar span { display:block; height:100%; background:#0891b2; border-radius:999px; }
+    .ruta-mes { font-size:11px; color:var(--gris); letter-spacing:.04em; margin:8px 0 6px; }
+    .ruta-wk { display:grid; grid-template-columns:26px 1fr; gap:10px; }
+    .ruta-rail { display:flex; flex-direction:column; align-items:center; }
+    .ruta-line { flex:1; width:2px; background:var(--borde); min-height:8px; }
+    .ruta-dot { width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+                font-size:12px; font-weight:800; flex-shrink:0; }
+    .ruta-dot.done  { background:#dcfce7; color:#166534; }
+    .ruta-dot.now   { background:var(--blanco); border:2px solid #0891b2; box-shadow:0 0 0 3px #cffafe; }
+    .ruta-dot.plan  { background:var(--gris); }
+    .ruta-dot.vacia { border:1.5px dashed var(--borde); }
+    .ruta-body { padding-bottom:12px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .ruta-wk.now .ruta-body { border:2px solid #0891b2; border-radius:12px; padding:9px 10px; background:var(--blanco); }
+    .ruta-wk-top { font-size:12px; color:var(--gris); }
+    .ruta-wk.now .ruta-wk-top { color:#0e7490; }
+    .ruta-badge { font-size:10px; font-weight:800; background:#cffafe; color:#0e7490; padding:1px 7px; border-radius:999px; }
+    .ruta-chip { display:inline-block; font-size:12px; margin:3px 0; padding:2px 8px; border-radius:999px; background:#eff6ff; color:#1e40af; }
+    .ruta-ses { font-size:14px; color:var(--texto); }
+    .ruta-ses.vacia { color:var(--gris); }
+    .ruta-panel { grid-column:1 / -1; background:var(--blanco); border:1px solid var(--borde); border-radius:12px; padding:12px; margin:0 0 12px 36px; }
+    .ruta-lbl { display:block; font-size:11px; font-weight:700; color:var(--gris); margin:8px 2px 3px; }
+    .ruta-lbl:first-child { margin-top:0; }
+    .ruta-leyenda { font-size:11px; color:var(--gris); margin-top:12px; padding-top:10px; border-top:1px solid var(--borde); }
     .comp-resumen-videos { display:flex; flex-wrap:nowrap; gap:6px; align-items:flex-start; }
     .comp-resumen-videos .ejcard { flex:1 1 0; min-width:0; }
     .comp-resumen-videos .ejcard-titulo { font-size:11px; }
@@ -5717,7 +5763,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.199.0';
+    var APP_VERSION = '0.200.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -13096,6 +13142,122 @@
       });
       return out;
     }
+    // ══════════════════════════════════════════
+    // v0.200 (prototipo) — RUTA DE LA TEMPORADA (semanas, solo EN3)
+    // ------------------------------------------------------------
+    // Segunda "lente" de la planificación de Competición: 40 semanas de
+    // septiembre a junio en línea temporal vertical. Cada semana lleva un
+    // ÁREA (del catálogo de áreas) y una SESIÓN (de la biblioteca). La
+    // semana en curso se resalta y las dadas se marcan como trabajadas.
+    // Prototipo: se guarda en local (padel-ruta-<curso>); compartir con la
+    // vista mensual es el siguiente paso.
+    var _rutaOn = false;
+    function _rutaEsN3() { try { return !!(_sbGrupo && _sbGrupo.rol === 'nivel3'); } catch(e){ return false; } }
+    function rutaToggle() { _rutaOn = !_rutaOn; compDiaAbierta = null; _rutaSel = null; mostrarPlanificacion(); }
+    var _rutaSel = null;   // semana con el panel abierto
+    var _MESES_R = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    function _rutaInicioISO(curso) {
+      var y = parseInt(String(curso).slice(0,4),10) || (new Date().getFullYear());
+      var d = new Date(y, 8, 1);                       // 1 de septiembre
+      var add = (d.getDay() === 1) ? 0 : ((8 - d.getDay()) % 7);  // hasta el lunes
+      d.setDate(d.getDate() + add);
+      return dateToISOLocal(d);
+    }
+    function _rutaSemanas(curso) {
+      var ini = _rutaInicioISO(curso), p = ini.split('-');
+      var base = new Date(+p[0], +p[1]-1, +p[2]);
+      var out = [];
+      for (var i = 0; i < 40; i++) {
+        var lun = new Date(base); lun.setDate(base.getDate() + i*7);
+        var dom = new Date(lun);  dom.setDate(lun.getDate() + 6);
+        out.push({ idx:i, lunISO:dateToISOLocal(lun), domISO:dateToISOLocal(dom),
+                   lun:lun, dom:dom, mes:lun.getMonth() });
+      }
+      return out;
+    }
+    function _rutaSemActual(curso) {
+      var ini = _rutaInicioISO(curso), p = ini.split('-');
+      var base = new Date(+p[0], +p[1]-1, +p[2]);
+      var h = hoyLocal().split('-'); var hoy = new Date(+h[0], +h[1]-1, +h[2]);
+      var idx = Math.floor((hoy - base) / (7*86400000));
+      return (idx >= 0 && idx < 40) ? idx : -1;
+    }
+    function _rutaKey(curso) { return 'padel-ruta-' + curso; }
+    function _rutaData() {
+      try { return JSON.parse(_lzGet(_rutaKey(_cursoActual())) || '{}'); } catch(e){ return {}; }
+    }
+    function _rutaGuardar(d) { _lzSet(_rutaKey(_cursoActual()), JSON.stringify(d)); }
+    function _rutaSet(idx, campo, val) {
+      var d = _rutaData(); (d[idx] = d[idx] || {})[campo] = val; _rutaGuardar(d); mostrarPlanificacion();
+    }
+    function rutaSetArea(idx, id)   { _rutaSet(idx, 'area', id || ''); }
+    function rutaSetSesion(idx, id) { _rutaSet(idx, 'sesion', id ? +id : ''); }
+    function rutaToggleTrab(idx)    { var d = _rutaData(); (d[idx]=d[idx]||{}).trab = !d[idx].trab; _rutaGuardar(d); mostrarPlanificacion(); }
+    function rutaAbrir(idx) { _rutaSel = (_rutaSel === idx) ? null : idx; mostrarPlanificacion(); }
+
+    function _rutaHTML() {
+      var curso = _cursoActual();
+      var sems  = _rutaSemanas(curso);
+      var act   = _rutaSemActual(curso);
+      var data  = _rutaData();
+      var p     = leerPlan();
+      var areas = _compTodasFilas(p);                 // catálogo de áreas del nivel
+      var areaN = {}; areas.forEach(function(a){ areaN[a.id] = a.t; });
+      var ses   = leerClases().slice().sort(function(a,b){ return (b.fecha||'').localeCompare(a.fecha||''); });
+      var sesN  = {}; ses.forEach(function(s){ sesN[s.id] = s.nombre || (s.fecha || 'Sesión'); });
+      var hechas = sems.filter(function(w){ return data[w.idx] && data[w.idx].trab; }).length;
+
+      var h = '<div class="ruta-hdr">' +
+        '<div class="ruta-prog-txt"><b>' + hechas + '</b> / 40 semanas trabajadas · sep–jun</div>' +
+        '<div class="ruta-prog-bar"><span style="width:' + Math.round(hechas/40*100) + '%;"></span></div>' +
+      '</div>';
+
+      var mesPrev = -1;
+      sems.forEach(function(w){
+        if (w.mes !== mesPrev) { h += '<div class="ruta-mes">' + _MESES_R[w.mes] + '</div>'; mesPrev = w.mes; }
+        var wd = data[w.idx] || {};
+        var trab = !!wd.trab, esAct = (w.idx === act);
+        var tieneAlgo = wd.area || wd.sesion;
+        var estado = trab ? 'done' : (esAct ? 'now' : (tieneAlgo ? 'plan' : 'vacia'));
+        var rango = w.lun.getDate() + '–' + w.dom.getDate() + ' ' + _MESES_R[w.dom.getMonth()].slice(0,3);
+        var punto = estado === 'done'
+          ? '<span class="ruta-dot done"><span class="ti">✓</span></span>'
+          : estado === 'now'  ? '<span class="ruta-dot now"></span>'
+          : estado === 'plan' ? '<span class="ruta-dot plan"></span>'
+          : '<span class="ruta-dot vacia"></span>';
+        h += '<div class="ruta-wk ' + estado + '">' +
+          '<div class="ruta-rail">' + punto + '<span class="ruta-line"></span></div>' +
+          '<div class="ruta-body" onclick="rutaAbrir(' + w.idx + ')">' +
+            '<div class="ruta-wk-top">Semana ' + (w.idx+1) + ' · ' + rango +
+              (esAct ? ' <span class="ruta-badge">esta semana</span>' : '') + '</div>' +
+            (wd.area   ? '<span class="ruta-chip">' + _gEsc(areaN[wd.area] || 'Área') + '</span>' : '') +
+            (wd.sesion ? '<div class="ruta-ses">' + _gEsc(sesN[wd.sesion] || 'Sesión') + '</div>'
+                       : '<div class="ruta-ses vacia">' + (tieneAlgo ? 'sin sesión' : '＋ planificar semana') + '</div>') +
+          '</div>' +
+        '</div>';
+        // Panel de edición de la semana seleccionada
+        if (_rutaSel === w.idx) {
+          h += '<div class="ruta-panel">' +
+            '<label class="ruta-lbl">Área de trabajo</label>' +
+            '<select class="form-input" onchange="rutaSetArea(' + w.idx + ',this.value)">' +
+              '<option value="">— elegir área —</option>' +
+              areas.map(function(a){ return '<option value="' + a.id + '"' + (wd.area===a.id?' selected':'') + '>' + _gEsc(a.t) + '</option>'; }).join('') +
+            '</select>' +
+            '<label class="ruta-lbl">Sesión</label>' +
+            '<select class="form-input" onchange="rutaSetSesion(' + w.idx + ',this.value)">' +
+              '<option value="">— elegir sesión —</option>' +
+              ses.map(function(s){ return '<option value="' + s.id + '"' + (wd.sesion===s.id?' selected':'') + '>' + _gEsc(s.nombre || s.fecha || ('Sesión '+s.id)) + '</option>'; }).join('') +
+            '</select>' +
+            '<button class="btn btn-sm ' + (trab?'btn-verde':'btn-sec') + '" style="width:100%;margin-top:8px;" onclick="rutaToggleTrab(' + w.idx + ')">' +
+              (trab ? '✓ Trabajada (quitar)' : '✓ Marcar trabajada') + '</button>' +
+          '</div>';
+        }
+      });
+
+      h += '<div class="ruta-leyenda">✓ trabajada · ◉ esta semana · ● planificada · ○ vacía</div>';
+      return h;
+    }
+
     function compMesNav(delta) { compMesOff += delta; compDiaAbierta = null; compDiaEditando = false; mostrarPlanificacion(); }
     function compDiaAbrir(fechaISO) {
       // Cualquier día activo (pasado o futuro) es clicable: permite
@@ -13500,6 +13662,16 @@
       }
 
       if (esComp) {
+        // v0.200: para EN3, interruptor entre las dos lentes de la
+        // planificación: Mensual (la de siempre) y Semanas (ruta de la
+        // temporada). En modo Semanas se renderiza la ruta y se sale.
+        if (_rutaEsN3()) {
+          h += '<div class="ruta-toggle">' +
+            '<button type="button" class="' + (!_rutaOn?'on':'') + '" onclick="if(_rutaOn)rutaToggle()">📅 Mensual</button>' +
+            '<button type="button" class="' + (_rutaOn?'on':'') + '" onclick="if(!_rutaOn)rutaToggle()">🗺️ Semanas</button>' +
+          '</div>';
+          if (_rutaOn) { h += _rutaHTML(); cont.innerHTML = h; return; }
+        }
         // v0.123: vista mensual agrupada por día de la semana (sustituye al
         // banner informativo del ciclo, al calendario-cuadrícula de v0.121
         // y a la lista semanal de v0.122). Solo en modo consulta.
