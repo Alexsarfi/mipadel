@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.195.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.196.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,12 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.196.0 — Gesto técnico: sembrado el vídeo de Volea (prototipo) (2026-08)
+    · Se añade a los datos de prueba el vídeo "Volea derecha sentado en
+      silla", para que Volea no salga vacía mientras el módulo siga siendo
+      prototipo. Recordatorio: esto es provisional; lo definitivo es que el
+      módulo se alimente del sync del vault (apartado 08), que hoy NO se lee.
 
   v0.195.0 — Gesto técnico: fuera el "por ver" (2026-08)
     · Se retira el contador "· N por ver" de cada golpe y la marca 🔲/✅ de
@@ -5681,7 +5687,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.195.0';
+    var APP_VERSION = '0.196.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -14979,6 +14985,10 @@
         matices: 'Elevar la punta: flexión lateral de la empuñadura para llegar al golpeo con más firmeza.\n' +
                  'Mano no dominante hacia extensión palmar en la preparación → mejor elasticidad en el impacto.',
         videos: [ { titulo:'Revés con limitaciones', video:'https://youtube.com/shorts/duJDNTbjUmQ', visto:false } ]
+      },
+      volea: {
+        matices: 'Volea de derecha: el movimiento nace de la cintura escapular, sin depender de las piernas.',
+        videos: [ { titulo:'Volea derecha sentado en silla', video:'https://youtube.com/shorts/eyhQ0TRh_Mo', visto:false } ]
       }
     };
     function _gtEsN3() { try { return !!(_sbGrupo && _sbGrupo.rol === 'nivel3'); } catch(e){ return false; } }
