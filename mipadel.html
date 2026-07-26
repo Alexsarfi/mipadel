@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.206.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.207.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,30 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.207.0 — Ruta y Mensual comparten datos (2026-08)
+    · Deja de ser un almacén aparte: el ÁREA de una semana ya NO se guarda
+      por semana, se DERIVA de lo marcado en Mensual (p.compDias) en los
+      días reales de clase que caen esa semana. Mensual manda; Semanas solo
+      refleja — si marcas un área un martes en Mensual, esa semana ya sale
+      con esa área en Semanas sin tocar nada más, y al revés.
+    · La SESIÓN sigue siendo un dato propio de cada semana (Mensual no
+      tiene ese concepto), pero ya no vive en local: se guarda en
+      p.rutaSes, sincronizado con el resto del plan como compDias — deja de
+      depender del dispositivo.
+    · Al asignar un área desde el panel de la semana: si esa semana tiene
+      MÁS de un día real de clase, se pregunta primero a cuál de ellos se
+      aplica (chips con el día). Si solo tiene uno, se marca directamente.
+    · El panel de la semana ahora enseña arriba "Ya marcado esta semana
+      (Mensual)": un chip por cada área realmente marcada, con su día y una
+      ✕ para desmarcarla — el mismo toggle que usa Mensual, no una copia.
+    · "Vaciar esta semana" pasa a llamarse "Quitar la sesión de esta
+      semana": ya solo quita la sesión (el área se quita desde su propia ✕,
+      o desde el propio día en Mensual).
+    · Migración ÚNICA y automática de lo que hubiera en el modelo viejo
+      (padel-ruta-<curso>, local por dispositivo): la sesión de cada semana
+      pasa a p.rutaSes; el área de cada semana se marca en el primer día
+      real de esa semana en compDias. Se ejecuta una sola vez.
 
   v0.206.0 — Arreglado: los bloques del archivo no se abrían ni cerraban (2026-08)
     · En el 📦 Archivo de la ruta, los cursos y sus trimestres salían todos
@@ -4653,6 +4677,19 @@
     .ruta-modal-sub { font-size:12px; color:var(--gris); }
     .ruta-modal-cols { display:flex; flex-direction:column; gap:14px; }
     .ruta-modal-vacio { text-align:center; color:var(--gris); font-size:13px; line-height:1.7; padding:22px 10px; }
+    /* v0.207 — resumen de lo ya marcado en Mensual esta semana (chips con
+       día + ✕) y el picker "¿qué día?" cuando la semana tiene más de un
+       día real de clase. */
+    .ruta-modal-resumen { margin-bottom:14px; padding-bottom:12px; border-bottom:1px dashed var(--borde); }
+    .ruta-chip-rm { display:inline-flex; align-items:center; gap:6px; margin:0 6px 6px 0; }
+    .ruta-chip-dia { font-size:10px; opacity:.75; }
+    .ruta-chip-rm button { border:none; background:none; color:inherit; font-size:12px; font-family:inherit;
+      cursor:pointer; padding:0; line-height:1; opacity:.7; }
+    .ruta-chip-rm button:hover { opacity:1; }
+    .ruta-dia-chips { display:flex; flex-wrap:wrap; gap:6px; padding:2px 2px 8px; }
+    .ruta-dia-chip { font-family:inherit; font-size:12px; font-weight:700; padding:6px 12px; border-radius:999px;
+      border:1.5px solid #0891b2; background:#ecfeff; color:#0e7490; cursor:pointer; }
+    .ruta-dia-chip:hover { background:#0891b2; color:#fff; }
     .ruta-panel-paso { display:flex; align-items:center; gap:8px; font-size:11px; font-weight:700; color:var(--gris); margin:0 2px 8px; }
     .ruta-panel-nota { font-size:11px; font-weight:400; color:var(--gris); }
     .ruta-area-grupo { font-size:10px; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.04em; margin:10px 2px 5px; }
@@ -5954,7 +5991,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.206.0';
+    var APP_VERSION = '0.207.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -13334,7 +13371,7 @@
       return out;
     }
     // ══════════════════════════════════════════
-    // v0.203 (prototipo) — RUTA DE LA TEMPORADA (semanas, solo EN3)
+    // v0.207 — RUTA DE LA TEMPORADA (semanas, solo EN3)
     // ------------------------------------------------------------
     // Segunda "lente" de la planificación de Competición, pensada para
     // planificar SENTADO EN EL ORDENADOR (en móvil/tablet se apila para
@@ -13345,11 +13382,18 @@
     //     una con sus semanas.
     //   · Abajo del todo: 📦 archivo con los meses cuya fecha YA PASÓ,
     //     colapsado (lo vivido no estorba a lo que viene).
-    // Cada semana lleva un ÁREA (del catálogo) y una SESIÓN (de la
-    // biblioteca), elegidas en un panel grande con miniaturas de vídeo. Al
-    // elegir la sesión, la semana se marca trabajada sola.
-    // Prototipo: se guarda en local (padel-ruta-<curso>); compartir con la
-    // vista mensual es el siguiente paso.
+    // v0.207 — YA NO es un almacén aparte: comparte datos con Mensual.
+    //   · El ÁREA de una semana ya NO se guarda por semana: se DERIVA de lo
+    //     marcado en p.compDias (lo mismo que usa Mensual) en los días
+    //     reales de clase que caen esa semana. Mensual manda; Semanas solo
+    //     refleja. Si asignas un área desde aquí y la semana tiene más de un
+    //     día real de clase, se pregunta a cuál de ellos se aplica.
+    //   · La SESIÓN sí es un dato propio de la semana (Mensual no tiene ese
+    //     concepto): vive en p.rutaSes, indexado por el LUNES iso de la
+    //     semana (curso-agnóstico, como compDias), sincronizado con el resto
+    //     del plan — ya no es local ni depende del dispositivo.
+    //   · Migración única desde el modelo viejo (padel-ruta-<curso> en
+    //     localStorage): ver _rutaMigrarLocal().
     var _rutaOn = false;
     function _rutaEsN3() { try { return !!(_sbGrupo && _sbGrupo.rol === 'nivel3'); } catch(e){ return false; } }
     function rutaToggle() { _rutaOn = !_rutaOn; compDiaAbierta = null; rutaCerrarModal(); mostrarPlanificacion(); }
@@ -13379,17 +13423,6 @@
       mostrarPlanificacion();
     }
     function rutaCursoHoy() { _rutaCursoSel = null; _rutaTri = null; mostrarPlanificacion(); }
-    // Cursos que ya tienen algo planificado (una clave padel-ruta-<curso>).
-    function _rutaCursosConDatos() {
-      var out = [];
-      try {
-        for (var i = 0; i < localStorage.length; i++) {
-          var k = localStorage.key(i);
-          if (k && k.indexOf('padel-ruta-') === 0) out.push(k.slice(11));
-        }
-      } catch (e) {}
-      return out;
-    }
     function _rutaBloqueDeMes(mes) {
       for (var i = 0; i < _RUTA_BLOQUES.length; i++) if (_RUTA_BLOQUES[i].meses.indexOf(mes) >= 0) return _RUTA_BLOQUES[i].key;
       return _RUTA_BLOQUES[0].key;
@@ -13453,48 +13486,189 @@
       var idx = Math.floor((hoy - base) / (7*86400000));
       return (idx >= 0 && idx < 40) ? idx : -1;
     }
-    function _rutaKey(curso) { return 'padel-ruta-' + curso; }
-    function _rutaDataDe(curso) {
-      try { return JSON.parse(_lzGet(_rutaKey(curso)) || '{}'); } catch(e){ return {}; }
+    // ── v0.207 — Datos COMPARTIDOS con Mensual ──
+    // Días reales de clase (configurados, sin festivo/día sin clase del
+    // club) que caen dentro de [w.lun, w.dom]. Mismo criterio que usa
+    // _compListaMesHTML para decidir qué días son marcables.
+    function _rutaDiasRealesDeSemana(w) {
+      var clases  = leerAsistConfig().clases || [];
+      var diasMap = {};
+      clases.forEach(function(c){ (diasMap[c.diaSemana] = diasMap[c.diaSemana] || []).push(c); });
+      var regs = leerAsistRegistros();
+      var out = [];
+      for (var i = 0; i < 7; i++) {
+        var d = new Date(w.lun); d.setDate(w.lun.getDate() + i);
+        var dow = d.getDay();
+        if (!diasMap[dow] || !diasMap[dow].length) continue;
+        var fISO = dateToISOLocal(d);
+        if (_compDiaEstado(fISO, diasMap, regs) === 'activa') out.push({ fecha: fISO, dow: dow });
+      }
+      return out;
     }
-    function _rutaData() { return _rutaDataDe(_rutaCurso()); }
-    function _rutaGuardar(d) { _lzSet(_rutaKey(_rutaCurso()), JSON.stringify(d)); }
+    // Marca una fila un día concreto SIN alternar (a diferencia de
+    // compDiaToggleFila): si ya estaba, no hace nada. Para "asignar" desde
+    // la semana, no para el botón ✕ de quitar (ese sí usa el toggle normal).
+    function _compDiaMarcar(fechaISO, filaId) {
+      var p = leerPlan();
+      if (!p.compDias) p.compDias = {};
+      var arr = (p.compDias[fechaISO] || []).slice();
+      if (arr.indexOf(filaId) < 0) { arr.push(filaId); p.compDias[fechaISO] = arr; _planGuardar(p); }
+    }
+    // Áreas de verdad marcadas en los días reales de una semana, leyendo
+    // p.compDias — el MISMO dato que pinta Mensual. Puede haber varias (de
+    // días distintos) o ninguna. idsNivel filtra al nivel activo, igual que
+    // en Mensual (lo de Avanzado no cuenta aquí).
+    function _rutaAreasDeSemana(p, w, idsNivel) {
+      var out = [];
+      _rutaDiasRealesDeSemana(w).forEach(function(d){
+        ((p.compDias && p.compDias[d.fecha]) || []).forEach(function(id){
+          if (idsNivel[id]) out.push({ areaId:id, fecha:d.fecha });
+        });
+      });
+      return out;
+    }
+    // Área "por defecto" a mostrar abierta al entrar en el panel de la
+    // semana: solo si hay EXACTAMENTE una distinta marcada (si hay varias o
+    // ninguna, se entra sin preselección — ambiguo elegir por ti).
+    function _rutaAreaDefecto(p, w, idsNivel) {
+      var vistos = {};
+      _rutaAreasDeSemana(p, w, idsNivel).forEach(function(x){ vistos[x.areaId] = true; });
+      var ids = Object.keys(vistos);
+      return ids.length === 1 ? ids[0] : '';
+    }
+    // Resumen de una semana (áreas marcadas + sesión + si cuenta como
+    // trabajada) a partir de los datos compartidos. Sustituye al viejo `wd`
+    // guardado por semana.
+    function _rutaSemanaDatos(p, w, idsNivel) {
+      var areasSemana = _rutaAreasDeSemana(p, w, idsNivel);
+      var sesion = (p.rutaSes || {})[w.lunISO] || '';
+      return { areasSemana: areasSemana, sesion: sesion, trab: areasSemana.length > 0 };
+    }
+    // Cursos con algo planificado: cualquier fecha marcada en compDias o
+    // cualquier semana con sesión en rutaSes cuyo cursoDeFecha() case.
+    function _rutaCursosConDatos(p) {
+      var set = {};
+      Object.keys(p.compDias || {}).forEach(function(f){ set[cursoDeFecha(f)] = true; });
+      Object.keys(p.rutaSes || {}).forEach(function(f){ set[cursoDeFecha(f)] = true; });
+      return Object.keys(set);
+    }
+    // v0.207 — Migración ÚNICA del modelo viejo (padel-ruta-<curso> en
+    // localStorage, un blob por dispositivo) al nuevo modelo compartido: la
+    // sesión de cada semana pasa a p.rutaSes; el área de cada semana se
+    // marca en compDias, en el PRIMER día real de esa semana (antes no se
+    // sabía a qué día concreto pertenecía, porque el modelo viejo no lo
+    // distinguía). Se ejecuta una sola vez por dispositivo.
+    function _rutaMigrarLocal() {
+      var MARCA = 'padel-ruta-migrado-v207';
+      try {
+        if (localStorage.getItem(MARCA)) return;
+        var claves = [];
+        for (var i = 0; i < localStorage.length; i++) {
+          var k = localStorage.key(i);
+          if (k && k.indexOf('padel-ruta-') === 0) claves.push(k);
+        }
+        if (claves.length) {
+          var p = leerPlan();
+          if (!p.rutaSes) p.rutaSes = {};
+          if (!p.compDias) p.compDias = {};
+          var tocado = false;
+          claves.forEach(function(k){
+            var curso = k.slice('padel-ruta-'.length);
+            var datos; try { datos = JSON.parse(_lzGet(k) || '{}'); } catch(e){ datos = {}; }
+            var sems = _rutaSemanas(curso);
+            Object.keys(datos).forEach(function(idxStr){
+              var w = sems[+idxStr], entry = datos[idxStr];
+              if (!w || !entry) return;
+              if (entry.sesion) { p.rutaSes[w.lunISO] = entry.sesion; tocado = true; }
+              if (entry.area) {
+                var dias = _rutaDiasRealesDeSemana(w);
+                if (dias.length) {
+                  var arr = (p.compDias[dias[0].fecha] || []).slice();
+                  if (arr.indexOf(entry.area) < 0) { arr.push(entry.area); p.compDias[dias[0].fecha] = arr; tocado = true; }
+                }
+              }
+            });
+          });
+          if (tocado) _planGuardar(p);
+        }
+        claves.forEach(function(k){ localStorage.removeItem(k); });
+        localStorage.setItem(MARCA, '1');
+      } catch (e) {}
+    }
     // ── Panel grande de planificación de una semana (v0.203) ──
     // Sustituye al panel en línea de v0.202: al planificar en el ordenador
     // interesa VER las sesiones (miniatura + nº de ejercicios), no una lista
     // de texto. En móvil el mismo panel se comporta como hoja inferior.
     var _rutaModalIdx  = null;   // semana que se está planificando (null = cerrado)
-    var _rutaModalArea = null;   // null = usar el área guardada; '' = paso 1; id = paso 2
-    function rutaAbrir(idx) { _rutaModalIdx = idx; _rutaModalArea = null; _rutaModalRender(); }
+    var _rutaModalArea = null;   // null = usar el área por defecto; '' = paso 1; id = paso 2
+    var _rutaEligeDia  = null;   // areaId pendiente de "¿qué día?" (semana con >1 día real), o null
+    function rutaAbrir(idx) {
+      _rutaMigrarLocal();   // v0.207: por si aún queda algo del modelo viejo sin migrar
+      _rutaModalIdx = idx; _rutaModalArea = null; _rutaEligeDia = null;
+      _rutaModalRender();
+    }
     function rutaCerrarModal() {
-      _rutaModalIdx = null; _rutaModalArea = null;
+      _rutaModalIdx = null; _rutaModalArea = null; _rutaEligeDia = null;
       var ov = document.getElementById('ruta-plan-ov');
       if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; }
     }
-    // Paso 1 → elige área: se guarda ya y se pasa al paso 2 (sesiones de esa área).
-    // v0.205: si se vuelve a tocar el área ya abierta, se pliega (en móvil el
-    // bloque funciona como acordeón); lo guardado no se toca.
+    // Paso 1 → elige área. v0.207: el área se marca directamente en
+    // compDias (mismo dato que Mensual). Si la semana tiene MÁS de un día
+    // real de clase, primero se pregunta a cuál se aplica (rutaElegirDia);
+    // si solo tiene uno, se marca ahí sin preguntar.
+    // Si se vuelve a tocar el área ya abierta, se pliega sin tocar nada
+    // (en móvil el bloque funciona como acordeón).
     function rutaElegirArea(idx, areaId) {
-      var abierta = (_rutaModalArea !== null) ? _rutaModalArea : ((_rutaData()[idx] || {}).area || '');
-      if (abierta === areaId) { _rutaModalArea = ''; _rutaModalRender(); return; }
-      var d = _rutaData(); d[idx] = d[idx] || {}; d[idx].area = areaId; _rutaGuardar(d);
-      _rutaModalArea = areaId;
+      var p = leerPlan(), idsNivel = _compIdsNivel(p);
+      var w = _rutaSemanas(_rutaCurso())[idx];
+      var abierta = (_rutaModalArea !== null) ? _rutaModalArea : _rutaAreaDefecto(p, w, idsNivel);
+      if (abierta === areaId && _rutaEligeDia === null) { _rutaModalArea = ''; _rutaModalRender(); return; }
+      var dias = _rutaDiasRealesDeSemana(w);
+      if (!dias.length) {
+        alert('Esta semana no tiene ningún día de clase configurado — no se puede marcar un área aquí. Configúralo primero en Asistencia.');
+        return;
+      }
+      if (dias.length === 1) {
+        _compDiaMarcar(dias[0].fecha, areaId);
+        _rutaEligeDia = null; _rutaModalArea = areaId;
+        mostrarPlanificacion(); _rutaModalRender();
+        return;
+      }
+      // Varios días reales esta semana: hay que elegir a cuál se aplica.
+      _rutaEligeDia = areaId;
+      _rutaModalRender();
+    }
+    // Se elige el día concreto (semana con >1 día real de clase).
+    function rutaElegirDia(idx, areaId, fechaISO) {
+      _compDiaMarcar(fechaISO, areaId);
+      _rutaEligeDia = null; _rutaModalArea = areaId;
       mostrarPlanificacion(); _rutaModalRender();
     }
+    // Quita UNA marca concreta (área+día) del resumen de la semana. Reusa
+    // el toggle de Mensual: como ya está presente, alternar la quita.
+    function rutaQuitarArea(fechaISO, areaId) {
+      compDiaToggleFila(fechaISO, areaId);
+      _rutaModalRender();
+    }
     // "cambiar área" dentro del paso 2 → vuelve al paso 1 sin tocar lo guardado.
-    function rutaCambiarArea() { _rutaModalArea = ''; _rutaModalRender(); }
-    // Paso 2 → elige sesión: se guarda y la semana se marca trabajada sola
-    // (decisión: menos toques que marcarla aparte). Cierra el panel.
+    function rutaCambiarArea() { _rutaModalArea = ''; _rutaEligeDia = null; _rutaModalRender(); }
+    // Paso 2 → elige sesión: se guarda en p.rutaSes (dato propio de la
+    // semana, sincronizado con el resto del plan). Cierra el panel.
     function rutaElegirSesion(idx, sesId) {
-      var d = _rutaData(); d[idx] = d[idx] || {};
-      d[idx].sesion = +sesId; d[idx].trab = true;
-      _rutaGuardar(d);
+      var w = _rutaSemanas(_rutaCurso())[idx];
+      var p = leerPlan();
+      if (!p.rutaSes) p.rutaSes = {};
+      p.rutaSes[w.lunISO] = +sesId;
+      _planGuardar(p);
       rutaCerrarModal();
       mostrarPlanificacion();
     }
-    // Vaciar la semana (quita área+sesión+marca) para volver a empezar.
+    // Quita solo la sesión asignada a la semana (el área se quita desde su
+    // propio ✕ en el resumen, o desde Mensual — es el mismo dato).
     function rutaBorrarSemana(idx) {
-      var d = _rutaData(); delete d[idx]; _rutaGuardar(d);
+      var w = _rutaSemanas(_rutaCurso())[idx];
+      var p = leerPlan();
+      if (p.rutaSes) { delete p.rutaSes[w.lunISO]; _planGuardar(p); }
       rutaCerrarModal();
       mostrarPlanificacion();
     }
@@ -13553,12 +13727,14 @@
       var idx   = _rutaModalIdx;
       var curso = _rutaCurso();
       var w     = _rutaSemanas(curso)[idx];
-      var wd    = _rutaData()[idx] || {};
-      var areas = _compTodasFilas(leerPlan());
+      var p     = leerPlan();
+      var idsNivel = _compIdsNivel(p);
+      var wd    = _rutaSemanaDatos(p, w, idsNivel);   // v0.207: derivado de compDias + rutaSes
+      var areas = _compTodasFilas(p);
       var areaN = {}; areas.forEach(function(a){ areaN[a.id] = a.t; });
       var sesDe = _rutaSesPorArea(areas);   // v0.204: sesiones de cada área
-      // areaSel: '' fuerza el paso 1; null usa la guardada; un id viene de elegirla ahora.
-      var areaSel = (_rutaModalArea !== null) ? _rutaModalArea : (wd.area || '');
+      // areaSel: '' fuerza el paso 1; null usa la de defecto; un id viene de elegirla ahora.
+      var areaSel = (_rutaModalArea !== null) ? _rutaModalArea : _rutaAreaDefecto(p, w, idsNivel);
       var rango = w.lun.getDate() + ' ' + _MESES_R[w.lun.getMonth()].slice(0,3) +
                   ' – ' + w.dom.getDate() + ' ' + _MESES_R[w.dom.getMonth()].slice(0,3);
 
@@ -13567,6 +13743,21 @@
         '<div><div class="ruta-modal-tit">Semana ' + (idx+1) + '</div>' +
         '<div class="ruta-modal-sub">' + rango + '</div></div>' +
         '<button class="plan-modal-x" onclick="rutaCerrarModal()" aria-label="Cerrar">✕</button></div>';
+
+      // v0.207 — Resumen de lo que YA está marcado en Mensual esta semana
+      // (mismo dato, no una copia). Cada chip lleva su día y una ✕ para
+      // desmarcarlo — es el mismo toggle que usa Mensual.
+      if (wd.areasSemana.length) {
+        h += '<div class="ruta-modal-resumen">';
+        h += '<div class="ruta-panel-paso">Ya marcado esta semana (Mensual)</div>';
+        wd.areasSemana.forEach(function(x){
+          h += '<span class="ruta-chip ruta-chip-rm">' + _gEsc(areaN[x.areaId] || 'Área') +
+            ' <span class="ruta-chip-dia">' + formatFechaDiaMes(x.fecha) + '</span>' +
+            '<button type="button" onclick="rutaQuitarArea(\'' + x.fecha + '\',\'' + x.areaId + '\')" aria-label="Quitar">✕</button></span>';
+        });
+        h += '</div>';
+      }
+
       h += '<div class="ruta-modal-cols">';
 
       // ── Columna izquierda: áreas de trabajo ──
@@ -13584,13 +13775,23 @@
             // saber de un vistazo dónde hay material sin entrar a mirar.
             var n    = (sesDe[a.id] || []).length;
             var abto = (areaSel === a.id);
-            h += '<button type="button" class="ruta-area-row' + (abto ? ' on' : '') + (n ? '' : ' sinses') + '" onclick="rutaElegirArea(' + idx + ',\'' + a.id + '\')">' +
+            var eligiendoDia = (_rutaEligeDia === a.id);
+            h += '<button type="button" class="ruta-area-row' + ((abto || eligiendoDia) ? ' on' : '') + (n ? '' : ' sinses') + '" onclick="rutaElegirArea(' + idx + ',\'' + a.id + '\')">' +
               '<span class="ruta-area-ico">◆</span><span class="ruta-area-t">' + _gEsc(a.t) + '</span>' +
               '<span class="ruta-area-n">' + (n || '—') + '</span></button>';
-            // v0.205 — MÓVIL: las sesiones del área se despliegan aquí mismo,
-            // justo debajo del bloque tocado (en el ordenador salen en la
-            // columna de la derecha; el CSS oculta una u otra según el ancho).
-            if (abto) {
+            // v0.207 — Semana con MÁS de un día real de clase: hay que
+            // elegir a cuál de ellos se aplica el área antes de seguir.
+            if (eligiendoDia) {
+              h += '<div class="ruta-area-inline"><div class="ruta-panel-paso">¿Qué día de esta semana?</div><div class="ruta-dia-chips">';
+              _rutaDiasRealesDeSemana(w).forEach(function(d){
+                h += '<button type="button" class="ruta-dia-chip" onclick="rutaElegirDia(' + idx + ',\'' + a.id + '\',\'' + d.fecha + '\')">' +
+                  DIAS_NOMBRES_A[d.dow].slice(0,3) + ' ' + parseInt(d.fecha.slice(8,10),10) + '</button>';
+              });
+              h += '</div></div>';
+            } else if (abto) {
+              // v0.205 — MÓVIL: las sesiones del área se despliegan aquí mismo,
+              // justo debajo del bloque tocado (en el ordenador salen en la
+              // columna de la derecha; el CSS oculta una u otra según el ancho).
               h += '<div class="ruta-area-inline">';
               if (!n) {
                 h += '<div class="ruta-panel-nota" style="padding:4px 2px 8px;">Este bloque todavía no tiene ninguna sesión enlazada.</div>';
@@ -13628,7 +13829,7 @@
         }
       }
       h += '</div></div>';   // /ses /cols
-      if (wd.area || wd.sesion) h += '<button type="button" class="ruta-panel-borrar" onclick="rutaBorrarSemana(' + idx + ')">🗑️ Vaciar esta semana</button>';
+      if (wd.sesion) h += '<button type="button" class="ruta-panel-borrar" onclick="rutaBorrarSemana(' + idx + ')">🗑️ Quitar la sesión de esta semana</button>';
       h += '</div>';         // /ruta-modal
 
       ov.innerHTML = h;
@@ -13636,9 +13837,11 @@
     }
 
     // Tarjeta compacta de una semana dentro de la columna de su mes.
+    // v0.207: wd viene de _rutaSemanaDatos (derivado de compDias + rutaSes),
+    // así que wd.areasSemana puede traer VARIAS áreas (una por día marcado).
     function _rutaSemanaHTML(w, act, wd, areaN, sesN) {
-      var trab = !!wd.trab, esAct = (w.idx === act);
-      var tieneAlgo = wd.area || wd.sesion;
+      var trab = wd.trab, esAct = (w.idx === act);
+      var tieneAlgo = trab || wd.sesion;
       var estado = trab ? 'done' : (esAct ? 'now' : (tieneAlgo ? 'plan' : 'vacia'));
       var rango = w.lun.getDate() + '–' + w.dom.getDate();
       var punto = estado === 'done'
@@ -13646,39 +13849,48 @@
         : estado === 'now'  ? '<span class="ruta-dot now"></span>'
         : estado === 'plan' ? '<span class="ruta-dot plan"></span>'
         : '<span class="ruta-dot vacia"></span>';
+      var vistos = {}, areasChips = '';
+      wd.areasSemana.forEach(function(x){
+        if (vistos[x.areaId]) return;
+        vistos[x.areaId] = true;
+        areasChips += '<span class="ruta-chip">' + _gEsc(areaN[x.areaId] || 'Área') + '</span>';
+      });
       return '<div class="ruta-wk ' + estado + '" onclick="rutaAbrir(' + w.idx + ')">' +
         '<div class="ruta-wk-top">' + punto +
           '<span class="ruta-wk-n">S' + (w.idx+1) + '</span>' +
           '<span class="ruta-wk-rango">' + rango + '</span>' +
           (esAct ? '<span class="ruta-badge">hoy</span>' : '') + '</div>' +
-        (wd.area   ? '<span class="ruta-chip">' + _gEsc(areaN[wd.area] || 'Área') + '</span>' : '') +
+        areasChips +
         (wd.sesion ? '<div class="ruta-ses">' + _gEsc(sesN[wd.sesion] || 'Sesión') + '</div>'
                    : '<div class="ruta-ses vacia">' + (tieneAlgo ? 'sin sesión' : '＋ planificar') + '</div>') +
       '</div>';
     }
 
-    // Columna de un mes (cabecera + sus semanas).
-    function _rutaMesColHTML(mes, act, data, areaN, sesN) {
-      var hechasM = mes.sems.filter(function(w){ return data[w.idx] && data[w.idx].trab; }).length;
+    // Columna de un mes (cabecera + sus semanas). v0.207: recibe el plan (p)
+    // + idsNivel en vez del viejo blob por curso, para leer los datos
+    // compartidos con Mensual.
+    function _rutaMesColHTML(mes, act, p, idsNivel, areaN, sesN) {
+      var hechasM = mes.sems.filter(function(w){ return _rutaSemanaDatos(p, w, idsNivel).trab; }).length;
       var h = '<div class="ruta-mes-col">';
       h += '<div class="ruta-mes-hdr"><span>' + _MESES_R[mes.m] + '</span>' +
            '<span class="ruta-mes-prog">' + hechasM + '/' + mes.sems.length + '</span></div>';
-      mes.sems.forEach(function(w){ h += _rutaSemanaHTML(w, act, data[w.idx] || {}, areaN, sesN); });
+      mes.sems.forEach(function(w){ h += _rutaSemanaHTML(w, act, _rutaSemanaDatos(p, w, idsNivel), areaN, sesN); });
       h += '</div>';
       return h;
     }
 
     function _rutaHTML() {
+      _rutaMigrarLocal();   // v0.207: por si aún queda algo del modelo viejo sin migrar
       var curso = _rutaCurso();
       var sems  = _rutaSemanas(curso);
       var act   = _rutaSemActual(curso);
-      var data  = _rutaData();
       var p     = leerPlan();
+      var idsNivel = _compIdsNivel(p);
       var areas = _compTodasFilas(p);                 // catálogo de áreas del nivel
       var areaN = {}; areas.forEach(function(a){ areaN[a.id] = a.t; });
       var ses   = leerClases();
       var sesN  = {}; ses.forEach(function(s){ sesN[s.id] = s.nombre || (s.fecha || 'Sesión'); });
-      var hechas = sems.filter(function(w){ return data[w.idx] && data[w.idx].trab; }).length;
+      var hechas = sems.filter(function(w){ return _rutaSemanaDatos(p, w, idsNivel).trab; }).length;
       var esHoy  = (curso === _cursoActual());
 
       // ── Selector de CURSO: permite adelantarse y planificar el que viene ──
@@ -13701,7 +13913,7 @@
       _RUTA_BLOQUES.forEach(function(bl){
         var semsB = sems.filter(function(w){ return bl.meses.indexOf(w.mes) >= 0; });
         if (!semsB.length) return;
-        var hechasB = semsB.filter(function(w){ return data[w.idx] && data[w.idx].trab; }).length;
+        var hechasB = semsB.filter(function(w){ return _rutaSemanaDatos(p, w, idsNivel).trab; }).length;
         var contieneAct = semsB.some(function(w){ return w.idx === act; });
         h += '<button type="button" class="ruta-tri' + (triSel === bl.key ? ' on' : '') + (contieneAct ? ' hoy' : '') + '" onclick="rutaTriSel(\'' + bl.key + '\')">' +
           '<span class="ruta-tri-lbl">' + bl.label + '</span>' +
@@ -13720,11 +13932,11 @@
         h += '<div class="ruta-modal-vacio" style="margin-top:12px;">Este bloque ya está cerrado — lo tienes abajo, en 📦 Meses cerrados.</div>';
       } else {
         h += '<div class="ruta-mes-cols">';
-        activos.forEach(function(m){ h += _rutaMesColHTML(m, act, data, areaN, sesN); });
+        activos.forEach(function(m){ h += _rutaMesColHTML(m, act, p, idsNivel, areaN, sesN); });
         h += '</div>';
       }
 
-      h += _rutaArchivoHTML(areaN, sesN);
+      h += _rutaArchivoHTML(p, idsNivel, areaN, sesN);
       h += '<div class="ruta-leyenda">✓ trabajada · ◉ esta semana · ● planificada · ○ vacía</div>';
       return h;
     }
@@ -13733,15 +13945,17 @@
     // Un nivel más: 📦 Archivo › Curso 25-26 › 🧭 Preparación / 1er / 2º / 3er
     // trimestre › meses. Solo entra lo que YA PASÓ, de cualquier curso que
     // tenga algo planificado (no solo el que se está mirando).
-    function _rutaArchivoHTML(areaN, sesN) {
+    // v0.207: todo sale del mismo `p` (compDias + rutaSes), ya no hay un
+    // blob distinto por curso que leer.
+    function _rutaArchivoHTML(p, idsNivel, areaN, sesN) {
       // Cursos candidatos: los que tienen datos + el actual + el que se mira.
-      var cursos = _rutaCursosConDatos();
+      var cursos = _rutaCursosConDatos(p);
       [_cursoActual(), _rutaCurso()].forEach(function(c){ if (cursos.indexOf(c) < 0) cursos.push(c); });
       // Cada curso, con solo sus meses ya cerrados; se descartan los vacíos.
       var fichas = [];
       cursos.forEach(function(c){
         var pasados = _rutaMeses(_rutaSemanas(c)).filter(function(m){ return _rutaMesPasado(m.y, m.m); });
-        if (pasados.length) fichas.push({ curso:c, meses:pasados, data:_rutaDataDe(c) });
+        if (pasados.length) fichas.push({ curso:c, meses:pasados });
       });
       if (!fichas.length) return '';
       fichas.sort(function(a, b){ return b.curso.localeCompare(a.curso); });   // el más reciente arriba
@@ -13755,7 +13969,7 @@
 
       fichas.forEach(function(f){
         var hechasC = f.meses.reduce(function(n, m){
-          return n + m.sems.filter(function(w){ return f.data[w.idx] && f.data[w.idx].trab; }).length; }, 0);
+          return n + m.sems.filter(function(w){ return _rutaSemanaDatos(p, w, idsNivel).trab; }).length; }, 0);
         var totalC  = f.meses.reduce(function(n, m){ return n + m.sems.length; }, 0);
         var abiertoC = !!_rutaArchAbierto[f.curso];
         h += '<div class="plan-otros' + (abiertoC ? ' abierto' : '') + '">';
@@ -13769,7 +13983,7 @@
           var mesesB = f.meses.filter(function(m){ return bl.meses.indexOf(m.m) >= 0; });
           if (!mesesB.length) return;
           var hechasB = mesesB.reduce(function(n, m){
-            return n + m.sems.filter(function(w){ return f.data[w.idx] && f.data[w.idx].trab; }).length; }, 0);
+            return n + m.sems.filter(function(w){ return _rutaSemanaDatos(p, w, idsNivel).trab; }).length; }, 0);
           var totalB  = mesesB.reduce(function(n, m){ return n + m.sems.length; }, 0);
           var kB = f.curso + '|' + bl.key;
           var abiertoB = !!_rutaArchAbierto[kB];
@@ -13780,7 +13994,7 @@
             '<span class="chev">›</span></div>';
           h += '<div class="plan-otros-body"><div class="ruta-mes-cols">';
           // act = -1: en el archivo nunca hay "semana de hoy" que resaltar.
-          mesesB.forEach(function(m){ h += _rutaMesColHTML(m, -1, f.data, areaN, sesN); });
+          mesesB.forEach(function(m){ h += _rutaMesColHTML(m, -1, p, idsNivel, areaN, sesN); });
           h += '</div></div></div>';
         });
         h += '</div></div>';
