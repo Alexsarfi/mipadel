@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.201.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.202.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,24 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.202.0 — Ruta de la temporada: bloques trimestrales + picker en 2 pasos (2026-08)
+    · Las 40 semanas ya no se ven todas de golpe: se agrupan en 4 bloques
+      colapsables — 🧭 Preparación (septiembre) y 1er/2º/3er trimestre
+      (oct-dic, ene-mar, abr-jun). Solo se abre el bloque de la semana en
+      curso; el resto se ve como una barra con su progreso (p. ej. "4/13").
+    · Elegir área + sesión ya no son dos <select> largos: al tocar una
+      semana se muestra primero un paso 1 con tarjetas grandes de área
+      (agrupadas por apartado); al elegir una, el paso 2 muestra SOLO las
+      sesiones ya enlazadas a esa área en el catálogo de Competición (si
+      el área no tiene ninguna enlazada, se ofrece la biblioteca completa
+      como alternativa). Dos toques y la semana queda planificada.
+    · Al elegir la sesión, la semana se marca "trabajada" sola — ya no hace
+      falta un botón aparte para confirmarlo.
+    · Nuevo botón "🗑️ Vaciar esta semana" dentro del panel, por si hay que
+      deshacer una semana entera (área + sesión + marca).
+    · Sigue siendo PROTOTIPO en local (padel-ruta-<curso>); compartir con
+      la vista mensual sigue pendiente.
 
   v0.201.0 — Orden y ruido visual en Sesiones/Planificación (2026-08)
     · Sesiones: el botón "Técnica" pasa a llamarse "Aspectos técnicos" (mismo
@@ -4533,6 +4551,27 @@
     .ruta-lbl { display:block; font-size:11px; font-weight:700; color:var(--gris); margin:8px 2px 3px; }
     .ruta-lbl:first-child { margin-top:0; }
     .ruta-leyenda { font-size:11px; color:var(--gris); margin-top:12px; padding-top:10px; border-top:1px solid var(--borde); }
+    /* v0.202: picker de área+sesión en 2 pasos (tarjetas, no <select>) */
+    .ruta-panel-paso { font-size:11px; font-weight:700; color:var(--gris); margin:0 2px 8px; }
+    .ruta-panel-nota { font-size:11px; font-weight:400; color:var(--gris); }
+    .ruta-area-grupo { font-size:10px; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.04em; margin:10px 2px 6px; }
+    .ruta-area-grupo:first-of-type { margin-top:0; }
+    .ruta-area-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+    .ruta-area-card { display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 6px;
+      border:1.5px solid var(--borde); border-radius:12px; background:var(--blanco); font-family:inherit;
+      font-size:12px; font-weight:600; color:var(--texto); text-align:center; cursor:pointer; }
+    .ruta-area-card.on { border-color:#0891b2; background:#ecfeff; color:#0e7490; }
+    .ruta-area-ico { font-size:18px; }
+    .ruta-chip-sel { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:700; color:#1e40af;
+      background:#eff6ff; padding:6px 10px; border-radius:999px; margin-bottom:10px; }
+    .ruta-chip-x { margin-left:auto; font-family:inherit; font-size:11px; font-weight:700; color:var(--gris);
+      background:none; border:1px solid var(--borde); border-radius:999px; padding:2px 9px; cursor:pointer; }
+    .ruta-ses-lista { display:flex; flex-direction:column; gap:6px; max-height:260px; overflow-y:auto; }
+    .ruta-ses-row { text-align:left; font-family:inherit; font-size:13px; padding:10px 12px; border:1.5px solid var(--borde);
+      border-radius:10px; background:var(--blanco); color:var(--texto); cursor:pointer; }
+    .ruta-ses-row.on { border-color:#0891b2; background:#ecfeff; color:#0e7490; font-weight:700; }
+    .ruta-panel-borrar { display:block; width:100%; margin-top:10px; font-family:inherit; font-size:12px; font-weight:700;
+      color:#b91c1c; background:none; border:1px dashed #fca5a5; border-radius:10px; padding:8px; cursor:pointer; }
     .comp-resumen-videos { display:flex; flex-wrap:nowrap; gap:6px; align-items:flex-start; }
     .comp-resumen-videos .ejcard { flex:1 1 0; min-width:0; }
     .comp-resumen-videos .ejcard-titulo { font-size:11px; }
@@ -5774,7 +5813,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.201.0';
+    var APP_VERSION = '0.202.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -13154,19 +13193,46 @@
       return out;
     }
     // ══════════════════════════════════════════
-    // v0.200 (prototipo) — RUTA DE LA TEMPORADA (semanas, solo EN3)
+    // v0.202 (prototipo) — RUTA DE LA TEMPORADA (semanas, solo EN3)
     // ------------------------------------------------------------
     // Segunda "lente" de la planificación de Competición: 40 semanas de
-    // septiembre a junio en línea temporal vertical. Cada semana lleva un
-    // ÁREA (del catálogo de áreas) y una SESIÓN (de la biblioteca). La
-    // semana en curso se resalta y las dadas se marcan como trabajadas.
+    // septiembre a junio, agrupadas en 4 BLOQUES colapsables (Preparación +
+    // 3 trimestres) para no ver las 40 de golpe. Cada semana lleva un ÁREA
+    // (del catálogo de áreas) y una SESIÓN (de la biblioteca), elegidas en
+    // dos pasos (tarjeta de área → lista de sesiones YA filtrada a esa área)
+    // en vez de dos desplegables largos. Al elegir la sesión, la semana se
+    // marca trabajada sola.
     // Prototipo: se guarda en local (padel-ruta-<curso>); compartir con la
     // vista mensual es el siguiente paso.
     var _rutaOn = false;
     function _rutaEsN3() { try { return !!(_sbGrupo && _sbGrupo.rol === 'nivel3'); } catch(e){ return false; } }
-    function rutaToggle() { _rutaOn = !_rutaOn; compDiaAbierta = null; _rutaSel = null; mostrarPlanificacion(); }
-    var _rutaSel = null;   // semana con el panel abierto
+    function rutaToggle() { _rutaOn = !_rutaOn; compDiaAbierta = null; _rutaSel = null; _rutaPanelArea = null; mostrarPlanificacion(); }
+    var _rutaSel = null;        // semana con el panel abierto
+    var _rutaPanelArea = null;  // paso del panel: null=usar área guardada, ''=forzar paso 1, id=paso 2 con esa área
     var _MESES_R = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    // v0.202: bloques de la temporada — septiembre es "Preparación" y el
+    // resto se agrupa en 3 trimestres naturales (oct-dic, ene-mar, abr-jun).
+    var _RUTA_BLOQUES = [
+      { key:'prep', label:'🧭 Preparación',   meses:[8] },
+      { key:'t1',   label:'1er trimestre',    meses:[9,10,11] },
+      { key:'t2',   label:'2º trimestre',     meses:[0,1,2] },
+      { key:'t3',   label:'3er trimestre',    meses:[3,4,5] }
+    ];
+    var _rutaBloqueOpen = null; // null = usar por defecto el bloque de la semana actual; '' = todos cerrados; key = ese bloque abierto
+    function _rutaBloqueDeMes(mes) {
+      for (var i = 0; i < _RUTA_BLOQUES.length; i++) if (_RUTA_BLOQUES[i].meses.indexOf(mes) >= 0) return _RUTA_BLOQUES[i].key;
+      return _RUTA_BLOQUES[0].key;
+    }
+    function _rutaBloqueDefecto() {
+      var curso = _cursoActual(), act = _rutaSemActual(curso);
+      if (act < 0) return _RUTA_BLOQUES[0].key;
+      return _rutaBloqueDeMes(_rutaSemanas(curso)[act].mes);
+    }
+    function _rutaBloqueToggle(key) {
+      var abierto = (_rutaBloqueOpen === null) ? _rutaBloqueDefecto() : _rutaBloqueOpen;
+      _rutaBloqueOpen = (abierto === key) ? '' : key;
+      mostrarPlanificacion();
+    }
     function _rutaInicioISO(curso) {
       var y = parseInt(String(curso).slice(0,4),10) || (new Date().getFullYear());
       var d = new Date(y, 8, 1);                       // 1 de septiembre
@@ -13198,13 +13264,108 @@
       try { return JSON.parse(_lzGet(_rutaKey(_cursoActual())) || '{}'); } catch(e){ return {}; }
     }
     function _rutaGuardar(d) { _lzSet(_rutaKey(_cursoActual()), JSON.stringify(d)); }
-    function _rutaSet(idx, campo, val) {
-      var d = _rutaData(); (d[idx] = d[idx] || {})[campo] = val; _rutaGuardar(d); mostrarPlanificacion();
+    // v0.202: abrir/cerrar el panel de una semana. Al abrir uno nuevo se
+    // resetea el paso del picker (arranca por el área ya guardada, o el
+    // paso 1 si la semana está vacía).
+    function rutaAbrir(idx) {
+      _rutaSel = (_rutaSel === idx) ? null : idx;
+      _rutaPanelArea = null;
+      mostrarPlanificacion();
     }
-    function rutaSetArea(idx, id)   { _rutaSet(idx, 'area', id || ''); }
-    function rutaSetSesion(idx, id) { _rutaSet(idx, 'sesion', id ? +id : ''); }
-    function rutaToggleTrab(idx)    { var d = _rutaData(); (d[idx]=d[idx]||{}).trab = !d[idx].trab; _rutaGuardar(d); mostrarPlanificacion(); }
-    function rutaAbrir(idx) { _rutaSel = (_rutaSel === idx) ? null : idx; mostrarPlanificacion(); }
+    // Paso 1 → elige área: se guarda ya y se pasa al paso 2 (sesiones de esa área).
+    function rutaElegirArea(idx, areaId) {
+      var d = _rutaData(); d[idx] = d[idx] || {}; d[idx].area = areaId; _rutaGuardar(d);
+      _rutaPanelArea = areaId;
+      mostrarPlanificacion();
+    }
+    // "cambiar área" dentro del paso 2 → vuelve al paso 1 sin tocar lo guardado.
+    function rutaCambiarArea() { _rutaPanelArea = ''; mostrarPlanificacion(); }
+    // Paso 2 → elige sesión: se guarda y la semana se marca trabajada sola
+    // (decisión: menos toques que marcarla aparte). Cierra el panel.
+    function rutaElegirSesion(idx, sesId) {
+      var d = _rutaData(); d[idx] = d[idx] || {};
+      d[idx].sesion = +sesId; d[idx].trab = true;
+      _rutaGuardar(d);
+      _rutaSel = null; _rutaPanelArea = null;
+      mostrarPlanificacion();
+    }
+    // Vaciar la semana (quita área+sesión+marca) para volver a empezar.
+    function rutaBorrarSemana(idx) {
+      var d = _rutaData(); delete d[idx]; _rutaGuardar(d);
+      _rutaSel = null; _rutaPanelArea = null;
+      mostrarPlanificacion();
+    }
+
+    // Fila de una semana + su panel de edición (si está abierta). Separado
+    // de _rutaHTML para poder llamarlo por cada semana dentro de su bloque.
+    function _rutaSemanaHTML(w, act, wd, areas, areaN, ses, sesN) {
+      var trab = !!wd.trab, esAct = (w.idx === act);
+      var tieneAlgo = wd.area || wd.sesion;
+      var estado = trab ? 'done' : (esAct ? 'now' : (tieneAlgo ? 'plan' : 'vacia'));
+      var rango = w.lun.getDate() + '–' + w.dom.getDate() + ' ' + _MESES_R[w.dom.getMonth()].slice(0,3);
+      var punto = estado === 'done'
+        ? '<span class="ruta-dot done"><span class="ti">✓</span></span>'
+        : estado === 'now'  ? '<span class="ruta-dot now"></span>'
+        : estado === 'plan' ? '<span class="ruta-dot plan"></span>'
+        : '<span class="ruta-dot vacia"></span>';
+      var h = '<div class="ruta-wk ' + estado + '">' +
+        '<div class="ruta-rail">' + punto + '<span class="ruta-line"></span></div>' +
+        '<div class="ruta-body" onclick="rutaAbrir(' + w.idx + ')">' +
+          '<div class="ruta-wk-top">Semana ' + (w.idx+1) + ' · ' + rango +
+            (esAct ? ' <span class="ruta-badge">esta semana</span>' : '') + '</div>' +
+          (wd.area   ? '<span class="ruta-chip">' + _gEsc(areaN[wd.area] || 'Área') + '</span>' : '') +
+          (wd.sesion ? '<div class="ruta-ses">' + _gEsc(sesN[wd.sesion] || 'Sesión') + '</div>'
+                     : '<div class="ruta-ses vacia">' + (tieneAlgo ? 'sin sesión' : '＋ planificar semana') + '</div>') +
+        '</div>' +
+      '</div>';
+
+      if (_rutaSel === w.idx) {
+        // areaSel: '' fuerza el paso 1 (el usuario tocó "cambiar área");
+        // null usa el área ya guardada (o paso 1 si no hay ninguna); un id
+        // real viene de haberla elegido ahora mismo → pasa directo al paso 2.
+        var areaSel = (_rutaPanelArea !== null) ? _rutaPanelArea : (wd.area || '');
+        h += '<div class="ruta-panel">';
+        if (!areaSel) {
+          h += '<div class="ruta-panel-paso">1 · Elige el área de trabajo</div>';
+          var porApartado = {};
+          areas.forEach(function(a){ (porApartado[a.apartado] = porApartado[a.apartado] || []).push(a); });
+          Object.keys(porApartado).forEach(function(ap){
+            h += '<div class="ruta-area-grupo">' + _gEsc(ap) + '</div><div class="ruta-area-grid">';
+            porApartado[ap].forEach(function(a){
+              h += '<button type="button" class="ruta-area-card' + (wd.area === a.id ? ' on' : '') + '" onclick="rutaElegirArea(' + w.idx + ',\'' + a.id + '\')">' +
+                '<span class="ruta-area-ico">◆</span><span class="ruta-area-t">' + _gEsc(a.t) + '</span>' +
+              '</button>';
+            });
+            h += '</div>';
+          });
+          if (!areas.length) h += '<div class="ruta-panel-nota">Aún no hay áreas en el catálogo de Competición.</div>';
+        } else {
+          var areaObj = areas.filter(function(a){ return a.id === areaSel; })[0];
+          var idsLigadas = (areaObj && areaObj.sesInc) || [];
+          var sesFiltradas = ses.filter(function(s){ return idsLigadas.indexOf(s.id) >= 0; });
+          var lista = sesFiltradas.length ? sesFiltradas : ses;
+          h += '<div class="ruta-panel-paso">2 · Elige la sesión' +
+            (sesFiltradas.length ? '' : ' <span class="ruta-panel-nota">(esta área aún no tiene sesiones enlazadas — elige de toda la biblioteca)</span>') +
+          '</div>';
+          h += '<div class="ruta-chip-sel">' + _gEsc(areaN[areaSel] || 'Área') +
+            '<button type="button" class="ruta-chip-x" onclick="rutaCambiarArea()">cambiar</button></div>';
+          if (!lista.length) {
+            h += '<div class="ruta-panel-nota">Todavía no hay sesiones en la biblioteca.</div>';
+          } else {
+            h += '<div class="ruta-ses-lista">';
+            lista.forEach(function(s){
+              h += '<button type="button" class="ruta-ses-row' + (wd.sesion === s.id ? ' on' : '') + '" onclick="rutaElegirSesion(' + w.idx + ',' + s.id + ')">' +
+                _gEsc(s.nombre || s.fecha || ('Sesión ' + s.id)) +
+              '</button>';
+            });
+            h += '</div>';
+          }
+        }
+        if (wd.area || wd.sesion) h += '<button type="button" class="ruta-panel-borrar" onclick="rutaBorrarSemana(' + w.idx + ')">🗑️ Vaciar esta semana</button>';
+        h += '</div>';
+      }
+      return h;
+    }
 
     function _rutaHTML() {
       var curso = _cursoActual();
@@ -13223,46 +13384,27 @@
         '<div class="ruta-prog-bar"><span style="width:' + Math.round(hechas/40*100) + '%;"></span></div>' +
       '</div>';
 
-      var mesPrev = -1;
-      sems.forEach(function(w){
-        if (w.mes !== mesPrev) { h += '<div class="ruta-mes">' + _MESES_R[w.mes] + '</div>'; mesPrev = w.mes; }
-        var wd = data[w.idx] || {};
-        var trab = !!wd.trab, esAct = (w.idx === act);
-        var tieneAlgo = wd.area || wd.sesion;
-        var estado = trab ? 'done' : (esAct ? 'now' : (tieneAlgo ? 'plan' : 'vacia'));
-        var rango = w.lun.getDate() + '–' + w.dom.getDate() + ' ' + _MESES_R[w.dom.getMonth()].slice(0,3);
-        var punto = estado === 'done'
-          ? '<span class="ruta-dot done"><span class="ti">✓</span></span>'
-          : estado === 'now'  ? '<span class="ruta-dot now"></span>'
-          : estado === 'plan' ? '<span class="ruta-dot plan"></span>'
-          : '<span class="ruta-dot vacia"></span>';
-        h += '<div class="ruta-wk ' + estado + '">' +
-          '<div class="ruta-rail">' + punto + '<span class="ruta-line"></span></div>' +
-          '<div class="ruta-body" onclick="rutaAbrir(' + w.idx + ')">' +
-            '<div class="ruta-wk-top">Semana ' + (w.idx+1) + ' · ' + rango +
-              (esAct ? ' <span class="ruta-badge">esta semana</span>' : '') + '</div>' +
-            (wd.area   ? '<span class="ruta-chip">' + _gEsc(areaN[wd.area] || 'Área') + '</span>' : '') +
-            (wd.sesion ? '<div class="ruta-ses">' + _gEsc(sesN[wd.sesion] || 'Sesión') + '</div>'
-                       : '<div class="ruta-ses vacia">' + (tieneAlgo ? 'sin sesión' : '＋ planificar semana') + '</div>') +
-          '</div>' +
-        '</div>';
-        // Panel de edición de la semana seleccionada
-        if (_rutaSel === w.idx) {
-          h += '<div class="ruta-panel">' +
-            '<label class="ruta-lbl">Área de trabajo</label>' +
-            '<select class="form-input" onchange="rutaSetArea(' + w.idx + ',this.value)">' +
-              '<option value="">— elegir área —</option>' +
-              areas.map(function(a){ return '<option value="' + a.id + '"' + (wd.area===a.id?' selected':'') + '>' + _gEsc(a.t) + '</option>'; }).join('') +
-            '</select>' +
-            '<label class="ruta-lbl">Sesión</label>' +
-            '<select class="form-input" onchange="rutaSetSesion(' + w.idx + ',this.value)">' +
-              '<option value="">— elegir sesión —</option>' +
-              ses.map(function(s){ return '<option value="' + s.id + '"' + (wd.sesion===s.id?' selected':'') + '>' + _gEsc(s.nombre || s.fecha || ('Sesión '+s.id)) + '</option>'; }).join('') +
-            '</select>' +
-            '<button class="btn btn-sm ' + (trab?'btn-verde':'btn-sec') + '" style="width:100%;margin-top:8px;" onclick="rutaToggleTrab(' + w.idx + ')">' +
-              (trab ? '✓ Trabajada (quitar)' : '✓ Marcar trabajada') + '</button>' +
-          '</div>';
-        }
+      // v0.202: agrupadas en bloques colapsables — solo el bloque en curso
+      // (o el que el usuario haya tocado) muestra sus semanas.
+      var openKey = (_rutaBloqueOpen === null) ? _rutaBloqueDefecto() : _rutaBloqueOpen;
+      _RUTA_BLOQUES.forEach(function(bl){
+        var semsB = sems.filter(function(w){ return bl.meses.indexOf(w.mes) >= 0; });
+        if (!semsB.length) return;
+        var hechasB = semsB.filter(function(w){ return data[w.idx] && data[w.idx].trab; }).length;
+        var contieneAct = semsB.some(function(w){ return w.idx === act; });
+        var open = (openKey === bl.key);
+        h += '<div class="plan-otros' + (open ? ' abierto' : '') + '" style="margin-top:0.6rem;">';
+        h += '<div class="plan-otros-hdr" onclick="_rutaBloqueToggle(\'' + bl.key + '\')">' +
+          '<span style="flex:1;">' + bl.label + (contieneAct ? ' <span class="ruta-badge">en curso</span>' : '') + '</span>' +
+          '<span class="plan-etapa-prog">' + hechasB + '/' + semsB.length + '</span>' +
+          '<span class="chev">›</span></div>';
+        h += '<div class="plan-otros-body">';
+        var mesPrev = -1;
+        semsB.forEach(function(w){
+          if (w.mes !== mesPrev) { h += '<div class="ruta-mes">' + _MESES_R[w.mes] + '</div>'; mesPrev = w.mes; }
+          h += _rutaSemanaHTML(w, act, data[w.idx] || {}, areas, areaN, ses, sesN);
+        });
+        h += '</div></div>';
       });
 
       h += '<div class="ruta-leyenda">✓ trabajada · ◉ esta semana · ● planificada · ○ vacía</div>';
