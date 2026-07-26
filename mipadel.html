@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.193.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.194.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,21 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.194.0 — Gesto técnico por golpe en Sesiones → Técnica (solo EN3) (PROTOTIPO) (2026-08)
+    · Dentro de Sesiones → Técnica, para la cuenta EN3, aparece el módulo de
+      GESTO TÉCNICO por golpe: una rejilla de golpes (Derecha, Revés, Volea,
+      Bandeja, Remate, Víbora, Globo, Salida de pared, Saque). Derecha y
+      Revés van separados, como en el vault.
+    · Al tocar un golpe: sus VÍDEOS de gesto como miniaturas reproducibles
+      (se abren en el globo, reutiliza abrirLightboxVideo) y, debajo, los
+      MATICES colapsados (acordeón). Marca ✅/🔲 de visto por vídeo.
+    · Solo lo ve EN3 (nivel3). El resto de cuentas siguen viendo Técnica
+      como antes.
+    · PROTOTIPO: de momento con datos de prueba (el vídeo de revés). El
+      siguiente paso es alimentarlo desde el sync del vault (apartado
+      "08 DETALLES DEL GESTO TÉCNICO") vía Supabase.
+    · Sin cambios de datos/esquema todavía.
 
   v0.193.0 — "Editar plan" abajo también en Iniciación y Avanzado (2026-08)
     · El botón "✏️ Editar plan" de la planificación anual ya no va arriba de
@@ -4409,6 +4424,17 @@
     /* v0.133: miniaturas del resumen del día en UNA sola línea (nunca dos).
        Cada tarjeta se reparte el ancho a partes iguales (pensado para hasta
        4 vídeos); min-width:0 permite que encojan para no desbordar la línea. */
+    /* v0.194: vídeos de gesto técnico (Técnica → golpe, EN3) */
+    .gt-videos { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+    .gt-vid { cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .gt-vid:active { transform:scale(0.98); }
+    .gt-vid-thumb { position:relative; width:100%; aspect-ratio:16/9; border-radius:12px; overflow:hidden;
+                    background:#111; border:1px solid var(--borde); display:flex; align-items:center; justify-content:center; }
+    .gt-vid-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+    .gt-vid-play { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+                   color:#fff; font-size:26px; text-shadow:0 1px 6px rgba(0,0,0,.6); pointer-events:none; }
+    .gt-vid-tit { font-size:12px; font-weight:600; color:var(--texto); margin-top:5px; line-height:1.25; }
+    @media (max-width:400px){ .gt-videos { grid-template-columns:1fr; } }
     .comp-resumen-videos { display:flex; flex-wrap:nowrap; gap:6px; align-items:flex-start; }
     .comp-resumen-videos .ejcard { flex:1 1 0; min-width:0; }
     .comp-resumen-videos .ejcard-titulo { font-size:11px; }
@@ -5650,7 +5676,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.193.0';
+    var APP_VERSION = '0.194.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -14922,6 +14948,84 @@
     }
     function irClasesGrupo(key)   { grupoClasesSel = key;   irA('pantalla-clases-grupo'); }
 
+    // ══════════════════════════════════════════
+    // v0.194 (prototipo) — GESTO TÉCNICO por golpe (solo EN3)
+    // ------------------------------------------------------------
+    // Dentro de Sesiones → Técnica, cada golpe muestra sus vídeos de gesto
+    // técnico (miniaturas reproducibles) y sus matices (colapsados). De
+    // momento con DATOS DE PRUEBA; luego llegará por el sync del vault
+    // (apartado "08 DETALLES DEL GESTO TÉCNICO"). Solo lo ve la cuenta EN3.
+    // Incluye Derecha y Revés como golpes propios (en el vault van separados).
+    var GT_GOLPES = [
+      { key:'derecha', label:'Derecha', icono:'🎾' },
+      { key:'reves',   label:'Revés',   icono:'🖐️' },
+      { key:'volea',   label:'Volea',   icono:'🎯' },
+      { key:'bandeja', label:'Bandeja', icono:'🪃' },
+      { key:'remate',  label:'Remate',  icono:'💥' },
+      { key:'vibora',  label:'Víbora',  icono:'🐍' },
+      { key:'globo',   label:'Globo',   icono:'🎈' },
+      { key:'pared',   label:'Salida de pared', icono:'🧱' },
+      { key:'saque',   label:'Saque',   icono:'🚀' },
+    ];
+    // Datos de prueba (se sustituirán por los del sync). matices = texto;
+    // videos = [{ titulo, video (url), visto }].
+    var _gtGesto = {
+      reves: {
+        matices: 'Elevar la punta: flexión lateral de la empuñadura para llegar al golpeo con más firmeza.\n' +
+                 'Mano no dominante hacia extensión palmar en la preparación → mejor elasticidad en el impacto.',
+        videos: [ { titulo:'Revés con limitaciones', video:'https://youtube.com/shorts/duJDNTbjUmQ', visto:false } ]
+      }
+    };
+    function _gtEsN3() { try { return !!(_sbGrupo && _sbGrupo.rol === 'nivel3'); } catch(e){ return false; } }
+    function _gtDe(key) { return _gtGesto[key] || { matices:'', videos:[] }; }
+    function _gtGolpeCardsHTML() {
+      var h = '<p class="ajustes-desc" style="margin:0 0 0.7rem;">🎯 Gesto técnico por golpe — vídeos y matices. Toca un golpe.</p>';
+      GT_GOLPES.forEach(function(g){
+        var d = _gtDe(g.key), n = (d.videos||[]).length;
+        var porVer = (d.videos||[]).filter(function(v){ return !v.visto; }).length;
+        var cnt = n ? (n + ' vídeo' + (n!==1?'s':'') + (porVer ? ' · ' + porVer + ' por ver' : '')) : 'sin vídeos';
+        h += '<div class="clase-grupo-btn" onclick="irClasesGrupo(\'' + g.key + '\')">' +
+          '<span class="clase-grupo-ico">' + g.icono + '</span>' +
+          '<span class="clase-grupo-lbl">' + g.label + '</span>' +
+          '<span class="clase-grupo-cnt">' + cnt + '</span>' +
+          '<span class="clase-grupo-arr">›</span>' +
+        '</div>';
+      });
+      return h;
+    }
+    function _gtGolpeDetalleHTML(key) {
+      var g = GT_GOLPES.filter(function(x){ return x.key === key; })[0] || { label:'', icono:'🎾' };
+      var d = _gtDe(key);
+      var h = '';
+      if ((d.videos||[]).length) {
+        h += '<div class="detalle-seccion-titulo">Vídeos</div><div class="gt-videos">';
+        d.videos.forEach(function(v){
+          var ytId = extraerIdYoutube(v.video || '');
+          var thumb = ytId ? ('https://img.youtube.com/vi/' + ytId + '/mqdefault.jpg') : '';
+          var vu = (v.video || '').replace(/'/g, "\\'");
+          h += '<div class="gt-vid" onclick="abrirLightboxVideo(\'' + (ytId||'') + '\',\'' + vu + '\')">' +
+            '<div class="gt-vid-thumb">' +
+              (thumb ? '<img src="' + thumb + '" loading="lazy" alt="" onerror="this.style.display=\'none\'">' : '') +
+              '<span class="gt-vid-play">▶</span>' +
+            '</div>' +
+            '<div class="gt-vid-tit">' + (v.visto ? '✅ ' : '🔲 ') + _gEsc(v.titulo || 'Vídeo') + '</div>' +
+          '</div>';
+        });
+        h += '</div>';
+      } else {
+        h += '<p class="ajustes-desc">Aún no hay vídeos de gesto técnico de este golpe.</p>';
+      }
+      // Matices, colapsado (mismo acordeón que Áreas de trabajo)
+      h += '<div class="plan-otros" style="margin-top:0.9rem;">' +
+        '<div class="plan-otros-hdr" onclick="this.parentNode.classList.toggle(\'abierto\')">📝 Matices del gesto<span class="chev">›</span></div>' +
+        '<div class="plan-otros-body">' +
+          (d.matices ? '<p class="ajustes-desc" style="white-space:pre-wrap;margin:0;">' + _gEsc(d.matices) + '</p>'
+                     : '<p class="ajustes-desc" style="margin:0;">Sin matices todavía.</p>') +
+        '</div>' +
+      '</div>';
+      return { titulo: g.icono + ' ' + g.label, html: h };
+    }
+
     // Pantalla de NIVEL: botones por golpe/intención (cada uno abre sus sesiones).
     function mostrarClases() {
       // EN2: nunca aterrizar en un nivel no permitido
@@ -14935,6 +15039,15 @@
       var sesiones = porNivel[nivelClasesSel] || [];
       var nivMeta  = NIV_HOME.filter(function(n){ return n.key === nivelClasesSel; })[0] || { label:'Sesiones', icono:'🎾' };
       if (tituloEl) tituloEl.textContent = nivMeta.icono + ' ' + nivMeta.label;
+
+      // v0.194: Técnica, para EN3, es el módulo de GESTO TÉCNICO por golpe
+      // (vídeos + matices), no las sesiones. Rejilla de golpes.
+      if (nivelClasesSel === 'tecnica' && _gtEsN3()) {
+        subClases.textContent = GT_GOLPES.length + ' golpes';
+        hub.innerHTML = _gtGolpeCardsHTML();
+        return;
+      }
+
       subClases.textContent = sesiones.length + ' sesión' + (sesiones.length !== 1 ? 'es' : '');
 
       if (!sesiones.length) {
@@ -14976,6 +15089,18 @@
     function mostrarClasesGrupo() {
       var mapEj  = _ejsById();
       var lista  = document.getElementById('clases-grupo-lista');
+
+      // v0.194: Técnica (EN3) → detalle de GESTO TÉCNICO del golpe (vídeos
+      // reproducibles + matices colapsados), en vez de sesiones.
+      if (nivelClasesSel === 'tecnica' && _gtEsN3()) {
+        var g = GT_GOLPES.filter(function(x){ return x.key === grupoClasesSel; })[0] || { label:'', icono:'🎾' };
+        var det = _gtGolpeDetalleHTML(grupoClasesSel);
+        document.getElementById('clases-grupo-volver').textContent = '‹ Técnica';
+        document.getElementById('clases-grupo-titulo').textContent = det.titulo;
+        document.getElementById('clases-grupo-sub').textContent    = 'Gesto técnico';
+        lista.innerHTML = det.html;
+        return;
+      }
       var esComp = (nivelClasesSel === 'competicion');
       var grupos = esComp ? INTENCION_GRUPOS : GOLPE_GRUPOS;
       var clasificar = esComp ? intencionDeSesion : golpeDeSesion;
