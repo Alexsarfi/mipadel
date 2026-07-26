@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.207.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.208.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,23 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.208.0 — Mensual usa el mismo panel grande que Semanas (2026-08)
+    · En Competición, para EN3: tocar un día VACÍO en la vista Mensual ya no
+      abre la lista de checkboxes por apartado — abre el mismo panel grande
+      que las semanas de la ruta (área con tarjetas + sesión con
+      miniaturas). El área elegida se marca directo en ESE día concreto,
+      sin preguntar nada (a diferencia de Semanas, aquí ya se sabe a qué
+      día se refiere).
+    · Un día YA marcado sigue abriendo el resumen con vídeos reproducibles
+      (pensado para consultar en pista); desde ahí, "cambiar selección" (⚙)
+      también lleva ahora al panel grande en vez del checkbox.
+    · El panel, al abrirse desde un día, muestra ESE día en el título (p.
+      ej. "Martes 21 de octubre") en vez de "Semana N", y solo preselecciona
+      un área si es justo la marcada ese día (no la de otro día de la
+      misma semana, para no confundir).
+    · Iniciación y Avanzado no cambian: siguen con el selector de checkboxes
+      de siempre (no tienen ruta de semanas).
 
   v0.207.0 — Ruta y Mensual comparten datos (2026-08)
     · Deja de ser un almacén aparte: el ÁREA de una semana ya NO se guarda
@@ -5991,7 +6008,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.207.0';
+    var APP_VERSION = '0.208.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -13599,30 +13616,67 @@
     // Sustituye al panel en línea de v0.202: al planificar en el ordenador
     // interesa VER las sesiones (miniatura + nº de ejercicios), no una lista
     // de texto. En móvil el mismo panel se comporta como hoja inferior.
-    var _rutaModalIdx  = null;   // semana que se está planificando (null = cerrado)
-    var _rutaModalArea = null;   // null = usar el área por defecto; '' = paso 1; id = paso 2
-    var _rutaEligeDia  = null;   // areaId pendiente de "¿qué día?" (semana con >1 día real), o null
+    var _rutaModalIdx   = null;   // semana que se está planificando (null = cerrado)
+    var _rutaModalArea  = null;   // null = usar el área por defecto; '' = paso 1; id = paso 2
+    var _rutaEligeDia   = null;   // areaId pendiente de "¿qué día?" (semana con >1 día real), o null
+    // v0.208 — el mismo panel se abre también desde Mensual (un día
+    // concreto), no solo desde Semanas (una semana). Estos dos guardan el
+    // contexto cuando viene de un día: el curso puede no ser el que esté
+    // navegando la ruta ahora mismo, y el área elegida va DIRECTA a ese día
+    // (sin preguntar "¿qué día?", porque ya se sabe cuál es).
+    var _rutaModalCurso     = null;   // curso del día/semana que se está editando; null = el de _rutaCurso()
+    var _rutaModalFechaFija = null;   // fecha exacta si se abrió desde Mensual; null si se abrió desde Semanas
+    function _rutaModalCursoActual() { return _rutaModalCurso || _rutaCurso(); }
     function rutaAbrir(idx) {
       _rutaMigrarLocal();   // v0.207: por si aún queda algo del modelo viejo sin migrar
       _rutaModalIdx = idx; _rutaModalArea = null; _rutaEligeDia = null;
+      _rutaModalCurso = null; _rutaModalFechaFija = null;
+      _rutaModalRender();
+    }
+    // v0.208 — Abre el mismo panel para un DÍA concreto de Mensual (en vez
+    // de una semana de la ruta). Se usa desde Competición, solo EN3, cuando
+    // el día no tiene nada marcado todavía (o al pulsar "cambiar selección"
+    // desde el resumen). El área elegida se marca directamente en este día,
+    // sin preguntar a cuál aplica (ya se sabe).
+    function rutaAbrirDia(fechaISO) {
+      _rutaMigrarLocal();
+      var curso = cursoDeFecha(fechaISO);
+      var w = _rutaSemanas(curso).filter(function(w){ return fechaISO >= w.lunISO && fechaISO <= w.domISO; })[0];
+      if (!w) {
+        alert('Este día queda fuera de las 40 semanas de la ruta (sep–jun) — márcalo con el selector de siempre.');
+        compDiaAbierta = fechaISO; compDiaEditando = true; mostrarPlanificacion();
+        return;
+      }
+      _rutaModalCurso = curso;
+      _rutaModalFechaFija = fechaISO;
+      _rutaModalIdx = w.idx; _rutaModalArea = null; _rutaEligeDia = null;
       _rutaModalRender();
     }
     function rutaCerrarModal() {
       _rutaModalIdx = null; _rutaModalArea = null; _rutaEligeDia = null;
+      _rutaModalCurso = null; _rutaModalFechaFija = null;
       var ov = document.getElementById('ruta-plan-ov');
       if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; }
     }
     // Paso 1 → elige área. v0.207: el área se marca directamente en
     // compDias (mismo dato que Mensual). Si la semana tiene MÁS de un día
     // real de clase, primero se pregunta a cuál se aplica (rutaElegirDia);
-    // si solo tiene uno, se marca ahí sin preguntar.
+    // si solo tiene uno, se marca ahí sin preguntar. v0.208: si el panel se
+    // abrió desde un día concreto de Mensual (_rutaModalFechaFija), se marca
+    // DIRECTO ahí, sin preguntar nada — ya se sabe a qué día se refiere.
     // Si se vuelve a tocar el área ya abierta, se pliega sin tocar nada
     // (en móvil el bloque funciona como acordeón).
     function rutaElegirArea(idx, areaId) {
       var p = leerPlan(), idsNivel = _compIdsNivel(p);
-      var w = _rutaSemanas(_rutaCurso())[idx];
+      var w = _rutaSemanas(_rutaModalCursoActual())[idx];
       var abierta = (_rutaModalArea !== null) ? _rutaModalArea : _rutaAreaDefecto(p, w, idsNivel);
       if (abierta === areaId && _rutaEligeDia === null) { _rutaModalArea = ''; _rutaModalRender(); return; }
+      if (_rutaModalFechaFija) {
+        _compDiaMarcar(_rutaModalFechaFija, areaId);
+        _rutaEligeDia = null; _rutaModalArea = areaId;
+        mostrarPlanificacion(); _rutaModalRender();
+        return;
+      }
       var dias = _rutaDiasRealesDeSemana(w);
       if (!dias.length) {
         alert('Esta semana no tiene ningún día de clase configurado — no se puede marcar un área aquí. Configúralo primero en Asistencia.');
@@ -13655,7 +13709,7 @@
     // Paso 2 → elige sesión: se guarda en p.rutaSes (dato propio de la
     // semana, sincronizado con el resto del plan). Cierra el panel.
     function rutaElegirSesion(idx, sesId) {
-      var w = _rutaSemanas(_rutaCurso())[idx];
+      var w = _rutaSemanas(_rutaModalCursoActual())[idx];
       var p = leerPlan();
       if (!p.rutaSes) p.rutaSes = {};
       p.rutaSes[w.lunISO] = +sesId;
@@ -13666,7 +13720,7 @@
     // Quita solo la sesión asignada a la semana (el área se quita desde su
     // propio ✕ en el resumen, o desde Mensual — es el mismo dato).
     function rutaBorrarSemana(idx) {
-      var w = _rutaSemanas(_rutaCurso())[idx];
+      var w = _rutaSemanas(_rutaModalCursoActual())[idx];
       var p = leerPlan();
       if (p.rutaSes) { delete p.rutaSes[w.lunISO]; _planGuardar(p); }
       rutaCerrarModal();
@@ -13725,7 +13779,7 @@
       if (!ov) return;
       if (_rutaModalIdx === null) { ov.style.display = 'none'; ov.innerHTML = ''; return; }
       var idx   = _rutaModalIdx;
-      var curso = _rutaCurso();
+      var curso = _rutaModalCursoActual();
       var w     = _rutaSemanas(curso)[idx];
       var p     = leerPlan();
       var idsNivel = _compIdsNivel(p);
@@ -13734,14 +13788,38 @@
       var areaN = {}; areas.forEach(function(a){ areaN[a.id] = a.t; });
       var sesDe = _rutaSesPorArea(areas);   // v0.204: sesiones de cada área
       // areaSel: '' fuerza el paso 1; null usa la de defecto; un id viene de elegirla ahora.
-      var areaSel = (_rutaModalArea !== null) ? _rutaModalArea : _rutaAreaDefecto(p, w, idsNivel);
+      // v0.208: si se abrió desde un día concreto, la preselección mira SOLO
+      // lo marcado ese día (no toda la semana, que puede tener otro día con
+      // otra área y confundiría sobre "de qué estamos hablando").
+      var areaSel;
+      if (_rutaModalArea !== null) {
+        areaSel = _rutaModalArea;
+      } else if (_rutaModalFechaFija) {
+        var marcadasDia = ((p.compDias && p.compDias[_rutaModalFechaFija]) || []).filter(function(id){ return idsNivel[id]; });
+        areaSel = (marcadasDia.length === 1) ? marcadasDia[0] : '';
+      } else {
+        areaSel = _rutaAreaDefecto(p, w, idsNivel);
+      }
       var rango = w.lun.getDate() + ' ' + _MESES_R[w.lun.getMonth()].slice(0,3) +
                   ' – ' + w.dom.getDate() + ' ' + _MESES_R[w.dom.getMonth()].slice(0,3);
 
+      // v0.208 — si el panel se abrió desde un día concreto de Mensual, el
+      // título muestra ESE día (lo que el entrenador reconoce de un vistazo
+      // en pista); si viene de Semanas, sigue siendo "Semana N".
+      var tit, sub;
+      if (_rutaModalFechaFija) {
+        var fd = _rutaModalFechaFija;
+        var dow = new Date(+fd.slice(0,4), +fd.slice(5,7)-1, +fd.slice(8,10)).getDay();
+        tit = DIAS_NOMBRES_A[dow] + ' ' + formatFechaDiaMes(fd);
+        sub = 'Semana ' + (idx+1) + ' · ' + rango;
+      } else {
+        tit = 'Semana ' + (idx+1);
+        sub = rango;
+      }
       var h = '<div class="ruta-modal" onclick="event.stopPropagation()">';
       h += '<div class="ruta-modal-hdr">' +
-        '<div><div class="ruta-modal-tit">Semana ' + (idx+1) + '</div>' +
-        '<div class="ruta-modal-sub">' + rango + '</div></div>' +
+        '<div><div class="ruta-modal-tit">' + tit + '</div>' +
+        '<div class="ruta-modal-sub">' + sub + '</div></div>' +
         '<button class="plan-modal-x" onclick="rutaCerrarModal()" aria-label="Cerrar">✕</button></div>';
 
       // v0.207 — Resumen de lo que YA está marcado en Mensual esta semana
@@ -14012,23 +14090,40 @@
       compFilaSel = null;   // v0.148: cada día arranca en su primera sesión
       if (compDiaAbierta === fechaISO) {
         compDiaAbierta = null;
-      } else {
-        var p = leerPlan();
-        // v0.152: solo cuenta lo marcado del NIVEL activo para decidir si el
-        // día se abre en resumen (ya tiene contenido) o en selección.
-        var _ids = _compIdsNivel(p);
-        var yaMarcado = ((p.compDias && p.compDias[fechaISO]) || [])
-                          .some(function(id){ return _ids[id]; });
-        compDiaAbierta = fechaISO;
-        // v0.125: si el día ya tiene algo marcado, se abre directamente en
-        // modo RESUMEN (solo lo elegido + vídeos, poco ruido); si está
-        // vacío, se abre en modo SELECCIÓN (todo el catálogo) para elegir.
-        compDiaEditando = !yaMarcado;
+        mostrarPlanificacion();
+        return;
       }
+      var p = leerPlan();
+      // v0.152: solo cuenta lo marcado del NIVEL activo para decidir si el
+      // día se abre en resumen (ya tiene contenido) o en selección.
+      var _ids = _compIdsNivel(p);
+      var yaMarcado = ((p.compDias && p.compDias[fechaISO]) || [])
+                        .some(function(id){ return _ids[id]; });
+      // v0.208 — En Competición, para EN3, un día VACÍO se planifica con el
+      // mismo panel grande que las semanas de la ruta (área + sesión con
+      // miniaturas), no con la lista de checkboxes de siempre. Un día YA
+      // marcado sigue abriendo el resumen con vídeos (útil en pista); desde
+      // ahí, "cambiar selección" (⚙) también lleva al panel grande.
+      if (p.nivel === 'competicion' && _rutaEsN3() && !yaMarcado) {
+        rutaAbrirDia(fechaISO);
+        return;
+      }
+      compDiaAbierta = fechaISO;
+      // v0.125: si el día ya tiene algo marcado, se abre directamente en
+      // modo RESUMEN (solo lo elegido + vídeos, poco ruido); si está
+      // vacío, se abre en modo SELECCIÓN (todo el catálogo) para elegir.
+      compDiaEditando = !yaMarcado;
       mostrarPlanificacion();
     }
     // v0.125: "retroceder" desde el resumen para cambiar lo elegido.
+    // v0.208: en Competición, para EN3, esto abre el panel grande en vez del
+    // selector de checkboxes (mismo criterio que un día vacío).
     function compDiaEditar(fechaISO) {
+      var p = leerPlan();
+      if (p.nivel === 'competicion' && _rutaEsN3()) {
+        rutaAbrirDia(fechaISO);
+        return;
+      }
       compDiaAbierta = fechaISO;
       compDiaEditando = true;
       mostrarPlanificacion();
