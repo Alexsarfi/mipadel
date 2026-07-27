@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.221.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.223.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,42 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.223.0 — Área de trabajo, sin repetir lo mismo tres veces (2026-08)
+    (sin migraciones nuevas)
+    · Fuera la franja «✓ Sesiones de esta semana» que iba debajo de la
+      cabecera del área: repetía lo que ya se ve marcado con su ✓ en la lista
+      de sesiones del bloque, y en la tarjeta de la semana del tablero. Del
+      contador solo queda el número, en la propia cabecera.
+      El recorrido queda limpio: apartado → bloque → sus sesiones debajo, con
+      miniatura y nombre, y las elegidas marcadas.
+    · Fuera también la etiqueta con el nombre del bloque que salía encima de
+      las sesiones: el bloque ya aparece resaltado en la lista de la
+      izquierda, así que solo repetía. Se queda «cambiar bloque» para volver.
+    · LOS APARTADOS VIENEN PLEGADOS al abrir el panel — se ve el catálogo
+      agrupado de un vistazo, que en el móvil era una parrafada. Solo se abre
+      solo el que tiene el bloque ya elegido. El plegado se reinicia cada vez
+      que se abre el panel, venga de un día o de una semana.
+    · La vista del día (la de pista, v0.221) no se toca: ahí las sesiones
+      elegidas sí salen con su miniatura, que es justo lo que hace falta.
+
+  v0.222.0 — Aspectos técnicos sale de Sesiones y baja a la barra (2026-08)
+    (sin migraciones nuevas)
+    · «Aspectos técnicos» deja de estar dentro de Sesiones: no es una sesión,
+      es la teoría de la técnica (el gesto y sus matices). Pasa a la BARRA DE
+      ABAJO, al lado de Partido, con icono de 🧠 cerebro y la etiqueta
+      «Técnica». Entra de un toque, sin pasar por el hub de niveles.
+    · La barra queda así:
+        · normal : Inicio · Plan · Partido · Técnica · Sesiones
+        · EN3    : Inicio · Partido · Técnica · Sesiones · Ejercicios
+      El EN2 no tiene acceso a Aspectos técnicos, así que su botón ni se pinta.
+    · El botón se ilumina cuando estás dentro (comparte pantallas con Sesiones,
+      así que lo decide el apartado que estés viendo, no la pantalla).
+    · Detalle técnico: NIV_HOME (el hub de Sesiones) pasa a salir de NIV_META
+      quitándole 'tecnica'. Los títulos y las cabeceras siguen leyendo de
+      NIV_META, así que la pantalla de la técnica conserva su nombre e icono.
+    · La barra aguanta los cinco botones: texto un punto más pequeño y
+      recortado con puntos suspensivos si la pantalla es muy estrecha.
 
   v0.221.0 — La clase del día, en dos columnas para la pista (2026-08)
     (sin migraciones nuevas)
@@ -5107,8 +5143,6 @@
     .ruta-area-n { margin-left:auto; flex-shrink:0; min-width:20px; text-align:center; font-size:10.5px; font-weight:800;
       color:#1e40af; background:#eff6ff; border-radius:999px; padding:1px 6px; }
     .ruta-area-row.sinses .ruta-area-n { color:var(--gris); background:var(--arena); }
-    .ruta-chip-sel { display:inline-block; font-size:12px; font-weight:700; color:#1e40af;
-      background:#eff6ff; padding:5px 11px; border-radius:999px; margin-bottom:10px; }
     .ruta-chip-x { margin-left:auto; font-family:inherit; font-size:11px; font-weight:700; color:var(--gris);
       background:none; border:1px solid var(--borde); border-radius:999px; padding:2px 9px; cursor:pointer; }
     .ruta-chip-x:hover { border-color:#0891b2; color:#0e7490; }
@@ -6515,10 +6549,14 @@
              background:var(--verde); box-shadow:0 -2px 16px rgba(14,27,60,0.20);
              padding:6px 4px; padding-bottom:calc(6px + env(safe-area-inset-bottom)); }
     .appnav.oculto{ display:none; }
-    .appnav-btn{ flex:1; background:none; border:none; color:rgba(255,255,255,0.6);
-                 font-family:'Outfit',sans-serif; font-size:10.5px; font-weight:600;
+    /* v0.222: con cinco botones (entra Técnica) el texto se aprieta un poco;
+       min-width:0 + ellipsis para que ninguno rompa la fila en pantallas
+       estrechas. */
+    .appnav-btn{ flex:1; min-width:0; background:none; border:none; color:rgba(255,255,255,0.6);
+                 font-family:'Outfit',sans-serif; font-size:10px; font-weight:600;
                  display:flex; flex-direction:column; align-items:center; gap:3px;
-                 cursor:pointer; padding:6px 2px; -webkit-tap-highlight-color:transparent; transition:color .15s; }
+                 cursor:pointer; padding:6px 1px; -webkit-tap-highlight-color:transparent; transition:color .15s; }
+    .appnav-btn > span:last-child{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .appnav-btn .d{ font-size:21px; line-height:1; }
     .appnav-btn.activo{ color:var(--dorado); }
     .appnav-btn:active{ transform:scale(0.94); }
@@ -6599,6 +6637,8 @@
     .menu-icono svg{ width:24px; height:24px; }
   </style>
 
+  <!-- Los botones de esta barra los reconstruye renderBottomNav() según el rol
+       (ver NAV_BTN_HTML / NAV_ORDEN_*). Lo de aquí es solo el arranque. -->
   <nav id="appnav" class="appnav">
     <button class="appnav-btn activo" data-nav="inicio"     onclick="irA('pantalla-inicio')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg></span><span>Inicio</span></button>
     <button class="appnav-btn"        data-nav="plan"       onclick="irA('pantalla-planificacion')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 3v3M16 3v3"/></svg></span><span>Plan</span></button>
@@ -6609,7 +6649,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.221.0';
+    var APP_VERSION = '0.223.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -14458,6 +14498,7 @@
       _rutaModalCurso = (curso && curso !== _rutaCurso()) ? curso : null;
       _rutaModalFechaFija = null;
       _rutaModalSemLibre = null;   // v0.217: viene del tablero, es una de las 40
+      _rutaApAbierto = {};         // v0.223: los apartados, plegados al entrar
       _rutaModalRender();
     }
     // v0.208 — Abre el mismo panel para un DÍA concreto de Mensual (en vez
@@ -14497,6 +14538,7 @@
       _rutaModalFechaFija = fechaISO;
       _rutaModalIdx = w ? w.idx : -1;
       _rutaModalArea = null; _rutaEligeDia = null;
+      _rutaApAbierto = {};   // v0.223: los apartados, plegados al entrar
       _rutaModalRender();
     }
     function rutaCerrarModal() {
@@ -14932,30 +14974,15 @@
       //    la otra, cada una en lo suyo.
       h += '<div class="ruta-modal-carro" id="ruta-carro-bloque">' + _rutaCarroBloqueHTML(idx, wd.carro) + '</div>';
 
-      // ── PARTE 2: el ÁREA DE TRABAJO. v0.220: su propia tarjeta, con
-      //    cabecera, las sesiones ya elegidas debajo y, dentro, el bloque y
-      //    sus sesiones.
+      // ── PARTE 2: el ÁREA DE TRABAJO. v0.220: su propia tarjeta.
+      //    v0.223: se retira la franja «✓ Sesiones de esta semana» que iba
+      //    aquí debajo: repetía lo que ya se ve marcado (✓) en la lista de
+      //    sesiones del bloque, y en la tarjeta de la semana del tablero.
       h += '<div class="ruta-modal-trabajo">';
-      h += '<div class="ruta-parte-hdr">🎯 <b>2 · Área de trabajo</b><span>segunda parte</span></div>';
-      // Las sesiones YA elegidas de esta semana, siempre a la vista (aunque la
-      // columna de sesiones se pliegue en pantallas medianas).
-      if (wd.sesiones.length) {
-        var todasSes = leerClases();
-        h += '<div class="ruta-ses-elegidas">';
-        h += '<div class="ruta-panel-paso">✓ Sesiones de esta semana<span class="ruta-area-n">' + wd.sesiones.length + '</span></div>';
-        wd.sesiones.forEach(function(id){
-          var s = todasSes.filter(function(c){ return c.id === id; })[0];
-          var th = s ? _rutaSesThumb(s) : null;
-          h += '<div class="ruta-ses-eleg">' +
-            '<span class="ruta-ses-thumb">' + (th ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="ruta-ses-noimg">🎾</span>') + '</span>' +
-            '<span class="ruta-ses-nom">' + _gEsc(s ? (s.nombre || s.fecha || ('Sesión ' + id)) : ('Sesión ' + id)) + '</span>' +
-            '<button type="button" onclick="rutaElegirSesion(' + idx + ',' + id + ')" aria-label="Quitar">✕</button></div>';
-        });
-        h += '</div>';
-      }
+      h += '<div class="ruta-parte-hdr">🎯 <b>2 · Área de trabajo</b><span>segunda parte</span>' +
+           (wd.sesiones.length ? '<span class="ruta-area-n">' + wd.sesiones.length + '</span>' : '') + '</div>';
       h += '<div class="ruta-trabajo-cols">';
       h += '<div class="ruta-modal-areas">';
-      h += '<div class="ruta-panel-paso">Bloque</div>';
       if (!areas.length) {
         h += '<div class="ruta-panel-nota">Aún no hay áreas en el catálogo de Competición.</div>';
       } else {
@@ -14966,7 +14993,10 @@
         // con un catálogo grande, la lista entera era una parrafada.
         Object.keys(porApartado).forEach(function(ap, iAp){
           var tieneSel = areaSel && porApartado[ap].some(function(a){ return a.id === areaSel; });
-          var abierto = (_rutaApAbierto[iAp] !== undefined) ? _rutaApAbierto[iAp] : (!areaSel || tieneSel);
+          // v0.223: al entrar, TODOS los apartados vienen plegados — así se ve
+          // el catálogo agrupado de un vistazo, sobre todo en el móvil. Solo
+          // se abre solo el que tiene el bloque ya elegido.
+          var abierto = (_rutaApAbierto[iAp] !== undefined) ? _rutaApAbierto[iAp] : !!tieneSel;
           h += '<button type="button" class="ruta-area-grupo' + (abierto ? ' abierto' : '') + '" onclick="rutaApToggle(' + iAp + ',' + abierto + ')">' +
                '<span class="chev">›</span><span class="ruta-area-t">' + _gEsc(ap) + '</span>' +
                '<span class="ruta-area-n">' + (tieneSel ? '●' : porApartado[ap].length) + '</span></button>';
@@ -15020,9 +15050,10 @@
              '<span class="ruta-panel-nota">Te mostraré solo sus sesiones.</span></div>';
       } else {
         var lista = sesDe[areaSel] || [];
+        // v0.223: fuera la etiqueta con el nombre del bloque — ya se ve
+        // resaltado en la lista de la izquierda; aquí solo repetía.
         h += '<div class="ruta-panel-paso">Sesiones ' +
           '<button type="button" class="ruta-chip-x" onclick="rutaCambiarArea()">cambiar bloque</button></div>';
-        h += '<div class="ruta-chip-sel">' + _gEsc(areaN[areaSel] || 'Área') + '</div>';
         if (!lista.length) {
           // v0.204: si el área no tiene sesiones, NO se cae a toda la
           // biblioteca (era ruido). Se dice claramente que no hay.
@@ -16449,6 +16480,8 @@
       ejercicios: ['pantalla-categorias','pantalla-ejercicios','pantalla-nuevo-ejercicio','pantalla-nueva-categoria'],
       partido:    ['pantalla-partido','pantalla-marcador','pantalla-actas','pantalla-stats-jugador'],
       clases:     ['pantalla-clases-niveles','pantalla-clases','pantalla-clases-grupo']
+      // v0.222: 'tecnica' comparte pantallas con 'clases'; cuál de los dos se
+      // ilumina lo decide nivelClasesSel, en updateBottomNav.
     };
     // ── Botones de la barra (por clave) y orden según rol (v0.69) ──
     // La barra es dinámica: para el rol nivel3 (EN3) se sustituye "Plan"
@@ -16459,14 +16492,23 @@
       plan:       '<button class="appnav-btn" data-nav="plan" onclick="irA(\'pantalla-planificacion\')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 3v3M16 3v3"/></svg></span><span>Plan</span></button>',
       partido:    '<button class="appnav-btn" data-nav="partido" onclick="irA(\'pantalla-partido\')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M4.5 6.5c3.5 2.5 3.5 8.5 0 11M19.5 6.5c-3.5 2.5-3.5 8.5 0 11"/></svg></span><span>Partido</span></button>',
       clases:     '<button class="appnav-btn" data-nav="clases" onclick="irA(\'pantalla-clases-niveles\')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><path d="M16.5 5.3a2.8 2.8 0 0 1 0 5.4M18 14.4c2 .5 3.5 2.2 3.5 5.1"/></svg></span><span>Sesiones</span></button>',
-      ejercicios: '<button class="appnav-btn" data-nav="ejercicios" onclick="irA(\'pantalla-ejercicios\')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none"/></svg></span><span>Ejercicios</span></button>'
+      ejercicios: '<button class="appnav-btn" data-nav="ejercicios" onclick="irA(\'pantalla-ejercicios\')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none"/></svg></span><span>Ejercicios</span></button>',
+      // v0.222 — Aspectos técnicos, con icono de cerebro: es el saber técnico
+      // (el gesto y sus matices), no una sesión.
+      tecnica:    '<button class="appnav-btn" data-nav="tecnica" onclick="irClasesNivel(\'tecnica\')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4a3 3 0 0 0-5.7-1.2A2.8 2.8 0 0 0 4 7a2.9 2.9 0 0 0 .6 1.8A3 3 0 0 0 5 14.3V15a3 3 0 0 0 4.5 2.6A2.6 2.6 0 0 0 12 20Z"/><path d="M12 5.4a3 3 0 0 1 5.7-1.2A2.8 2.8 0 0 1 20 7a2.9 2.9 0 0 1-.6 1.8A3 3 0 0 1 19 14.3V15a3 3 0 0 1-4.5 2.6A2.6 2.6 0 0 1 12 20Z"/><path d="M12 5.4V20"/></svg></span><span>Técnica</span></button>'
     };
-    var NAV_ORDEN_DEFECTO = ['inicio','plan','partido','clases'];
-    var NAV_ORDEN_NIVEL3  = ['inicio','partido','clases','ejercicios'];
+    // v0.222: Técnica entra en la barra, justo al lado de Partido.
+    var NAV_ORDEN_DEFECTO = ['inicio','plan','partido','tecnica','clases'];
+    var NAV_ORDEN_NIVEL3  = ['inicio','partido','tecnica','clases','ejercicios'];
     function _navOrden(){
       var esN3 = false;
       try { esN3 = !!(_sbGrupo && _sbGrupo.rol === 'nivel3'); } catch(e){}
-      return esN3 ? NAV_ORDEN_NIVEL3 : NAV_ORDEN_DEFECTO;
+      var orden = esN3 ? NAV_ORDEN_NIVEL3 : NAV_ORDEN_DEFECTO;
+      // El EN2 no tiene acceso a Aspectos técnicos: su botón no se pinta.
+      return orden.filter(function(k){
+        if (k !== 'tecnica') return true;
+        try { return nivelPermitido('tecnica'); } catch(e){ return true; }
+      });
     }
     var _navOrdenActual = null;
     function renderBottomNav(force){
@@ -16488,6 +16530,11 @@
       nav.classList.toggle('oculto', !!ocultar);
       var grupo = null;
       for (var k in NAV_GROUPS){ if (NAV_GROUPS[k].indexOf(id) >= 0){ grupo = k; break; } }
+      // v0.222: dentro de las pantallas de Sesiones, si lo que se está viendo
+      // es Aspectos técnicos, el que se ilumina es su botón.
+      if (grupo === 'clases') {
+        try { if (nivelClasesSel === 'tecnica') grupo = 'tecnica'; } catch(e){}
+      }
       nav.querySelectorAll('.appnav-btn').forEach(function(b){
         b.classList.toggle('activo', b.getAttribute('data-nav') === grupo);
       });
@@ -17792,12 +17839,16 @@
       '</div>';
     }
 
-    // Lista de niveles para Inicio (los 3 + equipo + individual + técnica)
-    var NIV_HOME = NIVELES_CLASES.concat([
+    // Todos los apartados con su icono y etiqueta (para títulos y cabeceras)
+    var NIV_META = NIVELES_CLASES.concat([
       { key:'equipo',     icono:'🤝', label:'Equipo' },
       { key:'individual', icono:'👤', label:'Individual' },
-      { key:'tecnica',    icono:'🎯', label:'Aspectos técnicos' }
+      { key:'tecnica',    icono:'🧠', label:'Aspectos técnicos' }
     ]);
+    // v0.222 — «Aspectos técnicos» sale del hub de Sesiones: no es una sesión,
+    // es la teoría de la técnica (el gesto y sus matices). Pasa a la barra de
+    // abajo, al lado de Partido. Aquí quedan solo los apartados de sesiones.
+    var NIV_HOME = NIV_META.filter(function(n){ return n.key !== 'tecnica'; });
 
     function _clasesPorNivel() {
       var mapEj = _ejsById();
@@ -17960,7 +18011,7 @@
 
       var porNivel = _clasesPorNivel();
       var sesiones = porNivel[nivelClasesSel] || [];
-      var nivMeta  = NIV_HOME.filter(function(n){ return n.key === nivelClasesSel; })[0] || { label:'Sesiones', icono:'🎾' };
+      var nivMeta  = NIV_META.filter(function(n){ return n.key === nivelClasesSel; })[0] || { label:'Sesiones', icono:'🎾' };
       if (tituloEl) tituloEl.textContent = nivMeta.icono + ' ' + nivMeta.label;
 
       // v0.194: Técnica, para EN3, es el módulo de GESTO TÉCNICO por golpe
@@ -18029,7 +18080,7 @@
       var grupos = esComp ? INTENCION_GRUPOS : GOLPE_GRUPOS;
       var clasificar = esComp ? intencionDeSesion : golpeDeSesion;
       var zg = grupos.filter(function(g){ return g.key === grupoClasesSel; })[0] || { label:'', icono:'🎾' };
-      var nivMeta = NIV_HOME.filter(function(n){ return n.key === nivelClasesSel; })[0] || { label:'' };
+      var nivMeta = NIV_META.filter(function(n){ return n.key === nivelClasesSel; })[0] || { label:'' };
 
       var ses = (_clasesPorNivel()[nivelClasesSel] || []).filter(function(c){
         return clasificar(c, mapEj) === grupoClasesSel;
