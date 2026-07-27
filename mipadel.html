@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.210.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.211.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,41 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.211.0 — Competiciones en Inicio · abrir y copiar cursos (2026-08)
+    (sin migraciones nuevas: usa las de v0.210)
+    · El 🏆 Calendario de competiciones se muda a la pantalla de INICIO,
+      debajo de los botones FAP / FEP / FIP. Sale de Planificación →
+      Competición: es un dato de consulta rápida, no parte del trabajo
+      semanal. Se abre desde ahí y al cerrarlo se refresca la pantalla en la
+      que estés (Inicio o Planificación), para que el resumen del botón
+      ("próxima: …") quede al día.
+    · El EN1 ve el calendario pero no lo edita (sin ＋ Nueva, sin ✏ Editar y
+      sin apuntar tocando un día), igual que tiene el plan en solo lectura.
+      El monitor local (PIN) no ve el apartado Competición, así que tampoco
+      lo ve.
+    · ARCHIVO — cada curso trae dos acciones nuevas, dentro de su bloque para
+      no meter ruido arriba:
+      · «✏️ Abrir este curso para editarlo»: sus meses cerrados suben al
+        tablero de trimestres y se editan como los de ahora. Mientras está
+        abierto sale un aviso con el botón de volver al curso actual, y ese
+        curso no se repite abajo en el archivo.
+      · «📋 Copiar esta planificación»: panel plegado en el mismo sitio.
+        Se elige el curso de destino (el actual, los dos siguientes o
+        cualquiera con datos) y se copian el ÁREA y la SESIÓN de cada semana
+        emparejando por número: la 1 con la 1, la 2 con la 2… hasta la 40.
+        Cada área cae en el mismo día de la semana que tenía; si ese día no
+        hay clase en el curso de destino, va al primer día con clase de esa
+        semana. NO se pisa nada: solo entran las semanas del destino que
+        estén vacías, y al terminar se dice cuántas se copiaron, cuántas ya
+        tenían algo y cuántas se quedaron sin día de clase.
+        Las áreas del origen se leen de compDias en CUALQUIER día de la
+        semana, no solo en los que hoy tienen clase configurada: al copiar de
+        un curso viejo sus franjas pueden estar ya cerradas o borradas y lo
+        planificado sigue ahí.
+    · Fix: en el archivo conviven semanas de varios cursos y tocar una abría
+      la semana con ese mismo número del curso que estuvieras mirando arriba
+      (la equivocada). Ahora cada tarjeta lleva su curso — rutaAbrir(idx, curso).
 
   v0.210.0 — Círculos del mes de vuelta, alta de franjas y competiciones (2026-08)
     ⚠️ REQUIERE DOS MIGRACIONES antes de usar esta versión:
@@ -4880,6 +4915,27 @@
       .tor-cal-d { font-size:13px; }
       .tor-cal { gap:5px; }
     }
+    /* ── v0.211 — Curso cerrado abierto para editar + copia entre cursos ── */
+    .ruta-aviso-cerrado { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:12px;
+      padding:9px 12px; border:1.5px solid #fcd34d; border-radius:12px; background:#fffbeb;
+      font-size:12px; line-height:1.45; color:#92400e; }
+    .ruta-aviso-cerrado span { flex:1; min-width:180px; }
+    .ruta-aviso-cerrado button { font-family:inherit; font-size:11.5px; font-weight:700; color:#92400e;
+      background:var(--blanco); border:1.5px solid #fcd34d; border-radius:999px; padding:5px 12px; cursor:pointer; }
+    .ruta-aviso-cerrado button:hover { background:#fde68a; }
+    .ruta-arch-acc { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+    .ruta-arch-acc button { flex:1; min-width:150px; font-family:inherit; font-size:11.5px; font-weight:700;
+      color:var(--texto); background:var(--blanco); border:1.5px solid var(--borde); border-radius:10px;
+      padding:8px 10px; cursor:pointer; }
+    .ruta-arch-acc button:hover { border-color:#0891b2; color:#0e7490; }
+    .ruta-arch-acc button.on { border-color:#0891b2; background:#ecfeff; color:#0e7490; }
+    .ruta-copia { border:1.5px solid #cffafe; border-radius:12px; background:#f0fdff; padding:11px; margin-bottom:12px; }
+    .ruta-copia-tit { font-size:12.5px; font-weight:800; color:#0e7490; margin-bottom:9px; }
+    .ruta-copia-fila { display:flex; flex-direction:column; gap:5px; margin-bottom:9px; }
+    .ruta-copia-nota { font-size:11px; line-height:1.55; color:var(--gris); margin-bottom:10px; }
+    .ruta-copia-btns { display:flex; gap:7px; }
+    .ruta-copia-res { margin-top:9px; padding-top:8px; border-top:1px dashed #a5f3fc;
+      font-size:11.5px; line-height:1.5; color:#0e7490; }
     .comp-resumen-videos { display:flex; flex-wrap:nowrap; gap:6px; align-items:flex-start; }
     .comp-resumen-videos .ejcard { flex:1 1 0; min-width:0; }
     .comp-resumen-videos .ejcard-titulo { font-size:11px; }
@@ -5204,6 +5260,10 @@
             </div>
           </div>
         </div>
+        <!-- v0.211: calendario de competiciones del club, justo debajo de las
+             tres federaciones (antes vivía dentro de Planificación →
+             Competición). Lo rellena actualizarInicio() con _torBotonHTML(). -->
+        <div id="home-torneos" style="margin-top:10px;"></div>
       </div>
 
     </div>
@@ -6126,7 +6186,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.210.0';
+    var APP_VERSION = '0.211.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -13644,6 +13704,98 @@
     // que está al final de la página.
     var _rutaArchAbierto = {};   // { 'curso': true, 'curso|bloque': true }
     function rutaArchToggle(k) { _rutaArchAbierto[k] = !_rutaArchAbierto[k]; }
+    // ── v0.211 — Trabajar sobre un curso YA CERRADO ──
+    // Desde el archivo se puede "abrir" un curso pasado: sus meses cerrados
+    // suben al tablero de trimestres y se editan igual que los de ahora (antes
+    // solo se veían dentro del archivo, y tocar una semana ahí abría la semana
+    // equivocada, la del curso que estuvieras mirando arriba). Mientras hay un
+    // curso abierto sale un aviso con el botón de volver, y ese curso no se
+    // repite abajo en el archivo.
+    var _rutaCursoAbierto = null;
+    function rutaAbrirCurso(curso) {
+      _rutaCursoSel = curso; _rutaCursoAbierto = curso;
+      _rutaTri = null; _rutaCopiaDe = null; _rutaCopiaMsg = '';
+      rutaCerrarModal();
+      mostrarPlanificacion();
+      try { window.scrollTo(0, 0); } catch (e) {}
+    }
+    function rutaCerrarCursoAbierto() {
+      _rutaCursoAbierto = null; _rutaCursoSel = null; _rutaTri = null;
+      rutaCerrarModal();
+      mostrarPlanificacion();
+    }
+    // ── v0.211 — Copiar la planificación de un curso a otro ──
+    var _rutaCopiaDe  = null;   // curso ORIGEN cuyo panel de copia está abierto
+    var _rutaCopiaMsg = '';     // resultado de la última copia, para enseñarlo
+    function rutaCopiaAbrir(curso) { _rutaCopiaDe = curso; _rutaCopiaMsg = ''; mostrarPlanificacion(); }
+    function rutaCopiaCerrar() { _rutaCopiaDe = null; _rutaCopiaMsg = ''; mostrarPlanificacion(); }
+    function rutaCopiaEjecutar(cOrig) {
+      var sel = document.getElementById('ruta-copia-dest');
+      var cDest = sel ? sel.value : '';
+      if (!cDest) return;
+      if (cDest === cOrig) { alert('El curso de origen y el de destino son el mismo.'); return; }
+      var r = _rutaCopiarCurso(cOrig, cDest);
+      var partes = ['✓ <b>' + r.copiadas + '</b> semana' + (r.copiadas !== 1 ? 's' : '') + ' copiada' + (r.copiadas !== 1 ? 's' : '') + ' al curso ' + cDest];
+      if (r.ocupadas) partes.push(r.ocupadas + ' ya tenía' + (r.ocupadas !== 1 ? 'n' : '') + ' algo puesto (no se ha tocado)');
+      if (r.sinDia)   partes.push(r.sinDia + ' sin ningún día de clase esa semana');
+      if (!r.copiadas && !r.ocupadas && !r.sinDia) partes = ['El curso ' + cOrig + ' no tiene nada planificado que copiar.'];
+      _rutaCopiaMsg = partes.join(' · ');
+      mostrarPlanificacion();
+    }
+    // Marcas del nivel en CUALQUIER día de una semana, no solo en los que hoy
+    // tienen clase configurada: al copiar de un curso viejo sus franjas pueden
+    // estar ya cerradas o borradas, y aun así lo planificado sigue en compDias.
+    function _rutaMarcasSemana(p, w, idsNivel) {
+      var out = [];
+      for (var i = 0; i < 7; i++) {
+        var d = new Date(w.lun); d.setDate(w.lun.getDate() + i);
+        var fISO = dateToISOLocal(d), dow = d.getDay();
+        ((p.compDias && p.compDias[fISO]) || []).forEach(function(id){
+          if (idsNivel[id]) out.push({ areaId:id, fecha:fISO, dow:dow });
+        });
+      }
+      return out;
+    }
+    // Copia área + sesión de cada semana emparejando por NÚMERO de semana
+    // (la 1 del origen con la 1 del destino, y así las 40). No pisa nada: solo
+    // entra en las semanas del destino que estén vacías. Cada área intenta caer
+    // en el mismo día de la semana que tenía; si ese día no hay clase en el
+    // curso destino, va al primer día con clase de esa semana.
+    function _rutaCopiarCurso(cOrig, cDest) {
+      var p = leerPlan();
+      var idsNivel = _compIdsNivel(p);
+      var wO = _rutaSemanas(cOrig), wD = _rutaSemanas(cDest);
+      var res = { copiadas:0, ocupadas:0, sinDia:0, vacias:0 };
+      if (!p.compDias) p.compDias = {};
+      if (!p.rutaSes)  p.rutaSes  = {};
+      var n = Math.min(wO.length, wD.length);
+      for (var i = 0; i < n; i++) {
+        // Áreas distintas del origen, guardando el día de la semana que tenían
+        var areasO = [], vistos = {};
+        _rutaMarcasSemana(p, wO[i], idsNivel).forEach(function(x){
+          if (vistos[x.areaId]) return;
+          vistos[x.areaId] = true;
+          areasO.push({ id:x.areaId, dow:x.dow });
+        });
+        var sesO = (p.rutaSes[wO[i].lunISO] || '');
+        if (!areasO.length && !sesO) { res.vacias++; continue; }
+        // Destino ocupado (marcas en cualquier día o sesión) → no se toca
+        if (_rutaMarcasSemana(p, wD[i], idsNivel).length || p.rutaSes[wD[i].lunISO]) { res.ocupadas++; continue; }
+        var dias = _rutaDiasRealesDeSemana(wD[i]);
+        if (areasO.length && !dias.length) { res.sinDia++; continue; }
+        areasO.forEach(function(a, k){
+          var mismo = dias.filter(function(d){ return d.dow === a.dow; })[0];
+          var destino = mismo || dias[k % dias.length];
+          if (!destino) return;
+          var arr = (p.compDias[destino.fecha] || []).slice();
+          if (arr.indexOf(a.id) < 0) { arr.push(a.id); p.compDias[destino.fecha] = arr; }
+        });
+        if (sesO) p.rutaSes[wD[i].lunISO] = sesO;
+        res.copiadas++;
+      }
+      _planGuardar(p);
+      return res;
+    }
     // v0.203: un mes se archiva cuando su fecha YA PASÓ (mes natural anterior
     // al de hoy). Nada de estados manuales: arriba lo que viene, abajo lo dado.
     function _rutaMesPasado(y, m) {
@@ -13811,10 +13963,15 @@
     var _rutaModalCurso     = null;   // curso del día/semana que se está editando; null = el de _rutaCurso()
     var _rutaModalFechaFija = null;   // fecha exacta si se abrió desde Mensual; null si se abrió desde Semanas
     function _rutaModalCursoActual() { return _rutaModalCurso || _rutaCurso(); }
-    function rutaAbrir(idx) {
+    // v0.211: curso opcional. En el archivo se ven semanas de OTROS cursos
+    // (además del que se mira arriba), así que la tarjeta dice de qué curso es
+    // su semana; sin esto se abría la semana con el mismo número del curso
+    // equivocado.
+    function rutaAbrir(idx, curso) {
       _rutaMigrarLocal();   // v0.207: por si aún queda algo del modelo viejo sin migrar
       _rutaModalIdx = idx; _rutaModalArea = null; _rutaEligeDia = null;
-      _rutaModalCurso = null; _rutaModalFechaFija = null;
+      _rutaModalCurso = (curso && curso !== _rutaCurso()) ? curso : null;
+      _rutaModalFechaFija = null;
       _rutaModalRender();
     }
     // v0.208 — Abre el mismo panel para un DÍA concreto de Mensual (en vez
@@ -14117,7 +14274,9 @@
         vistos[x.areaId] = true;
         areasChips += '<span class="ruta-chip">' + _gEsc(areaN[x.areaId] || 'Área') + '</span>';
       });
-      return '<div class="ruta-wk ' + estado + '" onclick="rutaAbrir(' + w.idx + ')">' +
+      // v0.211: la tarjeta lleva su curso, porque en el archivo conviven
+      // semanas de varios cursos y el número de semana solo no basta.
+      return '<div class="ruta-wk ' + estado + '" onclick="rutaAbrir(' + w.idx + ',\'' + cursoDeFecha(w.lunISO) + '\')">' +
         '<div class="ruta-wk-top">' + punto +
           '<span class="ruta-wk-n">S' + (w.idx+1) + '</span>' +
           '<span class="ruta-wk-rango">' + rango + '</span>' +
@@ -14168,6 +14327,12 @@
         '<div class="ruta-prog-txt"><b>' + hechas + '</b> / 40 semanas trabajadas · sep–jun</div>' +
         '<div class="ruta-prog-bar"><span style="width:' + Math.round(hechas/40*100) + '%;"></span></div>' +
       '</div>';
+      // v0.211: aviso cuando se está trabajando sobre un curso ya cerrado
+      // (abierto a mano desde el archivo), con la salida a mano.
+      var abierto = (_rutaCursoAbierto === curso);
+      if (abierto) h += '<div class="ruta-aviso-cerrado">' +
+        '<span>📂 Estás editando el curso <b>' + curso + '</b>, que ya está cerrado. Se ven todos sus meses, también los pasados.</span>' +
+        '<button type="button" onclick="rutaCerrarCursoAbierto()">Volver al curso actual</button></div>';
 
       // ── Fila de trimestres, uno al lado de otro ──
       var triSel = _rutaTriActivo();
@@ -14192,7 +14357,9 @@
       var blSel = triSel ? (_RUTA_BLOQUES.filter(function(b){ return b.key === triSel; })[0] || _RUTA_BLOQUES[0]) : null;
       if (blSel) {
         var mesesSel = _rutaMeses(sems.filter(function(w){ return blSel.meses.indexOf(w.mes) >= 0; }));
-        var activos  = mesesSel.filter(function(m){ return !_rutaMesPasado(m.y, m.m); });
+        // v0.211: con el curso abierto a mano no se archiva nada — se ven sus
+        // 10 meses para poder repasar y editar lo ya dado.
+        var activos  = abierto ? mesesSel : mesesSel.filter(function(m){ return !_rutaMesPasado(m.y, m.m); });
         if (!activos.length) {
           h += '<div class="ruta-modal-vacio" style="margin-top:12px;">Este bloque ya está cerrado — lo tienes abajo, en 📦 Meses cerrados.</div>';
         } else {
@@ -14213,10 +14380,54 @@
     // tenga algo planificado (no solo el que se está mirando).
     // v0.207: todo sale del mismo `p` (compDias + rutaSes), ya no hay un
     // blob distinto por curso que leer.
+    // v0.211: cursos que se pueden elegir como DESTINO de una copia — el
+    // actual, los dos siguientes, el siguiente al de origen y cualquiera que
+    // ya tenga datos. El de origen no, claro.
+    function _rutaCursosDestino(cOrig) {
+      var set = {}, act = _cursoActual();
+      [act, _rutaCursoDesplaza(act, 1), _rutaCursoDesplaza(act, 2), _rutaCursoDesplaza(cOrig, 1)]
+        .forEach(function(c){ set[c] = true; });
+      _rutaCursosConDatos(leerPlan()).forEach(function(c){ set[c] = true; });
+      delete set[cOrig];
+      return Object.keys(set).sort();
+    }
+    // v0.211: acciones de un curso dentro del archivo — abrirlo para editarlo
+    // y copiar su planificación a otro curso (panel plegado aquí dentro, para
+    // no meter ruido en el tablero de arriba).
+    function _rutaArchAccionesHTML(curso) {
+      var h = '<div class="ruta-arch-acc">';
+      h += '<button type="button" onclick="rutaAbrirCurso(\'' + curso + '\')">✏️ Abrir este curso para editarlo</button>';
+      h += '<button type="button"' + (_rutaCopiaDe === curso ? ' class="on"' : '') +
+           ' onclick="' + (_rutaCopiaDe === curso ? 'rutaCopiaCerrar()' : 'rutaCopiaAbrir(\'' + curso + '\')') + '">' +
+           '📋 Copiar esta planificación</button>';
+      h += '</div>';
+      if (_rutaCopiaDe === curso) {
+        var dest = _rutaCursosDestino(curso);
+        h += '<div class="ruta-copia">';
+        h += '<div class="ruta-copia-tit">📋 Copiar la planificación del curso ' + curso + '</div>';
+        h += '<div class="ruta-copia-fila"><label class="form-label" for="ruta-copia-dest">Copiar al curso</label>' +
+             '<select class="form-select" id="ruta-copia-dest">';
+        dest.forEach(function(c){ h += '<option value="' + c + '">' + c + '</option>'; });
+        h += '</select></div>';
+        h += '<div class="ruta-copia-nota">Se copian el <b>área</b> y la <b>sesión</b> de cada semana, emparejando por número: la semana 1 con la 1, la 2 con la 2… hasta la 40. ' +
+             'Cada área cae en el mismo día de la semana que tenía; si ese día no hay clase en el curso de destino, va al primer día con clase. ' +
+             '<b>No se pisa nada</b>: solo se rellenan las semanas del destino que estén vacías.</div>';
+        h += '<div class="ruta-copia-btns">' +
+             '<button class="btn btn-verde btn-sm" onclick="rutaCopiaEjecutar(\'' + curso + '\')">Copiar</button>' +
+             '<button class="btn btn-sec btn-sm" onclick="rutaCopiaCerrar()">Cancelar</button></div>';
+        if (_rutaCopiaMsg) h += '<div class="ruta-copia-res">' + _rutaCopiaMsg + '</div>';
+        h += '</div>';
+      }
+      return h;
+    }
+
     function _rutaArchivoHTML(p, idsNivel, areaN, sesN) {
       // Cursos candidatos: los que tienen datos + el actual + el que se mira.
       var cursos = _rutaCursosConDatos(p);
       [_cursoActual(), _rutaCurso()].forEach(function(c){ if (cursos.indexOf(c) < 0) cursos.push(c); });
+      // v0.211: el curso abierto a mano está arriba, en el tablero — no se
+      // repite aquí abajo.
+      if (_rutaCursoAbierto) cursos = cursos.filter(function(c){ return c !== _rutaCursoAbierto; });
       // Cada curso, con solo sus meses ya cerrados; se descartan los vacíos.
       var fichas = [];
       cursos.forEach(function(c){
@@ -14244,6 +14455,8 @@
           '<span class="plan-etapa-prog">' + hechasC + '/' + totalC + '</span>' +
           '<span class="chev">›</span></div>';
         h += '<div class="plan-otros-body">';
+        // v0.211: acciones del curso (abrirlo / copiar su planificación)
+        h += _rutaArchAccionesHTML(f.curso);
         // Dentro del curso: Preparación / 1er / 2º / 3er trimestre
         _RUTA_BLOQUES.forEach(function(bl){
           var mesesB = f.meses.filter(function(m){ return bl.meses.indexOf(m.m) >= 0; });
@@ -14599,8 +14812,17 @@
       var ov = document.getElementById('torneo-ov');
       if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; }
       _torForm = null; _torVer = null;
-      mostrarPlanificacion();   // refresca el subtítulo del botón
+      // v0.211: el botón vive en Inicio, pero se puede abrir desde cualquier
+      // sitio: se refresca la pantalla que esté activa para que su subtítulo
+      // ("próxima: …") quede al día.
+      var ini = document.getElementById('pantalla-inicio');
+      if (ini && ini.classList.contains('activa')) { actualizarInicio(); return; }
+      var pl = document.getElementById('pantalla-planificacion');
+      if (pl && pl.classList.contains('activa')) mostrarPlanificacion();
     }
+    // v0.211: el EN1 tiene el plan en solo lectura, así que aquí también:
+    // ve el calendario del club pero no lo edita.
+    function _torSoloLectura() { try { return esEN1Cuenta(); } catch (e) { return false; } }
     function torCursoNav(delta) {
       _torCursoSel = _rutaCursoDesplaza(_torCurso(), delta);
       _torMesSel = null; _torForm = null; _torVer = null;
@@ -14716,7 +14938,8 @@
         if (t.enlace && /^https?:\/\//i.test(t.enlace))
           h += '<a class="tor-enlace" href="' + _gEsc(t.enlace) + '" target="_blank" rel="noopener">🔗 Abrir el enlace</a>';
         else if (t.enlace) h += '<div class="tor-dato"><b>Enlace</b> ' + _gEsc(t.enlace) + '</div>';
-        h += '<button class="btn btn-sec btn-sm" style="margin-top:8px;" onclick="torEditar(\'' + t.id + '\')">✏ Editar</button>';
+        if (!_torSoloLectura())
+          h += '<button class="btn btn-sec btn-sm" style="margin-top:8px;" onclick="torEditar(\'' + t.id + '\')">✏ Editar</button>';
         h += '</div>';
       }
       h += '</div>';
@@ -14732,6 +14955,7 @@
       var delCurso = _torDelCurso(curso);
       var delMes = _torDelMes(curso, mes.y, mes.m);
       var hoy = hoyLocal();
+      var soloLect = _torSoloLectura();   // v0.211: EN1 mira pero no toca
 
       var h = '<div class="ruta-modal" onclick="event.stopPropagation()">';
       h += '<div class="ruta-modal-hdr">' +
@@ -14770,23 +14994,25 @@
         var dots = '';
         enDia.slice(0, 3).forEach(function(t){ dots += '<span class="tor-dot" style="background:' + _torTipo(t.tipo).col + ';"></span>'; });
         var cls = 'tor-cal-d' + (enDia.length ? ' con' : '') + (fISO === hoy ? ' hoy' : '');
-        var acc = enDia.length ? 'torVerFicha(\'' + enDia[0].id + '\')' : 'torNueva(\'' + fISO + '\')';
+        var acc = enDia.length ? 'torVerFicha(\'' + enDia[0].id + '\')'
+                : (soloLect ? '' : 'torNueva(\'' + fISO + '\')');
         var tit = enDia.length
           ? enDia.map(function(t){ return (t.nombre || _torTipo(t.tipo).label); }).join(' · ')
-          : 'Apuntar una competición este día';
-        h += '<div class="' + cls + '" onclick="' + acc + '" title="' + _gEsc(tit) + '">' +
+          : (soloLect ? '' : 'Apuntar una competición este día');
+        h += '<div class="' + cls + '"' + (acc ? ' onclick="' + acc + '"' : '') + ' title="' + _gEsc(tit) + '">' +
              '<span class="tor-cal-n">' + d + '</span>' +
              (dots ? '<span class="tor-cal-dots">' + dots + '</span>' : '') + '</div>';
       }
       h += '</div>';
 
       // Formulario o lista del mes
-      if (_torForm) {
+      if (_torForm && !soloLect) {
         h += _torFormHTML();
       } else {
-        h += '<button type="button" class="tor-add" onclick="torNueva(\'' + (mes.y + '-' + ('0' + (mes.m+1)).slice(-2) + '-01') + '\')">＋ Nueva competición</button>';
+        if (!soloLect) h += '<button type="button" class="tor-add" onclick="torNueva(\'' + (mes.y + '-' + ('0' + (mes.m+1)).slice(-2) + '-01') + '\')">＋ Nueva competición</button>';
         if (!delMes.length) {
-          h += '<div class="ruta-modal-vacio">Este mes no tiene competiciones.<br>Toca un día del calendario para apuntar una.</div>';
+          h += '<div class="ruta-modal-vacio">Este mes no tiene competiciones.' +
+               (soloLect ? '' : '<br>Toca un día del calendario para apuntar una.') + '</div>';
         } else {
           h += '<div class="tor-lista">';
           delMes.forEach(function(t){ h += _torCardHTML(t); });
@@ -15032,10 +15258,9 @@
       }
 
       if (esComp) {
-        // v0.210: calendario de competiciones del club (torneos, campeonatos,
-        // ligas…), arriba de todo. Es el marco al que sirve la planificación,
-        // así que se ve antes que el trabajo del día a día.
-        if (!edit) h += _torBotonHTML();
+        // v0.211: el calendario de competiciones se ha mudado a la pantalla de
+        // Inicio, debajo de FAP/FEP/FIP (en v0.210 estaba aquí arriba). Es un
+        // dato de consulta rápida, no parte del trabajo semanal.
         if (_rutaEsN3()) {
           // v0.209: para EN3, Mensual desaparece del todo — Semanas pasa a
           // ser la ÚNICA vista de Competición (sin interruptor, aparece
@@ -15349,6 +15574,12 @@
       }
       var pie = document.getElementById('inicio-pie');
       if (pie) pie.style.display = mon ? 'none' : 'flex';
+
+      // v0.211: calendario de competiciones, debajo de FAP/FEP/FIP. El
+      // monitor LOCAL (PIN) no ve el apartado Competición, así que tampoco
+      // esto; el EN1 sí lo ve (en modo consulta, ver _torRender).
+      var homeTor = document.getElementById('home-torneos');
+      if (homeTor) homeTor.innerHTML = mon && !monCuenta ? '' : _torBotonHTML();
 
       // Aviso si la migración eliminó fotos en base64
       var avisoImgs = localStorage.getItem('padel-aviso-imgs');
