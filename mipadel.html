@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.215.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.216.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,32 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.216.0 — EL CARRO: la primera parte de la clase (2026-08)
+    ⚠️ REQUIERE MIGRACIÓN: migraciones/migracion_carro.sql
+    · Una clase tiene dos partes y hasta ahora el panel solo guardaba una:
+        · CARRO → el entrenador lanza bolas y se repite un ejercicio. Son
+          EJERCICIOS, y suelen ser varios encadenados.
+        · ÁREA DE TRABAJO → combinaciones, minijuegos, táctica, minipartidos…
+          eso ya lo resolvía la SESIÓN.
+      Al planificar una semana o un día, debajo de Área y Sesión aparece el
+      bloque 🛒 Carro con los ejercicios de esa primera parte.
+    · Se eligen del catálogo ENTERO, con buscador por nombre, golpe, zona o
+      intención: el ejercicio de carro no tiene por qué ser del área que se
+      trabaja después, así que no se filtra por ella.
+    · Se marcan y desmarcan con un ✓ y se pueden meter los que hagan falta.
+      Los elegidos salen arriba como fichas con su ✕, y hay un «Vaciar el
+      carro» para empezar de cero.
+    · Al marcar solo se repinta lo que cambia (la fila tocada, las fichas de
+      arriba y el contador): no se rehace el bloque, así que no se pierde lo
+      escrito en el buscador ni salta el scroll marcando uno detrás de otro.
+    · El carro es de la SEMANA, igual que la sesión (p.rutaCarro, indexado por
+      el lunes). Las tarjetas de semana lo enseñan con «🛒 N ejercicios», y una
+      semana con solo el carro puesto ya cuenta como planificada.
+    · Sincronización: viaja en plan_dias_usuario.ruta_carro, junto a comp_dias
+      y ruta_ses (los tres son privados de cada entrenador). Si la migración no
+      está ejecutada, el upsert reintenta sin esa columna: el carro se queda en
+      local y el resto del sincronizado sigue igual.
 
   v0.215.0 — Un día y una semana abren la MISMA ventana (2026-08)
     (sin migraciones nuevas)
@@ -4959,6 +4985,26 @@
     .ruta-ses-info { display:flex; flex-direction:column; gap:2px; min-width:0; }
     .ruta-ses-nom { font-size:12.5px; font-weight:700; color:var(--texto); line-height:1.3; }
     .ruta-ses-meta { font-size:10.5px; color:var(--gris); }
+    /* v0.216 — CARRO: primera parte de la clase (ejercicios de lanzamiento) */
+    .ruta-carro { margin-top:14px; padding-top:12px; border-top:1px dashed var(--borde); }
+    .ruta-carro-sel { margin-bottom:8px; }
+    .ruta-carro-busca { padding:7px 11px; font-size:12.5px; margin-bottom:7px; }
+    .ruta-carro-lista { max-height:210px; overflow-y:auto; border:1px solid var(--borde); border-radius:10px; padding:4px; }
+    .ruta-carro-it { display:flex; align-items:center; gap:8px; width:100%; box-sizing:border-box; text-align:left;
+      padding:6px 8px; border:none; background:none; border-radius:8px; font-family:inherit; cursor:pointer; }
+    .ruta-carro-it:hover { background:var(--arena); }
+    .ruta-carro-it.on { background:#ecfeff; }
+    .ruta-carro-check { flex-shrink:0; width:17px; height:17px; border:1.5px solid var(--borde); border-radius:5px;
+      display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; color:#0e7490; background:var(--blanco); }
+    .ruta-carro-it.on .ruta-carro-check { border-color:#0891b2; background:#0891b2; color:#fff; }
+    .ruta-carro-txt { display:flex; flex-direction:column; gap:1px; min-width:0; }
+    .ruta-carro-txt b { font-size:12.5px; font-weight:600; color:var(--texto); line-height:1.3; }
+    .ruta-carro-txt span { font-size:10.5px; color:var(--gris); }
+    .ruta-wk .ruta-carro-n { display:block; margin:2px 0 0; font-size:10.5px; font-weight:700;
+      color:#0e7490; background:none; padding:0; text-align:left; }
+    @media (min-width:760px){
+      .ruta-carro-lista { max-height:260px; }
+    }
     .ruta-panel-borrar { display:block; width:100%; margin-top:14px; font-family:inherit; font-size:12px; font-weight:700;
       color:#b91c1c; background:none; border:1px dashed #fca5a5; border-radius:10px; padding:8px; cursor:pointer; }
     /* v0.205 — MÓVIL: al tocar un bloque, sus sesiones se despliegan justo
@@ -6354,7 +6400,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.215.0';
+    var APP_VERSION = '0.216.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -6763,7 +6809,8 @@
             // v0.210: sesiones de las semanas de la ruta. Si la columna aún no
             // existe en el proyecto (migración sin ejecutar) llega undefined y
             // se conserva lo que hubiera en local.
-            if (diasServ.ruta_ses != null) pD.rutaSes = diasServ.ruta_ses || {};
+            if (diasServ.ruta_ses   != null) pD.rutaSes   = diasServ.ruta_ses   || {};
+            if (diasServ.ruta_carro != null) pD.rutaCarro = diasServ.ruta_carro || {};   // v0.216
             escribirPlan(pD, true);
           } else {
             // Primera vez para esta cuenta: si hay marcado local previo
@@ -7079,10 +7126,12 @@
       // v0.207) viaja aquí, junto a comp_dias: los dos son privados del
       // entrenador. Antes se quedaba solo en el dispositivo donde se planificó,
       // así que lo planificado en el ordenador no se veía en la pista.
+      // v0.216: y el carro de cada semana (p.rutaCarro), en la misma fila.
       var row = {
         user_id:    base.user_id,
         comp_dias:  base.comp_dias,
         ruta_ses:   p.rutaSes || {},
+        ruta_carro: p.rutaCarro || {},
         updated_at: base.updated_at
       };
       setTimeout(function() {
@@ -7090,8 +7139,8 @@
           .then(function(r){
             if (!r.error) return;
             console.warn('bg sync comp_dias', r.error);
-            // Falta la columna ruta_ses (migración sin ejecutar): se reintenta
-            // sin ella para no llevarse por delante el resto del sincronizado.
+            // Falta ruta_ses o ruta_carro (migración sin ejecutar): se reintenta
+            // sin ellas para no llevarse por delante el resto del sincronizado.
             _sb.from('plan_dias_usuario').upsert(base, { onConflict: 'user_id' })
               .then(function(r2){ if (r2.error) console.warn('bg sync comp_dias (2º intento)', r2.error); });
           });
@@ -14108,14 +14157,19 @@
     function _rutaSemanaDatos(p, w, idsNivel) {
       var areasSemana = _rutaAreasDeSemana(p, w, idsNivel);
       var sesion = (p.rutaSes || {})[w.lunISO] || '';
-      return { areasSemana: areasSemana, sesion: sesion, trab: areasSemana.length > 0 };
+      // v0.216: el CARRO de la semana — los ejercicios de la primera parte de
+      // la clase (lanzamiento de bolas, repetición). Va junto a la sesión, que
+      // es la segunda parte (el área de trabajo).
+      var carro = ((p.rutaCarro || {})[w.lunISO] || []).slice();
+      return { areasSemana: areasSemana, sesion: sesion, carro: carro, trab: areasSemana.length > 0 };
     }
     // Cursos con algo planificado: cualquier fecha marcada en compDias o
     // cualquier semana con sesión en rutaSes cuyo cursoDeFecha() case.
     function _rutaCursosConDatos(p) {
       var set = {};
-      Object.keys(p.compDias || {}).forEach(function(f){ set[cursoDeFecha(f)] = true; });
-      Object.keys(p.rutaSes || {}).forEach(function(f){ set[cursoDeFecha(f)] = true; });
+      Object.keys(p.compDias  || {}).forEach(function(f){ set[cursoDeFecha(f)] = true; });
+      Object.keys(p.rutaSes   || {}).forEach(function(f){ set[cursoDeFecha(f)] = true; });
+      Object.keys(p.rutaCarro || {}).forEach(function(f){ set[cursoDeFecha(f)] = true; });   // v0.216
       return Object.keys(set);
     }
     // v0.207 — Migración ÚNICA del modelo viejo (padel-ruta-<curso> en
@@ -14279,6 +14333,113 @@
       if (p.rutaSes) { delete p.rutaSes[w.lunISO]; _planGuardar(p); }
       rutaCerrarModal();
       mostrarPlanificacion();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // v0.216 — EL CARRO: la primera parte de la clase
+    // ══════════════════════════════════════════════════════════════
+    // Una clase tiene dos partes: el CARRO (el entrenador lanza bolas y se
+    // repite un ejercicio) y el ÁREA DE TRABAJO (combinaciones, minijuegos,
+    // táctica, minipartidos… que es lo que resuelve una SESIÓN).
+    // Por eso el panel guarda dos cosas distintas para la misma semana:
+    //   · p.rutaSes[lunes]   → la sesión (segunda parte), una
+    //   · p.rutaCarro[lunes] → los ejercicios del carro (primera parte), varios
+    // El carro se elige del catálogo ENTERO con un buscador: el ejercicio de
+    // carro no tiene por qué ser del área que se trabaja después.
+    var _rutaCarroQ = '';   // lo que hay escrito en el buscador del carro
+    function _rutaCarroDe(w) { return ((leerPlan().rutaCarro || {})[w.lunISO] || []).slice(); }
+    function rutaCarroToggle(idx, ejId) {
+      var w = _rutaSemanas(_rutaModalCursoActual())[idx];
+      var p = leerPlan();
+      if (!p.rutaCarro) p.rutaCarro = {};
+      var arr = (p.rutaCarro[w.lunISO] || []).slice();
+      var i = arr.indexOf(ejId);
+      if (i >= 0) arr.splice(i, 1); else arr.push(ejId);
+      if (arr.length) p.rutaCarro[w.lunISO] = arr; else delete p.rutaCarro[w.lunISO];
+      _planGuardar(p);
+      _rutaCarroRefrescar(idx, arr, ejId);
+      mostrarPlanificacion();
+    }
+    function rutaCarroVaciar(idx) {
+      var w = _rutaSemanas(_rutaModalCursoActual())[idx];
+      var p = leerPlan();
+      if (p.rutaCarro && p.rutaCarro[w.lunISO]) { delete p.rutaCarro[w.lunISO]; _planGuardar(p); }
+      _rutaModalRender();
+      mostrarPlanificacion();
+    }
+    // Repinta SOLO lo que cambia (los elegidos, el contador y la fila tocada).
+    // Así no se rehace el bloque entero y no se pierde lo escrito en el
+    // buscador ni salta el scroll al marcar un ejercicio detrás de otro.
+    function _rutaCarroRefrescar(idx, arr, ejId) {
+      var cont = document.getElementById('ruta-carro-sel');
+      if (cont) cont.innerHTML = _rutaCarroSelHTML(idx, arr);
+      var n = document.getElementById('ruta-carro-n');
+      if (n) n.textContent = arr.length ? arr.length : '—';
+      var fila = document.getElementById('carro-it-' + ejId);
+      if (fila) {
+        var on = arr.indexOf(ejId) >= 0;
+        fila.classList.toggle('on', on);
+        var chk = fila.querySelector('.ruta-carro-check');
+        if (chk) chk.textContent = on ? '✓' : '';
+      }
+    }
+    // Filtra la lista por lo escrito, sin repintar (no se pierde el foco).
+    function rutaCarroFiltrar(q) {
+      _rutaCarroQ = String(q || '').trim().toLowerCase();
+      var lista = document.getElementById('ruta-carro-lista');
+      if (!lista) return;
+      var vis = 0;
+      Array.prototype.forEach.call(lista.querySelectorAll('.ruta-carro-it'), function(el){
+        var ok = !_rutaCarroQ || (el.getAttribute('data-b') || '').indexOf(_rutaCarroQ) >= 0;
+        el.style.display = ok ? '' : 'none';
+        if (ok) vis++;
+      });
+      var vacio = document.getElementById('ruta-carro-vacio');
+      if (vacio) vacio.style.display = vis ? 'none' : '';
+    }
+    // Chips de los ejercicios ya metidos en el carro, con su ✕
+    function _rutaCarroSelHTML(idx, arr) {
+      if (!arr.length) return '<div class="ruta-panel-nota">Todavía no hay ningún ejercicio en el carro.</div>';
+      var mapEj = _ejsById(), h = '';
+      arr.forEach(function(id){
+        var e = mapEj[id];
+        h += '<span class="ruta-chip ruta-chip-rm">' + _gEsc(e ? e.nombre : ('Ejercicio ' + id)) +
+          '<button type="button" onclick="rutaCarroToggle(' + idx + ',' + id + ')" aria-label="Quitar">✕</button></span>';
+      });
+      return h;
+    }
+    // Bloque completo del carro dentro del panel
+    function _rutaCarroBloqueHTML(idx, arr) {
+      var ejs = leerEjercicios().slice().sort(function(a, b){
+        return String(a.nombre || '').localeCompare(String(b.nombre || ''));
+      });
+      var h = '<div class="ruta-carro">';
+      h += '<div class="ruta-panel-paso">🛒 Carro · ejercicios de la primera parte' +
+           '<span class="ruta-area-n" id="ruta-carro-n">' + (arr.length || '—') + '</span></div>';
+      h += '<div id="ruta-carro-sel" class="ruta-carro-sel">' + _rutaCarroSelHTML(idx, arr) + '</div>';
+      if (!ejs.length) {
+        h += '<div class="ruta-panel-nota">Aún no tienes ejercicios en el catálogo.</div>';
+      } else {
+        h += '<input type="search" class="form-input ruta-carro-busca" id="ruta-carro-busca" ' +
+             'placeholder="Buscar ejercicio por nombre, golpe o zona…" value="' + _gEsc(_rutaCarroQ) + '" ' +
+             'oninput="rutaCarroFiltrar(this.value)">';
+        h += '<div class="ruta-carro-lista" id="ruta-carro-lista">';
+        ejs.forEach(function(e){
+          var on = arr.indexOf(e.id) >= 0;
+          var meta = [ejFaceta(e, 'golpe'), ejFaceta(e, 'zona'), ejFaceta(e, 'intencion')].filter(Boolean).join(' · ');
+          var busca = ((e.nombre || '') + ' ' + meta).toLowerCase();
+          h += '<button type="button" class="ruta-carro-it' + (on ? ' on' : '') + '" id="carro-it-' + e.id + '"' +
+            ' data-b="' + _gEsc(busca) + '" onclick="rutaCarroToggle(' + idx + ',' + e.id + ')">' +
+            '<span class="ruta-carro-check">' + (on ? '✓' : '') + '</span>' +
+            '<span class="ruta-carro-txt"><b>' + _gEsc(e.nombre || ('Ejercicio ' + e.id)) + '</b>' +
+              (meta ? '<span>' + _gEsc(meta) + '</span>' : '') + '</span></button>';
+        });
+        h += '</div>';
+        h += '<div class="ruta-panel-nota" id="ruta-carro-vacio" style="display:none;">Ningún ejercicio con ese nombre.</div>';
+      }
+      if (arr.length) h += '<button type="button" class="ruta-chip-x" style="margin-top:8px;" onclick="rutaCarroVaciar(' + idx + ')">Vaciar el carro</button>';
+      h += '</div>';
+      return h;
     }
     // v0.204 — Sesiones que tiene CADA área del catálogo: las enlazadas a
     // mano (sesInc) MÁS las que traen apartado+bloque en su ficha desde
@@ -14461,6 +14622,10 @@
         }
       }
       h += '</div></div>';   // /ses /cols
+      // v0.216 — CARRO: la primera parte de la clase, a lo ancho y debajo de
+      // las dos columnas. No depende del área elegida (un ejercicio de carro
+      // puede ser de cualquier sitio), así que va en su propia franja.
+      h += _rutaCarroBloqueHTML(idx, wd.carro);
       if (wd.sesion) h += '<button type="button" class="ruta-panel-borrar" onclick="rutaBorrarSemana(' + idx + ')">🗑️ Quitar la sesión de esta semana</button>';
       h += '</div>';         // /ruta-modal
 
@@ -14473,7 +14638,8 @@
     // así que wd.areasSemana puede traer VARIAS áreas (una por día marcado).
     function _rutaSemanaHTML(w, act, wd, areaN, sesN) {
       var trab = wd.trab, esAct = (w.idx === act);
-      var tieneAlgo = trab || wd.sesion;
+      // v0.216: una semana con solo el carro puesto ya cuenta como planificada
+      var tieneAlgo = trab || wd.sesion || wd.carro.length;
       var estado = trab ? 'done' : (esAct ? 'now' : (tieneAlgo ? 'plan' : 'vacia'));
       var rango = w.lun.getDate() + '–' + w.dom.getDate();
       var punto = estado === 'done'
@@ -14497,6 +14663,8 @@
         areasChips +
         (wd.sesion ? '<div class="ruta-ses">' + _gEsc(sesN[wd.sesion] || 'Sesión') + '</div>'
                    : '<div class="ruta-ses vacia">' + (tieneAlgo ? 'sin sesión' : '＋ planificar') + '</div>') +
+        // v0.216: el carro de la semana, de un vistazo
+        (wd.carro.length ? '<div class="ruta-carro-n">🛒 ' + wd.carro.length + ' ejercicio' + (wd.carro.length !== 1 ? 's' : '') + '</div>' : '') +
       '</div>';
     }
 
