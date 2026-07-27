@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.212.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.212.2   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,28 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.212.2 — La versión, a la vista en la cabecera del gestor (2026-08)
+    · La cabecera del panel del gestor pasa a poner «📊 Gestión · v0.X.Y».
+      El gestor no pasa por Inicio (su rol solo entra a sus pantallas), así
+      que era la única sesión donde no había forma de saber qué versión del
+      archivo tenía cargada — y eso hacía imposible distinguir un fallo de la
+      app de un archivo viejo en caché.
+    · Nota: el formulario de clase es UNO solo en todo el archivo
+      (pantalla-asistencia-nueva-clase) y el campo «Empieza el día» va entre
+      «Nombre de la clase» y «Alumnos», sin ninguna condición de rol. Si en
+      una sesión sale y en otra no, las dos no están con el mismo archivo.
+
+  v0.212.1 — La fecha de alta también se ve en el panel del gestor (2026-08)
+    · En v0.212.0 la etiqueta «desde dd/mm/aa» solo salía en ⚙ Clases (la
+      pantalla del entrenador). Ahora sale también en la tarjeta de cada
+      franja del panel del gestor (_gTramoHTML), que es donde el gestor crea
+      y edita las franjas y por tanto donde hace falta comprobarlo.
+      Si en una franja no sale, esa franja no tiene fecha de alta: cuenta
+      desde el principio del curso y se arregla con el lápiz ✏.
+    · El formulario (con «Empieza el día») es el mismo para el entrenador y
+      para el gestor, tanto a pantalla completa como en el panel deslizante
+      del planning: no hace falta tocar nada más.
 
   v0.212.0 — Fix: el calendario no se abría · fecha de alta a la vista (2026-08)
     · FIX GORDO — el botón 🏆 Calendario de competiciones no hacía nada desde
@@ -5376,7 +5398,10 @@
     <div class="cabecera">
       <button class="btn-volver" id="gestor-volver-btn" style="display:none;" onclick="irA('pantalla-inicio')">‹ Inicio</button>
       <button class="gest-hdr-perfil" id="gest-hdr-perfil-btn" onclick="gestorPerfilMenu()" aria-label="Perfil" title="Cuenta">👤</button>
-      <div class="cab-etiqueta">📊 Gestión</div>
+      <!-- v0.212.2: la versión también aquí. El gestor no pasa por Inicio, así
+           que era la única sesión donde no había manera de saber qué versión
+           del archivo estaba cargada. -->
+      <div class="cab-etiqueta">📊 Gestión · <span id="cab-version-g"></span></div>
       <div class="cab-titulo">Mi academia</div>
       <div class="cab-sub" id="gestor-sub">Todos los entrenadores</div>
       <div class="gest-hdr-acts" id="gest-hdr-acts"></div>
@@ -6228,7 +6253,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.212.0';
+    var APP_VERSION = '0.212.2';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -10096,6 +10121,11 @@
       html +=   '<div class="ghd-col-izq">' +
                   '<div class="ghd-fr" style="font-weight:800;color:var(--texto);">' + _gEsc(c.franja||'—') + '</div>' +
                   (c.nombre && c.nombre !== 'Clase' ? '<div class="ghd-fr ghd-nom">' + _gEsc(c.nombre) + '</div>' : '') +
+                  // v0.212: fecha de alta de la franja, también aquí (en el
+                  // panel del gestor es donde se crean y se editan). Si no
+                  // sale, esa franja no tiene fecha de alta: cuenta desde el
+                  // principio del curso, y se puede poner con el lápiz ✏.
+                  (c.inicio ? '<div class="ghd-fr ghd-nom" title="Aparece en el calendario a partir de esta fecha">desde ' + _gFecha(c.inicio) + '</div>' : '') +
                   // v0.167: en la vista de SEMANA se ocultan los días del mes
                   // y el contador: ahí solo interesan los alumnos.
                   (opts.soloAlumnos ? '' :
@@ -20625,6 +20655,8 @@
     if (_iv) _iv.textContent = 'Versión ' + APP_VERSION + ' · Solo para mí';
     var _cv = document.getElementById('cab-version');
     if (_cv) _cv.textContent = 'v' + APP_VERSION;
+    var _cvg = document.getElementById('cab-version-g');   // v0.212.2: cabecera del gestor
+    if (_cvg) _cvg.textContent = 'v' + APP_VERSION;
     _migrarStorage(); // comprime datos viejos en localStorage (una sola vez)
     _marcRestaurar(); // recupera un partido en curso tras recarga/cierre
     actualizarInicio();
