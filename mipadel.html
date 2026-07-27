@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.211.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.212.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,35 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.212.0 — Fix: el calendario no se abría · fecha de alta a la vista (2026-08)
+    · FIX GORDO — el botón 🏆 Calendario de competiciones no hacía nada desde
+      Inicio. Su ventana (#torneo-ov) estaba dentro de pantalla-planificacion,
+      y como esa pantalla está oculta mientras no es la activa, se abría
+      invisible. Ahora vive fuera de toda .pantalla y se abre desde donde sea.
+    · El calendario es EL MISMO para todo el equipo técnico: viaja en el plan
+      del grupo (plan_grupo.torneos), así que lo que apunta un entrenador lo
+      ven y lo editan los demás. Lo editan EN2 y EN3; el EN1 lo ve en solo
+      lectura (igual que tiene el plan). La cabecera lo dice, para que quede
+      claro que no es una lista privada de cada uno.
+      ⚠️ Necesita la migración de v0.210 (migracion_torneos.sql). Sin ella
+      cada cuenta se queda con su copia local.
+    · FECHA DE ALTA de una franja, a la vista y editable — nuevo campo
+      «Empieza el día» en el formulario de clase. Al crear viene la de hoy y
+      se puede cambiar; al editar se ve la que tiene y se puede corregir.
+      Vacía = la franja vale desde el principio del curso (así están todas las
+      creadas antes de v0.210). En v0.210 esta fecha se ponía sola y no se
+      veía en ningún sitio: si una franja seguía apareciendo en semanas ya
+      pasadas no había manera de saber por qué ni de arreglarlo.
+    · En ⚙ Clases la etiqueta «desde dd/mm/aa» sale siempre que la franja
+      tenga fecha de alta (antes se escondía si era de septiembre). Si no sale
+      ninguna, esa franja no tiene fecha de alta: cuenta desde el principio
+      del curso, y ahora se puede poner a mano editándola.
+    · Robustez: si la migración de v0.210 no está ejecutada, guardar una
+      franja fallaba por completo (la columna `inicio` no existe) y la franja
+      no llegaba al entrenador — solo quedaba un aviso en la consola. Ahora se
+      reintenta sin esa columna: la franja se guarda igual y salta UN aviso
+      explicando qué migración falta.
 
   v0.211.0 — Competiciones en Inicio · abrir y copiar cursos (2026-08)
     (sin migraciones nuevas: usa las de v0.210)
@@ -5777,8 +5806,6 @@
 
     <!-- v0.203 — Panel grande: planificar una semana de la ruta (áreas + sesiones) -->
     <div id="ruta-plan-ov" class="ruta-modal-ov" style="display:none" onclick="rutaCerrarModal()"></div>
-    <!-- v0.210: calendario de competiciones (torneos, campeonatos, ligas…) -->
-    <div id="torneo-ov" class="ruta-modal-ov" style="display:none" onclick="torCerrar()"></div>
 
     <!-- Modal: biblioteca de bloques -->
     <div id="plan-lib-ov" class="plan-modal-ov" style="display:none">
@@ -6023,6 +6050,14 @@
           <label class="form-label">Nombre de la clase (opcional)</label>
           <input id="asist-form-nombre" class="form-input" type="text" placeholder="Ej: Nivel iniciación, Adultos…">
         </div>
+        <!-- v0.212: fecha de alta a la vista y editable. Al crear viene puesta
+             la de hoy; si se deja vacía, la franja vale desde el principio del
+             curso (como todas las de antes de v0.210). -->
+        <div class="form-grupo">
+          <label class="form-label" for="asist-form-inicio">Empieza el día</label>
+          <input id="asist-form-inicio" class="form-input" type="date">
+          <p class="form-hint">La clase aparece en el calendario a partir de esta fecha. Déjalo vacío para que valga desde el principio del curso.</p>
+        </div>
         <div class="form-grupo" id="asist-form-grupo-alumnos">
           <label class="form-label">Alumnos</label>
           <datalist id="dl-alumnos"></datalist>
@@ -6079,6 +6114,13 @@
     </div>
     <div class="contenido" id="asist-alumno-contenido"></div>
   </div>
+
+  <!-- ══ CALENDARIO DE COMPETICIONES (torneos, campeonatos, ligas…) ══
+       v0.212: vive FUERA de cualquier .pantalla. En v0.210/v0.211 estaba
+       dentro de pantalla-planificacion y, como esa pantalla está oculta
+       mientras no es la activa, al pulsar el botón desde Inicio no se veía
+       nada. Aquí arriba se abre desde donde sea. -->
+  <div id="torneo-ov" class="ruta-modal-ov" style="display:none" onclick="torCerrar()"></div>
 
   <!-- ══ GLOBO / LIGHTBOX (foto y vídeo) ══════════ -->
   <div id="lightbox" class="lightbox" onclick="if(event.target===this)cerrarLightbox()">
@@ -6186,7 +6228,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.211.0';
+    var APP_VERSION = '0.212.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -6801,16 +6843,42 @@
     };
 
     // Upsert en background de una tabla completa
+    // v0.212 — La columna `inicio` de asistencia_clases / sustituto_clases se
+    // añade en la migración de v0.210. Si esa migración no está ejecutada, el
+    // upsert ENTERO falla y la franja no llega al entrenador (antes solo
+    // quedaba un aviso en la consola). Se reintenta sin esa columna —la franja
+    // se guarda, su fecha de alta se queda en local— y se avisa UNA vez.
+    var _avisoInicioDado = false;
+    function _esErrorColInicio(err) {
+      var msg = String((err && (err.message || err.hint || err.details)) || err || '');
+      return /inicio/i.test(msg) && /column|columna|schema/i.test(msg);
+    }
+    function _avisarFaltaInicio() {
+      if (_avisoInicioDado) return;
+      _avisoInicioDado = true;
+      setTimeout(function(){
+        alert('⚠️ Falta ejecutar la migración de v0.210 en Supabase (migraciones/migracion_inicio_clase.sql).\n\n' +
+              'La franja se ha guardado, pero su fecha de alta («empieza el día») no se comparte todavía: el resto de cuentas la verán desde el principio del curso.');
+      }, 0);
+    }
+    function _filasSinInicio(filas) {
+      return filas.map(function(row){ var o = {}; for (var k in row) if (k !== 'inicio') o[k] = row[k]; return o; });
+    }
     function _bgUpsert(tabla, filas) {
       if (!_sb || !_sbUser || !filas.length) return;
       var uid = _sbUser.id;
       var gid = _sbGrupo ? _sbGrupo.id : null;
       var conflict = (_isSharedTabla(tabla) && gid) ? 'grupo_id,id' : 'user_id,id';
       setTimeout(function() {
-        _sb.from(tabla).upsert(
-          filas.map(function(x){ return _upMap[tabla](x, uid, gid); }),
-          { onConflict: conflict }
-        ).then(function(r){ if (r.error) console.warn('bg sync', tabla, r.error); });
+        var rows = filas.map(function(x){ return _upMap[tabla](x, uid, gid); });
+        _sb.from(tabla).upsert(rows, { onConflict: conflict }).then(function(r){
+          if (!r.error) return;
+          console.warn('bg sync', tabla, r.error);
+          if (tabla !== 'asistencia_clases' || !_esErrorColInicio(r.error)) return;
+          _avisarFaltaInicio();
+          _sb.from(tabla).upsert(_filasSinInicio(rows), { onConflict: conflict })
+            .then(function(r2){ if (r2.error) console.warn('bg sync (2º intento)', tabla, r2.error); });
+        });
       }, 0);
     }
 
@@ -7147,19 +7215,33 @@
       // v0.112: entrenador externo → tabla propia, clave (sustituto,id)
       if (_esExtUid(uid) && _EXT_TABLA[tabla]) {
         var sustId = _extId(uid);
-        _sb.from(_EXT_TABLA[tabla]).upsert(
-          filas.map(function(x){ return _extRow(tabla, x, sustId); }),
-          { onConflict: 'sustituto,id' }
-        ).then(function(r){
-          if (r.error) { console.warn('gestión ext sync', tabla, r.error); alert('⚠️ No se pudo guardar en el servidor: ' + r.error.message + '\n¿Está ejecutada la migración de clases de externos?'); }
+        var rowsE = filas.map(function(x){ return _extRow(tabla, x, sustId); });
+        _sb.from(_EXT_TABLA[tabla]).upsert(rowsE, { onConflict: 'sustituto,id' }).then(function(r){
+          if (!r.error) return;
+          console.warn('gestión ext sync', tabla, r.error);
+          // v0.212: si lo único que falla es la columna `inicio` (migración de
+          // v0.210 sin ejecutar), se reintenta sin ella en vez de perder la franja.
+          if (tabla === 'asistencia_clases' && _esErrorColInicio(r.error)) {
+            _avisarFaltaInicio();
+            _sb.from(_EXT_TABLA[tabla]).upsert(_filasSinInicio(rowsE), { onConflict: 'sustituto,id' })
+              .then(function(r2){ if (r2.error) alert('⚠️ No se pudo guardar en el servidor: ' + r2.error.message); });
+            return;
+          }
+          alert('⚠️ No se pudo guardar en el servidor: ' + r.error.message + '\n¿Está ejecutada la migración de clases de externos?');
         });
         return;
       }
-      _sb.from(tabla).upsert(
-        filas.map(function(x){ return _upMap[tabla](x, uid); }),
-        { onConflict: 'user_id,id' }
-      ).then(function(r){
-        if (r.error) { console.warn('gestión sync', tabla, r.error); alert('⚠️ No se pudo guardar en el servidor: ' + r.error.message); }
+      var rows = filas.map(function(x){ return _upMap[tabla](x, uid); });
+      _sb.from(tabla).upsert(rows, { onConflict: 'user_id,id' }).then(function(r){
+        if (!r.error) return;
+        console.warn('gestión sync', tabla, r.error);
+        if (tabla === 'asistencia_clases' && _esErrorColInicio(r.error)) {
+          _avisarFaltaInicio();
+          _sb.from(tabla).upsert(_filasSinInicio(rows), { onConflict: 'user_id,id' })
+            .then(function(r2){ if (r2.error) alert('⚠️ No se pudo guardar en el servidor: ' + r2.error.message); });
+          return;
+        }
+        alert('⚠️ No se pudo guardar en el servidor: ' + r.error.message);
       });
     }
     function _gEditDelete(tabla, id) {
@@ -14960,7 +15042,10 @@
       var h = '<div class="ruta-modal" onclick="event.stopPropagation()">';
       h += '<div class="ruta-modal-hdr">' +
         '<div><div class="ruta-modal-tit">🏆 Calendario de competiciones</div>' +
-        '<div class="ruta-modal-sub">' + delCurso.length + ' en el curso ' + curso + '</div></div>' +
+        '<div class="ruta-modal-sub">' + delCurso.length + ' en el curso ' + curso +
+          // v0.212: queda claro que es el mismo calendario para todo el equipo
+          ' · ' + (soloLect ? 'lo lleva el equipo técnico' : 'lo comparte todo el equipo técnico') +
+        '</div></div>' +
         '<button type="button" class="ruta-chip-x" onclick="torCerrar()">✕ Cerrar</button></div>';
 
       // Curso ‹ ›
@@ -19787,10 +19872,10 @@
           // v0.55: si la clase no es del curso actual, se indica su curso
           if (_claseCurso(clase) !== cursoDeFecha(hoyLocal()))
             html += '<span class="ghd-dur">curso ' + _claseCurso(clase) + '</span>';
-          // v0.210: fecha de alta de la franja. Solo se enseña si empezó a
-          // mitad de curso (no en septiembre), que es cuando explica por qué
-          // no aparece en las semanas anteriores.
-          if (clase.inicio && clase.inicio.slice(5,7) !== '09')
+          // v0.210: fecha de alta de la franja. v0.212: se enseña SIEMPRE que
+          // esté puesta (antes se escondía si era de septiembre), para poder
+          // comprobar de un vistazo desde cuándo cuenta cada franja.
+          if (clase.inicio)
             html += '<span class="ghd-dur" title="Aparece en el calendario a partir de esta fecha">desde ' + _gFecha(clase.inicio) + '</span>';
           html += '</div>';
           if (clase.nombre) html += '<div class="asist-cfg-clase-nombre">' + _gEsc(clase.nombre) + '</div>';
@@ -19841,6 +19926,9 @@
         document.getElementById('asist-form-dia').value    = clase.diaSemana;
         document.getElementById('asist-form-franja').value = clase.franja || '';
         document.getElementById('asist-form-nombre').value = clase.nombre || '';
+        // v0.212: fecha de alta. Vacío = vale desde el principio del curso
+        // (así están todas las franjas creadas antes de v0.210).
+        document.getElementById('asist-form-inicio').value  = clase.inicio || '';
         asistAlumnosForm = (clase.alumnos||[]).map(function(a){
           // v0.191: conserva su id; si no tenía, el id ESTABLE de persona.
           return { id: alId(a) || _alIdPersona(alNom(a), alApe(a)),
@@ -19852,6 +19940,8 @@
         document.getElementById('asist-form-dia').value    = (_gPrefillDia != null) ? String(_gPrefillDia) : '1';
         document.getElementById('asist-form-franja').value = '';
         document.getElementById('asist-form-nombre').value = '';
+        // v0.212: una franja nueva empieza HOY (se puede cambiar aquí mismo)
+        document.getElementById('asist-form-inicio').value  = hoyLocal();
         asistAlumnosForm = [];
       }
 
@@ -20045,23 +20135,27 @@
 
       var cfg = leerAsistConfig();
       cfg.clases = cfg.clases || [];
+      // v0.212: la fecha de alta se lee del formulario (antes se ponía sola,
+      // sin verse). Vacía = la franja vale desde el principio del curso.
+      var inicioEl = document.getElementById('asist-form-inicio');
+      var inicio   = inicioEl ? inicioEl.value.trim() : '';
 
       if (asistClaseEditId) {
         cfg.clases = cfg.clases.map(function(c) {
           if (c.id !== asistClaseEditId) return c;
           return { id:c.id, diaSemana:dia, franja:franja, nombre:nombre, alumnos:asistAlumnosForm.slice(), curso:_claseCurso(c),
-                   inicio:c.inicio || '',                              // v0.210: conservar fecha de alta
+                   inicio:inicio,                                      // v0.210/v0.212: fecha de alta
                    fin:c.fin || '', finMotivo:c.finMotivo || '' };   // v0.102: conservar finalización
         });
       } else {
         var newId = cfg.clases.length > 0 ? Math.max.apply(null, cfg.clases.map(function(c){return c.id||0;}))+1 : 1;
         // v0.55: la clase nueva se estampa con el curso del contexto (mes
         // visto en el detalle del gestor) o con el curso actual de hoy
-        // v0.210: y con su FECHA DE ALTA (hoy). El entrenador la ve en su
-        // calendario a partir de ese día, no en las semanas ya pasadas.
+        // v0.210: y con su FECHA DE ALTA (hoy por defecto). El entrenador la ve
+        // en su calendario a partir de ese día, no en las semanas ya pasadas.
         cfg.clases.push({ id:newId, diaSemana:dia, franja:franja, nombre:nombre, alumnos:asistAlumnosForm.slice(),
                           curso: _cursoNuevoCtx || cursoDeFecha(hoyLocal()),
-                          inicio: hoyLocal() });
+                          inicio: inicio || hoyLocal() });
       }
 
       escribirAsistConfig(cfg);
