@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.226.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.227.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,27 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.227.0 — Fix del carro en el día · todos los ejercicios (2026-08)
+    (sin migraciones nuevas)
+    · FIX GORDO — lo que metías en el 🛒 Carro desde el panel no aparecía
+      luego al pinchar el día. En v0.224 la planificación pasó a guardarse por
+      NIVEL + semana (`competicion|2025-09-01`) y esta vista se quedó leyendo
+      la clave vieja, sin nivel: guardaba en un sitio y leía en otro. Ahora
+      lee con el nivel que se está mirando, igual que el resto.
+      Lo mismo pasaba con las sesiones de esa vista. Y la migración de v0.207
+      (datos viejos de localStorage) también escribe ya con la clave nueva.
+    · EJERCICIOS — la pantalla enseña TODOS, con vídeo y sin él. Desde v0.70
+      solo salían los que tenían vídeo: el resto estaba guardado pero no había
+      forma de llegar a ellos. El subtítulo dice cuántos hay en total y
+      cuántos llevan vídeo.
+    · La tarjeta se ajusta a lo que hay: si no tiene ni vídeo ni foto, no
+      reserva el marco 16:9 vacío (ni pinta el ▶, que además era mentira) — se
+      queda con su título y un filete de color al lado. Si tiene vídeo, la
+      miniatura de YouTube es 16:9 exacta y entra sin recortarse.
+      Las tarjetas sin miniatura ya no se estiran hasta la altura de las que
+      sí la tienen (align-items:start en la rejilla).
+    · Una foto sin vídeo enseña la foto pero ya no el ▶.
 
   v0.226.0 — Fix: navegar entre las áreas dentro del globo (2026-08)
     (sin migraciones nuevas)
@@ -4459,13 +4480,18 @@
     .subgrupo-titulo { font-size:12px; font-weight:700; color:var(--gris); margin:10px 0 6px; padding-left:2px; }
 
     /* ── CUADRÍCULA DE EJERCICIOS (v0.70) — miniatura de vídeo ── */
-    .grid-ejercicios { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    /* v0.227: align-items:start para que una tarjeta sin miniatura no se
+       estire hasta la altura de las que sí la tienen. */
+    .grid-ejercicios { display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:start; }
     .ejcard { background:var(--blanco); border-radius:14px; overflow:hidden; border:1.5px solid transparent; cursor:pointer; transition:all 0.18s ease; box-shadow:0 1px 3px rgba(0,0,0,0.06); }
     .ejcard:active { transform:scale(0.98); }
     .ejcard-thumb { position:relative; width:100%; aspect-ratio:16/9; background:linear-gradient(135deg,var(--verde-suave),#e4e4de); overflow:hidden; }
     .ejcard-img { width:100%; height:100%; object-fit:cover; display:block; }
     .ejcard-play { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:38px; height:38px; background:rgba(255,0,0,0.85); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:15px; padding-left:2px; pointer-events:none; box-shadow:0 2px 8px rgba(0,0,0,0.25); }
     .ejcard-body { padding:8px 10px 10px; }
+    /* Sin vídeo ni foto: se marca con un filete de color en vez del marco */
+    .ejcard-sinthumb { border-left:3px solid var(--verde-claro); }
+    .ejcard-sinthumb .ejcard-body { padding:10px 10px 11px; }
     .ejcard-titulo { font-size:13px; font-weight:600; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
     .ejcard-meta { margin-top:6px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
     .ejcard-cod { font-family:ui-monospace,Menlo,monospace; font-size:9px; font-weight:700; color:var(--verde); background:var(--verde-suave); padding:1px 6px; border-radius:5px; }
@@ -6758,7 +6784,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.226.0';
+    var APP_VERSION = '0.227.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -14618,7 +14644,8 @@
             Object.keys(datos).forEach(function(idxStr){
               var w = sems[+idxStr], entry = datos[idxStr];
               if (!w || !entry) return;
-              if (entry.sesion) { p.rutaSes[w.lunISO] = entry.sesion; tocado = true; }
+              // v0.227: la migración vieja también escribe con la clave por nivel
+              if (entry.sesion) { _rutaEscribeSem(p.rutaSes, 'competicion', w.lunISO, [entry.sesion]); tocado = true; }
               if (entry.area) {
                 var dias = _rutaDiasRealesDeSemana(w);
                 if (dias.length) {
@@ -15668,9 +15695,13 @@
       //    a la izquierda el CARRO elegido y a la derecha el ÁREA DE TRABAJO.
       //    El carro y las sesiones son de la SEMANA, así que se leen por el
       //    lunes de la semana de este día.
+      // v0.227 FIX: desde v0.224 la planificación se guarda por NIVEL + semana
+      // (`competicion|2025-09-01`). Esta vista se quedó leyendo la clave vieja,
+      // así que lo que metías en el carro desde el panel no salía luego aquí.
       var lunSem = _rutaSemanaLibre(fechaISO).lunISO;
-      var carroIds = (p.rutaCarro || {})[lunSem] || [];
-      var sesIds   = _rutaSesArr((p.rutaSes || {})[lunSem]);
+      var nivDia = _compNivel();
+      var carroIds = _rutaLeeSem(p.rutaCarro, nivDia, lunSem) || [];
+      var sesIds   = _rutaSesArr(_rutaLeeSem(p.rutaSes, nivDia, lunSem));
       h += '<div class="comp-clase-cols">';
 
       // COLUMNA 1 · Carro
@@ -17414,9 +17445,10 @@
     }
 
     function renderListaEjercicios() {
-      // v0.70: solo se muestran ejercicios con vídeo (cualquier enlace) —
-      // el resto sigue guardado (local/Supabase) pero no aparece aquí.
-      var todosEjs = leerEjercicios().filter(function(e){ return !!e.video; });
+      // v0.227: se ven TODOS los ejercicios, con vídeo y sin él. Desde v0.70
+      // los que no tenían vídeo estaban guardados pero no aparecían aquí, y no
+      // había manera de llegar a ellos.
+      var todosEjs = leerEjercicios();
       var cats     = leerCategorias();
       var cont     = document.getElementById('lista-ejercicios');
 
@@ -17436,14 +17468,16 @@
       // Subtítulo dinámico
       var total = todosEjs.length;
       var visibles = ejs.length;
-      var subTxt = total + ' con vídeo';
+      var conVideo = todosEjs.filter(function(e){ return !!e.video; }).length;
+      var subTxt = total + ' ejercicio' + (total !== 1 ? 's' : '') +
+                   (conVideo < total ? ' · ' + conVideo + ' con vídeo' : '');
       if (visibles < total) subTxt += ' · ' + visibles + ' filtrados';
       document.getElementById('sub-ejercicios').textContent = subTxt;
 
       if (!ejs.length) {
         var msg = total === 0
-          ? 'Aún no tienes ejercicios con vídeo. Añade el enlace en Obsidian y sincroniza.'
-          : 'Ningún ejercicio con vídeo cumple los filtros.';
+          ? 'Aún no tienes ejercicios. Créalos en Obsidian y sincroniza.'
+          : 'Ningún ejercicio cumple los filtros.';
         cont.innerHTML = '<div class="vacio"><div class="vacio-icono">🎬</div><p>' + msg + '</p></div>';
         return;
       }
@@ -17527,22 +17561,27 @@
     function ejercicioCardHTML(ej, origen) {
       var ytId = extraerIdYoutube(ej.video);
       var thumb = ytId ? ('https://img.youtube.com/vi/' + ytId + '/mqdefault.jpg') : (ej.imagen || null);
-      var thumbHTML = thumb
-        ? '<img src="' + thumb + '" class="ejcard-img" alt="" loading="lazy" onerror="this.style.display=\'none\';this.parentNode.classList.add(\'sin-img\')">'
-        : '';
       var val = ej.valoracion || 0;
       var cod = ejCodigo(ej);
       var badges = '';
       if (cod) badges += '<span class="ejcard-cod">' + cod + '</span>';
       if (val > 0) badges += '<span class="ejcard-val">★' + val + '</span>';
 
-      return '<div class="ejcard" onclick="verEjercicio(' + ej.id + ',\'' + origen + '\')">' +
-        '<div class="ejcard-thumb">' + thumbHTML + '<div class="ejcard-play">▶</div></div>' +
-        '<div class="ejcard-body">' +
+      // v0.227: la tarjeta se ajusta a lo que hay. Sin vídeo ni foto no se
+      // reserva el marco 16:9 vacío (ni el ▶, que además sería mentira): la
+      // tarjeta se queda con su título y ya. Con vídeo, la miniatura de
+      // YouTube es 16:9 exacta, así que entra sin recortarse.
+      var h = '<div class="ejcard' + (thumb ? '' : ' ejcard-sinthumb') + '" onclick="verEjercicio(' + ej.id + ',\'' + origen + '\')">';
+      if (thumb) {
+        h += '<div class="ejcard-thumb">' +
+          '<img src="' + thumb + '" class="ejcard-img" alt="" loading="lazy" onerror="this.style.display=\'none\';this.parentNode.classList.add(\'sin-img\')">' +
+          (ej.video ? '<div class="ejcard-play">▶</div>' : '') + '</div>';
+      }
+      h += '<div class="ejcard-body">' +
           '<div class="ejcard-titulo">' + ej.nombre + '</div>' +
           (badges ? '<div class="ejcard-meta">' + badges + '</div>' : '') +
-        '</div>' +
-      '</div>';
+        '</div></div>';
+      return h;
     }
 
     function prepararFormEjercicio(editId) {
