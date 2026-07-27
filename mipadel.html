@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.209.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.210.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,46 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.210.0 — Círculos del mes de vuelta, alta de franjas y competiciones (2026-08)
+    ⚠️ REQUIERE DOS MIGRACIONES antes de usar esta versión:
+       migraciones/migracion_inicio_clase.sql  y  migraciones/migracion_torneos.sql
+    · COMPETICIÓN — vuelven arriba los círculos del mes en curso (mes a mes,
+      con ‹ ›), que en v0.209 se habían retirado con Mensual. No es el Mensual
+      viejo: tocar un círculo abre el MISMO panel grande que las semanas
+      (área + sesión con miniaturas). Arriba se planifica por día; debajo,
+      por trimestre y semana, con el mismo sistema.
+    · Los botones de trimestre (🧭 Preparación / 1er / 2º / 3er) ahora se
+      cierran al volver a pulsarlos: solo hay uno abierto a la vez y se puede
+      dejar ninguno, para quedarse solo con los círculos del mes.
+    · ALTA DE FRANJAS — cada franja horaria guarda su fecha de alta (c.inicio,
+      el día en que se creó). El entrenador la ve en su calendario de
+      asistencia a partir de ese día; las semanas anteriores quedan limpias
+      (antes aparecía desde septiembre y había que ignorarla a mano en todo lo
+      ya pasado). Es el espejo de `fin` (v0.102): fin cierra por abajo, inicio
+      abre por arriba. Nuevo helper _claseEnFecha(c, fecha) = curso + inicio +
+      fin, que sustituye a los filtros sueltos del calendario de asistencia,
+      de los círculos de Competición y de fechasClaseEnMes.
+      Las franjas que ya existen no tienen inicio, así que siguen valiendo
+      desde siempre: nada cambia para ellas.
+      En ⚙ Clases, una franja creada a mitad de curso muestra «desde dd/mm/aa».
+    · CALENDARIO DE COMPETICIONES — nuevo botón 🏆 arriba de Competición.
+      Abre el curso entero: fila de meses (sep→jun) con cuántas competiciones
+      tiene cada uno, cuadrícula del mes elegido con los días pintados por
+      tipo, y debajo la lista con su ficha desplegable. Cada competición
+      lleva tipo (torneo, campeonato, liga, interno del club, amistoso, otro),
+      nombre, fechas (un día o un rango que puede cruzar de mes), lugar,
+      categoría, enlace y notas. Se apunta tocando un día vacío del
+      calendario. Vive en p.torneos y viaja con el plan del GRUPO: un torneo
+      es del club, lo ve igual todo el equipo técnico.
+    · Fix de sincronización: la sesión asignada a cada semana de la ruta
+      (p.rutaSes, desde v0.207) se quedaba SOLO en el dispositivo donde se
+      planificaba — lo preparado en el ordenador no se veía en la pista.
+      Ahora viaja en plan_dias_usuario.ruta_ses, junto a comp_dias (los dos
+      son privados del entrenador).
+    · Los dos upserts nuevos reintentan sin la columna que falte, así que si
+      una migración no está ejecutada solo se queda en local lo suyo: el
+      resto del sincronizado sigue funcionando igual.
 
   v0.209.0 — Mensual desaparece: Semanas pasa a ser la única vista (2026-08)
     · En Competición, para EN3: Mensual y el interruptor 📅/🗺️ se retiran.
@@ -4779,6 +4819,67 @@
     @media (max-width:759px){
       .ruta-modal-ses { display:none; }     /* en móvil manda el desplegable */
     }
+    /* ── v0.210 — Calendario de competiciones ── */
+    .tor-btn { display:flex; align-items:center; gap:10px; width:100%; box-sizing:border-box; text-align:left;
+      padding:11px 13px; margin-bottom:0.6rem; border:1.5px solid #fcd34d; border-radius:14px; background:#fffbeb;
+      font-family:inherit; cursor:pointer; }
+    .tor-btn:hover { border-color:#f59e0b; }
+    .tor-btn-ico { font-size:20px; flex-shrink:0; }
+    .tor-btn-txt { display:flex; flex-direction:column; gap:2px; min-width:0; flex:1; }
+    .tor-btn-txt b { font-size:13.5px; font-weight:800; color:#92400e; }
+    .tor-btn-txt span { font-size:11.5px; color:#a16207; line-height:1.4; }
+    .tor-mes-chips { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:12px; }
+    .tor-mes-chip { position:relative; font-family:inherit; font-size:11.5px; font-weight:700; padding:5px 10px;
+      border-radius:999px; border:1.5px solid var(--borde); background:var(--blanco); color:var(--gris); cursor:pointer; }
+    .tor-mes-chip:hover { border-color:#f59e0b; }
+    .tor-mes-chip.hoy { border-style:dashed; border-color:#f59e0b; }
+    .tor-mes-chip.on { background:#fffbeb; border-color:#f59e0b; color:#92400e; }
+    .tor-mes-n { display:inline-block; margin-left:5px; font-size:9.5px; font-weight:800; color:#92400e;
+      background:#fde68a; border-radius:999px; padding:0 5px; }
+    .tor-cal-tit { font-size:12px; font-weight:800; color:var(--texto); text-transform:capitalize; margin:0 2px 6px; }
+    .tor-cal { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin-bottom:14px; }
+    .tor-cal-dow { text-align:center; font-size:9.5px; font-weight:800; color:var(--gris); text-transform:uppercase; padding-bottom:2px; }
+    .tor-cal-d { aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+      border:1px solid var(--borde); border-radius:8px; background:var(--blanco); font-size:11.5px; color:var(--texto); cursor:pointer; }
+    .tor-cal-d:hover { border-color:#f59e0b; }
+    .tor-cal-d.vacio { border:none; background:none; cursor:default; }
+    .tor-cal-d.con { font-weight:800; background:#fffbeb; border-color:#fcd34d; }
+    .tor-cal-d.hoy { border-color:var(--verde); border-width:2px; }
+    .tor-cal-dots { display:flex; gap:2px; }
+    .tor-dot { width:5px; height:5px; border-radius:50%; display:inline-block; flex-shrink:0; }
+    .tor-add { display:block; width:100%; font-family:inherit; font-size:12.5px; font-weight:700; color:#92400e;
+      background:#fffbeb; border:1.5px dashed #fcd34d; border-radius:10px; padding:9px; margin-bottom:10px; cursor:pointer; }
+    .tor-add:hover { border-color:#f59e0b; }
+    .tor-lista { display:flex; flex-direction:column; gap:7px; }
+    .tor-card { border:1.5px solid var(--borde); border-radius:12px; background:var(--blanco); overflow:hidden; }
+    .tor-card.abierta { border-color:#f59e0b; }
+    .tor-card.pasada { opacity:.62; }
+    .tor-card-hdr { display:flex; align-items:center; gap:9px; padding:9px 11px; cursor:pointer; }
+    .tor-card-ico { flex-shrink:0; width:28px; height:28px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:14px; }
+    .tor-card-txt { display:flex; flex-direction:column; gap:1px; min-width:0; flex:1; }
+    .tor-card-txt b { font-size:12.5px; font-weight:700; color:var(--texto); line-height:1.3; }
+    .tor-card-txt span { font-size:10.5px; color:var(--gris); }
+    .tor-btn .chev, .tor-card-hdr .chev { flex-shrink:0; font-size:13px; color:var(--gris); transition:transform .18s; }
+    .tor-card.abierta .tor-card-hdr .chev { transform:rotate(90deg); }
+    .tor-card-body { padding:0 11px 11px; border-top:1px dashed var(--borde); margin-top:2px; padding-top:9px; }
+    .tor-dato { font-size:12px; color:var(--texto); margin-bottom:5px; }
+    .tor-dato b { font-size:10px; font-weight:800; color:var(--gris); text-transform:uppercase; letter-spacing:.04em; margin-right:5px; }
+    .tor-notas { white-space:pre-wrap; line-height:1.5; color:var(--gris); }
+    .tor-enlace { display:inline-block; font-size:12px; font-weight:700; color:#1e40af; background:#eff6ff;
+      border-radius:999px; padding:5px 12px; text-decoration:none; }
+    .tor-form { border-top:1px dashed var(--borde); padding-top:12px; display:flex; flex-direction:column; gap:10px; }
+    .tor-form-tit { font-size:13px; font-weight:800; color:var(--texto); }
+    .tor-form-row { display:flex; gap:10px; }
+    .tor-form-row .form-grupo { flex:1; min-width:0; }
+    .tor-opc { font-weight:400; text-transform:none; letter-spacing:0; }
+    .tor-form-btns { display:flex; gap:8px; }
+    .tor-leyenda { display:flex; flex-wrap:wrap; gap:4px 12px; font-size:10.5px; color:var(--gris);
+      margin-top:14px; padding-top:10px; border-top:1px solid var(--borde); }
+    .tor-leyenda span { display:inline-flex; align-items:center; gap:4px; }
+    @media (min-width:760px){
+      .tor-cal-d { font-size:13px; }
+      .tor-cal { gap:5px; }
+    }
     .comp-resumen-videos { display:flex; flex-wrap:nowrap; gap:6px; align-items:flex-start; }
     .comp-resumen-videos .ejcard { flex:1 1 0; min-width:0; }
     .comp-resumen-videos .ejcard-titulo { font-size:11px; }
@@ -5616,6 +5717,8 @@
 
     <!-- v0.203 — Panel grande: planificar una semana de la ruta (áreas + sesiones) -->
     <div id="ruta-plan-ov" class="ruta-modal-ov" style="display:none" onclick="rutaCerrarModal()"></div>
+    <!-- v0.210: calendario de competiciones (torneos, campeonatos, ligas…) -->
+    <div id="torneo-ov" class="ruta-modal-ov" style="display:none" onclick="torCerrar()"></div>
 
     <!-- Modal: biblioteca de bloques -->
     <div id="plan-lib-ov" class="plan-modal-ov" style="display:none">
@@ -6023,7 +6126,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.209.0';
+    var APP_VERSION = '0.210.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -6355,6 +6458,7 @@
           diaSemana:c.dia_semana||'', franja:c.franja||'',
           alumnos:c.alumnos||[],
           curso:c.curso||'',
+          inicio:c.inicio||'',                         // v0.210: fecha de alta
           fin:c.fin||'', finMotivo:c.fin_motivo||'',   // v0.102
           _ownerUid:c.user_id                          // v0.182
         }; });
@@ -6405,6 +6509,8 @@
           pLocal.planEtapasV     = planServ.plan_etapas_v   != null ? planServ.plan_etapas_v   : pLocal.planEtapasV;
           pLocal.bibVersion      = planServ.bib_version     != null ? planServ.bib_version     : pLocal.bibVersion;
           pLocal.bibEstrategias  = planServ.bib_estrategias != null ? planServ.bib_estrategias : pLocal.bibEstrategias;
+          // v0.210: calendario de competiciones del grupo (manda el servidor)
+          if (planServ.torneos != null) pLocal.torneos = planServ.torneos || [];
           // compDias NO se lee del plan de grupo (v0.132): es privado por
           // entrenador y se resuelve más abajo con plan_dias_usuario.
           escribirPlan(pLocal, true);
@@ -6426,6 +6532,10 @@
           var pD = leerPlan();
           if (diasServ) {
             pD.compDias = diasServ.comp_dias || {};
+            // v0.210: sesiones de las semanas de la ruta. Si la columna aún no
+            // existe en el proyecto (migración sin ejecutar) llega undefined y
+            // se conserva lo que hubiera en local.
+            if (diasServ.ruta_ses != null) pD.rutaSes = diasServ.ruta_ses || {};
             escribirPlan(pD, true);
           } else {
             // Primera vez para esta cuenta: si hay marcado local previo
@@ -6612,6 +6722,7 @@
         franja:c.franja||'',
         alumnos:c.alumnos||[],
         curso:c.curso||'',      // v0.55: curso escolar de la clase ("2025-26")
+        inicio:c.inicio||null,        // v0.210: fecha de alta (se ve desde ese día)
         fin:c.fin||null,              // v0.102: fecha de finalización (conserva historial)
         fin_motivo:c.finMotivo||null  // v0.102: motivo ('finalizacion' | otro)
       }; },
@@ -6676,12 +6787,26 @@
         bib_estrategias: !!p.bibEstrategias,
         // v0.132: comp_dias ya NO viaja en el plan de grupo (es privado por
         // entrenador; se sube aparte con _bgUpsertCompDias a plan_dias_usuario).
+        // v0.210: el calendario de competiciones SÍ es del grupo — un torneo
+        // es del club, lo ve igual todo el equipo técnico.
+        torneos:         p.torneos || [],
         updated_by:      uid,
         updated_at:      new Date().toISOString()
       };
       setTimeout(function() {
         _sb.from('plan_grupo').upsert(row, { onConflict: 'scope_id' })
-          .then(function(r){ if (r.error) console.warn('bg sync plan', r.error); });
+          .then(function(r){
+            if (!r.error) return;
+            console.warn('bg sync plan', r.error);
+            // v0.210: si falla porque falta la columna torneos (migración sin
+            // ejecutar), se reintenta sin ella. Así el calendario de
+            // competiciones se queda en local pero el resto del plan sigue
+            // sincronizando como siempre.
+            if (row.torneos === undefined) return;
+            var sinT = {}; for (var k in row) if (k !== 'torneos') sinT[k] = row[k];
+            _sb.from('plan_grupo').upsert(sinT, { onConflict: 'scope_id' })
+              .then(function(r2){ if (r2.error) console.warn('bg sync plan (2º intento)', r2.error); });
+          });
       }, 0);
     }
 
@@ -6691,14 +6816,31 @@
     // comparten catálogo/ejercicios pero NO sus días marcados.
     function _bgUpsertCompDias(p) {
       if (!_sb || !_sbUser || _esGestor || !_diasSyncOK) return;
-      var row = {
+      var base = {
         user_id:    _sbUser.id,
         comp_dias:  p.compDias || {},
         updated_at: new Date().toISOString()
       };
+      // v0.210: la sesión asignada a cada semana de la ruta (p.rutaSes, desde
+      // v0.207) viaja aquí, junto a comp_dias: los dos son privados del
+      // entrenador. Antes se quedaba solo en el dispositivo donde se planificó,
+      // así que lo planificado en el ordenador no se veía en la pista.
+      var row = {
+        user_id:    base.user_id,
+        comp_dias:  base.comp_dias,
+        ruta_ses:   p.rutaSes || {},
+        updated_at: base.updated_at
+      };
       setTimeout(function() {
         _sb.from('plan_dias_usuario').upsert(row, { onConflict: 'user_id' })
-          .then(function(r){ if (r.error) console.warn('bg sync comp_dias', r.error); });
+          .then(function(r){
+            if (!r.error) return;
+            console.warn('bg sync comp_dias', r.error);
+            // Falta la columna ruta_ses (migración sin ejecutar): se reintenta
+            // sin ella para no llevarse por delante el resto del sincronizado.
+            _sb.from('plan_dias_usuario').upsert(base, { onConflict: 'user_id' })
+              .then(function(r2){ if (r2.error) console.warn('bg sync comp_dias (2º intento)', r2.error); });
+          });
       }, 0);
     }
 
@@ -6930,6 +7072,7 @@
         return { id:x.id, sustituto:sustId, nombre:x.nombre||'',
                  dia_semana:(x.diaSemana==null||x.diaSemana===''||x.diaSemana<0)?'':String(x.diaSemana),
                  franja:x.franja||'', alumnos:x.alumnos||[], curso:x.curso||'',
+                 inicio:x.inicio||null,   // v0.210
                  fin:x.fin||null, fin_motivo:x.finMotivo||null };
       }
       return { id:x.id, sustituto:sustId, clase_id:x.claseId, fecha:x.fecha,
@@ -6976,6 +7119,7 @@
         return { clases: g.clases.map(function(c){
           var ds = (c.dia_semana === '' || c.dia_semana == null) ? -1 : Number(c.dia_semana);
           return { id:c.id, nombre:c.nombre || '', diaSemana:ds, franja:c.franja || '', alumnos:c.alumnos || [], curso:c.curso || '',
+                   inicio:c.inicio || '',   // v0.210
                    fin:c.fin || '', finMotivo:c.fin_motivo || '' };
         }) };
       }
@@ -7096,8 +7240,24 @@
     // v0.102: ¿la clase (quizá finalizada) sigue siendo visible en un mes?
     // Finalizada ANTES del mes → oculta; finalizada dentro del mes o sin
     // finalizar → visible (con las fechas truncadas por fechasClaseEnMes).
+    // v0.210: además, una franja creada DESPUÉS del mes tampoco se ve (c.inicio).
     function _claseVisibleEnMes(c, mesISO) {
-      return !c.fin || c.fin >= mesISO + '-01';
+      if (c.fin && c.fin < mesISO + '-01') return false;
+      if (c.inicio && c.inicio.slice(0, 7) > mesISO) return false;
+      return true;
+    }
+    // v0.210 — ¿esta franja existe ya (y todavía) en una fecha concreta?
+    // Tres condiciones, en el orden en que se fueron añadiendo:
+    //   · curso  : la franja pertenece al curso escolar de esa fecha (v0.55)
+    //   · inicio : la franja se creó el mismo día o antes (v0.210). Las
+    //              franjas de antes de v0.210 no tienen inicio, así que
+    //              siguen valiendo desde siempre — nada cambia para ellas.
+    //   · fin    : la franja no estaba ya finalizada (v0.102)
+    function _claseEnFecha(c, fISO) {
+      if (_claseCurso(c) !== cursoDeFecha(fISO)) return false;
+      if (c.inicio && fISO < c.inicio) return false;
+      if (c.fin && fISO > c.fin) return false;
+      return true;
     }
 
     // Minutos de duración a partir de la franja horaria (ej. "17:00-18:30" → 90)
@@ -7144,7 +7304,7 @@
         var extC = (res[5] && !res[5].error && res[5].data || []).map(function(c){
           return { id:c.id, user_id:'ext:'+c.sustituto, sustituto:c.sustituto, nombre:c.nombre,
                    dia_semana:c.dia_semana, franja:c.franja, alumnos:c.alumnos,
-                   curso:c.curso, fin:c.fin, fin_motivo:c.fin_motivo };
+                   curso:c.curso, inicio:c.inicio, fin:c.fin, fin_motivo:c.fin_motivo };
         });
         var extR = (res[6] && !res[6].error && res[6].data || []).map(function(r){
           return { id:r.id, user_id:'ext:'+r.sustituto, sustituto:r.sustituto, clase_id:r.clase_id,
@@ -9318,6 +9478,7 @@
       return (d.clases || []).map(function(c){
         var ds = (c.dia_semana === '' || c.dia_semana == null) ? -1 : Number(c.dia_semana);
         return { id:c.id, nombre:c.nombre || 'Clase', diaSemana:ds, franja:c.franja || '', alumnos:c.alumnos || [], curso:c.curso || '',
+                 inicio:c.inicio || '',   // v0.210
                  fin:c.fin || '', finMotivo:c.fin_motivo || '' };
       });
     }
@@ -13363,7 +13524,7 @@
       // vacaciones). Manda sobre todo lo demás y se señala aparte.
       if (_dscEsSinClase(fISO)) return 'dsc';
       var cls = todasCls.filter(function(c){
-        return _claseCurso(c) === cursoDeFecha(fISO) && !(c.fin && fISO > c.fin);
+        return _claseEnFecha(c, fISO);   // v0.210: curso + alta (inicio) + baja (fin)
       });
       if (!cls.length) return 'festivo'; // sin clase activa ese día concreto (alta/baja)
       var algunaReal = cls.some(function(c){
@@ -13464,8 +13625,16 @@
       if (act < 0) return _RUTA_BLOQUES[0].key;   // curso futuro/pasado → empieza por Preparación
       return _rutaBloqueDeMes(_rutaSemanas(curso)[act].mes);
     }
-    function _rutaTriActivo() { return _rutaTri || _rutaBloqueDefecto(); }
-    function rutaTriSel(key) { _rutaTri = key; mostrarPlanificacion(); }
+    // v0.210: tres estados. null = el bloque de la semana en curso (al entrar);
+    // 'clave' = ese bloque abierto; '' = NINGUNO abierto. Solo hay uno abierto
+    // a la vez y volver a pulsar el que está abierto lo cierra, para dejar la
+    // pantalla limpia (arriba los círculos del mes, abajo solo los botones).
+    function _rutaTriActivo() { return _rutaTri === null ? _rutaBloqueDefecto() : _rutaTri; }
+    function rutaTriSel(key) {
+      _rutaTri = (_rutaTriActivo() === key) ? '' : key;
+      rutaCerrarModal();
+      mostrarPlanificacion();
+    }
     // v0.206: sin repintar la pantalla (lo hace el classList de la cabecera).
     function rutaArchivoToggle() { _rutaArchivoOpen = !_rutaArchivoOpen; }
     // v0.206: dentro del archivo, cada curso y cada bloque se abre y se cierra
@@ -14018,15 +14187,19 @@
 
       // ── Meses del trimestre elegido, en columnas paralelas. Los meses
       //    cuya fecha ya pasó no salen aquí: bajan al archivo. ──
-      var blSel = _RUTA_BLOQUES.filter(function(b){ return b.key === triSel; })[0] || _RUTA_BLOQUES[0];
-      var mesesSel = _rutaMeses(sems.filter(function(w){ return blSel.meses.indexOf(w.mes) >= 0; }));
-      var activos  = mesesSel.filter(function(m){ return !_rutaMesPasado(m.y, m.m); });
-      if (!activos.length) {
-        h += '<div class="ruta-modal-vacio" style="margin-top:12px;">Este bloque ya está cerrado — lo tienes abajo, en 📦 Meses cerrados.</div>';
-      } else {
-        h += '<div class="ruta-mes-cols">';
-        activos.forEach(function(m){ h += _rutaMesColHTML(m, act, p, idsNivel, areaN, sesN); });
-        h += '</div>';
+      // v0.210: triSel vacío = ningún trimestre abierto (se cerró al
+      // repincharlo). No se pinta ningún mes: solo quedan los botones.
+      var blSel = triSel ? (_RUTA_BLOQUES.filter(function(b){ return b.key === triSel; })[0] || _RUTA_BLOQUES[0]) : null;
+      if (blSel) {
+        var mesesSel = _rutaMeses(sems.filter(function(w){ return blSel.meses.indexOf(w.mes) >= 0; }));
+        var activos  = mesesSel.filter(function(m){ return !_rutaMesPasado(m.y, m.m); });
+        if (!activos.length) {
+          h += '<div class="ruta-modal-vacio" style="margin-top:12px;">Este bloque ya está cerrado — lo tienes abajo, en 📦 Meses cerrados.</div>';
+        } else {
+          h += '<div class="ruta-mes-cols">';
+          activos.forEach(function(m){ h += _rutaMesColHTML(m, act, p, idsNivel, areaN, sesN); });
+          h += '</div>';
+        }
       }
 
       h += _rutaArchivoHTML(p, idsNivel, areaN, sesN);
@@ -14337,6 +14510,302 @@
       return h;
     }
 
+    // ══════════════════════════════════════════════════════════════
+    // v0.210 — CALENDARIO DE COMPETICIONES (torneos, campeonatos, ligas…)
+    // ══════════════════════════════════════════════════════════════
+    // Vive en p.torneos y viaja con el plan del GRUPO (plan_grupo.torneos):
+    // un torneo es del club, así que lo ve igual todo el equipo técnico.
+    // Cada competición:
+    //   { id, tipo, nombre, fecha, fechaFin, lugar, categoria, enlace, notas }
+    // La pantalla es un overlay con el curso entero: fila de meses (sep→jun)
+    // con cuántas competiciones tiene cada uno, cuadrícula del mes elegido
+    // (los días con competición se pintan) y, debajo, la lista de ese mes con
+    // la ficha desplegable de cada una.
+    var TOR_TIPOS = [
+      { key:'torneo',     label:'Torneo',           ico:'🏆', col:'#f59e0b' },
+      { key:'campeonato', label:'Campeonato',       ico:'🥇', col:'#dc2626' },
+      { key:'liga',       label:'Liga',             ico:'📋', col:'#2563eb' },
+      { key:'interno',    label:'Interno del club', ico:'🏟️', col:'#7c3aed' },
+      { key:'amistoso',   label:'Amistoso',         ico:'🤝', col:'#16a34a' },
+      { key:'otro',       label:'Otro',             ico:'📌', col:'#64748b' }
+    ];
+    function _torTipo(k) {
+      return TOR_TIPOS.filter(function(t){ return t.key === k; })[0] || TOR_TIPOS[TOR_TIPOS.length - 1];
+    }
+    var _torCursoSel  = null;   // curso que se mira (null = el de la ruta)
+    var _torMesSel    = null;   // 0..9 dentro del curso (null = el mes de hoy)
+    var _torForm      = null;   // 'nueva' | id que se edita | null
+    var _torFormFecha = '';     // fecha preseleccionada al tocar un día vacío
+    var _torVer       = null;   // id de la ficha desplegada en la lista
+
+    function _torCurso() { return _torCursoSel || _rutaCurso(); }
+    function _torLeer()  { return leerPlan().torneos || []; }
+    function _torGuardar(arr) { var p = leerPlan(); p.torneos = arr; _planGuardar(p); }
+    // Los 10 meses de un curso, de septiembre a junio
+    function _torMeses(curso) {
+      var y0 = parseInt(String(curso).slice(0, 4), 10), out = [];
+      for (var i = 0; i < 10; i++) { var n = 8 + i; out.push({ y: y0 + (n > 11 ? 1 : 0), m: n % 12 }); }
+      return out;
+    }
+    function _torMesIdxDeHoy(curso) {
+      var h = hoyLocal(), y = +h.slice(0, 4), m = +h.slice(5, 7) - 1, ms = _torMeses(curso);
+      for (var i = 0; i < ms.length; i++) if (ms[i].y === y && ms[i].m === m) return i;
+      return 0;   // curso futuro o pasado → empieza por septiembre
+    }
+    function _torMesActivo() { return _torMesSel == null ? _torMesIdxDeHoy(_torCurso()) : _torMesSel; }
+    function _torDelCurso(curso) {
+      return _torLeer().filter(function(t){ return t.fecha && cursoDeFecha(t.fecha) === curso; })
+        .sort(function(a, b){ return String(a.fecha).localeCompare(String(b.fecha)); });
+    }
+    // Competiciones que solapan un mes (una liga de varios días puede
+    // empezar en un mes y acabar en el siguiente).
+    function _torDelMes(curso, y, m) {
+      var pre = y + '-' + ('0' + (m + 1)).slice(-2);
+      return _torDelCurso(curso).filter(function(t){
+        return t.fecha.slice(0, 7) <= pre && (t.fechaFin || t.fecha).slice(0, 7) >= pre;
+      });
+    }
+    function _torEnDia(lista, fISO) {
+      return lista.filter(function(t){ return fISO >= t.fecha && fISO <= (t.fechaFin || t.fecha); });
+    }
+    function _torRangoTxt(t) {
+      if (!t.fechaFin || t.fechaFin === t.fecha) return formatFechaDiaMes(t.fecha);
+      return formatFechaDiaMes(t.fecha) + ' – ' + formatFechaDiaMes(t.fechaFin);
+    }
+    function _torPorId(id) {
+      return _torLeer().filter(function(t){ return String(t.id) === String(id); })[0] || null;
+    }
+
+    // ── Botón de entrada, en la pantalla de Competición ──
+    function _torBotonHTML() {
+      var curso = _rutaCurso(), arr = _torDelCurso(curso), hoy = hoyLocal();
+      var prox = arr.filter(function(t){ return (t.fechaFin || t.fecha) >= hoy; })[0];
+      var sub = !arr.length
+        ? 'Sin competiciones apuntadas — toca para añadir la primera'
+        : arr.length + (arr.length === 1 ? ' competición' : ' competiciones') + ' en el curso ' + curso +
+          (prox ? ' · próxima: ' + _gEsc(prox.nombre || _torTipo(prox.tipo).label) + ' (' + _torRangoTxt(prox) + ')' : '');
+      return '<button type="button" class="tor-btn" onclick="torAbrir()">' +
+        '<span class="tor-btn-ico">🏆</span>' +
+        '<span class="tor-btn-txt"><b>Calendario de competiciones</b><span>' + sub + '</span></span>' +
+        '<span class="chev">›</span></button>';
+    }
+
+    // ── Abrir / cerrar / navegar ──
+    function torAbrir() {
+      _torCursoSel = null; _torMesSel = null; _torForm = null; _torVer = null; _torFormFecha = '';
+      _torRender();
+    }
+    function torCerrar() {
+      var ov = document.getElementById('torneo-ov');
+      if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; }
+      _torForm = null; _torVer = null;
+      mostrarPlanificacion();   // refresca el subtítulo del botón
+    }
+    function torCursoNav(delta) {
+      _torCursoSel = _rutaCursoDesplaza(_torCurso(), delta);
+      _torMesSel = null; _torForm = null; _torVer = null;
+      _torRender();
+    }
+    function torMesSel(i) { _torMesSel = i; _torForm = null; _torVer = null; _torRender(); }
+    function torVerFicha(id) { _torVer = (String(_torVer) === String(id)) ? null : id; _torForm = null; _torRender(); }
+    function torNueva(fechaISO) {
+      _torForm = 'nueva'; _torVer = null;
+      _torFormFecha = fechaISO || '';
+      _torRender();
+    }
+    function torEditar(id) { _torForm = id; _torVer = null; _torRender(); }
+    function torCancelarForm() { _torForm = null; _torRender(); }
+    function torBorrar(id) {
+      var t = _torPorId(id);
+      if (!t) return;
+      if (!confirm('¿Borrar «' + (t.nombre || _torTipo(t.tipo).label) + '» del calendario?')) return;
+      _torGuardar(_torLeer().filter(function(x){ return String(x.id) !== String(id); }));
+      _torVer = null; _torForm = null;
+      _torRender();
+    }
+    function torGuardarForm() {
+      function _v(id) { var e = document.getElementById(id); return e ? e.value.trim() : ''; }
+      var fecha = _v('tor-f-fecha');
+      if (!fecha) { alert('Pon al menos la fecha de la competición.'); return; }
+      var fin = _v('tor-f-fin');
+      if (fin && fin < fecha) { alert('La fecha de fin no puede ser anterior a la de inicio.'); return; }
+      var datos = {
+        tipo:      _v('tor-f-tipo') || 'torneo',
+        nombre:    _v('tor-f-nombre'),
+        fecha:     fecha,
+        fechaFin:  (fin && fin !== fecha) ? fin : '',
+        lugar:     _v('tor-f-lugar'),
+        categoria: _v('tor-f-cat'),
+        enlace:    _v('tor-f-enlace'),
+        notas:     _v('tor-f-notas')
+      };
+      var arr = _torLeer().slice();
+      if (_torForm === 'nueva') {
+        datos.id = 't' + Date.now();
+        arr.push(datos);
+      } else {
+        arr = arr.map(function(x){
+          if (String(x.id) !== String(_torForm)) return x;
+          datos.id = x.id; return datos;
+        });
+      }
+      _torGuardar(arr);
+      // Salta al mes de la competición guardada, para verla en su sitio
+      var ms = _torMeses(cursoDeFecha(fecha));
+      var y = +fecha.slice(0, 4), m = +fecha.slice(5, 7) - 1;
+      _torCursoSel = cursoDeFecha(fecha);
+      for (var i = 0; i < ms.length; i++) if (ms[i].y === y && ms[i].m === m) _torMesSel = i;
+      _torForm = null; _torVer = datos.id;
+      _torRender();
+      if (typeof planToast === 'function') planToast('✓ Competición guardada');
+    }
+
+    // ── Formulario de alta / edición ──
+    function _torFormHTML() {
+      var t = (_torForm === 'nueva') ? { tipo:'torneo', fecha:_torFormFecha } : (_torPorId(_torForm) || {});
+      var h = '<div class="tor-form">';
+      h += '<div class="tor-form-tit">' + (_torForm === 'nueva' ? '＋ Nueva competición' : '✏️ Editar competición') + '</div>';
+      h += '<div class="form-grupo"><label class="form-label" for="tor-f-tipo">Tipo</label><select class="form-select" id="tor-f-tipo">';
+      TOR_TIPOS.forEach(function(tp){
+        h += '<option value="' + tp.key + '"' + (t.tipo === tp.key ? ' selected' : '') + '>' + tp.ico + ' ' + tp.label + '</option>';
+      });
+      h += '</select></div>';
+      h += '<div class="form-grupo"><label class="form-label" for="tor-f-nombre">Nombre</label>' +
+           '<input class="form-input" id="tor-f-nombre" placeholder="Ej. Torneo de Navidad del club" value="' + _gEsc(t.nombre || '') + '"></div>';
+      h += '<div class="tor-form-row">' +
+           '<div class="form-grupo"><label class="form-label" for="tor-f-fecha">Desde</label>' +
+             '<input class="form-input" type="date" id="tor-f-fecha" value="' + (t.fecha || '') + '"></div>' +
+           '<div class="form-grupo"><label class="form-label" for="tor-f-fin">Hasta <span class="tor-opc">(opcional)</span></label>' +
+             '<input class="form-input" type="date" id="tor-f-fin" value="' + (t.fechaFin || '') + '"></div>' +
+           '</div>';
+      h += '<div class="tor-form-row">' +
+           '<div class="form-grupo"><label class="form-label" for="tor-f-lugar">Lugar</label>' +
+             '<input class="form-input" id="tor-f-lugar" placeholder="Club, ciudad…" value="' + _gEsc(t.lugar || '') + '"></div>' +
+           '<div class="form-grupo"><label class="form-label" for="tor-f-cat">Categoría</label>' +
+             '<input class="form-input" id="tor-f-cat" placeholder="Ej. Alevín, 3ª" value="' + _gEsc(t.categoria || '') + '"></div>' +
+           '</div>';
+      h += '<div class="form-grupo"><label class="form-label" for="tor-f-enlace">Enlace</label>' +
+           '<input class="form-input" type="url" id="tor-f-enlace" placeholder="https://… (inscripción, cuadros, resultados)" value="' + _gEsc(t.enlace || '') + '"></div>';
+      h += '<div class="form-grupo"><label class="form-label" for="tor-f-notas">Notas</label>' +
+           '<textarea class="form-textarea" id="tor-f-notas" placeholder="Quién juega, horarios, material…">' + _gEsc(t.notas || '') + '</textarea></div>';
+      h += '<div class="tor-form-btns">' +
+           '<button class="btn btn-verde" onclick="torGuardarForm()">✓ Guardar</button>' +
+           '<button class="btn btn-sec" onclick="torCancelarForm()">Cancelar</button>' +
+           '</div>';
+      if (_torForm !== 'nueva') h += '<button class="ruta-panel-borrar" onclick="torBorrar(\'' + _torForm + '\')">🗑️ Borrar esta competición</button>';
+      h += '</div>';
+      return h;
+    }
+
+    // ── Tarjeta de la lista, con ficha desplegable ──
+    function _torCardHTML(t) {
+      var tp = _torTipo(t.tipo), abierta = String(_torVer) === String(t.id);
+      var pasada = (t.fechaFin || t.fecha) < hoyLocal();
+      var h = '<div class="tor-card' + (abierta ? ' abierta' : '') + (pasada ? ' pasada' : '') + '">';
+      h += '<div class="tor-card-hdr" onclick="torVerFicha(\'' + t.id + '\')">' +
+        '<span class="tor-card-ico" style="background:' + tp.col + '1a;color:' + tp.col + ';">' + tp.ico + '</span>' +
+        '<span class="tor-card-txt"><b>' + _gEsc(t.nombre || tp.label) + '</b>' +
+          '<span>' + tp.label + ' · ' + _torRangoTxt(t) + (t.lugar ? ' · ' + _gEsc(t.lugar) : '') + '</span></span>' +
+        '<span class="chev">›</span></div>';
+      if (abierta) {
+        h += '<div class="tor-card-body">';
+        if (t.categoria) h += '<div class="tor-dato"><b>Categoría</b> ' + _gEsc(t.categoria) + '</div>';
+        if (t.lugar)     h += '<div class="tor-dato"><b>Lugar</b> ' + _gEsc(t.lugar) + '</div>';
+        if (t.notas)     h += '<div class="tor-dato tor-notas">' + _gEsc(t.notas) + '</div>';
+        // Solo enlaces http(s): si se pegó algo raro, se enseña como texto
+        if (t.enlace && /^https?:\/\//i.test(t.enlace))
+          h += '<a class="tor-enlace" href="' + _gEsc(t.enlace) + '" target="_blank" rel="noopener">🔗 Abrir el enlace</a>';
+        else if (t.enlace) h += '<div class="tor-dato"><b>Enlace</b> ' + _gEsc(t.enlace) + '</div>';
+        h += '<button class="btn btn-sec btn-sm" style="margin-top:8px;" onclick="torEditar(\'' + t.id + '\')">✏ Editar</button>';
+        h += '</div>';
+      }
+      h += '</div>';
+      return h;
+    }
+
+    // ── Overlay completo ──
+    function _torRender() {
+      var ov = document.getElementById('torneo-ov');
+      if (!ov) return;
+      var curso = _torCurso(), meses = _torMeses(curso), iMes = _torMesActivo();
+      var mes = meses[iMes] || meses[0];
+      var delCurso = _torDelCurso(curso);
+      var delMes = _torDelMes(curso, mes.y, mes.m);
+      var hoy = hoyLocal();
+
+      var h = '<div class="ruta-modal" onclick="event.stopPropagation()">';
+      h += '<div class="ruta-modal-hdr">' +
+        '<div><div class="ruta-modal-tit">🏆 Calendario de competiciones</div>' +
+        '<div class="ruta-modal-sub">' + delCurso.length + ' en el curso ' + curso + '</div></div>' +
+        '<button type="button" class="ruta-chip-x" onclick="torCerrar()">✕ Cerrar</button></div>';
+
+      // Curso ‹ ›
+      h += '<div class="ruta-curso-nav">' +
+        '<button type="button" onclick="torCursoNav(-1)" title="Curso anterior">‹</button>' +
+        '<div class="ruta-curso-lbl">Curso ' + curso +
+          (curso === _cursoActual() ? ' <span class="ruta-badge">actual</span>' : '') + '</div>' +
+        '<button type="button" onclick="torCursoNav(1)" title="Curso siguiente">›</button></div>';
+
+      // Meses del curso (sep → jun) con su contador
+      h += '<div class="tor-mes-chips">';
+      meses.forEach(function(x, i){
+        var n = _torDelMes(curso, x.y, x.m).length;
+        var esHoy = (x.y === +hoy.slice(0,4) && x.m === +hoy.slice(5,7) - 1);
+        h += '<button type="button" class="tor-mes-chip' + (i === iMes ? ' on' : '') + (esHoy ? ' hoy' : '') + '" onclick="torMesSel(' + i + ')">' +
+          _MESES_R[x.m].slice(0,3) + (n ? '<span class="tor-mes-n">' + n + '</span>' : '') + '</button>';
+      });
+      h += '</div>';
+
+      // Cuadrícula del mes elegido
+      var primero = new Date(mes.y, mes.m, 1);
+      var offset = (primero.getDay() + 6) % 7;             // lunes = 0
+      var ultimo = new Date(mes.y, mes.m + 1, 0).getDate();
+      h += '<div class="tor-cal-tit">' + _MESES_R[mes.m] + ' ' + mes.y + '</div>';
+      h += '<div class="tor-cal">';
+      ['L','M','X','J','V','S','D'].forEach(function(d){ h += '<div class="tor-cal-dow">' + d + '</div>'; });
+      for (var b = 0; b < offset; b++) h += '<div class="tor-cal-d vacio"></div>';
+      for (var d = 1; d <= ultimo; d++) {
+        var fISO = mes.y + '-' + ('0' + (mes.m + 1)).slice(-2) + '-' + ('0' + d).slice(-2);
+        var enDia = _torEnDia(delMes, fISO);
+        var dots = '';
+        enDia.slice(0, 3).forEach(function(t){ dots += '<span class="tor-dot" style="background:' + _torTipo(t.tipo).col + ';"></span>'; });
+        var cls = 'tor-cal-d' + (enDia.length ? ' con' : '') + (fISO === hoy ? ' hoy' : '');
+        var acc = enDia.length ? 'torVerFicha(\'' + enDia[0].id + '\')' : 'torNueva(\'' + fISO + '\')';
+        var tit = enDia.length
+          ? enDia.map(function(t){ return (t.nombre || _torTipo(t.tipo).label); }).join(' · ')
+          : 'Apuntar una competición este día';
+        h += '<div class="' + cls + '" onclick="' + acc + '" title="' + _gEsc(tit) + '">' +
+             '<span class="tor-cal-n">' + d + '</span>' +
+             (dots ? '<span class="tor-cal-dots">' + dots + '</span>' : '') + '</div>';
+      }
+      h += '</div>';
+
+      // Formulario o lista del mes
+      if (_torForm) {
+        h += _torFormHTML();
+      } else {
+        h += '<button type="button" class="tor-add" onclick="torNueva(\'' + (mes.y + '-' + ('0' + (mes.m+1)).slice(-2) + '-01') + '\')">＋ Nueva competición</button>';
+        if (!delMes.length) {
+          h += '<div class="ruta-modal-vacio">Este mes no tiene competiciones.<br>Toca un día del calendario para apuntar una.</div>';
+        } else {
+          h += '<div class="tor-lista">';
+          delMes.forEach(function(t){ h += _torCardHTML(t); });
+          h += '</div>';
+        }
+      }
+
+      // Leyenda de tipos
+      h += '<div class="tor-leyenda">';
+      TOR_TIPOS.forEach(function(tp){
+        h += '<span><span class="tor-dot" style="background:' + tp.col + ';"></span>' + tp.label + '</span>';
+      });
+      h += '</div>';
+
+      h += '</div>';   // /ruta-modal
+      ov.innerHTML = h;
+      ov.style.display = 'flex';
+    }
+
     function _compListaMesHTML(p) {
       _dscCargarSb();   // v0.147: días sin clase del club, para señalarlos aquí
       var clases  = leerAsistConfig().clases || [];
@@ -14563,13 +15032,22 @@
       }
 
       if (esComp) {
+        // v0.210: calendario de competiciones del club (torneos, campeonatos,
+        // ligas…), arriba de todo. Es el marco al que sirve la planificación,
+        // así que se ve antes que el trabajo del día a día.
+        if (!edit) h += _torBotonHTML();
         if (_rutaEsN3()) {
           // v0.209: para EN3, Mensual desaparece del todo — Semanas pasa a
           // ser la ÚNICA vista de Competición (sin interruptor, aparece
           // directa). Debajo de su 📦 Archivo va Área de trabajo, con Ciclo
           // y Análisis dentro, contraída por defecto (mismo acordeón de
           // siempre) — antes solo se veía en el modo Mensual ya retirado.
-          if (!edit) h += _rutaHTML();
+          // v0.210: vuelven ARRIBA los círculos del mes en curso (mes a mes,
+          // con ‹ ›). No es el Mensual viejo: tocar un círculo abre el mismo
+          // panel grande que las semanas (área + sesión con miniaturas), así
+          // que arriba se planifica por día y debajo, por trimestre y semana,
+          // con el mismo sistema.
+          if (!edit) h += _compListaMesHTML(p) + _rutaHTML();
         } else {
           // No-EN3 con acceso a Competición (p. ej. gestor sin rol de
           // entrenador nivel3): se mantiene el comportamiento de siempre,
@@ -18008,6 +18486,9 @@
       // v0.102: clase finalizada → sin fechas posteriores a su fin (el
       // historial hasta esa fecha se conserva intacto)
       if (clase.fin) out = out.filter(function(f){ return f <= clase.fin; });
+      // v0.210: franja creada a mitad de curso → sin fechas anteriores a su
+      // alta (esas semanas nunca existió, así que no cuentan como pendientes)
+      if (clase.inicio) out = out.filter(function(f){ return f >= clase.inicio; });
       return out;
     }
 
@@ -18079,7 +18560,7 @@
       // clase), fut (con clase, futuro), null (sin clases). rec = recups.
       function _estadoDia(f) {
         var dow = new Date(+f.slice(0,4), +f.slice(5,7)-1, +f.slice(8,10)).getDay();
-        var cls = (diasMap[dow] || []).filter(function(c){ return _claseCurso(c) === cursoDeFecha(f) && !(c.fin && f > c.fin); });
+        var cls = (diasMap[dow] || []).filter(function(c){ return _claseEnFecha(c, f); });   // v0.210
         if (!cls.length) return null;
         var pas = 0, sc = 0, rec = false, sust = false;
         cls.forEach(function(c){
@@ -18167,8 +18648,9 @@
           var esPas   = fecha < hoy;
           var diasNom = DIAS_NOMBRES_A[dia];
 
-          // v0.55: solo las clases del curso al que pertenece esa fecha
-          var clasesCurso = diasMap[dia].filter(function(c){ return _claseCurso(c) === cursoDeFecha(fecha) && !(c.fin && fecha > c.fin); });
+          // v0.55: solo las clases del curso al que pertenece esa fecha.
+          // v0.210: y solo las que ya existían ese día (fecha de alta).
+          var clasesCurso = diasMap[dia].filter(function(c){ return _claseEnFecha(c, fecha); });
           if (!clasesCurso.length) return;
 
           html += '<div class="asist-dia-card' + (esHoy ? ' es-hoy' : '') + '">';
@@ -19074,6 +19556,11 @@
           // v0.55: si la clase no es del curso actual, se indica su curso
           if (_claseCurso(clase) !== cursoDeFecha(hoyLocal()))
             html += '<span class="ghd-dur">curso ' + _claseCurso(clase) + '</span>';
+          // v0.210: fecha de alta de la franja. Solo se enseña si empezó a
+          // mitad de curso (no en septiembre), que es cuando explica por qué
+          // no aparece en las semanas anteriores.
+          if (clase.inicio && clase.inicio.slice(5,7) !== '09')
+            html += '<span class="ghd-dur" title="Aparece en el calendario a partir de esta fecha">desde ' + _gFecha(clase.inicio) + '</span>';
           html += '</div>';
           if (clase.nombre) html += '<div class="asist-cfg-clase-nombre">' + _gEsc(clase.nombre) + '</div>';
           html += '<div class="asist-cfg-alumnos-tag">👥 ' + activosHoy + ' activo' + (activosHoy!==1?'s':'') +
@@ -19332,14 +19819,18 @@
         cfg.clases = cfg.clases.map(function(c) {
           if (c.id !== asistClaseEditId) return c;
           return { id:c.id, diaSemana:dia, franja:franja, nombre:nombre, alumnos:asistAlumnosForm.slice(), curso:_claseCurso(c),
+                   inicio:c.inicio || '',                              // v0.210: conservar fecha de alta
                    fin:c.fin || '', finMotivo:c.finMotivo || '' };   // v0.102: conservar finalización
         });
       } else {
         var newId = cfg.clases.length > 0 ? Math.max.apply(null, cfg.clases.map(function(c){return c.id||0;}))+1 : 1;
         // v0.55: la clase nueva se estampa con el curso del contexto (mes
         // visto en el detalle del gestor) o con el curso actual de hoy
+        // v0.210: y con su FECHA DE ALTA (hoy). El entrenador la ve en su
+        // calendario a partir de ese día, no en las semanas ya pasadas.
         cfg.clases.push({ id:newId, diaSemana:dia, franja:franja, nombre:nombre, alumnos:asistAlumnosForm.slice(),
-                          curso: _cursoNuevoCtx || cursoDeFecha(hoyLocal()) });
+                          curso: _cursoNuevoCtx || cursoDeFecha(hoyLocal()),
+                          inicio: hoyLocal() });
       }
 
       escribirAsistConfig(cfg);
