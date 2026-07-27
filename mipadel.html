@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.232.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.233.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,31 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.233.0 — El ÁREA DE TRABAJO, en su propia pantalla (2026-08)
+    (sin migraciones nuevas)
+    · El botón «Sesiones» de la barra de abajo pasa a llamarse ÁREA y a abrir
+      la pantalla «Área de trabajo», con icono de tablero (antes el de un
+      grupo de personas).
+    · Esa pantalla lleva ahora los NIVELES EN LA CABECERA — Iniciación,
+      Avanzado, Competición, Equipo e Individual — y al pulsar cada uno se ve
+      SU área de trabajo: el catálogo de apartados y bloques, con las sesiones
+      y ejercicios enlazados dentro de cada uno, «Editar plan», el ciclo y el
+      análisis. El subtítulo dice cuántos apartados y bloques tiene.
+    · En consecuencia, ese mismo bloque DESAPARECE del final de Planificación
+      (iba debajo del archivo). Planificación se queda con lo suyo: el curso,
+      los círculos del mes y el tablero de meses y semanas.
+    · Equipo e Individual no tienen catálogo (no están en PLAN_ETAPAS), así que
+      su botón lleva a la lista de sesiones de siempre, como hasta ahora.
+    · El nivel elegido arriba es el MISMO que el de Planificación: si abres
+      Competición en Área de trabajo, Planificación te espera en Competición.
+    · Detalle técnico: _planEtapaCard y el bloque de áreas dejan de vivir
+      dentro de mostrarPlanificacion y pasan a ser _planEtapaCardHTML(p,nivel,…)
+      y _planAreasBlockHTML(p,nivel), para que las usen las dos pantallas. Y el
+      modo edición repinta la pantalla en la que estés (_planRepintar), no
+      siempre Planificación.
+    · De paso, «2 sesiónes» pasa a «2 sesiones» en los seis sitios donde el
+      plural se montaba pegando «es» a una palabra con tilde.
 
   v0.232.0 — El EN1, solo Asistencia · los tres niveles, igual (2026-08)
     (sin migraciones nuevas)
@@ -6304,11 +6329,13 @@
   <div id="pantalla-clases-niveles" class="pantalla">
     <div class="cabecera">
       <button class="btn-volver" onclick="irA('pantalla-inicio')">‹ Inicio</button>
-      <div class="cab-titulo">Sesiones</div>
-      <div class="cab-sub">Por nivel</div>
+      <div class="cab-titulo">Área de trabajo</div>
+      <div class="cab-sub" id="area-sub">—</div>
+      <!-- v0.233: los niveles, en la propia cabecera -->
+      <div class="nivelbar area-nivelbar" id="area-nivelbar"></div>
     </div>
     <div class="contenido">
-      <div class="home-niveles" id="clases-niveles-cont"></div>
+      <div id="clases-niveles-cont"></div>
     </div>
   </div>
 
@@ -6817,6 +6844,10 @@
                  font-family:'Outfit',sans-serif; font-size:10px; font-weight:600;
                  display:flex; flex-direction:column; align-items:center; gap:3px;
                  cursor:pointer; padding:6px 1px; -webkit-tap-highlight-color:transparent; transition:color .15s; }
+    /* v0.233: barra de niveles dentro de la cabecera de Área de trabajo */
+    .area-nivelbar { margin:10px 0 0; padding:0; background:none; gap:5px; }
+    .area-nivelbar .nivel-btn { padding:6px 4px; }
+    .area-nivelbar .nivel-btn-lbl { font-size:10px; }
     .appnav-btn > span:last-child{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .appnav-btn .d{ font-size:21px; line-height:1; }
     .appnav-btn.activo{ color:var(--dorado); }
@@ -6910,7 +6941,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.232.0';
+    var APP_VERSION = '0.233.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -13718,7 +13749,7 @@
     // además viajaba en la fila COMPARTIDA del grupo, así que un entrenador
     // le movía el progreso a otro. Lo que cuenta ahora es el trabajo real
     // registrado por días, que es privado de cada uno.
-    function planToggleEdit() { planEditMode = !planEditMode; mostrarPlanificacion(); }
+    function planToggleEdit() { planEditMode = !planEditMode; _planRepintar(); }   // v0.233
 
     // ── Edición de apartados ──
     function planMoverItem(nivel, mes, id, dir) {
@@ -13727,7 +13758,7 @@
       var j = i + dir;
       if (i < 0 || j < 0 || j >= arr.length) return;
       var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
-      _planGuardar(p); mostrarPlanificacion();
+      _planGuardar(p); _planRepintar();
     }
     function planBorrarItem(nivel, mes, id) {
       if (!confirm('¿Borrar este apartado del plan?')) return;
@@ -13741,7 +13772,7 @@
           if (arr.length) p.compDias[f] = arr; else delete p.compDias[f];
         });
       }
-      _planGuardar(p); mostrarPlanificacion();
+      _planGuardar(p); _planRepintar();
     }
     function planAbrirEditor(nivel, mes, id) {
       planEditTarget = { nivel:nivel, mes:mes, id:id };
@@ -13778,7 +13809,7 @@
       } else {
         arr.push({ id:_planNuevoId(), t:datos.t, f:datos.f, int:datos.int, z:datos.z, g:datos.g });
       }
-      _planGuardar(p); planCerrarEditor(); mostrarPlanificacion();
+      _planGuardar(p); planCerrarEditor(); _planRepintar();
     }
 
     // ── Biblioteca ──
@@ -13826,7 +13857,7 @@
       var c = planContenido(p);
       var arr = c[planLibTarget.nivel][planLibTarget.mes] || (c[planLibTarget.nivel][planLibTarget.mes] = []);
       arr.push({ id:_planNuevoId(), t:b.t, f:b.f, int:b.int, z:b.z, g:b.g });
-      _planGuardar(p); mostrarPlanificacion();
+      _planGuardar(p); _planRepintar();
       planConfirmAdd(_etapaNombre(planLibTarget.nivel, planLibTarget.mes));   // mini ventana de confirmación
     }
 
@@ -14046,7 +14077,7 @@
             var incSesLeg = (it && it.sesInc) ? it.sesInc : [];
             var sesLeg = incSesLeg.length ? leerClases().filter(function(c){ return incSesLeg.indexOf(c.id) >= 0; }) : [];
             if (sesLeg.length) {
-              h += '<div class="plan-ses-intro">⚠️ Sin ejercicios enlazados todavía, pero esta fila tiene ' + sesLeg.length + ' sesión' + (sesLeg.length!==1?'es':'') + ' enlazada' + (sesLeg.length!==1?'s':'') + ' al modelo antiguo (sin migrar). Toca para ver el detalle.</div>';
+              h += '<div class="plan-ses-intro">⚠️ Sin ejercicios enlazados todavía, pero esta fila tiene ' + sesLeg.length + (sesLeg.length!==1 ? ' sesiones' : ' sesión') + ' enlazada' + (sesLeg.length!==1?'s':'') + ' al modelo antiguo (sin migrar). Toca para ver el detalle.</div>';
               h += '<div class="plan-item-ses" style="border:1px solid var(--borde);border-radius:10px;">';
               sesLeg.forEach(function(c){
                 h += '<div class="plan-ses-mini' + (c.trabajada ? ' trabajada' : '') + '" onclick="verSesion(' + c.id + ',\'planif\')" title="' + nombreSesion(c).replace(/"/g,'') + '">' +
@@ -14091,7 +14122,7 @@
         if (!vis.length) {
           h += '<div class="plan-ses-intro">Este apartado no tiene sesiones enlazadas. Pulsa «Añadir / quitar sesiones» para enlazar las que quieras.</div>';
         } else {
-          h += '<div class="plan-ses-intro">' + vis.length + ' sesión' + (vis.length!==1?'es':'') + ' enlazada' + (vis.length!==1?'s':'') + ' · toca para verla.</div>';
+          h += '<div class="plan-ses-intro">' + vis.length + (vis.length!==1 ? ' sesiones' : ' sesión') + ' enlazada' + (vis.length!==1?'s':'') + ' · toca para verla.</div>';
           vis.forEach(function(c){
             var auto = _sesEsAuto(c, ctx.nivel, ctx.mes, it);
             var nEj = (c.ejercicioIds||[]).length;
@@ -16758,6 +16789,94 @@
       return h;
     }
 
+    // ══════════════════════════════════════════════════════════════
+    // v0.233 — EL ÁREA DE TRABAJO, EN SU PROPIA PANTALLA
+    // ══════════════════════════════════════════════════════════════
+    // El catálogo de un nivel (sus etapas con sus bloques, el ciclo y el
+    // análisis) sale de Planificación y pasa a la pantalla «Área de trabajo»
+    // de la barra de abajo, con los niveles arriba. Por eso estas dos
+    // funciones dejan de estar dentro de mostrarPlanificacion y pasan a
+    // recibir el plan y el nivel: las usan las dos pantallas.
+    function _planEtapaCardHTML(p, nivel, et, opts) {
+      opts = opts || {};
+      var meses  = planContenido(p)[nivel] || {};
+      var edit   = planEditMode;
+      var compContadorCurso = (COMP_NIVELES.indexOf(nivel) >= 0)
+        ? _compContadorTrabajo(p, cursoDeFecha(hoyLocal())) : null;
+
+        opts = opts || {};
+        var its  = meses[et.key] || [];
+        // v0.153: el progreso de la cabecera ya no sale del ✓ manual (que se
+        // ha retirado y además era compartido). En los niveles con registro
+        // por días cuenta las filas trabajadas de verdad este curso; en el
+        // resto no se muestra progreso, solo el nº de filas.
+        var conDiasN = (COMP_NIVELES.indexOf(nivel) >= 0);
+        var done = conDiasN && compContadorCurso
+          ? its.filter(function(it){ return (compContadorCurso[it.id] || 0) > 0; }).length
+          : 0;
+        var abierta = edit || opts.actual || p.etapasAbiertas[et.key];
+        var s = '<div class="plan-etapa' + (opts.actual ? ' actual' : '') + (abierta ? ' abierto' : '') + '">';
+        s += '<div class="plan-etapa-cab" onclick="planToggleEtapa(\'' + et.key + '\');this.parentNode.classList.toggle(\'abierto\')">' +
+          '<span class="plan-etapa-num' + (opts.icoClass || '') + '"' + (opts.icoBg ? ' style="background:' + opts.icoBg + ';"' : '') + '>' + (opts.ico || '') + '</span>' +
+          '<div class="plan-etapa-tit"><span class="plan-etapa-nom">' + et.nombre +
+            (opts.actual ? ' <span class="plan-etapa-badge">en curso</span>' : '') + '</span>' +
+            '<span class="plan-etapa-obj">' + et.obj + '</span></div>' +
+          (opts.noProg ? '' : '<span class="plan-etapa-prog">' +
+            (conDiasN ? done + '/' + its.length : its.length) + '</span>') +
+          '<span class="plan-etapa-chev">›</span></div>';
+        s += '<div class="plan-etapa-body">';
+        its.forEach(function(it){ s += _planItemHTML(nivel, et.key, it, null, edit, compContadorCurso); });
+        if (edit) s += _planAddRow(nivel, et.key);
+        s += '</div></div>';
+        return s;
+    }
+    function _planAreasBlockHTML(p, nivel) {
+      var etapas = PLAN_ETAPAS[nivel] || [];
+      var edit   = planEditMode;
+      function _planEtapaCard(et, o) { return _planEtapaCardHTML(p, nivel, et, o); }
+
+        var s = '';
+        var areasOpen = edit || !!p.areasAbierto;
+        s += '<div class="plan-otros' + (areasOpen ? ' abierto' : '') + '" style="margin-top:0.4rem;">';
+        s += '<div class="plan-otros-hdr" onclick="planToggleAreas();this.parentNode.classList.toggle(\'abierto\')">Áreas de trabajo<span class="chev">›</span></div>';
+        s += '<div class="plan-otros-body">';
+        // v0.232: Competición marca sus etapas con tipo ('area' | 'ciclo');
+        // Iniciación y Avanzado no llevan tipo, así que ahí valen todas.
+        var areaEtapas = etapas.filter(function(et){ return et.tipo === 'area'; });
+        if (!areaEtapas.length) areaEtapas = etapas.filter(function(et){ return et.tipo !== 'ciclo'; });
+        areaEtapas.forEach(function(et, i){
+          s += _planEtapaCard(et, { ico: (nivel === 'competicion' ? '◆' : (i + 1)) });
+        });
+        // v0.126: botón "Editar plan" al final de Áreas de trabajo (antes
+        // iba arriba de toda la pantalla) — contextual, junto a lo que edita.
+        if (!esEN1Cuenta()) s += '<button class="plan-edit-toggle' + (edit ? ' on' : '') + '" style="margin:0.6rem 0 0;" onclick="planToggleEdit()">' +
+             (edit ? '✓ Terminar de editar' : '✏️ Editar plan') + '</button>';
+        // v0.201: Ciclo · competir y evaluar y Análisis de planificación se
+        // meten DENTRO de Áreas de trabajo, debajo de "Editar plan", para no
+        // tener 3 acordeones sueltos (ruido visual). Antes de v0.201 eran
+        // cajas independientes a la altura de Áreas de trabajo.
+        var cicloEtapas = etapas.filter(function(et){ return et.tipo === 'ciclo'; });
+        if (cicloEtapas.length) {
+          var cicloOpen = edit || !!p.cicloAbierto;
+          s += '<div class="plan-otros' + (cicloOpen ? ' abierto' : '') + '" style="margin-top:0.6rem;">';
+          s += '<div class="plan-otros-hdr" onclick="planToggleCiclo();this.parentNode.classList.toggle(\'abierto\')">🏆 Ciclo · competir y evaluar<span class="chev">›</span></div>';
+          s += '<div class="plan-otros-body">';
+          cicloEtapas.forEach(function(et){
+            s += _planEtapaCard(et, { ico:'🏆', icoBg:'#0891b2', noProg:true });
+          });
+          s += '</div></div>';
+        }
+        if (!edit) {
+          var anOpenComp = p.analisisAbierto;
+          s += '<div class="plan-otros' + (anOpenComp ? ' abierto' : '') + '" style="margin-top:0.6rem;">';
+          s += '<div class="plan-otros-hdr" onclick="planToggleAnalisis();this.parentNode.classList.toggle(\'abierto\')">📊 Análisis de planificación<span class="chev">›</span></div>';
+          s += '<div class="plan-otros-body">' + _planAnalisisHTML(p, nivel) + '</div>';
+          s += '</div>';
+        }
+        s += '</div></div>';
+        return s;
+    }
+
     function mostrarPlanificacion() {
       _planSesCache = null;   // refresca clases/ejercicios para las sesiones inline
       var p = leerPlan();
@@ -16806,83 +16925,6 @@
         h += '<div class="plan-intro">🧭 Plan por <strong>etapas</strong> (sin meses). Se avanza a la siguiente al cumplir su <strong>objetivo</strong>. El saque es transversal.</div>';
       }
 
-      function _planEtapaCard(et, opts) {
-        opts = opts || {};
-        var its  = meses[et.key] || [];
-        // v0.153: el progreso de la cabecera ya no sale del ✓ manual (que se
-        // ha retirado y además era compartido). En los niveles con registro
-        // por días cuenta las filas trabajadas de verdad este curso; en el
-        // resto no se muestra progreso, solo el nº de filas.
-        var conDiasN = (COMP_NIVELES.indexOf(nivel) >= 0);
-        var done = conDiasN && compContadorCurso
-          ? its.filter(function(it){ return (compContadorCurso[it.id] || 0) > 0; }).length
-          : 0;
-        var abierta = edit || opts.actual || p.etapasAbiertas[et.key];
-        var s = '<div class="plan-etapa' + (opts.actual ? ' actual' : '') + (abierta ? ' abierto' : '') + '">';
-        s += '<div class="plan-etapa-cab" onclick="planToggleEtapa(\'' + et.key + '\');this.parentNode.classList.toggle(\'abierto\')">' +
-          '<span class="plan-etapa-num' + (opts.icoClass || '') + '"' + (opts.icoBg ? ' style="background:' + opts.icoBg + ';"' : '') + '>' + (opts.ico || '') + '</span>' +
-          '<div class="plan-etapa-tit"><span class="plan-etapa-nom">' + et.nombre +
-            (opts.actual ? ' <span class="plan-etapa-badge">en curso</span>' : '') + '</span>' +
-            '<span class="plan-etapa-obj">' + et.obj + '</span></div>' +
-          (opts.noProg ? '' : '<span class="plan-etapa-prog">' +
-            (conDiasN ? done + '/' + its.length : its.length) + '</span>') +
-          '<span class="plan-etapa-chev">›</span></div>';
-        s += '<div class="plan-etapa-body">';
-        its.forEach(function(it){ s += _planItemHTML(nivel, et.key, it, null, edit, compContadorCurso); });
-        if (edit) s += _planAddRow(nivel, et.key);
-        s += '</div></div>';
-        return s;
-      }
-
-      // v0.209 — Bloque "Áreas de trabajo" (+ Ciclo + Análisis + botón
-      // Editar plan) de Competición, extraído a función para poder
-      // pintarlo debajo de la ruta (EN3) o debajo de Mensual (el resto de
-      // roles) sin duplicar el código. Antes vivía solo dentro del modo
-      // Mensual porque el modo Semanas cortaba (return) antes de llegar
-      // aquí; ahora se ve siempre, sea la que sea la vista de arriba.
-      function _compAreasBlockHTML() {
-        var s = '';
-        var areasOpen = edit || !!p.areasAbierto;
-        s += '<div class="plan-otros' + (areasOpen ? ' abierto' : '') + '" style="margin-top:0.4rem;">';
-        s += '<div class="plan-otros-hdr" onclick="planToggleAreas();this.parentNode.classList.toggle(\'abierto\')">Áreas de trabajo<span class="chev">›</span></div>';
-        s += '<div class="plan-otros-body">';
-        // v0.232: Competición marca sus etapas con tipo ('area' | 'ciclo');
-        // Iniciación y Avanzado no llevan tipo, así que ahí valen todas.
-        var areaEtapas = etapas.filter(function(et){ return et.tipo === 'area'; });
-        if (!areaEtapas.length) areaEtapas = etapas.filter(function(et){ return et.tipo !== 'ciclo'; });
-        areaEtapas.forEach(function(et, i){
-          s += _planEtapaCard(et, { ico: (nivel === 'competicion' ? '◆' : (i + 1)) });
-        });
-        // v0.126: botón "Editar plan" al final de Áreas de trabajo (antes
-        // iba arriba de toda la pantalla) — contextual, junto a lo que edita.
-        if (!esEN1Cuenta()) s += '<button class="plan-edit-toggle' + (edit ? ' on' : '') + '" style="margin:0.6rem 0 0;" onclick="planToggleEdit()">' +
-             (edit ? '✓ Terminar de editar' : '✏️ Editar plan') + '</button>';
-        // v0.201: Ciclo · competir y evaluar y Análisis de planificación se
-        // meten DENTRO de Áreas de trabajo, debajo de "Editar plan", para no
-        // tener 3 acordeones sueltos (ruido visual). Antes de v0.201 eran
-        // cajas independientes a la altura de Áreas de trabajo.
-        var cicloEtapas = etapas.filter(function(et){ return et.tipo === 'ciclo'; });
-        if (cicloEtapas.length) {
-          var cicloOpen = edit || !!p.cicloAbierto;
-          s += '<div class="plan-otros' + (cicloOpen ? ' abierto' : '') + '" style="margin-top:0.6rem;">';
-          s += '<div class="plan-otros-hdr" onclick="planToggleCiclo();this.parentNode.classList.toggle(\'abierto\')">🏆 Ciclo · competir y evaluar<span class="chev">›</span></div>';
-          s += '<div class="plan-otros-body">';
-          cicloEtapas.forEach(function(et){
-            s += _planEtapaCard(et, { ico:'🏆', icoBg:'#0891b2', noProg:true });
-          });
-          s += '</div></div>';
-        }
-        if (!edit) {
-          var anOpenComp = p.analisisAbierto;
-          s += '<div class="plan-otros' + (anOpenComp ? ' abierto' : '') + '" style="margin-top:0.6rem;">';
-          s += '<div class="plan-otros-hdr" onclick="planToggleAnalisis();this.parentNode.classList.toggle(\'abierto\')">📊 Análisis de planificación<span class="chev">›</span></div>';
-          s += '<div class="plan-otros-body">' + _planAnalisisHTML(p, nivel) + '</div>';
-          s += '</div>';
-        }
-        s += '</div></div>';
-        return s;
-      }
-
       if (esComp) {
         // v0.232 — Iniciación, Avanzado y Competición comparten la MISMA
         // estructura: los círculos del mes arriba, el tablero de la ruta
@@ -16891,14 +16933,13 @@
         // marcas de compDias y la planificación (rutaSes / rutaCarro) ya
         // iban por nivel desde v0.224, así que solo faltaba pintarlo.
         // v0.211: el calendario de competiciones se ha mudado a Inicio.
+        // v0.233: el catálogo (Áreas de trabajo) ya no va aquí — vive en su
+        // propia pantalla, la de la barra de abajo.
         if (!edit) h += _compListaMesHTML(p) + _rutaHTML();
-        h += _compAreasBlockHTML();
       } else {
         // v0.232: no lo alcanza ningún nivel (los tres son COMP_NIVELES). Se
         // deja el catálogo por si algún día se añade un nivel sin ruta.
-        etapas.forEach(function(et, idx){ h += _planEtapaCard(et, { ico:(idx + 1) }); });
-        if (!esEN1Cuenta()) h += '<button class="plan-edit-toggle' + (edit ? ' on' : '') + '" style="margin:0.6rem 0 0;" onclick="planToggleEdit()">' +
-             (edit ? '✓ Terminar de editar' : '✏️ Editar plan') + '</button>';
+        etapas.forEach(function(et, idx){ h += _planEtapaCardHTML(p, nivel, et, { ico:(idx + 1) }); });
       }
 
       cont.innerHTML = h;
@@ -16936,7 +16977,9 @@
       inicio:     '<button class="appnav-btn" data-nav="inicio" onclick="irA(\'pantalla-inicio\')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg></span><span>Inicio</span></button>',
       plan:       '<button class="appnav-btn" data-nav="plan" onclick="irA(\'pantalla-planificacion\')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 3v3M16 3v3"/></svg></span><span>Plan</span></button>',
       partido:    '<button class="appnav-btn" data-nav="partido" onclick="irA(\'pantalla-partido\')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M4.5 6.5c3.5 2.5 3.5 8.5 0 11M19.5 6.5c-3.5 2.5-3.5 8.5 0 11"/></svg></span><span>Partido</span></button>',
-      clases:     '<button class="appnav-btn" data-nav="clases" onclick="irA(\'pantalla-clases-niveles\')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><path d="M16.5 5.3a2.8 2.8 0 0 1 0 5.4M18 14.4c2 .5 3.5 2.2 3.5 5.1"/></svg></span><span>Sesiones</span></button>',
+      // v0.233: era «Sesiones»; ahora es el ÁREA DE TRABAJO (el catálogo por
+      // nivel). Icono de tablero con sus bloques, que es lo que hay dentro.
+      clases:     '<button class="appnav-btn" data-nav="clases" onclick="irA(\'pantalla-clases-niveles\')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M9.5 9.5V20"/></svg></span><span>Área</span></button>',
       ejercicios: '<button class="appnav-btn" data-nav="ejercicios" onclick="irA(\'pantalla-ejercicios\')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none"/></svg></span><span>Ejercicios</span></button>',
       // v0.222 — Aspectos técnicos, con icono de cerebro: es el saber técnico
       // (el gesto y sus matices), no una sesión.
@@ -18329,18 +18372,74 @@
       }).join('');
     }
 
-    // Clases (barra inferior) → hub con los 4 niveles.
+    // ── v0.233 — PANTALLA «ÁREA DE TRABAJO» (barra de abajo) ──
+    // Arriba, los niveles; debajo, el ÁREA DE TRABAJO de ese nivel: su
+    // catálogo de etapas y bloques, con las sesiones y ejercicios enlazados
+    // dentro de cada uno, «Editar plan», el ciclo y el análisis. Es lo que
+    // hasta v0.232 colgaba del final de Planificación.
+    // Equipo e Individual no tienen catálogo (no están en PLAN_ETAPAS), así
+    // que ahí se sigue viendo su lista de sesiones de siempre.
+    var _areaNivelSel = null;
+    function _areaNivel() {
+      var n = _areaNivelSel;
+      if (n && nivelPermitido(n)) return n;
+      var p = leerPlan();
+      if (nivelPermitido(p.nivel)) return p.nivel;
+      var libre = NIV_HOME.filter(function(x){ return nivelPermitido(x.key); })[0];
+      return libre ? libre.key : 'iniciacion';
+    }
+    function areaSetNivel(n) {
+      _areaNivelSel = n;
+      // Los tres niveles con plan comparten el nivel activo con Planificación
+      if (PLAN_ETAPAS[n]) { var p = leerPlan(); if (p.nivel !== n) { p.nivel = n; _planGuardar(p); } }
+      grupoClasesSel = null;
+      renderClasesNiveles();
+    }
     function renderClasesNiveles() {
       var cont = document.getElementById('clases-niveles-cont');
       if (!cont) return;
-      var porNivel = _clasesPorNivel();
-      cont.innerHTML = NIV_HOME.filter(function(n){ return nivelPermitido(n.key); }).map(function(n){
-        return '<button class="home-niv-btn" onclick="irClasesNivel(\'' + n.key + '\')">' +
-          '<span class="home-niv-ico">' + n.icono + '</span>' +
-          '<span class="home-niv-lbl">' + n.label + '</span>' +
-          '<span class="home-niv-cnt">' + porNivel[n.key].length + '</span>' +
-        '</button>';
-      }).join('');
+      var nivel = _areaNivel();
+      var p = leerPlan();
+      var meta = NIV_META.filter(function(n){ return n.key === nivel; })[0] || { label:'', icono:'🎾' };
+
+      // Cabecera: un botón por nivel
+      var bar = document.getElementById('area-nivelbar');
+      if (bar) {
+        bar.innerHTML = NIV_HOME.filter(function(n){ return nivelPermitido(n.key); }).map(function(n){
+          return '<button class="nivel-btn' + (n.key === nivel ? ' activo' : '') + '" onclick="areaSetNivel(\'' + n.key + '\')">' +
+            '<span class="nivel-btn-ico">' + n.icono + '</span>' +
+            '<span class="nivel-btn-lbl">' + n.label + '</span></button>';
+        }).join('');
+      }
+
+      if (!PLAN_ETAPAS[nivel]) {
+        // Equipo / Individual: sus sesiones, como siempre
+        var ses = (_clasesPorNivel()[nivel] || []);
+        var subE = document.getElementById('area-sub');
+        if (subE) subE.textContent = meta.label + ' · ' + ses.length + (ses.length !== 1 ? ' sesiones' : ' sesión');
+        cont.innerHTML = '<div class="plan-intro">Este apartado no tiene catálogo propio: aquí están sus sesiones.</div>' +
+          '<button class="btn btn-sec" onclick="irClasesNivel(\'' + nivel + '\')">🎾 Ver las ' + ses.length +
+          (ses.length !== 1 ? ' sesiones' : ' sesión') + ' de ' + _gEsc(meta.label) + '</button>';
+        return;
+      }
+
+      var etapas = PLAN_ETAPAS[nivel] || [];
+      var nBloq = etapas.reduce(function(n, et){ return n + ((planContenido(p)[nivel] || {})[et.key] || []).length; }, 0);
+      var subEl = document.getElementById('area-sub');
+      if (subEl) subEl.textContent = meta.label + ' · ' + etapas.length + ' apartado' + (etapas.length !== 1 ? 's' : '') +
+                                     ' · ' + nBloq + ' bloque' + (nBloq !== 1 ? 's' : '');
+      var h = '';
+      if (planEditMode) h += '<div class="plan-intro">✏️ <strong>Modo edición.</strong> Toca un apartado para editarlo, ▲▼ para ordenar y 🗑️ para borrar. «＋ Nuevo» o «📚 Biblioteca» para añadir.</div>';
+      h += _planAreasBlockHTML(p, nivel);
+      cont.innerHTML = h;
+    }
+    // v0.233: el catálogo se pinta en dos pantallas (Planificación ya no, pero
+    // sus acordeones y el modo edición siguen usándose desde aquí). Repinta la
+    // que esté activa.
+    function _planRepintar() {
+      var cl = document.getElementById('pantalla-clases-niveles');
+      if (cl && cl.classList.contains('activa')) { renderClasesNiveles(); return; }
+      mostrarPlanificacion();
     }
 
     // Inicio → Planificación de un nivel concreto (un clic).
@@ -18478,7 +18577,7 @@
         return;
       }
 
-      subClases.textContent = sesiones.length + ' sesión' + (sesiones.length !== 1 ? 'es' : '');
+      subClases.textContent = sesiones.length + (sesiones.length !== 1 ? ' sesiones' : ' sesión');
 
       if (!sesiones.length) {
         hub.innerHTML = '<div class="vacio" style="padding:2rem 1rem;text-align:center;">' +
@@ -18543,7 +18642,7 @@
       document.getElementById('clases-grupo-volver').textContent = '‹ ' + nivMeta.label;
       document.getElementById('clases-grupo-titulo').textContent = zg.icono + ' ' + zg.label;
       document.getElementById('clases-grupo-sub').textContent =
-        nivMeta.label + ' · ' + ses.length + ' sesión' + (ses.length !== 1 ? 'es' : '');
+        nivMeta.label + ' · ' + ses.length + (ses.length !== 1 ? ' sesiones' : ' sesión');
       lista.innerHTML = ses.length
         ? ses.map(function(c){ return sesionRowHTML(c); }).join('')
         : '<div class="vacio"><div class="vacio-icono">🎾</div><p>Sin sesiones en este grupo.</p></div>';
