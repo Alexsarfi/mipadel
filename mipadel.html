@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.214.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.215.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,22 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.215.0 — Un día y una semana abren la MISMA ventana (2026-08)
+    (sin migraciones nuevas)
+    · En Competición, pinchar un día del calendario abre el panel grande de
+      siempre (área + sesión con miniaturas), el mismo que al pinchar una
+      semana de un trimestre. Antes eso solo pasaba en las cuentas marcadas
+      como entrenador nivel3 (_rutaEsN3): en el resto se desplegaba abajo el
+      cuadro de casillas por apartado, así que había DOS formas distintas de
+      hacer lo mismo según con qué cuenta entrases.
+      Ahora vale para cualquier cuenta que llegue a Competición, tanto al
+      tocar un día vacío como al darle a «cambiar selección» desde el resumen.
+    · Sin cambios en lo demás: un día que YA tiene algo marcado sigue abriendo
+      su resumen con los vídeos (que es lo cómodo en pista), y Avanzado e
+      Iniciación siguen con su cuadro de casillas — ahí la sesión de la semana
+      todavía comparte hueco entre niveles, así que eso es harina de otro
+      costal.
 
   v0.214.0 — Competiciones: barras con nombre y prefijo de federación (2026-08)
     (sin migraciones nuevas)
@@ -6338,7 +6354,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.214.0';
+    var APP_VERSION = '0.215.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -14697,12 +14713,16 @@
       var _ids = _compIdsNivel(p);
       var yaMarcado = ((p.compDias && p.compDias[fechaISO]) || [])
                         .some(function(id){ return _ids[id]; });
-      // v0.208 — En Competición, para EN3, un día VACÍO se planifica con el
-      // mismo panel grande que las semanas de la ruta (área + sesión con
-      // miniaturas), no con la lista de checkboxes de siempre. Un día YA
-      // marcado sigue abriendo el resumen con vídeos (útil en pista); desde
-      // ahí, "cambiar selección" (⚙) también lleva al panel grande.
-      if (p.nivel === 'competicion' && _rutaEsN3() && !yaMarcado) {
+      // v0.208 — En Competición, un día VACÍO se planifica con el mismo panel
+      // grande que las semanas de la ruta (área + sesión con miniaturas), no
+      // con la lista de casillas de siempre. Un día YA marcado sigue abriendo
+      // el resumen con vídeos (útil en pista); desde ahí, "cambiar selección"
+      // (⚙) también lleva al panel grande.
+      // v0.215: vale para CUALQUIER cuenta que llegue a Competición, no solo
+      // para las marcadas como entrenador nivel3. Antes, una cuenta sin ese rol
+      // se encontraba el cuadro de casillas al pinchar un día y el panel grande
+      // al pinchar una semana: dos formas distintas de hacer lo mismo.
+      if (p.nivel === 'competicion' && !yaMarcado) {
         rutaAbrirDia(fechaISO);
         return;
       }
@@ -14714,11 +14734,12 @@
       mostrarPlanificacion();
     }
     // v0.125: "retroceder" desde el resumen para cambiar lo elegido.
-    // v0.208: en Competición, para EN3, esto abre el panel grande en vez del
-    // selector de checkboxes (mismo criterio que un día vacío).
+    // v0.208/v0.215: en Competición esto abre el panel grande en vez del
+    // selector de casillas (mismo criterio que un día vacío), para cualquier
+    // cuenta que llegue a Competición.
     function compDiaEditar(fechaISO) {
       var p = leerPlan();
-      if (p.nivel === 'competicion' && _rutaEsN3()) {
+      if (p.nivel === 'competicion') {
         rutaAbrirDia(fechaISO);
         return;
       }
