@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.230.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.232.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,51 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.232.0 — El EN1, solo Asistencia · los tres niveles, igual (2026-08)
+    (sin migraciones nuevas)
+    · EL ENTRENADOR NIVEL 1 se queda SOLO con Asistencia. Desde v0.84 también
+      podía abrir Planificación y Sesiones (limitadas a Iniciación), pero no
+      es su trabajo: él pasa lista. En Inicio ya no ve ni Entrenamiento ni
+      Competición, y no le queda ningún nivel de entrenamiento permitido.
+      Conserva Ajustes para editar su perfil, que es donde pone su nombre para
+      que el gestor lo identifique.
+    · INICIACIÓN Y AVANZADO PASAN A TENER LA MISMA ESTRUCTURA QUE COMPETICIÓN,
+      cada uno con su contenido:
+        · los círculos del mes arriba,
+        · el tablero de la ruta (meses → semanas),
+        · el panel de 🛒 Carro y 🎯 Área de trabajo al tocar un día o una
+          semana, con sus golpes, miniaturas y sesiones,
+        · y debajo su catálogo, con «Editar plan» y el análisis.
+      El trabajo de fondo ya estaba hecho: el catálogo, las marcas del día
+      (compDias) y la planificación (rutaSes / rutaCarro) iban por nivel desde
+      v0.224 y por día desde v0.229. Solo faltaba pintarlo.
+    · Y con eso, el ENLACE CON ASISTENCIA vale igual para los tres: se marca la
+      franja como Iniciación, Avanzado o Competición y su botón abre el globo
+      con la clase preparada de ese nivel y ese día. Al planificar, el panel
+      solo ofrece los días de las franjas de ese nivel.
+    · Detalles: el catálogo de Competición marca sus etapas con tipo ('area' o
+      'ciclo'); Iniciación y Avanzado no lo llevan, así que ahí valen todas y
+      salen numeradas (1, 2, 3…) en vez del ◆. Y tocar un día abre el panel
+      grande en los tres niveles, no solo en Competición.
+    · Se retira el desvío por rol que quedaba en Planificación (_rutaEsN3):
+      todas las cuentas con acceso ven la misma pantalla.
+
+  v0.231.0 — Dos detalles: el mes de hoy y las cabeceras (2026-08)
+    (sin migraciones nuevas)
+    · El 🏆 Calendario de competiciones abre en el MES EN EL QUE ESTAMOS, como
+      el tablero de planificación. Y si ese mes no es de ese curso (julio y
+      agosto, o un curso pasado o futuro), en el MÁS CERCANO: junio si el
+      curso ya acabó, septiembre si aún no ha empezado. Antes en esos casos
+      caía siempre en septiembre.
+    · El mes de hoy se señala con el borde verde, igual que en el tablero
+      (antes era un borde de puntos ámbar que se confundía con el del mes
+      abierto). Si además es el que estás mirando, manda el ámbar de abierto.
+    · Las cabeceras 🛒 Carro · primera parte y 🎯 Área de trabajo · segunda
+      parte van ahora sobre una FRANJA SOMBREADA con esquinas redondeadas, en
+      vez de un filete fino debajo. La del carro lleva su tono cian. Se ve de
+      un golpe dónde empieza cada parte, en los tres sitios donde salen: el
+      panel de planificar, la vista del día y el globo de Asistencia.
 
   v0.230.0 — El tablero, por MESES · el curso llega a final de junio (2026-08)
     (sin migraciones nuevas)
@@ -5285,12 +5330,18 @@
       border-radius:14px; padding:11px 12px 12px; }
     .ruta-modal-carro { background:#f6fdff; border-color:#cffafe; }
     .ruta-modal-trabajo { background:var(--blanco); }
+    /* v0.231: la cabecera de cada parte va sobre una franja sombreada, para que
+       se vea de un golpe dónde empieza el carro y dónde el área de trabajo. */
     .ruta-parte-hdr { display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--gris);
-      padding-bottom:8px; margin-bottom:10px; border-bottom:1.5px solid var(--borde); }
+      padding:8px 10px; margin:-3px -3px 10px; border-radius:10px; background:var(--arena);
+      border-bottom:none; }
     .ruta-parte-hdr b { font-size:13.5px; font-weight:800; color:var(--texto); }
     .ruta-parte-hdr span { font-size:10.5px; }
     .ruta-parte-hdr .ruta-area-n { margin-left:auto; }
-    .ruta-modal-carro .ruta-parte-hdr { border-bottom-color:#cffafe; }
+    .ruta-modal-carro .ruta-parte-hdr,
+    .comp-clase-carro .ruta-parte-hdr { background:#cffafe; color:#0e7490; }
+    .ruta-modal-carro .ruta-parte-hdr b,
+    .comp-clase-carro .ruta-parte-hdr b { color:#0e7490; }
     .ruta-trabajo-cols { display:flex; flex-direction:column; gap:14px; min-width:0; }
     .ruta-modal-vacio { text-align:center; color:var(--gris); font-size:13px; line-height:1.7; padding:22px 10px; }
     /* v0.207 — resumen de lo ya marcado en Mensual esta semana (chips con
@@ -5391,7 +5442,6 @@
     .comp-clase-cols { display:flex; flex-direction:column; gap:12px; margin-top:10px; }
     .comp-clase-parte { min-width:0; border:1.5px solid var(--borde); border-radius:14px; padding:11px 12px 12px; }
     .comp-clase-carro { background:#f6fdff; border-color:#cffafe; }
-    .comp-clase-carro .ruta-parte-hdr { border-bottom-color:#cffafe; }
     .comp-clase-area { background:var(--blanco); }
     .comp-clase-parte .comp-resumen-fila { margin:0 0 8px; }
     .ruta-ses-eleg.clicable { cursor:pointer; }
@@ -5475,7 +5525,9 @@
     .tor-mes-chip { position:relative; font-family:inherit; font-size:11.5px; font-weight:700; padding:5px 10px;
       border-radius:999px; border:1.5px solid var(--borde); background:var(--blanco); color:var(--gris); cursor:pointer; }
     .tor-mes-chip:hover { border-color:#f59e0b; }
-    .tor-mes-chip.hoy { border-style:dashed; border-color:#f59e0b; }
+    /* v0.231: el mes en el que estamos, señalado igual que en el tablero */
+    .tor-mes-chip.hoy { border-width:2px; border-color:var(--verde); color:var(--texto); }
+    .tor-mes-chip.hoy.on { border-color:#f59e0b; }
     .tor-mes-chip.on { background:#fffbeb; border-color:#f59e0b; color:#92400e; }
     .tor-mes-n { display:inline-block; margin-left:5px; font-size:9.5px; font-weight:800; color:#92400e;
       background:#fde68a; border-radius:999px; padding:0 5px; }
@@ -6858,7 +6910,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.230.0';
+    var APP_VERSION = '0.232.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -7979,7 +8031,7 @@
     // (ni Competición ni Equipo/Individual/Técnica), también en Sesiones.
     function esEN2Cuenta() { return !!(_sbGrupo && _sbGrupo.rol === 'nivel2'); }
     var NIVELES_EN2 = ['iniciacion','avanzado'];
-    var NIVELES_EN1 = ['iniciacion'];   // EN1: del entrenamiento solo Iniciación
+    var NIVELES_EN1 = [];   // v0.232: el EN1 no entra al entrenamiento, solo Asistencia
     function nivelPermitido(key) {
       if (esEN1Cuenta()) return NIVELES_EN1.indexOf(key) >= 0;
       if (esEN2Cuenta()) return NIVELES_EN2.indexOf(key) >= 0;
@@ -14372,7 +14424,9 @@
     //     localStorage): ver _rutaMigrarLocal().
     //   · v0.209: Mensual desaparece para EN3 — Semanas pasa a ser la ÚNICA
     //     vista de Competición (ya no hay interruptor 📅/🗺️ que alternar).
-    function _rutaEsN3() { try { return !!(_sbGrupo && _sbGrupo.rol === 'nivel3'); } catch(e){ return false; } }
+    // v0.232: _rutaEsN3 ya no existe — Planificación es igual para todas las
+    // cuentas con acceso. El rol nivel3 sigue mandando en otros sitios (barra
+    // de abajo, gestión de otros entrenadores), cada uno con su comprobación.
     var _MESES_R = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
     // v0.202: bloques de la temporada — septiembre es "Preparación" y el
     // resto se agrupa en 3 trimestres naturales (oct-dic, ene-mar, abr-jun).
@@ -15743,7 +15797,7 @@
       // para las marcadas como entrenador nivel3. Antes, una cuenta sin ese rol
       // se encontraba el cuadro de casillas al pinchar un día y el panel grande
       // al pinchar una semana: dos formas distintas de hacer lo mismo.
-      if (p.nivel === 'competicion' && !yaMarcado) {
+      if (COMP_NIVELES.indexOf(p.nivel) >= 0 && !yaMarcado) {   // v0.232: los tres niveles
         rutaAbrirDia(fechaISO);
         return;
       }
@@ -15760,7 +15814,7 @@
     // cuenta que llegue a Competición.
     function compDiaEditar(fechaISO) {
       var p = leerPlan();
-      if (p.nivel === 'competicion') {
+      if (COMP_NIVELES.indexOf(p.nivel) >= 0) {   // v0.232: los tres niveles
         rutaAbrirDia(fechaISO);
         return;
       }
@@ -16075,10 +16129,18 @@
       for (var i = 0; i < 10; i++) { var n = 8 + i; out.push({ y: y0 + (n > 11 ? 1 : 0), m: n % 12 }); }
       return out;
     }
+    // v0.231: abre en el mes en el que estamos. Si ese mes no es de este curso
+    // (julio y agosto, o un curso pasado o futuro), en el MÁS CERCANO — junio
+    // si el curso ya acabó, septiembre si aún no ha empezado.
     function _torMesIdxDeHoy(curso) {
       var h = hoyLocal(), y = +h.slice(0, 4), m = +h.slice(5, 7) - 1, ms = _torMeses(curso);
-      for (var i = 0; i < ms.length; i++) if (ms[i].y === y && ms[i].m === m) return i;
-      return 0;   // curso futuro o pasado → empieza por septiembre
+      var hoyN = y * 12 + m, mejor = 0, dist = Infinity;
+      for (var i = 0; i < ms.length; i++) {
+        var d = Math.abs((ms[i].y * 12 + ms[i].m) - hoyN);
+        if (d === 0) return i;
+        if (d < dist) { dist = d; mejor = i; }
+      }
+      return mejor;
     }
     function _torMesActivo() { return _torMesSel == null ? _torMesIdxDeHoy(_torCurso()) : _torMesSel; }
     function _torDelCurso(curso) {
@@ -16722,7 +16784,9 @@
       });
       h += '</div>';
 
-      var esComp = (nivel === 'competicion');
+      // v0.232: los TRES niveles usan la misma estructura (círculos + ruta +
+      // catálogo). COMP_NIVELES son justo esos tres.
+      var esComp = (COMP_NIVELES.indexOf(nivel) >= 0);
       // v0.129/v0.153: contador "veces trabajada este curso", en los niveles
       // con registro por días (Competición y Avanzado).
       var compContadorCurso = (COMP_NIVELES.indexOf(nivel) >= 0)
@@ -16782,8 +16846,12 @@
         s += '<div class="plan-otros' + (areasOpen ? ' abierto' : '') + '" style="margin-top:0.4rem;">';
         s += '<div class="plan-otros-hdr" onclick="planToggleAreas();this.parentNode.classList.toggle(\'abierto\')">Áreas de trabajo<span class="chev">›</span></div>';
         s += '<div class="plan-otros-body">';
-        etapas.filter(function(et){ return et.tipo === 'area'; }).forEach(function(et){
-          s += _planEtapaCard(et, { ico:'◆' });
+        // v0.232: Competición marca sus etapas con tipo ('area' | 'ciclo');
+        // Iniciación y Avanzado no llevan tipo, así que ahí valen todas.
+        var areaEtapas = etapas.filter(function(et){ return et.tipo === 'area'; });
+        if (!areaEtapas.length) areaEtapas = etapas.filter(function(et){ return et.tipo !== 'ciclo'; });
+        areaEtapas.forEach(function(et, i){
+          s += _planEtapaCard(et, { ico: (nivel === 'competicion' ? '◆' : (i + 1)) });
         });
         // v0.126: botón "Editar plan" al final de Áreas de trabajo (antes
         // iba arriba de toda la pantalla) — contextual, junto a lo que edita.
@@ -16816,63 +16884,22 @@
       }
 
       if (esComp) {
-        // v0.211: el calendario de competiciones se ha mudado a la pantalla de
-        // Inicio, debajo de FAP/FEP/FIP (en v0.210 estaba aquí arriba). Es un
-        // dato de consulta rápida, no parte del trabajo semanal.
-        if (_rutaEsN3()) {
-          // v0.209: para EN3, Mensual desaparece del todo — Semanas pasa a
-          // ser la ÚNICA vista de Competición (sin interruptor, aparece
-          // directa). Debajo de su 📦 Archivo va Área de trabajo, con Ciclo
-          // y Análisis dentro, contraída por defecto (mismo acordeón de
-          // siempre) — antes solo se veía en el modo Mensual ya retirado.
-          // v0.210: vuelven ARRIBA los círculos del mes en curso (mes a mes,
-          // con ‹ ›). No es el Mensual viejo: tocar un círculo abre el mismo
-          // panel grande que las semanas (área + sesión con miniaturas), así
-          // que arriba se planifica por día y debajo, por trimestre y semana,
-          // con el mismo sistema.
-          if (!edit) h += _compListaMesHTML(p) + _rutaHTML();
-        } else {
-          // No-EN3 con acceso a Competición (p. ej. gestor sin rol de
-          // entrenador nivel3): se mantiene el comportamiento de siempre,
-          // Mensual + Áreas de trabajo, porque no tiene la ruta como
-          // alternativa.
-          // v0.201: los meses con las clases configuradas van antes del
-          // resto (contexto de un vistazo). v0.123: vista mensual agrupada
-          // por día de la semana. Solo en modo consulta.
-          if (!edit) h += _compListaMesHTML(p);
-        }
+        // v0.232 — Iniciación, Avanzado y Competición comparten la MISMA
+        // estructura: los círculos del mes arriba, el tablero de la ruta
+        // (meses → semanas → el panel de carro y área de trabajo) y, debajo,
+        // el catálogo del nivel. Cada uno con su contenido: el catálogo, las
+        // marcas de compDias y la planificación (rutaSes / rutaCarro) ya
+        // iban por nivel desde v0.224, así que solo faltaba pintarlo.
+        // v0.211: el calendario de competiciones se ha mudado a Inicio.
+        if (!edit) h += _compListaMesHTML(p) + _rutaHTML();
         h += _compAreasBlockHTML();
       } else {
-        // v0.152: AVANZADO usa la misma estructura de trabajo que Competición
-        // (vista del mes por semanas + marcar lo trabajado cada día), pero con
-        // SU catálogo: al abrir un día salen las áreas de trabajo de ese nivel.
-        // v0.187: INICIACIÓN también usa esa vista mensual, con su catálogo.
-        if (!edit && (nivel === 'avanzado' || nivel === 'iniciacion')) h += _compListaMesHTML(p);
-        // Iniciación / Avanzado: etapas en secuencia. Sin "en curso" automático;
-        // el progreso lo marca el usuario con el ✓ "trabajado" de cada bloque.
-        etapas.forEach(function(et, idx){
-          h += _planEtapaCard(et, { ico:(idx + 1) });
-        });
-        // v0.193: botón "Editar plan" AL FINAL (como en Competición), en vez
-        // de arriba de la pantalla.
+        // v0.232: no lo alcanza ningún nivel (los tres son COMP_NIVELES). Se
+        // deja el catálogo por si algún día se añade un nivel sin ruta.
+        etapas.forEach(function(et, idx){ h += _planEtapaCard(et, { ico:(idx + 1) }); });
         if (!esEN1Cuenta()) h += '<button class="plan-edit-toggle' + (edit ? ' on' : '') + '" style="margin:0.6rem 0 0;" onclick="planToggleEdit()">' +
              (edit ? '✓ Terminar de editar' : '✏️ Editar plan') + '</button>';
-
-        // ── Análisis de planificación (solo en modo consulta). v0.201: en
-        // Competición esta caja vive dentro de "Áreas de trabajo" (arriba);
-        // aquí solo se muestra para Iniciación/Avanzado. ──
-        if (!edit) {
-          var anOpen = p.analisisAbierto;
-          h += '<div class="plan-otros' + (anOpen ? ' abierto' : '') + '">';
-          h += '<div class="plan-otros-hdr" onclick="planToggleAnalisis();this.parentNode.classList.toggle(\'abierto\')">📊 Análisis de planificación<span class="chev">›</span></div>';
-          h += '<div class="plan-otros-body">' + _planAnalisisHTML(p, nivel) + '</div>';
-          h += '</div>';
-        }
       }
-
-      h += '<div class="plan-link-hint">' + (edit
-        ? 'Los cambios se guardan automáticamente en este dispositivo.'
-        : 'El nivel decide a qué sesiones te lleva cada apartado.') + '</div>';
 
       cont.innerHTML = h;
     }
@@ -16885,12 +16912,11 @@
     var MONITOR_PANTALLAS_OK = ['pantalla-inicio','pantalla-asistencia','pantalla-asistencia-config',
       'pantalla-asistencia-nueva-clase','pantalla-asistencia-lista','pantalla-asistencia-resumen',
       'pantalla-asistencia-alumno'];
-    // v0.84: el EN1 además puede abrir la Planificación y las Sesiones
-    // (limitadas a Iniciación por nivelPermitido)
-    var EN1_PANTALLAS_OK = MONITOR_PANTALLAS_OK.concat(['pantalla-planificacion',
-      'pantalla-plan-sesiones','pantalla-nueva-sesion',
-      'pantalla-clases-niveles','pantalla-clases','pantalla-clases-grupo',
-      'pantalla-ajustes']);   // v0.85: el EN1 puede editar sus datos (Perfil)
+    // v0.232: el EN1 se queda SOLO con Asistencia. Antes (v0.84) también podía
+    // abrir Planificación y Sesiones limitadas a Iniciación, pero no es su
+    // trabajo: él pasa lista. Conserva Ajustes para editar su perfil (v0.85),
+    // que es donde pone su nombre para que el gestor lo identifique.
+    var EN1_PANTALLAS_OK = MONITOR_PANTALLAS_OK.concat(['pantalla-ajustes']);
 
     // ── Barra de navegación inferior (rediseño) ──
     var NAV_GROUPS = {
@@ -17111,10 +17137,11 @@
       // v0.84: el EN1 ve Asistencia + Entrenamiento (solo Iniciación) +
       // apartado Competición. El monitor LOCAL (PIN) sigue viendo solo
       // Asistencia. Partido y Ajustes ocultos para ambos.
+      // v0.232: el EN1, como el monitor local, solo ve Asistencia en Inicio.
       var ocultarSec = {
-        'home-sec-entreno': mon && !monCuenta,   // EN1 sí ve Entrenamiento
+        'home-sec-entreno': mon,
         'home-sec-partido': mon,
-        'home-sec-comp':    mon && !monCuenta,   // EN1 sí ve el apartado Competición
+        'home-sec-comp':    mon,
         'home-sec-ajustes': mon
       };
       Object.keys(ocultarSec).forEach(function(id){
@@ -17131,8 +17158,9 @@
       var compBtn = document.getElementById('home-plan-comp');
       if (compBtn) compBtn.style.display = nivelPermitido('competicion') ? '' : 'none';
       // Acceso a Sesiones para EN1 (no tiene barra inferior)
+      // v0.232: el EN1 ya no entra a Sesiones, así que su acceso directo se va
       var en1Ses = document.getElementById('home-en1-sesiones');
-      if (en1Ses) en1Ses.style.display = monCuenta ? 'block' : 'none';
+      if (en1Ses) en1Ses.style.display = 'none';
       // Acceso claro a "Editar mi perfil" para el EN1. Si aún no tiene
       // nombre, el botón se resalta invitando a ponerlo (así el gestor lo
       // ve en vez del correo).
