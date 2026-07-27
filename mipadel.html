@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.224.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.225.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,23 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.225.0 — Detalles de la clase en Asistencia (2026-08)
+    (sin migraciones nuevas: sigue valiendo la de v0.224)
+    · El botón de la franja lleva ahora el NOMBRE del nivel debajo del icono
+      (🌱 Iniciación · 🔥 Avanzado · 🏆 Competición), así se sabe de qué clase
+      es sin abrir nada. Se retira la pastilla que iba junto al nombre de la
+      clase, que decía lo mismo con menos claridad.
+    · Fuera el botón «Cambiar la planificación de esta clase» del globo: la
+      edición vive en su sitio (Planificación → el nivel → el día) y el globo
+      se queda como lo que es, la vista para consultar en pista.
+    · FIX — al abrir una sesión desde el globo, el botón de atrás llevaba a la
+      pestaña Plan. Ahora vuelve a Asistencia y REABRE el mismo globo donde
+      estabas, y el botón lo dice: «‹ Asistencia».
+    · FIX — el vídeo se abría POR DETRÁS de los globos: el visor tenía
+      z-index 1000 y los paneles de v0.213 en adelante llegan a 10020, así
+      que al tocar una miniatura parecía que no pasaba nada. El visor sube a
+      10050 (y su ✕ a 10051), por encima de todos.
 
   v0.224.0 — Cada franja, su nivel: asistencia enlazada con el plan (2026-08)
     ⚠️ REQUIERE MIGRACIÓN: migraciones/migracion_nivel_clase.sql
@@ -4480,13 +4497,13 @@
     .detalle-enlace:hover { border-color:var(--verde-claro); }
     .video-thumb-wrap { display:block; position:relative; border-radius:14px; overflow:hidden; border:1px solid var(--borde); text-decoration:none; cursor:pointer; -webkit-tap-highlight-color:transparent; }
     /* Globo / lightbox para foto y vídeo */
-    .lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:1000; align-items:center; justify-content:center; padding:18px; }
+    .lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:10050; align-items:center; justify-content:center; padding:18px; }
     .lightbox.activa { display:flex; }
     .lightbox-inner { width:100%; max-width:960px; display:flex; align-items:center; justify-content:center; }
     .lightbox-inner img { max-width:100%; max-height:88vh; border-radius:12px; object-fit:contain; }
     .lb-video { position:relative; width:100%; aspect-ratio:16/9; }
     .lb-video iframe { width:100%; height:100%; border:0; border-radius:12px; }
-    .lightbox-close { position:fixed; top:14px; right:14px; width:46px; height:46px; border-radius:50%; background:rgba(255,255,255,0.16); color:#fff; border:none; font-size:20px; cursor:pointer; z-index:1001; -webkit-tap-highlight-color:transparent; }
+    .lightbox-close { position:fixed; top:14px; right:14px; width:46px; height:46px; border-radius:50%; background:rgba(255,255,255,0.16); color:#fff; border:none; font-size:20px; cursor:pointer; z-index:10051; -webkit-tap-highlight-color:transparent; }
     .lightbox-close:active { background:rgba(255,255,255,0.3); }
     .video-thumb-img { width:100%; display:block; aspect-ratio:16/9; object-fit:cover; }
     .video-thumb-fallback { width:100%; aspect-ratio:16/9; background:#111; color:#fff; font-size:15px; font-weight:600; align-items:center; justify-content:center; }
@@ -4815,12 +4832,16 @@
     /* v0.224: la fila se parte en la zona que abre la lista y el botón
        cuadrado que enseña la clase preparada de esa franja. */
     .asist-clase-row-main { display:flex; align-items:center; gap:10px; flex:1; min-width:0; }
-    .asist-niv-pill { font-size:11px; }
-    .asist-plan-btn { flex-shrink:0; width:38px; height:38px; border-radius:10px; border:1.5px dashed var(--borde);
-      background:var(--blanco); color:var(--gris); font-size:16px; font-family:inherit; cursor:pointer;
-      display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent; }
+    .asist-plan-btn { flex-shrink:0; min-width:56px; padding:5px 6px; border-radius:10px; border:1.5px dashed var(--borde);
+      background:var(--blanco); color:var(--gris); font-family:inherit; cursor:pointer;
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
+      -webkit-tap-highlight-color:transparent; }
+    .asist-plan-ico { font-size:15px; line-height:1; }
+    .asist-plan-niv { font-size:9px; font-weight:700; line-height:1.1; }
     .asist-plan-btn.con { border-style:solid; border-color:#0891b2; background:#ecfeff; color:#0e7490; }
     .asist-plan-btn:hover { border-color:#0891b2; }
+    /* v0.225: el globo del vídeo (.lightbox) va por ENCIMA de todos estos
+       overlays — antes se abría detrás y parecía que no pasaba nada. */
     /* Globo con la clase preparada (sin salir de Asistencia) */
     .asist-clase-ov { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:10020; display:flex;
       align-items:flex-end; justify-content:center; }
@@ -6720,7 +6741,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.224.0';
+    var APP_VERSION = '0.225.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -18432,6 +18453,16 @@
     // ══════════════════════════════════════════
 
     function volverDeSesion() {
+      // v0.225 — abierta desde el globo de una clase de Asistencia: se vuelve
+      // a Asistencia y se reabre ese mismo globo, para seguir donde estabas.
+      if (sesionOrigen === 'asist') {
+        var vuelta = _asistClaseVuelta;
+        document.querySelectorAll('.pantalla').forEach(function(p){ p.classList.remove('activa'); });
+        document.getElementById('pantalla-asistencia').classList.add('activa');
+        mostrarAsistencia(); window.scrollTo(0, 0);
+        if (vuelta) asistVerClase(vuelta.claseId, vuelta.fecha);
+        return;
+      }
       if (sesionOrigen === 'planif') {   // abierta desde el plan (sesión inline)
         document.querySelectorAll('.pantalla').forEach(function(p){ p.classList.remove('activa'); });
         document.getElementById('pantalla-planificacion').classList.add('activa');
@@ -18521,7 +18552,11 @@
       if (!sesion) return;
 
       var vb = document.getElementById('volver-detalle-sesion');
-      if (vb) vb.textContent = (sesionOrigen === 'plan') ? '‹ Sesiones' : (sesionOrigen === 'planif') ? '‹ Plan' : '‹ Sesiones';
+      // v0.225: si la sesión se abrió desde el globo de una clase (Asistencia),
+      // el botón vuelve ahí, no a Plan.
+      if (vb) vb.textContent = (sesionOrigen === 'asist') ? '‹ Asistencia'
+                             : (sesionOrigen === 'plan') ? '‹ Sesiones'
+                             : (sesionOrigen === 'planif') ? '‹ Plan' : '‹ Sesiones';
 
       document.getElementById('detalle-sesion-titulo').textContent = nombreSesion(sesion);
       document.getElementById('detalle-sesion-fecha').textContent  = formatearFecha(sesion.fecha) + (sesion.tematica ? '  ·  ' + sesion.tematica : '');
@@ -20059,6 +20094,7 @@
       return ((p.compDias && p.compDias[fechaISO]) || []).length > 0;
     }
     var _asistClaseVista = null;   // { claseId, fecha } o null
+    var _asistClaseVuelta = null;  // v0.225: a qué globo volver tras ver una sesión
     function asistVerClase(claseId, fechaISO) {
       _asistClaseVista = { claseId: claseId, fecha: fechaISO };
       _asistClaseRender();
@@ -20068,16 +20104,12 @@
       var ov = document.getElementById('asist-clase-ov');
       if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; }
     }
-    // Ir a planificar esta franja: abre el panel de siempre, ya con el nivel
-    // de la franja y el día puestos.
-    function asistPlanificarClase(claseId, fechaISO) {
-      var clase = (leerAsistConfig().clases || []).filter(function(c){ return c.id === claseId; })[0];
-      var niv = clase && clase.nivel ? clase.nivel : 'competicion';
+    // v0.225 — Abrir una sesión desde el globo: se recuerda a qué globo hay
+    // que volver, para que el botón de atrás no acabe en Plan.
+    function asistVerSesion(sesId) {
+      _asistClaseVuelta = _asistClaseVista;
       asistCerrarClase();
-      var p = leerPlan();
-      if (p.nivel !== niv) { p.nivel = niv; _planGuardar(p); }
-      irA('pantalla-planificacion');
-      rutaAbrirDia(fechaISO, niv);
+      verSesion(sesId, 'asist');
     }
     function _asistClaseRender() {
       var ov = document.getElementById('asist-clase-ov');
@@ -20135,7 +20167,7 @@
           var ses = todasS.filter(function(c){ return c.id === id; })[0];
           var th  = ses ? _rutaSesThumb(ses) : null;
           h += '<div class="ruta-ses-eleg' + (ses ? ' clicable' : '') + '"' +
-            (ses ? ' onclick="asistCerrarClase();verSesion(' + ses.id + ',\'planif\')"' : '') + '>' +
+            (ses ? ' onclick="asistVerSesion(' + ses.id + ')"' : '') + '>' +
             '<span class="ruta-ses-thumb">' + (th ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="ruta-ses-noimg">🎾</span>') + '</span>' +
             '<span class="ruta-ses-nom">' + _gEsc(ses ? (ses.nombre || ses.fecha || ('Sesión ' + id)) : ('Sesión ' + id)) + '</span></div>';
         });
@@ -20143,9 +20175,8 @@
       h += '</div>';
       h += '</div>';
 
-      h += '<button type="button" class="btn btn-sec" style="margin-top:12px;" onclick="asistPlanificarClase(' + claseId + ',\'' + fechaISO + '\')">' +
-        (carroIds.length || sesIds.length ? '✏️ Cambiar la planificación de esta clase' : '＋ Planificar esta clase') +
-        '</button>';
+      // v0.225: sin botón de editar — la planificación se toca en su sitio
+      // (Planificación → el nivel → el día), no desde la vista de pista.
       h += '</div>';
       ov.innerHTML = h;
       ov.style.display = 'flex';
@@ -20339,18 +20370,20 @@
             html += '<div class="asist-clase-row-main" onclick="asistAbrirLista(' + clase.id + ',\'' + fecha + '\')">';
             html += '<span class="asist-franja-pill">' + (clase.franja||'—') + '</span>';
             html += '<div class="asist-clase-row-info">';
-            html += '<div class="asist-clase-row-nombre">' + _gEsc(nombre) +
-                    (clase.nivel ? ' <span class="asist-niv-pill">' + _nivIcono(clase.nivel) + '</span>' : '') + '</div>';
+            html += '<div class="asist-clase-row-nombre">' + _gEsc(nombre) + '</div>';
             html += '<div class="asist-clase-row-alumnos">' + numAl + ' alumno' + (numAl!==1?'s':'') + '</div>';
             html += '</div>' + badge + '</div>';
             // v0.224: si la franja tiene nivel, botón cuadrado con la clase
             // planificada de ese nivel para ese día (carro + área de trabajo).
             if (clase.nivel) {
               var _pl = _claseTienePlan(clase.nivel, fecha);
+              // v0.225: el botón lleva el NOMBRE del nivel debajo del icono,
+              // para saber de qué clase es sin abrir nada.
               html += '<button type="button" class="asist-plan-btn' + (_pl ? ' con' : '') +
                 '" onclick="asistVerClase(' + clase.id + ',\'' + fecha + '\')"' +
-                ' title="' + (_pl ? 'Ver la clase preparada' : 'Sin planificar todavía') + '" aria-label="Ver la clase preparada">' +
-                '<span>' + (_pl ? '📋' : '＋') + '</span></button>';
+                ' title="' + (_pl ? 'Ver la clase preparada' : 'Sin planificar todavía') + '">' +
+                '<span class="asist-plan-ico">' + _nivIcono(clase.nivel) + '</span>' +
+                '<span class="asist-plan-niv">' + _nivNombre(clase.nivel) + '</span></button>';
             }
             html += '</div>';
           });
