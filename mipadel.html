@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.234.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.235.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,36 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.235.0 — Un EJ puede ser una progresión de varios vídeos (2026-07)
+    (sin migraciones nuevas: `videos` viaja dentro de `facetas`, jsonb ya
+    existente)
+    · Hasta ahora un ejercicio (EJ) solo podía tener un vídeo. Si una misma
+      situación se grababa en varias fases de exigencia (p.ej. alimentación
+      baja → alta), había que crear una nota EJ por vídeo — y eso las
+      convertía en "ejercicios" sueltos cuando en realidad eran UNO con
+      progresión, se colaban tres veces en el catálogo y en el carro.
+    · Nuevo campo de vault `videos:` (lista) en el frontmatter del EJ. El
+      primero de la lista sigue siendo también el `video:` de toda la vida
+      (compatibilidad total con el filtro "solo con vídeo" de sync_padel.py
+      y con cualquier sitio de la app que lea `ej.video`).
+    · Nuevo helper `ejVideos(ej)`: devuelve la lista completa o, si no hay
+      `videos:`, cae a `[ej.video]`. Se usa en tres sitios:
+        · Detalle del ejercicio: se listan TODOS los vídeos, numerados
+          ("Vídeo 1", "Vídeo 2"...) si hay más de uno.
+        · Ficha del EJ en el 🛒 Carro (al planificar un día): si el EJ tiene
+          varios vídeos aparecen TODAS sus miniaturas en fila (más pequeñas),
+          no solo la primera, y un aviso "N vídeos" junto al nombre.
+        · Tarjeta del catálogo de Ejercicios: badge "🎬×N" junto al código y
+          la valoración cuando hay progresión.
+    · sync_padel.py: lee `videos:` del frontmatter (mismo parser que
+      `condicionantes`/`combo`) y rellena `video` con el primero si no había
+      uno suelto.
+    · Aplicado al primer caso real: "EJ - Doble pared fondo lateral" pasa de
+      tener 3 notas sueltas (…1, …2, …3, una por fase) a una sola nota con
+      `videos:` con los 3 enlaces. Las 3 notas numeradas se han borrado y la
+      sesión "Avanzado/Doble pared fondo-lateral — Secuencia de progresión"
+      ahora enlaza una vez a la nota única en vez de tres.
 
   v0.234.0 — Fix: el atrás de un bloque vuelve al Área de trabajo (2026-08)
     (sin migraciones nuevas)
@@ -5472,6 +5502,11 @@
     .ruta-carro-ficha-txt { display:flex; flex-direction:column; gap:1px; min-width:0; flex:1; }
     .ruta-carro-ficha-txt b { font-size:12px; font-weight:700; color:var(--texto); line-height:1.3; }
     .ruta-carro-ficha-txt span { font-size:10.5px; color:#0e7490; font-weight:700; }
+    /* v0.235 — EJ en progresión (varios vídeos): fila de miniaturas más
+       pequeñas en vez de una sola, y aviso de cuántos vídeos tiene. */
+    .ruta-carro-thumbs { display:flex; gap:3px; flex-shrink:0; }
+    .ruta-carro-ficha .ruta-carro-thumb-mini { width:34px; cursor:pointer; }
+    .ruta-carro-nvid { color:var(--gris) !important; font-weight:600 !important; }
     .ruta-carro-ficha button { flex-shrink:0; border:none; background:none; color:#0e7490; font-size:13px;
       font-family:inherit; cursor:pointer; padding:0 4px; opacity:.75; }
     .ruta-carro-ficha button:hover { opacity:1; }
@@ -6953,7 +6988,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.234.0';
+    var APP_VERSION = '0.235.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -15213,18 +15248,39 @@
     // Es la misma ficha en el panel de planificar y en la vista del día, para
     // que en pista se reconozca lo mismo que se eligió.
     function _rutaCarroFichaHTML(e, quitar) {
-      var th = _rutaEjThumb(e);
       var gk = ejFaceta(e, 'golpe');
       var g  = gk ? (GOLPE_ICONO[gk] ? GOLPE_ICONO[gk] + ' ' + (GOLPE_LABEL[gk] || gk) : gk) : '';
-      var yt = extraerIdYoutube(e.video);
-      var ver = yt ? ' onclick="abrirLightboxVideo(\'' + yt + '\',null)"'
-              : (e.video ? ' onclick="abrirLightboxVideo(null,\'' + String(e.video).replace(/'/g, "\\'") + '\')"' : '');
+      // v0.235: si el EJ es una progresión (varios vídeos), se ven TODAS sus
+      // miniaturas en fila, no solo la primera — así en pista se reconoce que
+      // hay que pasar por las 3 fases, no solo lanzar la primera.
+      var vids = ejVideos(e);
+      var thumbsHTML = '';
+      if (vids.length > 1) {
+        thumbsHTML = '<span class="ruta-carro-thumbs">';
+        vids.forEach(function(v, vi) {
+          var yt = extraerIdYoutube(v);
+          var th = yt ? ('https://img.youtube.com/vi/' + yt + '/mqdefault.jpg') : null;
+          var verV = yt ? ' onclick="abrirLightboxVideo(\'' + yt + '\',null);event.stopPropagation()"'
+                   : (v ? ' onclick="abrirLightboxVideo(null,\'' + String(v).replace(/'/g, "\\'") + '\');event.stopPropagation()"' : '');
+          thumbsHTML += '<span class="ruta-carro-thumb ruta-carro-thumb-mini"' + verV + ' title="Vídeo ' + (vi + 1) + '">' +
+            (th ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="ruta-ses-noimg">🎾</span>') +
+            (verV ? '<span class="ejcard-play">▶</span>' : '') + '</span>';
+        });
+        thumbsHTML += '</span>';
+      } else {
+        var th1 = _rutaEjThumb(e);
+        var yt1 = extraerIdYoutube(e.video);
+        var ver1 = yt1 ? ' onclick="abrirLightboxVideo(\'' + yt1 + '\',null)"'
+                 : (e.video ? ' onclick="abrirLightboxVideo(null,\'' + String(e.video).replace(/'/g, "\\'") + '\')"' : '');
+        thumbsHTML = '<span class="ruta-carro-thumb"' + ver1 + '>' +
+          (th1 ? '<img src="' + th1 + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="ruta-ses-noimg">🎾</span>') +
+          (ver1 ? '<span class="ejcard-play">▶</span>' : '') + '</span>';
+      }
       return '<div class="ruta-carro-ficha">' +
-        '<span class="ruta-carro-thumb"' + ver + '>' +
-          (th ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="ruta-ses-noimg">🎾</span>') +
-          (ver ? '<span class="ejcard-play">▶</span>' : '') + '</span>' +
+        thumbsHTML +
         '<span class="ruta-carro-ficha-txt"><b>' + _gEsc(e.nombre || ('Ejercicio ' + e.id)) + '</b>' +
-          (g ? '<span>' + _gEsc(g) + '</span>' : '') + '</span>' +
+          (g ? '<span>' + _gEsc(g) + '</span>' : '') +
+          (vids.length > 1 ? '<span class="ruta-carro-nvid">' + vids.length + ' vídeos</span>' : '') + '</span>' +
         (quitar ? '<button type="button" onclick="' + quitar + '" aria-label="Quitar">✕</button>' : '') +
       '</div>';
     }
@@ -17544,6 +17600,15 @@
       return combo.slice().sort().join('+');
     }
 
+    // Un EJ puede ser una progresión con varios vídeos (campo `videos:` del
+    // vault) en vez de uno solo — p.ej. el mismo patrón con alimentación baja
+    // y alta. Devuelve siempre un array; si no hay `videos`, cae a [ej.video].
+    function ejVideos(ej) {
+      var vs = ejFaceta(ej, 'videos');
+      if (Array.isArray(vs) && vs.length) return vs.filter(Boolean);
+      return (ej && ej.video) ? [ej.video] : [];
+    }
+
     // ── Intención táctica (matriz Anular / Dominar / Definir) ──
     var INTENCION_CANON = [
       { key: 'anular',  icono: '🛡️', label: 'Anular'  },
@@ -17864,9 +17929,11 @@
       var thumb = ytId ? ('https://img.youtube.com/vi/' + ytId + '/mqdefault.jpg') : (ej.imagen || null);
       var val = ej.valoracion || 0;
       var cod = ejCodigo(ej);
+      var nvid = ejVideos(ej).length;
       var badges = '';
       if (cod) badges += '<span class="ejcard-cod">' + cod + '</span>';
       if (val > 0) badges += '<span class="ejcard-val">★' + val + '</span>';
+      if (nvid > 1) badges += '<span class="ejcard-cod" title="Progresión de ' + nvid + ' vídeos">🎬×' + nvid + '</span>';
 
       // v0.227: la tarjeta se ajusta a lo que hay. Sin vídeo ni foto no se
       // reserva el marco 16:9 vacío (ni el ▶, que además sería mentira): la
@@ -18128,26 +18195,30 @@
       if (ej.imagen) html += '<img src="' + ej.imagen + '" class="detalle-imagen" alt="' + ej.nombre + '" onclick="abrirLightboxImg(this.src)">';
       // (funciones del globo definidas más abajo: abrirLightboxImg / abrirLightboxVideo / cerrarLightbox)
 
-      // Vídeo
-      if (ej.video) {
-        var ytId = extraerIdYoutube(ej.video);
-        var vidUrl = ej.video.replace(/'/g, "\\'");
-        if (ytId) {
-          // Miniatura clicable: abre el vídeo en un globo (lightbox)
-          html += '<div><div class="detalle-seccion-titulo">Vídeo</div>' +
-            '<div class="video-thumb-wrap" onclick="abrirLightboxVideo(\'' + ytId + '\',\'' + vidUrl + '\')">' +
-              '<img src="https://img.youtube.com/vi/' + ytId + '/hqdefault.jpg" ' +
-                   'class="video-thumb-img" alt="Miniatura del vídeo" ' +
-                   'onerror="this.style.display=\'none\';this.nextSibling.style.display=\'flex\'">' +
-              '<div class="video-thumb-fallback" style="display:none">▶ Ver vídeo</div>' +
-              '<div class="video-play-btn">▶</div>' +
-            '</div>' +
-            '<a href="' + ej.video + '" target="_blank" class="detalle-enlace" style="margin-top:6px;">↗ Abrir en YouTube</a>' +
-          '</div>';
-        } else {
-          html += '<div><div class="detalle-seccion-titulo">Vídeo</div>' +
-            '<a href="' + ej.video + '" target="_blank" class="detalle-enlace">▶ Abrir vídeo</a></div>';
-        }
+      // Vídeo(s) — v0.235: un EJ puede ser una progresión con varios vídeos
+      var _vids = ejVideos(ej);
+      if (_vids.length) {
+        var _tituloVid = _vids.length > 1 ? 'Vídeos · progresión (' + _vids.length + ')' : 'Vídeo';
+        html += '<div><div class="detalle-seccion-titulo">' + _tituloVid + '</div>';
+        _vids.forEach(function(v, vi) {
+          var ytId = extraerIdYoutube(v);
+          var vidUrl = v.replace(/'/g, "\\'");
+          var etiqueta = _vids.length > 1 ? ('<div style="font-size:12px;font-weight:700;color:var(--gris);margin:' + (vi ? '14px' : '0') + ' 0 4px;">Vídeo ' + (vi + 1) + '</div>') : '';
+          if (ytId) {
+            html += etiqueta +
+              '<div class="video-thumb-wrap" onclick="abrirLightboxVideo(\'' + ytId + '\',\'' + vidUrl + '\')">' +
+                '<img src="https://img.youtube.com/vi/' + ytId + '/hqdefault.jpg" ' +
+                     'class="video-thumb-img" alt="Miniatura del vídeo" ' +
+                     'onerror="this.style.display=\'none\';this.nextSibling.style.display=\'flex\'">' +
+                '<div class="video-thumb-fallback" style="display:none">▶ Ver vídeo</div>' +
+                '<div class="video-play-btn">▶</div>' +
+              '</div>' +
+              '<a href="' + v + '" target="_blank" class="detalle-enlace" style="margin-top:6px;">↗ Abrir en YouTube</a>';
+          } else {
+            html += etiqueta + '<a href="' + v + '" target="_blank" class="detalle-enlace">▶ Abrir vídeo</a>';
+          }
+        });
+        html += '</div>';
       }
 
       // Ficha (código + facetas)
