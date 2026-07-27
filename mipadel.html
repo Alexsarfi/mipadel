@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.213.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.214.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,38 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.214.0 — Competiciones: barras con nombre y prefijo de federación (2026-08)
+    (sin migraciones nuevas)
+    · BARRAS EN VEZ DE PUNTOS — cada competición se pinta como una franja de
+      color continua CON SU NOMBRE encima de todos los días que ocupa, igual
+      que en un calendario de verdad. Antes eran puntitos que no decían nada y
+      había que abrir el día para saber qué era.
+      · Un evento que cruza de semana se corta al final de la fila y sigue en
+        la siguiente, con los bordes rectos por el lado que continúa (y sin
+        repetir el icono en el trozo de continuación).
+      · Los que se solapan se apilan en CARRILES: cada uno cae en el primero
+        libre a partir de su columna, así que caben todos los que hagan falta
+        (varios jugadores en torneos distintos a la vez) sin taparse.
+      · Los que no se solapan comparten carril, para no desperdiciar alto.
+      · La barra se pincha y abre esa competición; el número del día abre el
+        globo de ese día.
+    · CUADRÍCULA MÁS AJUSTADA — fuera los recuadros de cada día y el alto fijo
+      (aspect-ratio). Ahora cada semana es una línea de números pequeños con
+      sus barras debajo, separadas por un filete. Ocupa mucho menos y el
+      protagonismo es de los eventos, no de la rejilla.
+      También se retira la leyenda de colores del final: cada barra ya lleva
+      icono y nombre, así que solo hacía ruido.
+    · PREFIJO DE FEDERACIÓN — nuevo campo «Federación» en la ficha, con FAP,
+      FEP y FIP (las tres de siempre). Al elegir una:
+      · Se antepone al nombre en todas partes: «FAP · Open de invierno», en la
+        barra del calendario, en las fichas, en el aviso de la próxima del
+        botón de Inicio y en el evento que se exporta al calendario del móvil.
+      · Se rellena solo el enlace oficial (los mismos de los botones
+        FAP/FEP/FIP de Inicio). Si el enlace ya lo habías escrito tú —el
+        cuadro concreto del torneo, por ejemplo— NO se pisa; solo se cambia si
+        estaba vacío o si era el de otra federación.
+      · Se puede dejar en «— ninguna —» para las competiciones del club.
 
   v0.213.0 — Competiciones: globo del día y exportar al calendario (2026-08)
     (sin migraciones nuevas)
@@ -4951,17 +4983,28 @@
     .tor-mes-chip.on { background:#fffbeb; border-color:#f59e0b; color:#92400e; }
     .tor-mes-n { display:inline-block; margin-left:5px; font-size:9.5px; font-weight:800; color:#92400e;
       background:#fde68a; border-radius:999px; padding:0 5px; }
-    .tor-cal-tit { font-size:12px; font-weight:800; color:var(--texto); text-transform:capitalize; margin:0 2px 6px; }
-    .tor-cal { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin-bottom:14px; }
-    .tor-cal-dow { text-align:center; font-size:9.5px; font-weight:800; color:var(--gris); text-transform:uppercase; padding-bottom:2px; }
-    .tor-cal-d { aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
-      border:1px solid var(--borde); border-radius:8px; background:var(--blanco); font-size:11.5px; color:var(--texto); cursor:pointer; }
-    .tor-cal-d:hover { border-color:#f59e0b; }
-    .tor-cal-d.vacio { border:none; background:none; cursor:default; }
-    .tor-cal-d.con { font-weight:800; background:#fffbeb; border-color:#fcd34d; }
-    .tor-cal-d.hoy { border-color:var(--verde); border-width:2px; }
-    .tor-cal-dots { display:flex; gap:2px; }
-    .tor-dot { width:5px; height:5px; border-radius:50%; display:inline-block; flex-shrink:0; }
+    .tor-cal-tit { font-size:12px; font-weight:800; color:var(--texto); text-transform:capitalize; margin:0 2px 5px; }
+    /* v0.214 — cuadrícula ajustada: números pequeños y, debajo, las barras de
+       los eventos con su nombre. Sin recuadros por día: el protagonismo es de
+       los eventos, no de la rejilla. */
+    .tor-cal { display:flex; flex-direction:column; margin-bottom:12px; }
+    .tor-cal-dows { display:grid; grid-template-columns:repeat(7,1fr); padding-bottom:3px; }
+    .tor-cal-dows span { text-align:center; font-size:9px; font-weight:800; color:var(--gris); text-transform:uppercase; letter-spacing:.04em; }
+    .tor-sem { border-top:1px solid var(--borde); padding:2px 0 3px; }
+    .tor-dias { display:grid; grid-template-columns:repeat(7,1fr); }
+    .tor-dia-n { justify-self:center; min-width:19px; text-align:center; font-size:10.5px; color:var(--gris);
+      padding:1px 0; border-radius:6px; cursor:pointer; }
+    .tor-dia-n:hover { background:var(--arena); color:var(--texto); }
+    .tor-dia-n.fuera { visibility:hidden; cursor:default; }
+    .tor-dia-n.quieto { cursor:default; }
+    .tor-dia-n.quieto:hover { background:none; color:var(--gris); }
+    .tor-dia-n.hoy { background:var(--verde); color:#fff; font-weight:800; }
+    .tor-barras { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; margin-top:2px; }
+    .tor-barra { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+      font-size:9.5px; font-weight:700; color:#fff; line-height:1.5; padding:1px 5px; border-radius:5px; cursor:pointer; }
+    .tor-barra:hover { filter:brightness(1.12); }
+    .tor-barra.sigue-izq { border-top-left-radius:0; border-bottom-left-radius:0; padding-left:3px; }
+    .tor-barra.sigue-der { border-top-right-radius:0; border-bottom-right-radius:0; }
     .tor-add { display:block; width:100%; font-family:inherit; font-size:12.5px; font-weight:700; color:#92400e;
       background:#fffbeb; border:1.5px dashed #fcd34d; border-radius:10px; padding:9px; margin-bottom:10px; cursor:pointer; }
     .tor-add:hover { border-color:#f59e0b; }
@@ -4988,9 +5031,6 @@
     .tor-form-row .form-grupo { flex:1; min-width:0; }
     .tor-opc { font-weight:400; text-transform:none; letter-spacing:0; }
     .tor-form-btns { display:flex; gap:8px; }
-    .tor-leyenda { display:flex; flex-wrap:wrap; gap:4px 12px; font-size:10.5px; color:var(--gris);
-      margin-top:14px; padding-top:10px; border-top:1px solid var(--borde); }
-    .tor-leyenda span { display:inline-flex; align-items:center; gap:4px; }
     /* v0.213 — globo de un día, encima del calendario */
     .tor-dia-ov { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:10020; display:flex;
       align-items:flex-end; justify-content:center; }
@@ -4999,13 +5039,12 @@
       box-shadow:0 -8px 30px rgba(0,0,0,.3); animation:gpSheetUp .18s ease-out; }
     .tor-dia .ruta-modal-tit { text-transform:capitalize; }
     .tor-card-acts { display:flex; flex-wrap:wrap; gap:6px; margin-top:9px; }
-    .tor-cal-mas { font-size:8.5px; font-weight:800; color:#92400e; }
     .tor-exp { display:block; width:100%; margin-top:12px; font-family:inherit; font-size:12.5px; font-weight:700;
       color:#1e40af; background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:10px; padding:9px; cursor:pointer; }
     .tor-exp:hover { border-color:#2563eb; }
     @media (min-width:760px){
-      .tor-cal-d { font-size:13px; }
-      .tor-cal { gap:5px; }
+      .tor-dia-n { font-size:12px; min-width:22px; }
+      .tor-barra { font-size:11px; padding:2px 7px; }
       .tor-dia-ov { align-items:center; padding:24px; }
       .tor-dia { max-width:560px; max-height:84vh; border-radius:18px; padding:18px 20px 20px; }
     }
@@ -6299,7 +6338,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.213.0';
+    var APP_VERSION = '0.214.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -14903,6 +14942,24 @@
     function _torTipo(k) {
       return TOR_TIPOS.filter(function(t){ return t.key === k; })[0] || TOR_TIPOS[TOR_TIPOS.length - 1];
     }
+    // v0.214 — FEDERACIÓN de la competición. Va como PREFIJO del nombre
+    // («FAP · Torneo de Navidad») y al elegirla rellena sola el enlace oficial,
+    // que son los tres sitios que se consultan siempre. Los enlaces son los
+    // mismos que los botones FAP/FEP/FIP de la pantalla de Inicio.
+    var TOR_FEDS = [
+      { key:'',    corto:'',    label:'— ninguna —',                    url:'' },
+      { key:'fap', corto:'FAP', label:'FAP · Federación Andaluza',      url:'https://fap.es/campeonatos-torneos/' },
+      { key:'fep', corto:'FEP', label:'FEP · Federación Española',      url:'https://www.padelfederacion.es/Campeonatos' },
+      { key:'fip', corto:'FIP', label:'FIP · Federación Internacional', url:'https://www.padelfip.com/es/' }
+    ];
+    function _torFed(k) {
+      return TOR_FEDS.filter(function(f){ return f.key === (k || ''); })[0] || TOR_FEDS[0];
+    }
+    // Nombre tal y como se enseña en todas partes: con su prefijo si lo tiene.
+    function _torNombre(t) {
+      var f = _torFed(t.fed);
+      return (f.corto ? f.corto + ' · ' : '') + (t.nombre || _torTipo(t.tipo).label);
+    }
     var _torCursoSel  = null;   // curso que se mira (null = el de la ruta)
     var _torMesSel    = null;   // 0..9 dentro del curso (null = el mes de hoy)
     var _torForm      = null;   // 'nueva' | id que se edita | null
@@ -14959,7 +15016,7 @@
       var sub = !arr.length
         ? 'Sin competiciones apuntadas — toca para añadir la primera'
         : arr.length + (arr.length === 1 ? ' competición' : ' competiciones') + ' en el curso ' + curso +
-          (prox ? ' · próxima: ' + _gEsc(prox.nombre || _torTipo(prox.tipo).label) + ' (' + _torRangoTxt(prox) + ')' : '');
+          (prox ? ' · próxima: ' + _gEsc(_torNombre(prox)) + ' (' + _torRangoTxt(prox) + ')' : '');
       return '<button type="button" class="tor-btn" onclick="torAbrir()">' +
         '<span class="tor-btn-ico">🏆</span>' +
         '<span class="tor-btn-txt"><b>Calendario de competiciones</b><span>' + sub + '</span></span>' +
@@ -15035,6 +15092,17 @@
       _torDiaRender();
     }
     function torEditar(id) { _torForm = id; _torVer = null; _torDiaRender(); }
+    // v0.214: al elegir federación se pone su enlace oficial. Solo pisa el
+    // enlace si estaba vacío o si era el de otra federación: si lo escribiste
+    // tú (el cuadro concreto del torneo, por ejemplo), se respeta.
+    function torFedChange() {
+      var sel = document.getElementById('tor-f-fed');
+      var enl = document.getElementById('tor-f-enlace');
+      if (!sel || !enl) return;
+      var actual = enl.value.trim();
+      var esDeFed = TOR_FEDS.some(function(f){ return f.url && f.url === actual; });
+      if (!actual || esDeFed) enl.value = _torFed(sel.value).url || '';
+    }
     function torCancelarForm() {
       _torForm = null;
       // Si el día se quedó sin nada que enseñar, el globo se cierra solo
@@ -15044,7 +15112,7 @@
     function torBorrar(id) {
       var t = _torPorId(id);
       if (!t) return;
-      if (!confirm('¿Borrar «' + (t.nombre || _torTipo(t.tipo).label) + '» del calendario?')) return;
+      if (!confirm('¿Borrar «' + _torNombre(t) + '» del calendario?')) return;
       _torGuardar(_torLeer().filter(function(x){ return String(x.id) !== String(id); }));
       _torVer = null; _torForm = null;
       _torRender();
@@ -15059,6 +15127,7 @@
       if (fin && fin < fecha) { alert('La fecha de fin no puede ser anterior a la de inicio.'); return; }
       var datos = {
         tipo:      _v('tor-f-tipo') || 'torneo',
+        fed:       _v('tor-f-fed'),        // v0.214: prefijo FAP/FEP/FIP
         nombre:    _v('tor-f-nombre'),
         fecha:     fecha,
         fechaFin:  (fin && fin !== fecha) ? fin : '',
@@ -15098,6 +15167,13 @@
         h += '<option value="' + tp.key + '"' + (t.tipo === tp.key ? ' selected' : '') + '>' + tp.ico + ' ' + tp.label + '</option>';
       });
       h += '</select></div>';
+      // v0.214: federación → prefijo del nombre + enlace oficial automático
+      h += '<div class="form-grupo"><label class="form-label" for="tor-f-fed">Federación</label>' +
+           '<select class="form-select" id="tor-f-fed" onchange="torFedChange()">';
+      TOR_FEDS.forEach(function(f){
+        h += '<option value="' + f.key + '"' + ((t.fed || '') === f.key ? ' selected' : '') + '>' + f.label + '</option>';
+      });
+      h += '</select><p class="form-hint">Se pone delante del nombre (FAP · Torneo…) y rellena el enlace oficial.</p></div>';
       h += '<div class="form-grupo"><label class="form-label" for="tor-f-nombre">Nombre</label>' +
            '<input class="form-input" id="tor-f-nombre" placeholder="Ej. Torneo de Navidad del club" value="' + _gEsc(t.nombre || '') + '"></div>';
       h += '<div class="tor-form-row">' +
@@ -15132,7 +15208,7 @@
       var h = '<div class="tor-card' + (abierta ? ' abierta' : '') + (pasada ? ' pasada' : '') + '">';
       h += '<div class="tor-card-hdr" onclick="torVerFicha(\'' + t.id + '\')">' +
         '<span class="tor-card-ico" style="background:' + tp.col + '1a;color:' + tp.col + ';">' + tp.ico + '</span>' +
-        '<span class="tor-card-txt"><b>' + _gEsc(t.nombre || tp.label) + '</b>' +
+        '<span class="tor-card-txt"><b>' + _gEsc(_torNombre(t)) + '</b>' +
           '<span>' + tp.label + ' · ' + _torRangoTxt(t) + (t.lugar ? ' · ' + _gEsc(t.lugar) : '') + '</span></span>' +
         '<span class="chev">›</span></div>';
       if (abierta) {
@@ -15153,6 +15229,85 @@
         }
         h += '</div>';
         h += '</div>';
+      }
+      h += '</div>';
+      return h;
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // v0.214 — CUADRÍCULA DEL MES CON BARRAS
+    // ══════════════════════════════════════════════════════════════
+    // Un evento se pinta como una FRANJA continua con su nombre encima de
+    // todos los días que ocupa, como en un calendario de verdad (antes eran
+    // puntitos de color que no decían nada). Si un evento cruza de semana, se
+    // corta al final de la fila y sigue en la siguiente, con los bordes rectos
+    // por el lado que continúa.
+    // Los que se solapan se apilan en CARRILES: se ordenan de izquierda a
+    // derecha y cada uno cae en el primer carril libre a partir de su columna.
+    function _torCalHTML(mes, delMes, hoy, soloLect) {
+      var primero = new Date(mes.y, mes.m, 1);
+      var offset  = (primero.getDay() + 6) % 7;              // lunes = 0
+      var ultimo  = new Date(mes.y, mes.m + 1, 0).getDate();
+      var nSem    = Math.ceil((offset + ultimo) / 7);
+      var pre     = mes.y + '-' + ('0' + (mes.m + 1)).slice(-2) + '-';
+      function iso(d) { return pre + ('0' + d).slice(-2); }
+
+      var h = '<div class="tor-cal">';
+      h += '<div class="tor-cal-dows">';
+      ['L','M','X','J','V','S','D'].forEach(function(d){ h += '<span>' + d + '</span>'; });
+      h += '</div>';
+
+      for (var s = 0; s < nSem; s++) {
+        var d1 = s * 7 - offset + 1, d7 = d1 + 6;            // 1er y último día de la fila
+        var dIni = Math.max(d1, 1), dFin = Math.min(d7, ultimo);
+        var iniISO = iso(dIni), finISO = iso(dFin);
+
+        h += '<div class="tor-sem">';
+        // Fila de números
+        h += '<div class="tor-dias">';
+        for (var c = 0; c < 7; c++) {
+          var num = d1 + c;
+          if (num < 1 || num > ultimo) { h += '<span class="tor-dia-n fuera"></span>'; continue; }
+          var fISO = iso(num);
+          var enDia = _torEnDia(delMes, fISO);
+          // Todos los días abren su globo; en solo lectura, solo los que tienen algo
+          var abre = enDia.length || !soloLect;
+          var tit = enDia.length ? enDia.map(_torNombre).join(' · ')
+                                 : (soloLect ? '' : 'Apuntar una competición este día');
+          h += '<span class="tor-dia-n' + (fISO === hoy ? ' hoy' : '') + (abre ? '' : ' quieto') + '"' +
+               (abre ? ' onclick="torDiaAbrir(\'' + fISO + '\')"' : '') +
+               ' title="' + _gEsc(tit) + '">' + num + '</span>';
+        }
+        h += '</div>';
+
+        // Barras de los eventos que tocan esta fila, de izquierda a derecha
+        var evs = delMes.filter(function(t){
+          return t.fecha <= finISO && (t.fechaFin || t.fecha) >= iniISO;
+        }).map(function(t){
+          var eIni = t.fecha   > iniISO ? +t.fecha.slice(8, 10) : dIni;
+          var eFin = (t.fechaFin || t.fecha) < finISO ? +(t.fechaFin || t.fecha).slice(8, 10) : dFin;
+          return { t:t, col:(eIni - d1) + 1, span:(eFin - eIni) + 1,
+                   sigueIzq: t.fecha < iniISO, sigueDer: (t.fechaFin || t.fecha) > finISO,
+                   diaIni: iso(eIni) };
+        }).sort(function(a, b){ return a.col - b.col || b.span - a.span; });
+
+        if (evs.length) {
+          var carriles = [];   // por carril, la última columna ocupada
+          var barras = '';
+          evs.forEach(function(e){
+            var k = 0;
+            while (carriles[k] !== undefined && carriles[k] >= e.col) k++;
+            carriles[k] = e.col + e.span - 1;
+            var tp = _torTipo(e.t.tipo);
+            barras += '<span class="tor-barra' + (e.sigueIzq ? ' sigue-izq' : '') + (e.sigueDer ? ' sigue-der' : '') + '"' +
+              ' style="grid-column:' + e.col + ' / span ' + e.span + ';grid-row:' + (k + 1) + ';background:' + tp.col + ';"' +
+              ' onclick="torDiaAbrir(\'' + e.diaIni + '\',\'' + e.t.id + '\')"' +
+              ' title="' + _gEsc(tp.label + ' · ' + _torNombre(e.t) + ' · ' + _torRangoTxt(e.t)) + '">' +
+              (e.sigueIzq ? '' : tp.ico + ' ') + _gEsc(_torNombre(e.t)) + '</span>';
+          });
+          h += '<div class="tor-barras" style="grid-template-rows:repeat(' + carriles.length + ',auto);">' + barras + '</div>';
+        }
+        h += '</div>';   // /tor-sem
       }
       h += '</div>';
       return h;
@@ -15238,7 +15393,7 @@
         // Evento de día completo: DTEND es EXCLUSIVO, así que va el día siguiente
         L.push('DTSTART;VALUE=DATE:' + t.fecha.replace(/-/g, ''));
         L.push('DTEND;VALUE=DATE:' + addDiasISO(fin, 1).replace(/-/g, ''));
-        L.push('SUMMARY:' + _icsEsc(tp.ico + ' ' + (t.nombre || tp.label)));
+        L.push('SUMMARY:' + _icsEsc(tp.ico + ' ' + _torNombre(t)));
         if (t.lugar) L.push('LOCATION:' + _icsEsc(t.lugar));
         L.push('DESCRIPTION:' + _icsEsc(desc.join('\n')));
         if (t.enlace && /^https?:\/\//i.test(t.enlace)) L.push('URL:' + t.enlace);
@@ -15304,34 +15459,9 @@
       });
       h += '</div>';
 
-      // Cuadrícula del mes elegido
-      var primero = new Date(mes.y, mes.m, 1);
-      var offset = (primero.getDay() + 6) % 7;             // lunes = 0
-      var ultimo = new Date(mes.y, mes.m + 1, 0).getDate();
+      // Cuadrícula del mes elegido, con las barras de los eventos
       h += '<div class="tor-cal-tit">' + _MESES_R[mes.m] + ' ' + mes.y + '</div>';
-      h += '<div class="tor-cal">';
-      ['L','M','X','J','V','S','D'].forEach(function(d){ h += '<div class="tor-cal-dow">' + d + '</div>'; });
-      for (var b = 0; b < offset; b++) h += '<div class="tor-cal-d vacio"></div>';
-      for (var d = 1; d <= ultimo; d++) {
-        var fISO = mes.y + '-' + ('0' + (mes.m + 1)).slice(-2) + '-' + ('0' + d).slice(-2);
-        var enDia = _torEnDia(delMes, fISO);
-        var dots = '';
-        // v0.213: hasta 3 puntos y, si hay más, un «+N»: un día puede llevar
-        // varias competiciones a la vez (varios jugadores en torneos distintos).
-        enDia.slice(0, 3).forEach(function(t){ dots += '<span class="tor-dot" style="background:' + _torTipo(t.tipo).col + ';"></span>'; });
-        if (enDia.length > 3) dots += '<span class="tor-cal-mas">+' + (enDia.length - 3) + '</span>';
-        var cls = 'tor-cal-d' + (enDia.length ? ' con' : '') + (fISO === hoy ? ' hoy' : '');
-        // v0.213: TODOS los días abren el globo de ese día — con competiciones
-        // o sin ellas. El de solo lectura solo entra si hay algo que ver.
-        var abre = enDia.length || !soloLect;
-        var tit = enDia.length
-          ? enDia.map(function(t){ return (t.nombre || _torTipo(t.tipo).label); }).join(' · ')
-          : (soloLect ? '' : 'Apuntar una competición este día');
-        h += '<div class="' + cls + '"' + (abre ? ' onclick="torDiaAbrir(\'' + fISO + '\')"' : '') + ' title="' + _gEsc(tit) + '">' +
-             '<span class="tor-cal-n">' + d + '</span>' +
-             (dots ? '<span class="tor-cal-dots">' + dots + '</span>' : '') + '</div>';
-      }
-      h += '</div>';
+      h += _torCalHTML(mes, delMes, hoy, soloLect);
 
       // Lista del mes. v0.213: solo para leer — tocar una lleva a su día, que
       // es donde se edita. El formulario vive en el globo del día.
@@ -15346,7 +15476,7 @@
           h += '<div class="tor-card' + (pasada ? ' pasada' : '') + '">' +
             '<div class="tor-card-hdr" onclick="torDiaAbrir(\'' + t.fecha + '\',\'' + t.id + '\')">' +
               '<span class="tor-card-ico" style="background:' + tp.col + '1a;color:' + tp.col + ';">' + tp.ico + '</span>' +
-              '<span class="tor-card-txt"><b>' + _gEsc(t.nombre || tp.label) + '</b>' +
+              '<span class="tor-card-txt"><b>' + _gEsc(_torNombre(t)) + '</b>' +
                 '<span>' + tp.label + ' · ' + _torRangoTxt(t) + (t.lugar ? ' · ' + _gEsc(t.lugar) : '') + '</span></span>' +
               '<span class="chev">›</span></div></div>';
         });
@@ -15357,12 +15487,8 @@
       if (delCurso.length) h += '<button type="button" class="tor-exp" onclick="torExportarCurso()">' +
         '📅 Exportar el curso a mi calendario <span class="tor-opc">(' + delCurso.length + ' · Google o iPhone)</span></button>';
 
-      // Leyenda de tipos
-      h += '<div class="tor-leyenda">';
-      TOR_TIPOS.forEach(function(tp){
-        h += '<span><span class="tor-dot" style="background:' + tp.col + ';"></span>' + tp.label + '</span>';
-      });
-      h += '</div>';
+      // v0.214: fuera la leyenda de colores. Cada barra ya lleva el icono y el
+      // nombre del evento, así que la fila de seis colores solo hacía ruido.
 
       h += '</div>';   // /ruta-modal
       ov.innerHTML = h;
