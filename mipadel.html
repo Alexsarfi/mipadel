@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.227.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.229.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,48 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.229.0 — Cada clase, su plan: la sesión y el carro son de un DÍA (2026-08)
+    (sin migraciones nuevas)
+    · El problema: un grupo que entrena dos o tres días por semana compartía
+      sesión y carro entre todos ellos. El ÁREA sí iba por día (va pegada a la
+      fecha), pero la sesión y el carro eran de la semana entera, así que no
+      había forma de que el martes llevara una cosa y el jueves otra.
+    · Ahora la sesión y el carro también se guardan POR DÍA:
+          p.rutaSes['competicion|2025-09-16'] = [12, 7]
+          p.rutaCarro['competicion|2025-09-16'] = [3]
+      Se distinguen solas de las claves de semana, que siempre caen en lunes.
+    · HERENCIA, para no perder nada: lo guardado por semana (con nivel o sin
+      él) se sigue leyendo en TODOS los días de esa semana. En cuanto tocas un
+      día concreto, ese valor se REPARTE entre los días de clase de la semana
+      y la clave de semana se retira: a partir de ahí cada día va por su
+      cuenta. Así que no hay migración ni nada que perder.
+    · En el panel, si la semana tiene varios días de clase de ese nivel, sale
+      arriba «Clase del · mar 16 · jue 18» para elegir de cuál se habla. Con
+      un solo día no aparece, y abriendo desde un día concreto tampoco: ya se
+      sabe. El carro y las sesiones que se ven y se tocan son las de ese día.
+    · La tarjeta de la semana en el tablero SUMA lo de sus días, para seguir
+      viendo de un vistazo lo que lleva la semana entera.
+    · La copia entre cursos pasa a copiar día a día, emparejando por día de la
+      semana cuando se puede (martes con martes). Si la semana de destino no
+      tiene días de clase, se cuelga de su lunes para no perder lo copiado.
+    · El botón de borrar del panel ahora dice «Quitar las sesiones de esta
+      clase», que es lo que hace.
+
+  v0.228.0 — El globo, ordenado: cada sesión con su bloque (2026-08)
+    (sin migraciones nuevas)
+    · En el globo de la clase, la sesión salía suelta al final del todo, sin
+      que se viera de qué bloque era. Ahora va JUSTO DEBAJO de la pestaña de
+      su bloque, antes de sus ejercicios. El orden queda:
+          pestañas → la sesión de ese bloque → sus ejercicios
+      Se sabe qué sesión es de cada bloque por el mismo criterio de siempre
+      (las enlazadas a mano y las que traen apartado + bloque en su ficha).
+    · Fuera el título en negrita «apartado · bloque» que iba encima de los
+      ejercicios: decía lo mismo que la pestaña que acabas de pulsar.
+    · Una sesión que no cuelgue de ninguno de los bloques marcados no se
+      pierde: sale al final bajo «Otras sesiones de la semana». Y si una
+      sesión es de otro bloque marcado, aparece al cambiar a su pestaña, no
+      como suelta.
 
   v0.227.0 — Fix del carro en el día · todos los ejercicios (2026-08)
     (sin migraciones nuevas)
@@ -5232,6 +5274,11 @@
     .ruta-chip-rm button { border:none; background:none; color:inherit; font-size:12px; font-family:inherit;
       cursor:pointer; padding:0; line-height:1; opacity:.7; }
     .ruta-chip-rm button:hover { opacity:1; }
+    /* v0.229: selector del día de la clase, en la cabecera del panel */
+    .ruta-dia-sel { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:-4px 0 10px; }
+    .ruta-dia-sel .ruta-panel-paso { margin:0; }
+    .ruta-dia-sel .ruta-dia-chips { padding:0; }
+    .ruta-dia-chip.on { background:#0891b2; color:#fff; }
     .ruta-dia-chips { display:flex; flex-wrap:wrap; gap:6px; padding:2px 2px 8px; }
     .ruta-dia-chip { font-family:inherit; font-size:12px; font-weight:700; padding:6px 12px; border-radius:999px;
       border:1.5px solid #0891b2; background:#ecfeff; color:#0e7490; cursor:pointer; }
@@ -6784,7 +6831,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.227.0';
+    var APP_VERSION = '0.229.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -14427,10 +14474,14 @@
           vistos[x.areaId] = true;
           areasO.push({ id:x.areaId, dow:x.dow });
         });
-        var sesO = _rutaSesArr(_rutaLeeSem(p.rutaSes, nivCopia, wO[i].lunISO));   // v0.219/v0.224
+        // v0.229: se copia día a día. Se suma lo de toda la semana de origen y
+        // se reparte entre los días del destino, emparejando por día de la
+        // semana cuando se puede.
+        var diasO = _rutaDiasDeNivel(wO[i], nivCopia);
+        var sesO = _rutaSemanaUnion(p.rutaSes, nivCopia, wO[i]);
         if (!areasO.length && !sesO.length) { res.vacias++; continue; }
         // Destino ocupado (marcas en cualquier día o sesión) → no se toca
-        if (_rutaMarcasSemana(p, wD[i], idsNivel).length || _rutaSesArr(_rutaLeeSem(p.rutaSes, nivCopia, wD[i].lunISO)).length) { res.ocupadas++; continue; }
+        if (_rutaMarcasSemana(p, wD[i], idsNivel).length || _rutaSemanaUnion(p.rutaSes, nivCopia, wD[i]).length) { res.ocupadas++; continue; }
         var dias = _rutaDiasRealesDeSemana(wD[i]);
         if (areasO.length && !dias.length) { res.sinDia++; continue; }
         areasO.forEach(function(a, k){
@@ -14440,7 +14491,21 @@
           var arr = (p.compDias[destino.fecha] || []).slice();
           if (arr.indexOf(a.id) < 0) { arr.push(a.id); p.compDias[destino.fecha] = arr; }
         });
-        if (sesO.length) _rutaEscribeSem(p.rutaSes, nivCopia, wD[i].lunISO, sesO.slice());
+        if (sesO.length) {
+          // A cada día del destino, lo que tuviera su homólogo del origen; si
+          // el origen no distinguía días, lo mismo para todos.
+          var destinos = _rutaDiasDeNivel(wD[i], nivCopia);
+          if (!destinos.length) destinos = dias;
+          // Semana de destino sin ningún día de clase: se cuelga del lunes,
+          // para no perder lo copiado (la tarjeta de la semana lo enseña igual).
+          if (!destinos.length) destinos = [{ fecha: wD[i].lunISO, dow: 1 }];
+          destinos.forEach(function(dd, k){
+            var dOrig = diasO.filter(function(x){ return x.dow === dd.dow; })[0] || diasO[k] || null;
+            var val = dOrig ? _rutaSesArr(_rutaLeeDia(p.rutaSes, nivCopia, dOrig.fecha, wO[i].lunISO)) : sesO;
+            if (!val.length) val = sesO;
+            _rutaEscribeDia(p.rutaSes, nivCopia, dd.fecha, val.slice(), null);
+          });
+        }
         res.copiadas++;
       }
       _planGuardar(p);
@@ -14554,12 +14619,14 @@
       // v0.219: una semana puede llevar VARIAS sesiones. Lo guardado antes era
       // un id suelto, así que se normaliza a lista al leer (nada que migrar).
       // v0.224: y la planificación es de un NIVEL concreto.
+      // v0.229: y de un DÍA. Aquí se suma lo de todos los días de la semana,
+      // que es lo que enseña la tarjeta del tablero; el panel lee su día.
       var niv = nivel || _compNivel();
-      var sesiones = _rutaSesArr(_rutaLeeSem(p.rutaSes, niv, w.lunISO));
+      var sesiones = _rutaSemanaUnion(p.rutaSes, niv, w);
       // v0.216: el CARRO de la semana — los ejercicios de la primera parte de
       // la clase (lanzamiento de bolas, repetición). Va junto a la sesión, que
       // es la segunda parte (el área de trabajo).
-      var carro = (_rutaLeeSem(p.rutaCarro, niv, w.lunISO) || []).slice();
+      var carro = _rutaSemanaUnion(p.rutaCarro, niv, w);
       return { areasSemana: areasSemana, sesiones: sesiones, carro: carro, trab: areasSemana.length > 0 };
     }
     // v0.219 — Normaliza lo guardado en rutaSes: antes era UN id (número) y
@@ -14599,6 +14666,70 @@
       if (valor && valor.length) mapa[k] = valor; else delete mapa[k];
       if (_rutaNivelSem(nivel) === 'competicion') delete mapa[lunISO];
       return mapa;
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // v0.229 — Y LA PLANIFICACIÓN ES DE UN DÍA, NO DE LA SEMANA
+    // ══════════════════════════════════════════════════════════════
+    // Un mismo grupo puede entrenar dos o tres días por semana, y cada día es
+    // una clase distinta. El ÁREA ya se guardaba por día (va pegada a la
+    // fecha, en compDias); ahora la SESIÓN y el CARRO también:
+    //     p.rutaSes['competicion|2025-09-16'] = [12, 7]
+    //     p.rutaCarro['competicion|2025-09-16'] = [3]
+    // La clave es igual que la de semana pero con la fecha del día, así que
+    // se distinguen solas: las de semana caen siempre en lunes.
+    //
+    // HERENCIA: lo guardado antes (por semana, con nivel o sin él) se sigue
+    // leyendo en TODOS los días de esa semana — nada desaparece. En cuanto se
+    // toca un día concreto, ese valor de semana se «reparte» entre los días
+    // reales de clase de esa semana y la clave de semana se retira: a partir
+    // de ahí cada día va por su cuenta.
+    function _rutaKeyDia(nivel, fechaISO) { return _rutaNivelSem(nivel) + '|' + fechaISO; }
+    // Lee lo de un DÍA: primero lo suyo y, si no tiene, lo que herede de su
+    // semana (formato viejo).
+    function _rutaLeeDia(mapa, nivel, fechaISO, lunISO) {
+      mapa = mapa || {};
+      var k = _rutaKeyDia(nivel, fechaISO);
+      if (mapa[k] !== undefined) return mapa[k];
+      return _rutaLeeSem(mapa, nivel, lunISO);
+    }
+    // Reparte el valor de semana (si lo hay) entre los días de clase de esa
+    // semana y retira la clave de semana. Se hace una sola vez, la primera
+    // que se toca un día de esa semana.
+    function _rutaRepartirSemana(mapa, nivel, w) {
+      if (!mapa) return;
+      var deSem = _rutaLeeSem(mapa, nivel, w.lunISO);
+      if (deSem === undefined) return;
+      var dias = _rutaDiasDeNivel(w, nivel);
+      dias.forEach(function(d){
+        var kd = _rutaKeyDia(nivel, d.fecha);
+        if (mapa[kd] === undefined) mapa[kd] = Array.isArray(deSem) ? deSem.slice() : deSem;
+      });
+      _rutaEscribeSem(mapa, nivel, w.lunISO, null);   // fuera la clave de semana
+    }
+    function _rutaEscribeDia(mapa, nivel, fechaISO, valor, w) {
+      if (w) _rutaRepartirSemana(mapa, nivel, w);
+      var k = _rutaKeyDia(nivel, fechaISO);
+      if (valor && valor.length) mapa[k] = valor; else delete mapa[k];
+      return mapa;
+    }
+    // Todo lo planificado en una semana, sumando sus días (y lo que quede
+    // guardado por semana). Es lo que enseña la tarjeta del tablero.
+    function _rutaSemanaUnion(mapa, nivel, w) {
+      var out = [], vistos = {};
+      function mete(v) {
+        (Array.isArray(v) ? v : (v == null || v === '' ? [] : [v])).forEach(function(x){
+          if (!vistos[x]) { vistos[x] = true; out.push(x); }
+        });
+      }
+      var deSem = _rutaLeeSem(mapa, nivel, w.lunISO);
+      if (deSem !== undefined) mete(deSem);
+      for (var i = 0; i < 7; i++) {
+        var d = new Date(w.lun); d.setDate(w.lun.getDate() + i);
+        var v = (mapa || {})[_rutaKeyDia(nivel, dateToISOLocal(d))];
+        if (v !== undefined) mete(v);
+      }
+      return out;
     }
     // Todas las fechas (lunes) que hay en un mapa, venga la clave con nivel o
     // sin él. Lo usa el archivo para saber qué cursos tienen algo.
@@ -14681,6 +14812,17 @@
     // Asistencia, el de esa franja.
     var _rutaModalNivelSel = null;
     function _rutaModalNivel() { return _rutaNivelSem(_rutaModalNivelSel || _compNivel()); }
+    // v0.229 — DÍA sobre el que trabaja el panel. Si se abrió desde un día, ese;
+    // si se abrió desde una semana, el primero de sus días de clase de ese
+    // nivel (y se puede cambiar con los botones de la cabecera).
+    var _rutaModalDiaSel = null;
+    function _rutaModalDia(w) {
+      if (_rutaModalFechaFija) return _rutaModalFechaFija;
+      if (_rutaModalDiaSel) return _rutaModalDiaSel;
+      var dias = w ? _rutaDiasDeNivel(w, _rutaModalNivel()) : [];
+      return dias.length ? dias[0].fecha : (w ? w.lunISO : null);
+    }
+    function rutaModalDia(fechaISO) { _rutaModalDiaSel = fechaISO; _rutaModalRender(); }
     // v0.211: curso opcional. En el archivo se ven semanas de OTROS cursos
     // (además del que se mira arriba), así que la tarjeta dice de qué curso es
     // su semana; sin esto se abría la semana con el mismo número del curso
@@ -14692,6 +14834,7 @@
       _rutaModalFechaFija = null;
       _rutaModalSemLibre = null;   // v0.217: viene del tablero, es una de las 40
       _rutaModalNivelSel = null;   // v0.224: el nivel que se esté mirando
+      _rutaModalDiaSel = null;     // v0.229: el día lo decide la semana
       _rutaApAbierto = {};         // v0.223: los apartados, plegados al entrar
       _rutaModalRender();
     }
@@ -14723,6 +14866,7 @@
     function rutaAbrirDia(fechaISO, nivelFranja) {
       _rutaMigrarLocal();
       _rutaModalNivelSel = nivelFranja || null;   // v0.224
+      _rutaModalDiaSel = null;                    // v0.229: manda la fecha fija
       var curso = cursoDeFecha(fechaISO);
       var w = _rutaSemanas(curso).filter(function(w){ return fechaISO >= w.lunISO && fechaISO <= w.domISO; })[0];
       // v0.217: si el día queda fuera de las 40 semanas, se planifica igual
@@ -14738,7 +14882,7 @@
     }
     function rutaCerrarModal() {
       _rutaModalIdx = null; _rutaModalArea = null; _rutaEligeDia = null;
-      _rutaModalCurso = null; _rutaModalFechaFija = null; _rutaModalSemLibre = null; _rutaModalNivelSel = null;
+      _rutaModalCurso = null; _rutaModalFechaFija = null; _rutaModalSemLibre = null; _rutaModalNivelSel = null; _rutaModalDiaSel = null;
       var ov = document.getElementById('ruta-plan-ov');
       if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; }
     }
@@ -14832,11 +14976,11 @@
       var w = _rutaSemanaActual(idx);
       var p = leerPlan();
       if (!p.rutaSes) p.rutaSes = {};
-      var nivS = _rutaModalNivel();
-      var arr = _rutaSesArr(_rutaLeeSem(p.rutaSes, nivS, w.lunISO));
+      var nivS = _rutaModalNivel(), fS = _rutaModalDia(w);
+      var arr = _rutaSesArr(_rutaLeeDia(p.rutaSes, nivS, fS, w.lunISO));
       var i = arr.indexOf(+sesId);
       if (i >= 0) arr.splice(i, 1); else arr.push(+sesId);
-      _rutaEscribeSem(p.rutaSes, nivS, w.lunISO, arr);
+      _rutaEscribeDia(p.rutaSes, nivS, fS, arr, w);
       _planGuardar(p);
       mostrarPlanificacion();
       _rutaModalRender();
@@ -14846,7 +14990,7 @@
     function rutaBorrarSemana(idx) {
       var w = _rutaSemanaActual(idx);
       var p = leerPlan();
-      if (p.rutaSes) { _rutaEscribeSem(p.rutaSes, _rutaModalNivel(), w.lunISO, null); _planGuardar(p); }
+      if (p.rutaSes) { _rutaEscribeDia(p.rutaSes, _rutaModalNivel(), _rutaModalDia(w), null, w); _planGuardar(p); }
       mostrarPlanificacion();
       _rutaModalRender();   // v0.219: el panel se queda abierto
     }
@@ -14863,16 +15007,18 @@
     // El carro se elige del catálogo ENTERO con un buscador: el ejercicio de
     // carro no tiene por qué ser del área que se trabaja después.
     var _rutaCarroQ = '';   // lo que hay escrito en el buscador del carro
-    function _rutaCarroDe(w) { return (_rutaLeeSem(leerPlan().rutaCarro, _rutaModalNivel(), w.lunISO) || []).slice(); }
+    function _rutaCarroDe(w) {
+      return (_rutaLeeDia(leerPlan().rutaCarro, _rutaModalNivel(), _rutaModalDia(w), w.lunISO) || []).slice();
+    }
     function rutaCarroToggle(idx, ejId) {
       var w = _rutaSemanaActual(idx);
       var p = leerPlan();
       if (!p.rutaCarro) p.rutaCarro = {};
-      var nivC = _rutaModalNivel();
-      var arr = (_rutaLeeSem(p.rutaCarro, nivC, w.lunISO) || []).slice();
+      var nivC = _rutaModalNivel(), fC = _rutaModalDia(w);
+      var arr = (_rutaLeeDia(p.rutaCarro, nivC, fC, w.lunISO) || []).slice();
       var i = arr.indexOf(ejId);
       if (i >= 0) arr.splice(i, 1); else arr.push(ejId);
-      _rutaEscribeSem(p.rutaCarro, nivC, w.lunISO, arr);
+      _rutaEscribeDia(p.rutaCarro, nivC, fC, arr, w);
       _planGuardar(p);
       _rutaCarroRefrescar(idx, arr, ejId);
       mostrarPlanificacion();
@@ -14880,7 +15026,7 @@
     function rutaCarroVaciar(idx) {
       var w = _rutaSemanaActual(idx);
       var p = leerPlan();
-      if (p.rutaCarro) { _rutaEscribeSem(p.rutaCarro, _rutaModalNivel(), w.lunISO, null); _planGuardar(p); }
+      if (p.rutaCarro) { _rutaEscribeDia(p.rutaCarro, _rutaModalNivel(), _rutaModalDia(w), null, w); _planGuardar(p); }
       _rutaModalRender();
       mostrarPlanificacion();
     }
@@ -15120,6 +15266,9 @@
       var p     = leerPlan();
       var idsNivel = _compIdsNivel(p);
       var wd    = _rutaSemanaDatos(p, w, idsNivel);   // v0.207: derivado de compDias + rutaSes
+      // v0.229: dentro del panel, carro y sesiones son del DÍA elegido (wd trae
+      // la suma de la semana, que es lo que necesita la tarjeta del tablero).
+      var nivPanel = _rutaModalNivel();
       var areas = _compTodasFilas(p);
       var areaN = {}; areas.forEach(function(a){ areaN[a.id] = a.t; });
       var sesDe = _rutaSesPorArea(areas);   // v0.204: sesiones de cada área
@@ -15159,6 +15308,26 @@
         '<div><div class="ruta-modal-tit">' + tit + '</div>' +
         '<div class="ruta-modal-sub">' + sub + '</div></div>' +
         '<button class="plan-modal-x" onclick="rutaCerrarModal()" aria-label="Cerrar">✕</button></div>';
+
+      // v0.229 — El carro y las sesiones son de un DÍA. Si la semana tiene
+      // varios días de clase de este nivel (mismo grupo, varios días), aquí se
+      // elige de cuál se está hablando. Abierto desde un día concreto no hace
+      // falta: ya se sabe.
+      var diaPanel = _rutaModalDia(w);
+      wd.sesiones = _rutaSesArr(_rutaLeeDia(p.rutaSes,  nivPanel, diaPanel, w.lunISO));
+      wd.carro    = (_rutaLeeDia(p.rutaCarro, nivPanel, diaPanel, w.lunISO) || []).slice();
+      if (!_rutaModalFechaFija) {
+        var diasNivel = _rutaDiasDeNivel(w, _rutaModalNivel());
+        if (diasNivel.length > 1) {
+          h += '<div class="ruta-dia-sel"><span class="ruta-panel-paso">Clase del</span><div class="ruta-dia-chips">';
+          diasNivel.forEach(function(d){
+            h += '<button type="button" class="ruta-dia-chip' + (d.fecha === diaPanel ? ' on' : '') +
+              '" onclick="rutaModalDia(\'' + d.fecha + '\')">' +
+              DIAS_NOMBRES_A[d.dow].slice(0,3) + ' ' + parseInt(d.fecha.slice(8,10), 10) + '</button>';
+          });
+          h += '</div></div>';
+        }
+      }
 
       // v0.207 — Resumen de lo que YA está marcado en Mensual esta semana
       // (mismo dato, no una copia). Cada chip lleva su día y una ✕ para
@@ -15274,7 +15443,7 @@
         }
       }
       h += '</div></div></div></div>';   // /ses /trabajo-cols /trabajo /cols
-      if (wd.sesiones.length) h += '<button type="button" class="ruta-panel-borrar" onclick="rutaBorrarSemana(' + idx + ')">🗑️ Quitar las sesiones de esta semana</button>';
+      if (wd.sesiones.length) h += '<button type="button" class="ruta-panel-borrar" onclick="rutaBorrarSemana(' + idx + ')">🗑️ Quitar las sesiones de esta clase</button>';
       h += '</div>';         // /ruta-modal
 
       ov.innerHTML = h;
@@ -15698,10 +15867,11 @@
       // v0.227 FIX: desde v0.224 la planificación se guarda por NIVEL + semana
       // (`competicion|2025-09-01`). Esta vista se quedó leyendo la clave vieja,
       // así que lo que metías en el carro desde el panel no salía luego aquí.
+      // v0.229: la clase es de ESE día (con lo de la semana como herencia)
       var lunSem = _rutaSemanaLibre(fechaISO).lunISO;
       var nivDia = _compNivel();
-      var carroIds = _rutaLeeSem(p.rutaCarro, nivDia, lunSem) || [];
-      var sesIds   = _rutaSesArr(_rutaLeeSem(p.rutaSes, nivDia, lunSem));
+      var carroIds = _rutaLeeDia(p.rutaCarro, nivDia, fechaISO, lunSem) || [];
+      var sesIds   = _rutaSesArr(_rutaLeeDia(p.rutaSes, nivDia, fechaISO, lunSem));
       h += '<div class="comp-clase-cols">';
 
       // COLUMNA 1 · Carro
@@ -20145,8 +20315,8 @@
     function _claseTienePlan(nivel, fechaISO) {
       var p = leerPlan();
       var lun = _rutaSemanaLibre(fechaISO).lunISO;
-      if ((_rutaLeeSem(p.rutaCarro, nivel, lun) || []).length) return true;
-      if (_rutaSesArr(_rutaLeeSem(p.rutaSes, nivel, lun)).length) return true;
+      if ((_rutaLeeDia(p.rutaCarro, nivel, fechaISO, lun) || []).length) return true;   // v0.229
+      if (_rutaSesArr(_rutaLeeDia(p.rutaSes, nivel, fechaISO, lun)).length) return true;
       return ((p.compDias && p.compDias[fechaISO]) || []).length > 0;
     }
     var _asistClaseVista = null;   // { claseId, fecha } o null
@@ -20181,8 +20351,8 @@
       var niv = clase.nivel || 'competicion';
       var p   = leerPlan();
       var lun = _rutaSemanaLibre(fechaISO).lunISO;
-      var carroIds = _rutaLeeSem(p.rutaCarro, niv, lun) || [];
-      var sesIds   = _rutaSesArr(_rutaLeeSem(p.rutaSes, niv, lun));
+      var carroIds = _rutaLeeDia(p.rutaCarro, niv, fechaISO, lun) || [];   // v0.229
+      var sesIds   = _rutaSesArr(_rutaLeeDia(p.rutaSes, niv, fechaISO, lun));
       // Las áreas marcadas ese día, del catálogo de ESE nivel
       var pNiv = { nivel: niv, contenido: p.contenido, biblioteca: p.biblioteca,
                    planEtapasV: p.planEtapasV, hechos: p.hechos || {}, etapasAbiertas: {} };
@@ -20217,6 +20387,21 @@
       // v0.226 — Si el día tiene VARIAS áreas marcadas se navegan con
       // pestañas, y de cada una se ven sus ejercicios (con vídeo). Antes solo
       // salían los nombres como etiquetas y no había forma de entrar en ellas.
+      // v0.228 — Debajo de la pestaña va SU sesión (la que está enlazada a ese
+      // bloque) y después sus ejercicios. Y se retira el título en negrita
+      // «apartado · bloque»: es lo mismo que ya pone la pestaña.
+      var todasS = leerClases();
+      function _sesFicha(id) {
+        var ses = todasS.filter(function(c){ return c.id === id; })[0];
+        var th  = ses ? _rutaSesThumb(ses) : null;
+        return '<div class="ruta-ses-eleg' + (ses ? ' clicable' : '') + '"' +
+          (ses ? ' onclick="asistVerSesion(' + ses.id + ')"' : '') + '>' +
+          '<span class="ruta-ses-thumb">' + (th ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="ruta-ses-noimg">🎾</span>') + '</span>' +
+          '<span class="ruta-ses-nom">' + _gEsc(ses ? (ses.nombre || ses.fecha || ('Sesión ' + id)) : ('Sesión ' + id)) + '</span></div>';
+      }
+      // Qué sesiones tiene enlazadas cada bloque del catálogo
+      var sesPorArea = _rutaSesPorArea(areasFila);
+      var sesColocadas = {};
       if (marcadas.length) {
         var selFila = _asistClaseFila;
         if (!selFila || marcadas.indexOf(selFila) < 0) selFila = marcadas[0];
@@ -20230,10 +20415,19 @@
           });
           h += '</div>';
         }
+        // Una sesión que cuelga de CUALQUIER bloque marcado ya tiene su sitio
+        // (en la pestaña de ese bloque), aunque ahora mismo no sea la abierta.
+        marcadas.forEach(function(aid){
+          (sesPorArea[aid] || []).forEach(function(c){ if (sesIds.indexOf(c.id) >= 0) sesColocadas[c.id] = true; });
+        });
+        // Las de ESTE bloque, justo debajo de su pestaña.
+        var idsDeSel = (sesPorArea[selFila] || []).map(function(c){ return c.id; });
+        sesIds.filter(function(id){ return idsDeSel.indexOf(id) >= 0; })
+              .forEach(function(id){ h += _sesFicha(id); });
+
         var fSel = areasFila.filter(function(x){ return x.id === selFila; })[0];
         if (fSel) {
           h += '<div class="comp-resumen-fila">';
-          h += '<div class="comp-resumen-fila-tit">' + _gEsc(fSel.apartado + ' · ' + fSel.t) + '</div>';
           var ejsF = _planEjerciciosDeBloque(niv, { ejInc: fSel.ejInc || [] });
           if (ejsF.length) {
             h += '<div class="comp-resumen-videos">';
@@ -20255,18 +20449,14 @@
           h += '</div>';
         }
       }
+      // Las sesiones que no cuelgan de ningún bloque marcado no se pierden:
+      // van al final, para que se vea todo lo que hay puesto esa semana.
+      var sesSueltas = sesIds.filter(function(id){ return !sesColocadas[id]; });
       if (!sesIds.length) {
         h += '<div class="comp-picker-vacio">Sin sesiones asignadas.</div>';
-      } else {
-        var todasS = leerClases();
-        sesIds.forEach(function(id){
-          var ses = todasS.filter(function(c){ return c.id === id; })[0];
-          var th  = ses ? _rutaSesThumb(ses) : null;
-          h += '<div class="ruta-ses-eleg' + (ses ? ' clicable' : '') + '"' +
-            (ses ? ' onclick="asistVerSesion(' + ses.id + ')"' : '') + '>' +
-            '<span class="ruta-ses-thumb">' + (th ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="ruta-ses-noimg">🎾</span>') + '</span>' +
-            '<span class="ruta-ses-nom">' + _gEsc(ses ? (ses.nombre || ses.fecha || ('Sesión ' + id)) : ('Sesión ' + id)) + '</span></div>';
-        });
+      } else if (sesSueltas.length) {
+        if (marcadas.length) h += '<div class="ruta-panel-paso" style="margin-top:8px;">Otras sesiones de la semana</div>';
+        sesSueltas.forEach(function(id){ h += _sesFicha(id); });
       }
       h += '</div>';
       h += '</div>';
