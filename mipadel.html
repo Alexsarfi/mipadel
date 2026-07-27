@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.225.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.226.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,23 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.226.0 — Fix: navegar entre las áreas dentro del globo (2026-08)
+    (sin migraciones nuevas)
+    · En el globo de la clase (Asistencia → botón de la franja), si el día
+      tenía VARIAS áreas de trabajo marcadas solo salían sus nombres como
+      etiquetas: no había forma de entrar en ellas ni de ver sus ejercicios.
+    · Ahora se navegan con pestañas, las mismas que ya usaba la vista del día:
+      una por área, y debajo el área elegida con su apartado, su bloque y sus
+      ejercicios en miniatura, con el vídeo tocable.
+    · Si un área no tiene ejercicios enlazados pero sí una sesión del modelo
+      antiguo (sesInc), se enseñan los ejercicios de esa sesión — mismo
+      criterio que en la vista del día. Y si no hay nada, se dice en vez de
+      quedarse en blanco.
+    · Con una sola área marcada no salen pestañas: se ve directa.
+    · La pestaña elegida se olvida al cerrar el globo y al abrir el de otro
+      día, así que siempre se entra por la primera. Si la que estaba abierta
+      se desmarca, cae en la primera en vez de quedarse en blanco.
 
   v0.225.0 — Detalles de la clase en Asistencia (2026-08)
     (sin migraciones nuevas: sigue valiendo la de v0.224)
@@ -6741,7 +6758,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.225.0';
+    var APP_VERSION = '0.226.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -20094,13 +20111,17 @@
       return ((p.compDias && p.compDias[fechaISO]) || []).length > 0;
     }
     var _asistClaseVista = null;   // { claseId, fecha } o null
+    var _asistClaseFila  = null;   // v0.226: área abierta dentro del globo
     var _asistClaseVuelta = null;  // v0.225: a qué globo volver tras ver una sesión
     function asistVerClase(claseId, fechaISO) {
       _asistClaseVista = { claseId: claseId, fecha: fechaISO };
+      _asistClaseFila  = null;   // v0.226: se entra por la primera área
       _asistClaseRender();
     }
+    // v0.226: cambiar de área dentro del globo (día con varias marcadas)
+    function asistClaseFila(id) { _asistClaseFila = id; _asistClaseRender(); }
     function asistCerrarClase() {
-      _asistClaseVista = null;
+      _asistClaseVista = null; _asistClaseFila = null;
       var ov = document.getElementById('asist-clase-ov');
       if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; }
     }
@@ -20154,10 +20175,46 @@
       // 🎯 Área de trabajo
       h += '<div class="comp-clase-parte comp-clase-area">';
       h += '<div class="ruta-parte-hdr">🎯 <b>Área de trabajo</b><span>segunda parte</span></div>';
+      // v0.226 — Si el día tiene VARIAS áreas marcadas se navegan con
+      // pestañas, y de cada una se ven sus ejercicios (con vídeo). Antes solo
+      // salían los nombres como etiquetas y no había forma de entrar en ellas.
       if (marcadas.length) {
-        h += '<div class="ruta-modal-resumen">';
-        marcadas.forEach(function(id){ h += '<span class="ruta-chip">' + _gEsc(areaN[id] || 'Área') + '</span>'; });
-        h += '</div>';
+        var selFila = _asistClaseFila;
+        if (!selFila || marcadas.indexOf(selFila) < 0) selFila = marcadas[0];
+        if (marcadas.length > 1) {
+          h += '<div class="comp-fila-tabs">';
+          marcadas.forEach(function(id){
+            var f0 = areasFila.filter(function(x){ return x.id === id; })[0];
+            h += '<button type="button" class="comp-fila-tab' + (id === selFila ? ' sel' : '') +
+              '" onclick="asistClaseFila(\'' + id + '\')" title="' + _gEsc(areaN[id] || '') + '">' +
+              _gEsc(f0 ? f0.t : 'Área') + '</button>';
+          });
+          h += '</div>';
+        }
+        var fSel = areasFila.filter(function(x){ return x.id === selFila; })[0];
+        if (fSel) {
+          h += '<div class="comp-resumen-fila">';
+          h += '<div class="comp-resumen-fila-tit">' + _gEsc(fSel.apartado + ' · ' + fSel.t) + '</div>';
+          var ejsF = _planEjerciciosDeBloque(niv, { ejInc: fSel.ejInc || [] });
+          if (ejsF.length) {
+            h += '<div class="comp-resumen-videos">';
+            ejsF.forEach(function(e){ h += _compVideoCardHTML(e); });
+            h += '</div>';
+          } else {
+            // Igual que en la vista del día: si no hay ejercicios pero sí una
+            // sesión del modelo antiguo (sesInc), se enseñan sus ejercicios.
+            var sesLegF = _planSesionesDeBloque(niv, { sesInc: fSel.sesInc || [] });
+            var ejsSesF = sesLegF.length ? _compEjerciciosDeSesiones(sesLegF) : [];
+            if (ejsSesF.length) {
+              h += '<div class="comp-resumen-videos">';
+              ejsSesF.forEach(function(e){ h += _compVideoCardHTML(e); });
+              h += '</div>';
+            } else {
+              h += '<div class="plan-item-ses-vacio">Sin ejercicios enlazados a este bloque</div>';
+            }
+          }
+          h += '</div>';
+        }
       }
       if (!sesIds.length) {
         h += '<div class="comp-picker-vacio">Sin sesiones asignadas.</div>';
