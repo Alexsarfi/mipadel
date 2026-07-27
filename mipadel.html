@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.212.2   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.213.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,35 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.213.0 — Competiciones: globo del día y exportar al calendario (2026-08)
+    (sin migraciones nuevas)
+    · Se retira el botón «＋ Nueva competición», que obligaba a teclear la
+      fecha a mano. Ahora se toca un DÍA del calendario y se abre un globo
+      encima con todo lo de ese día, como en un calendario de verdad.
+    · Dentro del globo: las competiciones de ese día, «＋ Añadir otra
+      competición este día» y, en cada una, su ficha con ✏ Editar, 🗑 Borrar
+      y 📅 A mi calendario. Un día vacío abre directo el formulario con la
+      fecha ya puesta (las fechas siguen editables: un torneo puede durar
+      varios días).
+    · VARIOS EVENTOS EL MISMO DÍA — pensado para cuando hay varios jugadores
+      en torneos distintos a la vez. En la cuadrícula un día enseña hasta 3
+      puntos de color (uno por tipo) y, si hay más, un «+N».
+    · Un torneo de varios días aparece en el globo de CADA día que ocupa, y el
+      calendario de detrás se coloca solo en el mes y el curso que toque.
+    · La lista del mes pasa a ser solo de lectura: al tocar una competición se
+      va a su día. Así el alta y la edición están en un único sitio.
+    · EXPORTAR A GOOGLE CALENDAR / IPHONE — nuevo archivo .ics (el formato
+      estándar de calendarios, RFC 5545) con las competiciones como eventos de
+      día completo:
+      · «📅 Exportar el curso a mi calendario», al final del calendario.
+      · «📅 A mi calendario» en la ficha de una competición sola.
+      En Google Calendar se sube por «Configuración › Importar y exportar»; en
+      el iPhone basta con abrir el archivo y decir «Añadir todos». No hace
+      falta cuenta ni conexión: es un archivo que se descarga. Cada evento
+      lleva nombre, lugar, tipo, categoría, notas y enlace.
+    · El EN1 sigue en solo lectura (no añade, ni edita, ni borra), pero sí
+      puede llevarse las competiciones a su calendario.
 
   v0.212.2 — La versión, a la vista en la cabecera del gestor (2026-08)
     · La cabecera del panel del gestor pasa a poner «📊 Gestión · v0.X.Y».
@@ -4962,9 +4991,23 @@
     .tor-leyenda { display:flex; flex-wrap:wrap; gap:4px 12px; font-size:10.5px; color:var(--gris);
       margin-top:14px; padding-top:10px; border-top:1px solid var(--borde); }
     .tor-leyenda span { display:inline-flex; align-items:center; gap:4px; }
+    /* v0.213 — globo de un día, encima del calendario */
+    .tor-dia-ov { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:10020; display:flex;
+      align-items:flex-end; justify-content:center; }
+    .tor-dia { background:var(--blanco); width:100%; max-width:480px; max-height:86vh; overflow-y:auto;
+      border-radius:18px 18px 0 0; padding:16px 14px calc(16px + env(safe-area-inset-bottom));
+      box-shadow:0 -8px 30px rgba(0,0,0,.3); animation:gpSheetUp .18s ease-out; }
+    .tor-dia .ruta-modal-tit { text-transform:capitalize; }
+    .tor-card-acts { display:flex; flex-wrap:wrap; gap:6px; margin-top:9px; }
+    .tor-cal-mas { font-size:8.5px; font-weight:800; color:#92400e; }
+    .tor-exp { display:block; width:100%; margin-top:12px; font-family:inherit; font-size:12.5px; font-weight:700;
+      color:#1e40af; background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:10px; padding:9px; cursor:pointer; }
+    .tor-exp:hover { border-color:#2563eb; }
     @media (min-width:760px){
       .tor-cal-d { font-size:13px; }
       .tor-cal { gap:5px; }
+      .tor-dia-ov { align-items:center; padding:24px; }
+      .tor-dia { max-width:560px; max-height:84vh; border-radius:18px; padding:18px 20px 20px; }
     }
     /* ── v0.211 — Curso cerrado abierto para editar + copia entre cursos ── */
     .ruta-aviso-cerrado { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:12px;
@@ -6146,6 +6189,9 @@
        mientras no es la activa, al pulsar el botón desde Inicio no se veía
        nada. Aquí arriba se abre desde donde sea. -->
   <div id="torneo-ov" class="ruta-modal-ov" style="display:none" onclick="torCerrar()"></div>
+  <!-- v0.213: globo de un día del calendario (sus competiciones, añadir,
+       editar y borrar). Va encima del calendario, que se sigue viendo detrás. -->
+  <div id="torneo-dia-ov" class="tor-dia-ov" style="display:none" onclick="torDiaCerrar()"></div>
 
   <!-- ══ GLOBO / LIGHTBOX (foto y vídeo) ══════════ -->
   <div id="lightbox" class="lightbox" onclick="if(event.target===this)cerrarLightbox()">
@@ -6253,7 +6299,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.212.2';
+    var APP_VERSION = '0.213.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -14862,6 +14908,11 @@
     var _torForm      = null;   // 'nueva' | id que se edita | null
     var _torFormFecha = '';     // fecha preseleccionada al tocar un día vacío
     var _torVer       = null;   // id de la ficha desplegada en la lista
+    // v0.213: día abierto en el globo (fecha ISO) o null. Todo el alta y la
+    // edición pasa por ahí: se toca un día del calendario y se trabaja sobre
+    // ese día, como en un calendario de verdad. Ya no hay botón «＋ Nueva
+    // competición» suelto, que obligaba a teclear la fecha a mano.
+    var _torDia       = null;
 
     function _torCurso() { return _torCursoSel || _rutaCurso(); }
     function _torLeer()  { return leerPlan().torneos || []; }
@@ -14918,9 +14969,11 @@
     // ── Abrir / cerrar / navegar ──
     function torAbrir() {
       _torCursoSel = null; _torMesSel = null; _torForm = null; _torVer = null; _torFormFecha = '';
+      _torDia = null;
       _torRender();
     }
     function torCerrar() {
+      torDiaCerrar(true);   // v0.213: si estaba el globo del día, se cierra con él
       var ov = document.getElementById('torneo-ov');
       if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; }
       _torForm = null; _torVer = null;
@@ -14937,18 +14990,57 @@
     function _torSoloLectura() { try { return esEN1Cuenta(); } catch (e) { return false; } }
     function torCursoNav(delta) {
       _torCursoSel = _rutaCursoDesplaza(_torCurso(), delta);
-      _torMesSel = null; _torForm = null; _torVer = null;
+      _torMesSel = null; _torForm = null; _torVer = null; _torDia = null;
       _torRender();
     }
     function torMesSel(i) { _torMesSel = i; _torForm = null; _torVer = null; _torRender(); }
-    function torVerFicha(id) { _torVer = (String(_torVer) === String(id)) ? null : id; _torForm = null; _torRender(); }
-    function torNueva(fechaISO) {
-      _torForm = 'nueva'; _torVer = null;
-      _torFormFecha = fechaISO || '';
+
+    // ── v0.213 — EL GLOBO DEL DÍA ──
+    // Se toca un día del calendario y se abre encima un globo con TODO lo de
+    // ese día: sus competiciones (pueden ser varias a la vez, p. ej. varios
+    // jugadores en torneos distintos el mismo fin de semana), el botón de
+    // añadir otra y la ficha de cada una para editarla o borrarla.
+    // Un día vacío abre directamente el formulario, con la fecha ya puesta.
+    function torDiaAbrir(fISO, verId) {
+      _torDia = fISO;
+      _torVer = verId || null;
+      var deEseDia = _torEnDia(_torLeer(), fISO);
+      // Día vacío y con permiso de edición → el formulario, listo para escribir
+      _torForm = (!deEseDia.length && !_torSoloLectura()) ? 'nueva' : null;
+      _torFormFecha = fISO;
+      // Si la fecha cae en otro mes o curso del que se está mirando, el
+      // calendario de detrás se coloca en su sitio.
+      var curso = cursoDeFecha(fISO);
+      if (curso !== _torCurso()) _torCursoSel = curso;
+      var ms = _torMeses(curso), y = +fISO.slice(0, 4), m = +fISO.slice(5, 7) - 1;
+      for (var i = 0; i < ms.length; i++) if (ms[i].y === y && ms[i].m === m) _torMesSel = i;
       _torRender();
+      _torDiaRender();
     }
-    function torEditar(id) { _torForm = id; _torVer = null; _torRender(); }
-    function torCancelarForm() { _torForm = null; _torRender(); }
+    // soloOcultar=true: solo baja el globo (lo usa torCerrar, que cierra todo)
+    function torDiaCerrar(soloOcultar) {
+      _torDia = null; _torForm = null; _torVer = null;
+      var ov = document.getElementById('torneo-dia-ov');
+      if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; }
+      if (!soloOcultar) _torRender();
+    }
+    function torVerFicha(id) {
+      _torVer = (String(_torVer) === String(id)) ? null : id;
+      _torForm = null;
+      _torDiaRender();
+    }
+    function torNuevaEnDia() {
+      _torForm = 'nueva'; _torVer = null;
+      _torFormFecha = _torDia || hoyLocal();
+      _torDiaRender();
+    }
+    function torEditar(id) { _torForm = id; _torVer = null; _torDiaRender(); }
+    function torCancelarForm() {
+      _torForm = null;
+      // Si el día se quedó sin nada que enseñar, el globo se cierra solo
+      if (_torDia && !_torEnDia(_torLeer(), _torDia).length) { torDiaCerrar(); return; }
+      _torDiaRender();
+    }
     function torBorrar(id) {
       var t = _torPorId(id);
       if (!t) return;
@@ -14956,6 +15048,8 @@
       _torGuardar(_torLeer().filter(function(x){ return String(x.id) !== String(id); }));
       _torVer = null; _torForm = null;
       _torRender();
+      if (_torDia && !_torEnDia(_torLeer(), _torDia).length) { torDiaCerrar(); return; }
+      _torDiaRender();
     }
     function torGuardarForm() {
       function _v(id) { var e = document.getElementById(id); return e ? e.value.trim() : ''; }
@@ -14984,21 +15078,21 @@
         });
       }
       _torGuardar(arr);
-      // Salta al mes de la competición guardada, para verla en su sitio
-      var ms = _torMeses(cursoDeFecha(fecha));
-      var y = +fecha.slice(0, 4), m = +fecha.slice(5, 7) - 1;
-      _torCursoSel = cursoDeFecha(fecha);
-      for (var i = 0; i < ms.length; i++) if (ms[i].y === y && ms[i].m === m) _torMesSel = i;
-      _torForm = null; _torVer = datos.id;
-      _torRender();
       if (typeof planToast === 'function') planToast('✓ Competición guardada');
+      // v0.213: se vuelve al globo del día de la competición guardada (si se
+      // cambió la fecha, al del día nuevo), con su ficha ya abierta.
+      var diaDestino = (_torDia && fecha <= _torDia && (datos.fechaFin || fecha) >= _torDia) ? _torDia : fecha;
+      torDiaAbrir(diaDestino, datos.id);
     }
 
     // ── Formulario de alta / edición ──
     function _torFormHTML() {
       var t = (_torForm === 'nueva') ? { tipo:'torneo', fecha:_torFormFecha } : (_torPorId(_torForm) || {});
       var h = '<div class="tor-form">';
-      h += '<div class="tor-form-tit">' + (_torForm === 'nueva' ? '＋ Nueva competición' : '✏️ Editar competición') + '</div>';
+      h += '<div class="tor-form-tit">' + (_torForm === 'nueva' ? '＋ Nueva competición' : '✏️ Editar competición') +
+           // v0.213: las fechas siguen editables (un torneo puede durar varios
+           // días), pero vienen puestas desde el día que se ha tocado.
+           '<span class="tor-opc"> · las fechas se pueden cambiar</span></div>';
       h += '<div class="form-grupo"><label class="form-label" for="tor-f-tipo">Tipo</label><select class="form-select" id="tor-f-tipo">';
       TOR_TIPOS.forEach(function(tp){
         h += '<option value="' + tp.key + '"' + (t.tipo === tp.key ? ' selected' : '') + '>' + tp.ico + ' ' + tp.label + '</option>';
@@ -15050,12 +15144,127 @@
         if (t.enlace && /^https?:\/\//i.test(t.enlace))
           h += '<a class="tor-enlace" href="' + _gEsc(t.enlace) + '" target="_blank" rel="noopener">🔗 Abrir el enlace</a>';
         else if (t.enlace) h += '<div class="tor-dato"><b>Enlace</b> ' + _gEsc(t.enlace) + '</div>';
-        if (!_torSoloLectura())
-          h += '<button class="btn btn-sec btn-sm" style="margin-top:8px;" onclick="torEditar(\'' + t.id + '\')">✏ Editar</button>';
+        h += '<div class="tor-card-acts">';
+        // v0.213: cada competición se puede llevar al calendario del móvil
+        h += '<button class="btn btn-sec btn-sm" onclick="torExportarUno(\'' + t.id + '\')">📅 A mi calendario</button>';
+        if (!_torSoloLectura()) {
+          h += '<button class="btn btn-sec btn-sm" onclick="torEditar(\'' + t.id + '\')">✏ Editar</button>';
+          h += '<button class="btn btn-rojo btn-sm" onclick="torBorrar(\'' + t.id + '\')">🗑 Borrar</button>';
+        }
+        h += '</div>';
         h += '</div>';
       }
       h += '</div>';
       return h;
+    }
+
+    // ── v0.213 — Globo de un día ──
+    function _torDiaRender() {
+      var ov = document.getElementById('torneo-dia-ov');
+      if (!ov) return;
+      if (!_torDia) { ov.style.display = 'none'; ov.innerHTML = ''; return; }
+      var fISO = _torDia, soloLect = _torSoloLectura();
+      var lista = _torEnDia(_torLeer(), fISO)
+        .sort(function(a, b){ return String(a.fecha).localeCompare(String(b.fecha)); });
+      var d = new Date(+fISO.slice(0,4), +fISO.slice(5,7)-1, +fISO.slice(8,10));
+      var titulo = DIAS_NOMBRES_A[d.getDay()] + ', ' + formatFechaDiaMes(fISO);
+
+      var h = '<div class="tor-dia" onclick="event.stopPropagation()">';
+      h += '<div class="ruta-modal-hdr">' +
+        '<div><div class="ruta-modal-tit">' + titulo + (fISO === hoyLocal() ? ' <span class="ruta-badge">hoy</span>' : '') + '</div>' +
+        '<div class="ruta-modal-sub">' +
+          (lista.length ? lista.length + (lista.length === 1 ? ' competición' : ' competiciones') + ' este día'
+                        : (soloLect ? 'sin competiciones' : 'apunta la primera de este día')) +
+        '</div></div>' +
+        '<button type="button" class="ruta-chip-x" onclick="torDiaCerrar()">✕</button></div>';
+
+      if (_torForm && !soloLect) {
+        h += _torFormHTML();
+      } else {
+        if (lista.length) {
+          h += '<div class="tor-lista">';
+          lista.forEach(function(t){ h += _torCardHTML(t); });
+          h += '</div>';
+        } else {
+          h += '<div class="ruta-modal-vacio">Este día no tiene competiciones.</div>';
+        }
+        // v0.213: varias competiciones el mismo día (varios jugadores en
+        // torneos distintos a la vez) se apuntan una detrás de otra desde aquí.
+        if (!soloLect) h += '<button type="button" class="tor-add" style="margin:10px 0 0;" onclick="torNuevaEnDia()">＋ Añadir otra competición este día</button>';
+      }
+
+      h += '</div>';
+      ov.innerHTML = h;
+      ov.style.display = 'flex';
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // v0.213 — EXPORTAR A GOOGLE CALENDAR / CALENDARIO DEL IPHONE
+    // ══════════════════════════════════════════════════════════════
+    // Se genera un archivo .ics (el formato estándar de calendarios, RFC 5545)
+    // con las competiciones como eventos de día completo. Google Calendar lo
+    // traga por «Configuración › Importar y exportar»; en el iPhone basta con
+    // abrir el archivo y decir «Añadir todos». No hace falta ninguna cuenta ni
+    // conexión: es un archivo que se descarga.
+    function _icsEsc(s) {
+      return String(s == null ? '' : s)
+        .replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,')
+        .replace(/\r?\n/g, '\\n');
+    }
+    // Las líneas de un .ics no deben pasar de 75 octetos; la continuación
+    // empieza por un espacio. Se corta con margen, por los acentos.
+    function _icsFold(linea) {
+      if (linea.length <= 70) return linea;
+      var out = linea.slice(0, 70), resto = linea.slice(70);
+      while (resto.length) { out += '\r\n ' + resto.slice(0, 69); resto = resto.slice(69); }
+      return out;
+    }
+    function _torICS(lista) {
+      var stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+      var L = ['BEGIN:VCALENDAR', 'VERSION:2.0',
+               'PRODID:-//Mi Padel//Calendario de competiciones//ES',
+               'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+               'X-WR-CALNAME:Competiciones de pádel'];
+      lista.forEach(function(t){
+        var tp = _torTipo(t.tipo);
+        var fin = t.fechaFin || t.fecha;
+        var desc = ['Tipo: ' + tp.label];
+        if (t.categoria) desc.push('Categoría: ' + t.categoria);
+        if (t.notas)     desc.push(t.notas);
+        if (t.enlace)    desc.push(t.enlace);
+        L.push('BEGIN:VEVENT');
+        L.push('UID:' + t.id + '@mipadel');
+        L.push('DTSTAMP:' + stamp);
+        // Evento de día completo: DTEND es EXCLUSIVO, así que va el día siguiente
+        L.push('DTSTART;VALUE=DATE:' + t.fecha.replace(/-/g, ''));
+        L.push('DTEND;VALUE=DATE:' + addDiasISO(fin, 1).replace(/-/g, ''));
+        L.push('SUMMARY:' + _icsEsc(tp.ico + ' ' + (t.nombre || tp.label)));
+        if (t.lugar) L.push('LOCATION:' + _icsEsc(t.lugar));
+        L.push('DESCRIPTION:' + _icsEsc(desc.join('\n')));
+        if (t.enlace && /^https?:\/\//i.test(t.enlace)) L.push('URL:' + t.enlace);
+        L.push('CATEGORIES:' + _icsEsc(tp.label));
+        L.push('END:VEVENT');
+      });
+      L.push('END:VCALENDAR');
+      return L.map(_icsFold).join('\r\n') + '\r\n';
+    }
+    function _torDescargarICS(texto, nombre) {
+      var blob = new Blob([texto], { type: 'text/calendar;charset=utf-8' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = nombre;
+      document.body.appendChild(a); a.click();
+      setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 0);
+    }
+    function torExportarCurso() {
+      var curso = _torCurso(), lista = _torDelCurso(curso);
+      if (!lista.length) { alert('El curso ' + curso + ' no tiene competiciones que exportar.'); return; }
+      _torDescargarICS(_torICS(lista), 'competiciones-' + curso + '.ics');
+    }
+    function torExportarUno(id) {
+      var t = _torPorId(id);
+      if (!t) return;
+      _torDescargarICS(_torICS([t]), 'competicion-' + t.fecha + '.ics');
     }
 
     // ── Overlay completo ──
@@ -15107,33 +15316,46 @@
         var fISO = mes.y + '-' + ('0' + (mes.m + 1)).slice(-2) + '-' + ('0' + d).slice(-2);
         var enDia = _torEnDia(delMes, fISO);
         var dots = '';
+        // v0.213: hasta 3 puntos y, si hay más, un «+N»: un día puede llevar
+        // varias competiciones a la vez (varios jugadores en torneos distintos).
         enDia.slice(0, 3).forEach(function(t){ dots += '<span class="tor-dot" style="background:' + _torTipo(t.tipo).col + ';"></span>'; });
+        if (enDia.length > 3) dots += '<span class="tor-cal-mas">+' + (enDia.length - 3) + '</span>';
         var cls = 'tor-cal-d' + (enDia.length ? ' con' : '') + (fISO === hoy ? ' hoy' : '');
-        var acc = enDia.length ? 'torVerFicha(\'' + enDia[0].id + '\')'
-                : (soloLect ? '' : 'torNueva(\'' + fISO + '\')');
+        // v0.213: TODOS los días abren el globo de ese día — con competiciones
+        // o sin ellas. El de solo lectura solo entra si hay algo que ver.
+        var abre = enDia.length || !soloLect;
         var tit = enDia.length
           ? enDia.map(function(t){ return (t.nombre || _torTipo(t.tipo).label); }).join(' · ')
           : (soloLect ? '' : 'Apuntar una competición este día');
-        h += '<div class="' + cls + '"' + (acc ? ' onclick="' + acc + '"' : '') + ' title="' + _gEsc(tit) + '">' +
+        h += '<div class="' + cls + '"' + (abre ? ' onclick="torDiaAbrir(\'' + fISO + '\')"' : '') + ' title="' + _gEsc(tit) + '">' +
              '<span class="tor-cal-n">' + d + '</span>' +
              (dots ? '<span class="tor-cal-dots">' + dots + '</span>' : '') + '</div>';
       }
       h += '</div>';
 
-      // Formulario o lista del mes
-      if (_torForm && !soloLect) {
-        h += _torFormHTML();
+      // Lista del mes. v0.213: solo para leer — tocar una lleva a su día, que
+      // es donde se edita. El formulario vive en el globo del día.
+      if (!delMes.length) {
+        h += '<div class="ruta-modal-vacio">Este mes no tiene competiciones.' +
+             (soloLect ? '' : '<br>Toca un día del calendario para apuntar una.') + '</div>';
       } else {
-        if (!soloLect) h += '<button type="button" class="tor-add" onclick="torNueva(\'' + (mes.y + '-' + ('0' + (mes.m+1)).slice(-2) + '-01') + '\')">＋ Nueva competición</button>';
-        if (!delMes.length) {
-          h += '<div class="ruta-modal-vacio">Este mes no tiene competiciones.' +
-               (soloLect ? '' : '<br>Toca un día del calendario para apuntar una.') + '</div>';
-        } else {
-          h += '<div class="tor-lista">';
-          delMes.forEach(function(t){ h += _torCardHTML(t); });
-          h += '</div>';
-        }
+        h += '<div class="tor-lista">';
+        delMes.forEach(function(t){
+          var tp = _torTipo(t.tipo);
+          var pasada = (t.fechaFin || t.fecha) < hoy;
+          h += '<div class="tor-card' + (pasada ? ' pasada' : '') + '">' +
+            '<div class="tor-card-hdr" onclick="torDiaAbrir(\'' + t.fecha + '\',\'' + t.id + '\')">' +
+              '<span class="tor-card-ico" style="background:' + tp.col + '1a;color:' + tp.col + ';">' + tp.ico + '</span>' +
+              '<span class="tor-card-txt"><b>' + _gEsc(t.nombre || tp.label) + '</b>' +
+                '<span>' + tp.label + ' · ' + _torRangoTxt(t) + (t.lugar ? ' · ' + _gEsc(t.lugar) : '') + '</span></span>' +
+              '<span class="chev">›</span></div></div>';
+        });
+        h += '</div>';
       }
+
+      // v0.213: llevarse el curso entero al calendario del móvil
+      if (delCurso.length) h += '<button type="button" class="tor-exp" onclick="torExportarCurso()">' +
+        '📅 Exportar el curso a mi calendario <span class="tor-opc">(' + delCurso.length + ' · Google o iPhone)</span></button>';
 
       // Leyenda de tipos
       h += '<div class="tor-leyenda">';
