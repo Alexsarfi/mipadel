@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.216.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.218.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,53 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.218.0 — El panel, en dos columnas: carro | área de trabajo (2026-08)
+    (sin migraciones nuevas)
+    · Las dos partes de la clase se ven ahora una al lado de la otra, cada una
+      en su columna, en vez del carro colgando abajo del todo:
+        · IZQUIERDA — 🛒 1 · Carro (la primera parte)
+        · DERECHA   — 2 · Área de trabajo y 3 · Sesión, tal y como estaban,
+                      con sus dos sub-columnas y las miniaturas.
+      Separadas por una línea, para que se distinga de un vistazo dónde
+      acaba una y empieza la otra. El panel se ensancha a 1140 px para que
+      quepan las tres sin apretarse.
+    · Los pasos se renumeran: el carro es el 1, el área el 2 y la sesión el 3
+      (el orden en el que va la clase).
+    · EJERCICIOS DEL CARRO POR GOLPE — encima de la lista hay una fila de
+      botones: Todos, Volea, Bandeja, Víbora, Remate, Globo, Pared, Fondo,
+      Saque/Resto, Combinada y «Sin golpe», en el orden del vocabulario del
+      catálogo y solo los que tengan ejercicios, cada uno con su cuenta.
+      Al pulsar uno la lista se queda con los suyos; al repulsarlo, vuelven
+      todos. Es como se piensa el carro: «hoy toca bandeja».
+    · El buscador sigue ahí y no se pierde al cambiar de golpe. Lo ya metido
+      en el carro se ve siempre arriba en fichas, aunque estés mirando otro
+      golpe. Y si un golpe se queda sin ejercicios, se vuelve a «Todos» en vez
+      de dejar la lista en blanco.
+    · En móvil no cambia nada de fondo: las dos partes siguen apiladas, con el
+      carro arriba.
+
+  v0.217.0 — Planificar sin cortapisas: fuera los dos avisos (2026-08)
+    (sin migraciones nuevas)
+    · Se retiran los dos mensajes que impedían planificar:
+        «Este día queda fuera de las 40 semanas de la ruta (sep–jun)…»
+        «Esta semana no tiene ningún día de clase configurado…»
+      Planificar no depende de la asistencia ni del calendario del curso: una
+      clase se afina DESPUÉS de darla (quitar o añadir algo), y eso puede
+      tocar días viejos, de julio o de semanas sin franjas configuradas.
+    · DÍAS FUERA DE LAS 40 SEMANAS (julio, agosto, el final de junio) — se
+      planifican con el mismo panel. Se construye al vuelo una «semana suelta»
+      a partir de la fecha (su lunes y su domingo, aunque cruce de mes), con
+      idx -1. Área, sesión y carro se guardan igual que en cualquier otra
+      semana. La cabecera enseña el día y su rango, sin número de semana.
+    · SEMANAS SIN CLASES CONFIGURADAS — al elegir un área ya no se bloquea:
+      se ofrecen los SIETE días de la semana para colgarla, avisando de que no
+      hay clases configuradas. Si sí las hay, todo sigue igual (un día, se
+      marca directo; varios, se pregunta cuál).
+    · Y un arreglo que venía de serie con esto: las áreas de una semana se
+      leen ahora de los siete días, no solo de los que hoy tienen clase
+      configurada. Lo marcado en su día en una franja que luego se cerró o se
+      borró volvía a aparecer: seguía guardado, pero la ruta no lo enseñaba.
 
   v0.216.0 — EL CARRO: la primera parte de la clase (2026-08)
     ⚠️ REQUIERE MIGRACIÓN: migraciones/migracion_carro.sql
@@ -4937,6 +4984,8 @@
     .ruta-modal-tit { font-size:16px; font-weight:800; color:var(--texto); }
     .ruta-modal-sub { font-size:12px; color:var(--gris); }
     .ruta-modal-cols { display:flex; flex-direction:column; gap:14px; }
+    /* v0.218: en móvil las dos partes se apilan (carro arriba, área debajo) */
+    .ruta-modal-trabajo { display:flex; flex-direction:column; gap:14px; min-width:0; }
     .ruta-modal-vacio { text-align:center; color:var(--gris); font-size:13px; line-height:1.7; padding:22px 10px; }
     /* v0.207 — resumen de lo ya marcado en Mensual esta semana (chips con
        día + ✕) y el picker "¿qué día?" cuando la semana tiene más de un
@@ -4986,8 +5035,18 @@
     .ruta-ses-nom { font-size:12.5px; font-weight:700; color:var(--texto); line-height:1.3; }
     .ruta-ses-meta { font-size:10.5px; color:var(--gris); }
     /* v0.216 — CARRO: primera parte de la clase (ejercicios de lanzamiento) */
+    /* v0.218: en móvil va apilado (con su filete de separación); en ordenador
+       es la columna de la izquierda del panel, así que ahí el filete sobra. */
     .ruta-carro { margin-top:14px; padding-top:12px; border-top:1px dashed var(--borde); }
     .ruta-carro-sel { margin-bottom:8px; }
+    /* v0.218 — botones de golpe: así se piensa el carro («hoy toca bandeja») */
+    .ruta-carro-golpes { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px; }
+    .ruta-carro-g { font-family:inherit; font-size:11px; font-weight:700; color:var(--gris);
+      background:var(--blanco); border:1.5px solid var(--borde); border-radius:999px;
+      padding:4px 10px; cursor:pointer; }
+    .ruta-carro-g:hover { border-color:#0891b2; color:#0e7490; }
+    .ruta-carro-g.on { border-color:#0891b2; background:#ecfeff; color:#0e7490; }
+    .ruta-carro-g b { font-weight:800; opacity:.65; margin-left:2px; }
     .ruta-carro-busca { padding:7px 11px; font-size:12.5px; margin-bottom:7px; }
     .ruta-carro-lista { max-height:210px; overflow-y:auto; border:1px solid var(--borde); border-radius:10px; padding:4px; }
     .ruta-carro-it { display:flex; align-items:center; gap:8px; width:100%; box-sizing:border-box; text-align:left;
@@ -5003,7 +5062,8 @@
     .ruta-wk .ruta-carro-n { display:block; margin:2px 0 0; font-size:10.5px; font-weight:700;
       color:#0e7490; background:none; padding:0; text-align:left; }
     @media (min-width:760px){
-      .ruta-carro-lista { max-height:260px; }
+      .ruta-carro { margin-top:0; padding-top:0; border-top:none; }
+      .ruta-carro-lista { max-height:calc(60vh - 190px); min-height:150px; }
     }
     .ruta-panel-borrar { display:block; width:100%; margin-top:14px; font-family:inherit; font-size:12px; font-weight:700;
       color:#b91c1c; background:none; border:1px dashed #fca5a5; border-radius:10px; padding:8px; cursor:pointer; }
@@ -5017,9 +5077,14 @@
       .ruta-tri-row { grid-template-columns:repeat(4,1fr); }
       .ruta-mes-cols { grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); }
       .ruta-modal-ov { align-items:center; padding:24px; }
-      .ruta-modal { max-width:940px; max-height:86vh; border-radius:18px; padding:18px 20px 20px; }
-      .ruta-modal-cols { flex-direction:row; align-items:flex-start; gap:20px; }
-      .ruta-modal-areas { flex:0 0 270px; max-height:60vh; overflow-y:auto; }
+      /* v0.218: el panel crece — a la izquierda el carro y a la derecha el
+         área de trabajo con sus sesiones, sin apretujarse. */
+      .ruta-modal { max-width:1140px; max-height:86vh; border-radius:18px; padding:18px 20px 20px; }
+      .ruta-modal-cols { flex-direction:row; align-items:flex-start; gap:18px; }
+      .ruta-modal-carro { flex:0 0 268px; min-width:0; }
+      .ruta-modal-trabajo { flex:1; min-width:0; display:flex; align-items:flex-start; gap:18px;
+        padding-left:18px; border-left:1px solid var(--borde); }
+      .ruta-modal-areas { flex:0 0 240px; max-height:60vh; overflow-y:auto; }
       .ruta-modal-ses { flex:1; min-width:0; max-height:60vh; overflow-y:auto; }
       .ruta-ses-grid { grid-template-columns:repeat(2,1fr); }
       .ruta-ses-thumb { width:96px; }
@@ -6400,7 +6465,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.216.0';
+    var APP_VERSION = '0.218.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -14133,14 +14198,14 @@
     // p.compDias — el MISMO dato que pinta Mensual. Puede haber varias (de
     // días distintos) o ninguna. idsNivel filtra al nivel activo, igual que
     // en Mensual (lo de Avanzado no cuenta aquí).
+    // v0.217: se leen los SIETE días de la semana, no solo los que hoy tienen
+    // clase configurada. Si no, lo planificado en un día suelto (o lo marcado
+    // en su momento en una franja que luego se cerró o se borró) desaparecía
+    // de la ruta aunque siguiera guardado.
     function _rutaAreasDeSemana(p, w, idsNivel) {
-      var out = [];
-      _rutaDiasRealesDeSemana(w).forEach(function(d){
-        ((p.compDias && p.compDias[d.fecha]) || []).forEach(function(id){
-          if (idsNivel[id]) out.push({ areaId:id, fecha:d.fecha });
-        });
+      return _rutaMarcasSemana(p, w, idsNivel).map(function(x){
+        return { areaId:x.areaId, fecha:x.fecha };
       });
-      return out;
     }
     // Área "por defecto" a mostrar abierta al entrar en el panel de la
     // semana: solo si hay EXACTAMENTE una distinta marcada (si hay varias o
@@ -14239,6 +14304,7 @@
       _rutaModalIdx = idx; _rutaModalArea = null; _rutaEligeDia = null;
       _rutaModalCurso = (curso && curso !== _rutaCurso()) ? curso : null;
       _rutaModalFechaFija = null;
+      _rutaModalSemLibre = null;   // v0.217: viene del tablero, es una de las 40
       _rutaModalRender();
     }
     // v0.208 — Abre el mismo panel para un DÍA concreto de Mensual (en vez
@@ -14246,23 +14312,43 @@
     // el día no tiene nada marcado todavía (o al pulsar "cambiar selección"
     // desde el resumen). El área elegida se marca directamente en este día,
     // sin preguntar a cuál aplica (ya se sabe).
+    // v0.217 — Semana SUELTA: la de un día que no cae en las 40 de la ruta
+    // (julio, agosto, el final de junio…). Se construye al vuelo a partir de
+    // la fecha, con idx -1, para que el panel funcione igual. Antes esos días
+    // no se podían planificar con el panel: saltaba un aviso y te mandaba al
+    // selector de casillas.
+    var _rutaModalSemLibre = null;
+    function _rutaSemanaLibre(fISO) {
+      var p = fISO.split('-');
+      var d = new Date(+p[0], +p[1] - 1, +p[2]);
+      var lun = new Date(d); lun.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+      var dom = new Date(lun); dom.setDate(lun.getDate() + 6);
+      return { idx:-1, lunISO:dateToISOLocal(lun), domISO:dateToISOLocal(dom),
+               lun:lun, dom:dom, mes:lun.getMonth() };
+    }
+    // La semana sobre la que trabaja el panel: la suelta si la hay, o la que
+    // toque de las 40 del curso.
+    function _rutaSemanaActual(idx) {
+      if (_rutaModalSemLibre) return _rutaModalSemLibre;
+      return _rutaSemanas(_rutaModalCursoActual())[idx];
+    }
     function rutaAbrirDia(fechaISO) {
       _rutaMigrarLocal();
       var curso = cursoDeFecha(fechaISO);
       var w = _rutaSemanas(curso).filter(function(w){ return fechaISO >= w.lunISO && fechaISO <= w.domISO; })[0];
-      if (!w) {
-        alert('Este día queda fuera de las 40 semanas de la ruta (sep–jun) — márcalo con el selector de siempre.');
-        compDiaAbierta = fechaISO; compDiaEditando = true; mostrarPlanificacion();
-        return;
-      }
+      // v0.217: si el día queda fuera de las 40 semanas, se planifica igual
+      // con una semana suelta — cualquier día es planificable, también los ya
+      // pasados (después de dar una clase se afina lo que se hizo).
+      _rutaModalSemLibre = w ? null : _rutaSemanaLibre(fechaISO);
       _rutaModalCurso = curso;
       _rutaModalFechaFija = fechaISO;
-      _rutaModalIdx = w.idx; _rutaModalArea = null; _rutaEligeDia = null;
+      _rutaModalIdx = w ? w.idx : -1;
+      _rutaModalArea = null; _rutaEligeDia = null;
       _rutaModalRender();
     }
     function rutaCerrarModal() {
       _rutaModalIdx = null; _rutaModalArea = null; _rutaEligeDia = null;
-      _rutaModalCurso = null; _rutaModalFechaFija = null;
+      _rutaModalCurso = null; _rutaModalFechaFija = null; _rutaModalSemLibre = null;
       var ov = document.getElementById('ruta-plan-ov');
       if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; }
     }
@@ -14276,7 +14362,7 @@
     // (en móvil el bloque funciona como acordeón).
     function rutaElegirArea(idx, areaId) {
       var p = leerPlan(), idsNivel = _compIdsNivel(p);
-      var w = _rutaSemanas(_rutaModalCursoActual())[idx];
+      var w = _rutaSemanaActual(idx);
       var abierta = (_rutaModalArea !== null) ? _rutaModalArea : _rutaAreaDefecto(p, w, idsNivel);
       if (abierta === areaId && _rutaEligeDia === null) { _rutaModalArea = ''; _rutaModalRender(); return; }
       if (_rutaModalFechaFija) {
@@ -14285,11 +14371,11 @@
         mostrarPlanificacion(); _rutaModalRender();
         return;
       }
-      var dias = _rutaDiasRealesDeSemana(w);
-      if (!dias.length) {
-        alert('Esta semana no tiene ningún día de clase configurado — no se puede marcar un área aquí. Configúralo primero en Asistencia.');
-        return;
-      }
+      // v0.217: si la semana no tiene ningún día de clase configurado ya no se
+      // bloquea — se ofrecen sus 7 días para elegir. Planificar no depende de
+      // que la asistencia esté puesta (semanas viejas, franjas ya cerradas,
+      // periodos sin clases fijas…).
+      var dias = _rutaDiasElegibles(w);
       if (dias.length === 1) {
         _compDiaMarcar(dias[0].fecha, areaId);
         _rutaEligeDia = null; _rutaModalArea = areaId;
@@ -14299,6 +14385,20 @@
       // Varios días reales esta semana: hay que elegir a cuál se aplica.
       _rutaEligeDia = areaId;
       _rutaModalRender();
+    }
+    // v0.217 — Días a los que se puede colgar un área en una semana: los que
+    // tienen clase configurada y, si no hay ninguno, los SIETE de la semana.
+    // Así siempre se puede planificar; el día de clase solo es una comodidad
+    // para no tener que elegir.
+    function _rutaDiasElegibles(w) {
+      var reales = _rutaDiasRealesDeSemana(w);
+      if (reales.length) return reales;
+      var out = [];
+      for (var i = 0; i < 7; i++) {
+        var d = new Date(w.lun); d.setDate(w.lun.getDate() + i);
+        out.push({ fecha: dateToISOLocal(d), dow: d.getDay(), libre: true });
+      }
+      return out;
     }
     // Se elige el día concreto (semana con >1 día real de clase).
     function rutaElegirDia(idx, areaId, fechaISO) {
@@ -14317,7 +14417,7 @@
     // Paso 2 → elige sesión: se guarda en p.rutaSes (dato propio de la
     // semana, sincronizado con el resto del plan). Cierra el panel.
     function rutaElegirSesion(idx, sesId) {
-      var w = _rutaSemanas(_rutaModalCursoActual())[idx];
+      var w = _rutaSemanaActual(idx);
       var p = leerPlan();
       if (!p.rutaSes) p.rutaSes = {};
       p.rutaSes[w.lunISO] = +sesId;
@@ -14328,7 +14428,7 @@
     // Quita solo la sesión asignada a la semana (el área se quita desde su
     // propio ✕ en el resumen, o desde Mensual — es el mismo dato).
     function rutaBorrarSemana(idx) {
-      var w = _rutaSemanas(_rutaModalCursoActual())[idx];
+      var w = _rutaSemanaActual(idx);
       var p = leerPlan();
       if (p.rutaSes) { delete p.rutaSes[w.lunISO]; _planGuardar(p); }
       rutaCerrarModal();
@@ -14349,7 +14449,7 @@
     var _rutaCarroQ = '';   // lo que hay escrito en el buscador del carro
     function _rutaCarroDe(w) { return ((leerPlan().rutaCarro || {})[w.lunISO] || []).slice(); }
     function rutaCarroToggle(idx, ejId) {
-      var w = _rutaSemanas(_rutaModalCursoActual())[idx];
+      var w = _rutaSemanaActual(idx);
       var p = leerPlan();
       if (!p.rutaCarro) p.rutaCarro = {};
       var arr = (p.rutaCarro[w.lunISO] || []).slice();
@@ -14361,7 +14461,7 @@
       mostrarPlanificacion();
     }
     function rutaCarroVaciar(idx) {
-      var w = _rutaSemanas(_rutaModalCursoActual())[idx];
+      var w = _rutaSemanaActual(idx);
       var p = leerPlan();
       if (p.rutaCarro && p.rutaCarro[w.lunISO]) { delete p.rutaCarro[w.lunISO]; _planGuardar(p); }
       _rutaModalRender();
@@ -14409,22 +14509,66 @@
       return h;
     }
     // Bloque completo del carro dentro del panel
+    // v0.218 — Los ejercicios del carro se agrupan POR GOLPE: una fila de
+    // botones (volea, bandeja, globo, pared…) y debajo los de ese golpe. Es
+    // como se piensa el carro: «hoy toca bandeja». '' = todos.
+    var _rutaCarroGolpe = '';
+    function rutaCarroGolpe(k, idx) {
+      _rutaCarroGolpe = (_rutaCarroGolpe === k) ? '' : k;
+      var cont = document.getElementById('ruta-carro-bloque');
+      if (cont) cont.innerHTML = _rutaCarroBloqueHTML(idx, _rutaCarroDe(_rutaSemanaActual(idx)));
+      rutaCarroFiltrar(_rutaCarroQ);   // se respeta lo que hubiera escrito
+    }
+    // Ejercicios repartidos por golpe, en el orden canónico del catálogo.
+    // Los que no tienen golpe puesto caen en el cajón '_'.
+    function _rutaCarroPorGolpe(ejs) {
+      var por = {};
+      ejs.forEach(function(e){
+        var g = ejFaceta(e, 'golpe') || '_';
+        (por[g] = por[g] || []).push(e);
+      });
+      var orden = GOLPE_CANON.filter(function(g){ return por[g.key]; })
+        .map(function(g){ return { key:g.key, label:g.label, icono:g.icono, ejs:por[g.key] }; });
+      // Golpes que no están en el vocabulario canónico (por si acaso)
+      Object.keys(por).forEach(function(k){
+        if (k === '_' || GOLPE_CANON.some(function(g){ return g.key === k; })) return;
+        orden.push({ key:k, label:k, icono:'🏓', ejs:por[k] });
+      });
+      if (por['_']) orden.push({ key:'_', label:'Sin golpe', icono:'❓', ejs:por['_'] });
+      return orden;
+    }
     function _rutaCarroBloqueHTML(idx, arr) {
       var ejs = leerEjercicios().slice().sort(function(a, b){
         return String(a.nombre || '').localeCompare(String(b.nombre || ''));
       });
+      var grupos = _rutaCarroPorGolpe(ejs);
+      // Si el golpe elegido ya no tiene ejercicios, se vuelve a "todos"
+      var golpeSel = _rutaCarroGolpe;
+      if (golpeSel && !grupos.some(function(g){ return g.key === golpeSel; })) golpeSel = '';
+      var visibles = golpeSel
+        ? (grupos.filter(function(g){ return g.key === golpeSel; })[0] || { ejs:[] }).ejs
+        : ejs;
+
       var h = '<div class="ruta-carro">';
-      h += '<div class="ruta-panel-paso">🛒 Carro · ejercicios de la primera parte' +
+      h += '<div class="ruta-panel-paso">🛒 1 · Carro <span class="ruta-panel-nota">primera parte</span>' +
            '<span class="ruta-area-n" id="ruta-carro-n">' + (arr.length || '—') + '</span></div>';
       h += '<div id="ruta-carro-sel" class="ruta-carro-sel">' + _rutaCarroSelHTML(idx, arr) + '</div>';
       if (!ejs.length) {
         h += '<div class="ruta-panel-nota">Aún no tienes ejercicios en el catálogo.</div>';
       } else {
+        // Botones de golpe
+        h += '<div class="ruta-carro-golpes">';
+        h += '<button type="button" class="ruta-carro-g' + (golpeSel ? '' : ' on') + '" onclick="rutaCarroGolpe(\'\',' + idx + ')">Todos <b>' + ejs.length + '</b></button>';
+        grupos.forEach(function(g){
+          h += '<button type="button" class="ruta-carro-g' + (golpeSel === g.key ? ' on' : '') + '" onclick="rutaCarroGolpe(\'' + g.key + '\',' + idx + ')">' +
+            g.icono + ' ' + _gEsc(g.label) + ' <b>' + g.ejs.length + '</b></button>';
+        });
+        h += '</div>';
         h += '<input type="search" class="form-input ruta-carro-busca" id="ruta-carro-busca" ' +
-             'placeholder="Buscar ejercicio por nombre, golpe o zona…" value="' + _gEsc(_rutaCarroQ) + '" ' +
+             'placeholder="Buscar por nombre o zona…" value="' + _gEsc(_rutaCarroQ) + '" ' +
              'oninput="rutaCarroFiltrar(this.value)">';
         h += '<div class="ruta-carro-lista" id="ruta-carro-lista">';
-        ejs.forEach(function(e){
+        visibles.forEach(function(e){
           var on = arr.indexOf(e.id) >= 0;
           var meta = [ejFaceta(e, 'golpe'), ejFaceta(e, 'zona'), ejFaceta(e, 'intencion')].filter(Boolean).join(' · ');
           var busca = ((e.nombre || '') + ' ' + meta).toLowerCase();
@@ -14495,7 +14639,7 @@
       if (_rutaModalIdx === null) { ov.style.display = 'none'; ov.innerHTML = ''; return; }
       var idx   = _rutaModalIdx;
       var curso = _rutaModalCursoActual();
-      var w     = _rutaSemanas(curso)[idx];
+      var w     = _rutaSemanaActual(idx);
       var p     = leerPlan();
       var idsNivel = _compIdsNivel(p);
       var wd    = _rutaSemanaDatos(p, w, idsNivel);   // v0.207: derivado de compDias + rutaSes
@@ -14526,10 +14670,12 @@
         var fd = _rutaModalFechaFija;
         var dow = new Date(+fd.slice(0,4), +fd.slice(5,7)-1, +fd.slice(8,10)).getDay();
         tit = DIAS_NOMBRES_A[dow] + ' ' + formatFechaDiaMes(fd);
-        sub = 'Semana ' + (idx+1) + ' · ' + rango;
+        // v0.217: un día fuera de las 40 semanas (idx -1) no tiene número de
+        // semana que enseñar; se queda solo con su rango de fechas.
+        sub = (idx >= 0 ? 'Semana ' + (idx+1) + ' · ' : '') + rango;
       } else {
-        tit = 'Semana ' + (idx+1);
-        sub = rango;
+        tit = idx >= 0 ? 'Semana ' + (idx+1) : rango;
+        sub = idx >= 0 ? rango : 'Fuera de las 40 semanas del curso';
       }
       var h = '<div class="ruta-modal" onclick="event.stopPropagation()">';
       h += '<div class="ruta-modal-hdr">' +
@@ -14553,9 +14699,17 @@
 
       h += '<div class="ruta-modal-cols">';
 
-      // ── Columna izquierda: áreas de trabajo ──
+      // ── v0.218 — COLUMNA IZQUIERDA: el CARRO (primera parte de la clase),
+      //    con sus ejercicios repartidos por golpe. Antes iba abajo del todo,
+      //    a lo ancho; ahora las dos partes de la clase se ven una al lado de
+      //    la otra, cada una en lo suyo.
+      h += '<div class="ruta-modal-carro" id="ruta-carro-bloque">' + _rutaCarroBloqueHTML(idx, wd.carro) + '</div>';
+
+      // ── COLUMNA DERECHA: el ÁREA DE TRABAJO (segunda parte), tal cual
+      //    estaba: elegir el área y, al lado, sus sesiones con miniaturas.
+      h += '<div class="ruta-modal-trabajo">';
       h += '<div class="ruta-modal-areas">';
-      h += '<div class="ruta-panel-paso">1 · Área de trabajo</div>';
+      h += '<div class="ruta-panel-paso">2 · Área de trabajo</div>';
       if (!areas.length) {
         h += '<div class="ruta-panel-nota">Aún no hay áreas en el catálogo de Competición.</div>';
       } else {
@@ -14575,8 +14729,13 @@
             // v0.207 — Semana con MÁS de un día real de clase: hay que
             // elegir a cuál de ellos se aplica el área antes de seguir.
             if (eligiendoDia) {
-              h += '<div class="ruta-area-inline"><div class="ruta-panel-paso">¿Qué día de esta semana?</div><div class="ruta-dia-chips">';
-              _rutaDiasRealesDeSemana(w).forEach(function(d){
+              // v0.217: si la semana no tiene clases configuradas salen sus 7
+              // días, para poder planificar igual.
+              var elegibles = _rutaDiasElegibles(w);
+              var sinClases = elegibles.length && elegibles[0].libre;
+              h += '<div class="ruta-area-inline"><div class="ruta-panel-paso">¿Qué día de esta semana?' +
+                   (sinClases ? '<span class="ruta-panel-nota"> · sin clases configuradas</span>' : '') + '</div><div class="ruta-dia-chips">';
+              elegibles.forEach(function(d){
                 h += '<button type="button" class="ruta-dia-chip" onclick="rutaElegirDia(' + idx + ',\'' + a.id + '\',\'' + d.fecha + '\')">' +
                   DIAS_NOMBRES_A[d.dow].slice(0,3) + ' ' + parseInt(d.fecha.slice(8,10),10) + '</button>';
               });
@@ -14607,7 +14766,7 @@
              '<span class="ruta-panel-nota">Te mostraré solo sus sesiones.</span></div>';
       } else {
         var lista = sesDe[areaSel] || [];
-        h += '<div class="ruta-panel-paso">2 · Sesión ' +
+        h += '<div class="ruta-panel-paso">3 · Sesión ' +
           '<button type="button" class="ruta-chip-x" onclick="rutaCambiarArea()">cambiar área</button></div>';
         h += '<div class="ruta-chip-sel">' + _gEsc(areaN[areaSel] || 'Área') + '</div>';
         if (!lista.length) {
@@ -14621,11 +14780,7 @@
           h += '</div>';
         }
       }
-      h += '</div></div>';   // /ses /cols
-      // v0.216 — CARRO: la primera parte de la clase, a lo ancho y debajo de
-      // las dos columnas. No depende del área elegida (un ejercicio de carro
-      // puede ser de cualquier sitio), así que va en su propia franja.
-      h += _rutaCarroBloqueHTML(idx, wd.carro);
+      h += '</div></div></div>';   // /ses /trabajo /cols
       if (wd.sesion) h += '<button type="button" class="ruta-panel-borrar" onclick="rutaBorrarSemana(' + idx + ')">🗑️ Quitar la sesión de esta semana</button>';
       h += '</div>';         // /ruta-modal
 
