@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.220.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.221.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,29 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.221.0 — La clase del día, en dos columnas para la pista (2026-08)
+    (sin migraciones nuevas)
+    · AL PINCHAR UN DÍA que ya tiene algo puesto, la vista de la clase se
+      parte en DOS TARJETAS, una al lado de otra, igual que al planificar:
+        🛒 Carro          — los ejercicios elegidos, con su miniatura
+        🎯 Área de trabajo — las sesiones elegidas y lo marcado ese día
+      Es la vista para tener delante mientras se da la clase: de un vistazo,
+      lo que toca lanzar y lo que toca jugar.
+      Se ponen al lado desde 700 px; por debajo se apilan, con el carro arriba.
+    · El carro y las sesiones son de la SEMANA, así que se leen por el lunes de
+      la semana de ese día — sirve para cualquier fecha, también las de fuera
+      de las 40 semanas del curso.
+    · Las sesiones elegidas se abren tocándolas, y las miniaturas de los
+      ejercicios reproducen su vídeo, como en el resto de la app.
+    · FICHA DEL EJERCICIO DE CARRO — lo elegido ya no son etiquetas de texto:
+      ahora es MINIATURA + nombre + SU GOLPE (con icono) + la ✕ de quitar.
+      Va encima de los botones de golpe, y es exactamente la misma ficha que
+      se ve luego en la vista del día: lo que eliges es lo que reconoces en
+      pista.
+    · Fuera la barra de «N / 40 semanas trabajadas» de la cabecera de la ruta:
+      no aportaba nada para planificar. Los contadores por trimestre (3/13) y
+      por mes se quedan, que esos sí sitúan.
 
   v0.220.0 — Las dos partes de la clase, en dos tarjetas (2026-08)
     (sin migraciones nuevas)
@@ -4983,10 +5006,6 @@
     .ruta-curso-nav > button:hover { border-color:#0891b2; color:#0e7490; }
     .ruta-curso-lbl { flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
       font-size:13.5px; font-weight:800; color:var(--texto); }
-    .ruta-hdr { margin-bottom:12px; }
-    .ruta-prog-txt { font-size:12px; color:var(--gris); margin-bottom:4px; }
-    .ruta-prog-bar { height:6px; background:var(--arena); border-radius:999px; overflow:hidden; }
-    .ruta-prog-bar span { display:block; height:100%; background:#0891b2; border-radius:999px; }
     /* Fila de trimestres — siempre uno al lado de otro */
     .ruta-tri-row { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:14px; }
     .ruta-tri { display:flex; flex-direction:column; align-items:flex-start; gap:3px; padding:10px 12px; cursor:pointer;
@@ -5125,10 +5144,37 @@
     .ruta-carro-gsub { font-size:10px; font-weight:800; color:var(--gris); text-transform:uppercase;
       letter-spacing:.04em; margin:8px 2px 4px; }
     .ruta-carro-gsub:first-child { margin-top:2px; }
-    .ruta-carro-thumb { flex-shrink:0; width:52px; aspect-ratio:16/9; border-radius:6px; overflow:hidden;
+    .ruta-carro-thumb { position:relative; flex-shrink:0; width:52px; aspect-ratio:16/9; border-radius:6px; overflow:hidden;
       background:#111; display:flex; align-items:center; justify-content:center; }
     .ruta-carro-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
     .ruta-carro-thumb .ruta-ses-noimg { font-size:14px; }
+    /* v0.221 — ficha del ejercicio del carro: miniatura + nombre + su golpe.
+       La misma en el panel de planificar y en la vista del día. */
+    .ruta-carro-ficha { display:flex; align-items:center; gap:8px; padding:5px; margin-bottom:5px;
+      border:1.5px solid #0891b2; border-radius:10px; background:#ecfeff; }
+    .ruta-carro-ficha .ruta-carro-thumb { width:62px; cursor:pointer; }
+    .ruta-carro-ficha .ejcard-play { position:absolute; inset:0; display:flex; align-items:center;
+      justify-content:center; font-size:13px; color:#fff; text-shadow:0 1px 4px rgba(0,0,0,.6); }
+    .ruta-carro-ficha-txt { display:flex; flex-direction:column; gap:1px; min-width:0; flex:1; }
+    .ruta-carro-ficha-txt b { font-size:12px; font-weight:700; color:var(--texto); line-height:1.3; }
+    .ruta-carro-ficha-txt span { font-size:10.5px; color:#0e7490; font-weight:700; }
+    .ruta-carro-ficha button { flex-shrink:0; border:none; background:none; color:#0e7490; font-size:13px;
+      font-family:inherit; cursor:pointer; padding:0 4px; opacity:.75; }
+    .ruta-carro-ficha button:hover { opacity:1; }
+    /* v0.221 — LA CLASE DEL DÍA, en dos columnas: carro | área de trabajo */
+    .comp-clase-cols { display:flex; flex-direction:column; gap:12px; margin-top:10px; }
+    .comp-clase-parte { min-width:0; border:1.5px solid var(--borde); border-radius:14px; padding:11px 12px 12px; }
+    .comp-clase-carro { background:#f6fdff; border-color:#cffafe; }
+    .comp-clase-carro .ruta-parte-hdr { border-bottom-color:#cffafe; }
+    .comp-clase-area { background:var(--blanco); }
+    .comp-clase-parte .comp-resumen-fila { margin:0 0 8px; }
+    .ruta-ses-eleg.clicable { cursor:pointer; }
+    .ruta-ses-eleg.clicable:hover { background:#cffafe; }
+    @media (min-width:700px){
+      .comp-clase-cols { flex-direction:row; align-items:stretch; gap:14px; }
+      .comp-clase-carro { flex:0 0 300px; }
+      .comp-clase-area  { flex:1; }
+    }
     /* v0.219 — sesiones ya elegidas de la semana, una debajo de otra */
     .ruta-ses-elegidas { margin-bottom:12px; padding-bottom:10px; border-bottom:1px dashed var(--borde); }
     .ruta-ses-eleg { display:flex; align-items:center; gap:8px; padding:5px; margin-bottom:5px;
@@ -6563,7 +6609,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.220.0';
+    var APP_VERSION = '0.221.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -14618,14 +14664,33 @@
       var vacio = document.getElementById('ruta-carro-vacio');
       if (vacio) vacio.style.display = vis ? 'none' : '';
     }
-    // Chips de los ejercicios ya metidos en el carro, con su ✕
+    // v0.221 — Ficha de un ejercicio del carro: MINIATURA + nombre + su GOLPE.
+    // Si se le pasa un `quitar` (el onclick de la ✕), lleva el botón de borrar.
+    // Es la misma ficha en el panel de planificar y en la vista del día, para
+    // que en pista se reconozca lo mismo que se eligió.
+    function _rutaCarroFichaHTML(e, quitar) {
+      var th = _rutaEjThumb(e);
+      var gk = ejFaceta(e, 'golpe');
+      var g  = gk ? (GOLPE_ICONO[gk] ? GOLPE_ICONO[gk] + ' ' + (GOLPE_LABEL[gk] || gk) : gk) : '';
+      var yt = extraerIdYoutube(e.video);
+      var ver = yt ? ' onclick="abrirLightboxVideo(\'' + yt + '\',null)"'
+              : (e.video ? ' onclick="abrirLightboxVideo(null,\'' + String(e.video).replace(/'/g, "\\'") + '\')"' : '');
+      return '<div class="ruta-carro-ficha">' +
+        '<span class="ruta-carro-thumb"' + ver + '>' +
+          (th ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="ruta-ses-noimg">🎾</span>') +
+          (ver ? '<span class="ejcard-play">▶</span>' : '') + '</span>' +
+        '<span class="ruta-carro-ficha-txt"><b>' + _gEsc(e.nombre || ('Ejercicio ' + e.id)) + '</b>' +
+          (g ? '<span>' + _gEsc(g) + '</span>' : '') + '</span>' +
+        (quitar ? '<button type="button" onclick="' + quitar + '" aria-label="Quitar">✕</button>' : '') +
+      '</div>';
+    }
+    // Los ejercicios ya metidos en el carro, encima de los botones de golpe.
     function _rutaCarroSelHTML(idx, arr) {
       if (!arr.length) return '<div class="ruta-panel-nota">Todavía no hay ningún ejercicio en el carro.</div>';
       var mapEj = _ejsById(), h = '';
       arr.forEach(function(id){
-        var e = mapEj[id];
-        h += '<span class="ruta-chip ruta-chip-rm">' + _gEsc(e ? e.nombre : ('Ejercicio ' + id)) +
-          '<button type="button" onclick="rutaCarroToggle(' + idx + ',' + id + ')" aria-label="Quitar">✕</button></span>';
+        var e = mapEj[id] || { id:id, nombre:'Ejercicio ' + id, facetas:{} };
+        h += _rutaCarroFichaHTML(e, 'rutaCarroToggle(' + idx + ',' + id + ')');
       });
       return h;
     }
@@ -15038,7 +15103,6 @@
       var areaN = {}; areas.forEach(function(a){ areaN[a.id] = a.t; });
       var ses   = leerClases();
       var sesN  = {}; ses.forEach(function(s){ sesN[s.id] = s.nombre || (s.fecha || 'Sesión'); });
-      var hechas = sems.filter(function(w){ return _rutaSemanaDatos(p, w, idsNivel).trab; }).length;
       var esHoy  = (curso === _cursoActual());
 
       // ── Selector de CURSO: permite adelantarse y planificar el que viene ──
@@ -15050,10 +15114,8 @@
         '</div>' +
         '<button type="button" onclick="rutaCursoNav(1)" title="Curso siguiente">›</button>' +
       '</div>';
-      h += '<div class="ruta-hdr">' +
-        '<div class="ruta-prog-txt"><b>' + hechas + '</b> / 40 semanas trabajadas · sep–jun</div>' +
-        '<div class="ruta-prog-bar"><span style="width:' + Math.round(hechas/40*100) + '%;"></span></div>' +
-      '</div>';
+      // v0.221: fuera la barra de «N / 40 semanas trabajadas». No decía nada
+      // útil para planificar y solo metía ruido en la cabecera.
       // v0.211: aviso cuando se está trabajando sobre un curso ya cerrado
       // (abierto a mano desde el archivo), con la salida a mano.
       var abierto = (_rutaCursoAbierto === curso);
@@ -15389,6 +15451,52 @@
         '<span>' + DIAS_NOMBRES_A[dow] + ' ' + formatFechaDiaMes(fechaISO) + '</span>' +
         '<button class="comp-resumen-editar-ic" onclick="compDiaEditar(\'' + fechaISO + '\')" title="Cambiar selección" aria-label="Cambiar selección">⚙</button>' +
       '</div>';
+
+      // ── v0.221 — LA CLASE, EN DOS COLUMNAS, para tenerla delante en pista:
+      //    a la izquierda el CARRO elegido y a la derecha el ÁREA DE TRABAJO.
+      //    El carro y las sesiones son de la SEMANA, así que se leen por el
+      //    lunes de la semana de este día.
+      var lunSem = _rutaSemanaLibre(fechaISO).lunISO;
+      var carroIds = (p.rutaCarro || {})[lunSem] || [];
+      var sesIds   = _rutaSesArr((p.rutaSes || {})[lunSem]);
+      h += '<div class="comp-clase-cols">';
+
+      // COLUMNA 1 · Carro
+      h += '<div class="comp-clase-parte comp-clase-carro">';
+      h += '<div class="ruta-parte-hdr">🛒 <b>Carro</b><span>primera parte</span>' +
+           '<span class="ruta-area-n">' + (carroIds.length || '—') + '</span></div>';
+      if (!carroIds.length) {
+        h += '<div class="comp-picker-vacio">Sin ejercicios de carro esta semana.</div>';
+      } else {
+        var mapEjC = _ejsById();
+        h += '<div class="comp-carro-grid">';
+        carroIds.forEach(function(id){
+          var e = mapEjC[id];
+          if (!e) return;
+          // Misma tarjeta con golpe y miniatura que en el panel de planificar
+          h += _rutaCarroFichaHTML(e, '');
+        });
+        h += '</div>';
+      }
+      h += '</div>';
+
+      // COLUMNA 2 · Área de trabajo
+      h += '<div class="comp-clase-parte comp-clase-area">';
+      h += '<div class="ruta-parte-hdr">🎯 <b>Área de trabajo</b><span>segunda parte</span></div>';
+      // Las sesiones elegidas para la semana, arriba del todo
+      if (sesIds.length) {
+        var todasSesR = leerClases();
+        h += '<div class="ruta-ses-elegidas">';
+        sesIds.forEach(function(id){
+          var s = todasSesR.filter(function(c){ return c.id === id; })[0];
+          var th = s ? _rutaSesThumb(s) : null;
+          h += '<div class="ruta-ses-eleg' + (s ? ' clicable' : '') + '"' +
+            (s ? ' onclick="verSesion(' + s.id + ',\'planif\')"' : '') + '>' +
+            '<span class="ruta-ses-thumb">' + (th ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="ruta-ses-noimg">🎾</span>') + '</span>' +
+            '<span class="ruta-ses-nom">' + _gEsc(s ? (s.nombre || s.fecha || ('Sesión ' + id)) : ('Sesión ' + id)) + '</span></div>';
+        });
+        h += '</div>';
+      }
       if (!filas.length) {
         h += '<div class="comp-picker-vacio">Nada marcado todavía.</div>';
       } else {
@@ -15451,6 +15559,8 @@
           h += '</div>';
         });
       }
+      h += '</div>';   // /comp-clase-area
+      h += '</div>';   // /comp-clase-cols
       h += '</div>';
       return h;
     }
