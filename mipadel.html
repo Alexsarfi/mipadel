@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.208.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.209.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,23 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.209.0 — Mensual desaparece: Semanas pasa a ser la única vista (2026-08)
+    · En Competición, para EN3: Mensual y el interruptor 📅/🗺️ se retiran.
+      Semanas aparece directamente, sin nada que elegir. El resumen con
+      vídeos de un día ya marcado (que solo tenía Mensual) también se
+      retira — ya se revisa el vídeo desde la sesión asignada.
+    · Áreas de trabajo (con 🏆 Ciclo · competir y evaluar y 📊 Análisis de
+      planificación dentro) pasa a verse SIEMPRE debajo de 📦 Archivo, en la
+      misma página de Competición — antes solo se veía en el modo Mensual
+      ya retirado, porque el modo Semanas cortaba antes de llegar ahí.
+      Sigue contraída por defecto, se abre tocándola, igual que siempre.
+    · El catálogo (editar áreas, ciclo, etc.) sigue en la misma pantalla:
+      "Editar plan" oculta la ruta y muestra solo Áreas de trabajo en modo
+      edición, como siempre ha funcionado.
+    · Cuentas sin rol de entrenador nivel3 que tengan acceso a Competición
+      (p. ej. gestor) mantienen Mensual tal cual — no tienen la ruta como
+      alternativa.
 
   v0.208.0 — Mensual usa el mismo panel grande que Semanas (2026-08)
     · En Competición, para EN3: tocar un día VACÍO en la vista Mensual ya no
@@ -4628,11 +4645,9 @@
     @media (max-width:400px){ .gt-videos { grid-template-columns:1fr; } }
     /* v0.200/v0.203: RUTA DE LA TEMPORADA (tablero por semanas, EN3).
        Pensado para planificar en el ORDENADOR: trimestres en fila y meses en
-       columnas paralelas. En móvil/tablet todo se apila (uso en pista). */
-    .ruta-toggle { display:flex; gap:6px; margin:0 0 0.8rem; }
-    .ruta-toggle button { flex:1; font-family:inherit; font-size:13px; font-weight:700; padding:8px; border-radius:10px;
-                          border:1.5px solid var(--borde); background:var(--blanco); color:var(--gris); cursor:pointer; }
-    .ruta-toggle button.on { background:#0891b2; border-color:#0891b2; color:#fff; }
+       columnas paralelas. En móvil/tablet todo se apila (uso en pista).
+       v0.209: ya no hay interruptor Mensual/Semanas (.ruta-toggle) — Semanas
+       es la única vista para EN3, así que esa clase se retira. */
     /* v0.205: navegador de curso (‹ Curso 2026-27 ›) */
     .ruta-curso-nav { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
     .ruta-curso-nav > button { flex-shrink:0; width:34px; height:34px; border-radius:10px; border:1.5px solid var(--borde);
@@ -6008,7 +6023,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.208.0';
+    var APP_VERSION = '0.209.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -13411,9 +13426,9 @@
     //     del plan — ya no es local ni depende del dispositivo.
     //   · Migración única desde el modelo viejo (padel-ruta-<curso> en
     //     localStorage): ver _rutaMigrarLocal().
-    var _rutaOn = false;
+    //   · v0.209: Mensual desaparece para EN3 — Semanas pasa a ser la ÚNICA
+    //     vista de Competición (ya no hay interruptor 📅/🗺️ que alternar).
     function _rutaEsN3() { try { return !!(_sbGrupo && _sbGrupo.rol === 'nivel3'); } catch(e){ return false; } }
-    function rutaToggle() { _rutaOn = !_rutaOn; compDiaAbierta = null; rutaCerrarModal(); mostrarPlanificacion(); }
     var _MESES_R = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
     // v0.202: bloques de la temporada — septiembre es "Preparación" y el
     // resto se agrupa en 3 trimestres naturales (oct-dic, ene-mar, abr-jun).
@@ -14502,38 +14517,24 @@
         return s;
       }
 
-      if (esComp) {
-        // v0.201: los meses con las clases configuradas van ANTES del
-        // interruptor Mensual/Semanas (contexto de un vistazo, sea cual sea
-        // la lente elegida después).
-        // v0.123: vista mensual agrupada por día de la semana (sustituye al
-        // banner informativo del ciclo, al calendario-cuadrícula de v0.121
-        // y a la lista semanal de v0.122). Solo en modo consulta.
-        if (!edit) h += _compListaMesHTML(p);
-        // v0.200: para EN3, interruptor entre las dos lentes de la
-        // planificación: Mensual (la de siempre) y Semanas (ruta de la
-        // temporada). En modo Semanas se renderiza la ruta y se sale.
-        if (_rutaEsN3()) {
-          h += '<div class="ruta-toggle">' +
-            '<button type="button" class="' + (!_rutaOn?'on':'') + '" onclick="if(_rutaOn)rutaToggle()">📅 Mensual</button>' +
-            '<button type="button" class="' + (_rutaOn?'on':'') + '" onclick="if(!_rutaOn)rutaToggle()">🗺️ Semanas</button>' +
-          '</div>';
-          if (_rutaOn) { h += _rutaHTML(); cont.innerHTML = h; return; }
-        }
-        // Catálogo de áreas (sin secuencia, ◆). v0.124: colapsado por
-        // defecto (acordeón, mismo patrón que "Análisis de planificación")
-        // para quitar ruido visual; el texto "elige según el último
-        // torneo" se elimina del título.
+      // v0.209 — Bloque "Áreas de trabajo" (+ Ciclo + Análisis + botón
+      // Editar plan) de Competición, extraído a función para poder
+      // pintarlo debajo de la ruta (EN3) o debajo de Mensual (el resto de
+      // roles) sin duplicar el código. Antes vivía solo dentro del modo
+      // Mensual porque el modo Semanas cortaba (return) antes de llegar
+      // aquí; ahora se ve siempre, sea la que sea la vista de arriba.
+      function _compAreasBlockHTML() {
+        var s = '';
         var areasOpen = edit || !!p.areasAbierto;
-        h += '<div class="plan-otros' + (areasOpen ? ' abierto' : '') + '" style="margin-top:0.4rem;">';
-        h += '<div class="plan-otros-hdr" onclick="planToggleAreas();this.parentNode.classList.toggle(\'abierto\')">Áreas de trabajo<span class="chev">›</span></div>';
-        h += '<div class="plan-otros-body">';
+        s += '<div class="plan-otros' + (areasOpen ? ' abierto' : '') + '" style="margin-top:0.4rem;">';
+        s += '<div class="plan-otros-hdr" onclick="planToggleAreas();this.parentNode.classList.toggle(\'abierto\')">Áreas de trabajo<span class="chev">›</span></div>';
+        s += '<div class="plan-otros-body">';
         etapas.filter(function(et){ return et.tipo === 'area'; }).forEach(function(et){
-          h += _planEtapaCard(et, { ico:'◆' });
+          s += _planEtapaCard(et, { ico:'◆' });
         });
         // v0.126: botón "Editar plan" al final de Áreas de trabajo (antes
         // iba arriba de toda la pantalla) — contextual, junto a lo que edita.
-        if (!esEN1Cuenta()) h += '<button class="plan-edit-toggle' + (edit ? ' on' : '') + '" style="margin:0.6rem 0 0;" onclick="planToggleEdit()">' +
+        if (!esEN1Cuenta()) s += '<button class="plan-edit-toggle' + (edit ? ' on' : '') + '" style="margin:0.6rem 0 0;" onclick="planToggleEdit()">' +
              (edit ? '✓ Terminar de editar' : '✏️ Editar plan') + '</button>';
         // v0.201: Ciclo · competir y evaluar y Análisis de planificación se
         // meten DENTRO de Áreas de trabajo, debajo de "Editar plan", para no
@@ -14542,22 +14543,44 @@
         var cicloEtapas = etapas.filter(function(et){ return et.tipo === 'ciclo'; });
         if (cicloEtapas.length) {
           var cicloOpen = edit || !!p.cicloAbierto;
-          h += '<div class="plan-otros' + (cicloOpen ? ' abierto' : '') + '" style="margin-top:0.6rem;">';
-          h += '<div class="plan-otros-hdr" onclick="planToggleCiclo();this.parentNode.classList.toggle(\'abierto\')">🏆 Ciclo · competir y evaluar<span class="chev">›</span></div>';
-          h += '<div class="plan-otros-body">';
+          s += '<div class="plan-otros' + (cicloOpen ? ' abierto' : '') + '" style="margin-top:0.6rem;">';
+          s += '<div class="plan-otros-hdr" onclick="planToggleCiclo();this.parentNode.classList.toggle(\'abierto\')">🏆 Ciclo · competir y evaluar<span class="chev">›</span></div>';
+          s += '<div class="plan-otros-body">';
           cicloEtapas.forEach(function(et){
-            h += _planEtapaCard(et, { ico:'🏆', icoBg:'#0891b2', noProg:true });
+            s += _planEtapaCard(et, { ico:'🏆', icoBg:'#0891b2', noProg:true });
           });
-          h += '</div></div>';
+          s += '</div></div>';
         }
         if (!edit) {
           var anOpenComp = p.analisisAbierto;
-          h += '<div class="plan-otros' + (anOpenComp ? ' abierto' : '') + '" style="margin-top:0.6rem;">';
-          h += '<div class="plan-otros-hdr" onclick="planToggleAnalisis();this.parentNode.classList.toggle(\'abierto\')">📊 Análisis de planificación<span class="chev">›</span></div>';
-          h += '<div class="plan-otros-body">' + _planAnalisisHTML(p, nivel) + '</div>';
-          h += '</div>';
+          s += '<div class="plan-otros' + (anOpenComp ? ' abierto' : '') + '" style="margin-top:0.6rem;">';
+          s += '<div class="plan-otros-hdr" onclick="planToggleAnalisis();this.parentNode.classList.toggle(\'abierto\')">📊 Análisis de planificación<span class="chev">›</span></div>';
+          s += '<div class="plan-otros-body">' + _planAnalisisHTML(p, nivel) + '</div>';
+          s += '</div>';
         }
-        h += '</div></div>';
+        s += '</div></div>';
+        return s;
+      }
+
+      if (esComp) {
+        if (_rutaEsN3()) {
+          // v0.209: para EN3, Mensual desaparece del todo — Semanas pasa a
+          // ser la ÚNICA vista de Competición (sin interruptor, aparece
+          // directa). Debajo de su 📦 Archivo va Área de trabajo, con Ciclo
+          // y Análisis dentro, contraída por defecto (mismo acordeón de
+          // siempre) — antes solo se veía en el modo Mensual ya retirado.
+          if (!edit) h += _rutaHTML();
+        } else {
+          // No-EN3 con acceso a Competición (p. ej. gestor sin rol de
+          // entrenador nivel3): se mantiene el comportamiento de siempre,
+          // Mensual + Áreas de trabajo, porque no tiene la ruta como
+          // alternativa.
+          // v0.201: los meses con las clases configuradas van antes del
+          // resto (contexto de un vistazo). v0.123: vista mensual agrupada
+          // por día de la semana. Solo en modo consulta.
+          if (!edit) h += _compListaMesHTML(p);
+        }
+        h += _compAreasBlockHTML();
       } else {
         // v0.152: AVANZADO usa la misma estructura de trabajo que Competición
         // (vista del mes por semanas + marcar lo trabajado cada día), pero con
