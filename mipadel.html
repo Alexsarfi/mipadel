@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.223.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.224.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,40 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.224.0 — Cada franja, su nivel: asistencia enlazada con el plan (2026-08)
+    ⚠️ REQUIERE MIGRACIÓN: migraciones/migracion_nivel_clase.sql
+    · NIVEL DE LA FRANJA — el gestor asigna la franja horaria; el ENTRENADOR
+      decide qué se da en ella: Iniciación, Avanzado o Competición. Nuevo
+      campo «Nivel de la clase» en la ficha de la franja. Vacío = sin asignar,
+      y entonces todo funciona como hasta ahora.
+    · Con el nivel puesto, la franja queda ENLAZADA con la planificación de ese
+      nivel. En el calendario de Asistencia sale un botón cuadrado a la
+      derecha de la franja:
+        📋 con borde sólido → hay clase preparada
+        ＋ con borde de puntos → aún no hay nada
+      Al pulsarlo se abre un globo, SIN salir de Asistencia, con la clase de
+      ese día en dos columnas: 🛒 Carro (con las fichas de los ejercicios, su
+      golpe y su miniatura) y 🎯 Área de trabajo (los bloques marcados y las
+      sesiones, tocables para abrirlas). Abajo, un botón que lleva a
+      planificarla, ya con el nivel y el día puestos.
+    · LA PLANIFICACIÓN PASA A SER POR NIVEL. La sesión y el carro se guardaban
+      por semana a secas, así que dos franjas de niveles distintos en la misma
+      semana compartían planificación. Ahora la clave lleva el nivel delante:
+          p.rutaSes['competicion|2025-09-01'] = [12, 7]
+          p.rutaCarro['iniciacion|2025-09-01'] = [3]
+      Lo guardado antes no llevaba nivel: se lee como Competición (que es
+      donde vivía la ruta), así que NO hay nada que migrar — ni en local ni en
+      Supabase, que la columna es jsonb. Al volver a guardar esa semana, la
+      clave vieja se recoloca sola.
+    · Y por lo mismo, al marcar un área el panel ofrece solo los DÍAS DE LAS
+      FRANJAS DE ESE NIVEL: si planificas Competición, no te pregunta por el
+      martes de Iniciación. Si ninguna franja de esa semana tiene nivel
+      puesto todavía, se ofrecen todos los días, como siempre.
+    · La franja enseña su nivel con un icono (🌱 🔥 🏆) junto al nombre, en el
+      calendario de Asistencia.
+    · El aviso de «falta la migración» ahora cubre también esta columna: si no
+      está ejecutada, la franja se guarda igual y el nivel se queda en local.
 
   v0.223.0 — Área de trabajo, sin repetir lo mismo tres veces (2026-08)
     (sin migraciones nuevas)
@@ -4778,6 +4812,25 @@
     .asist-clase-row:last-child { margin-bottom:0; }
     .asist-clase-row:hover { border-color:var(--lila-claro); transform:translateY(-1px); box-shadow:0 4px 12px rgba(124,58,237,0.10); }
     .asist-clase-row:active { transform:translateY(0); }
+    /* v0.224: la fila se parte en la zona que abre la lista y el botón
+       cuadrado que enseña la clase preparada de esa franja. */
+    .asist-clase-row-main { display:flex; align-items:center; gap:10px; flex:1; min-width:0; }
+    .asist-niv-pill { font-size:11px; }
+    .asist-plan-btn { flex-shrink:0; width:38px; height:38px; border-radius:10px; border:1.5px dashed var(--borde);
+      background:var(--blanco); color:var(--gris); font-size:16px; font-family:inherit; cursor:pointer;
+      display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent; }
+    .asist-plan-btn.con { border-style:solid; border-color:#0891b2; background:#ecfeff; color:#0e7490; }
+    .asist-plan-btn:hover { border-color:#0891b2; }
+    /* Globo con la clase preparada (sin salir de Asistencia) */
+    .asist-clase-ov { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:10020; display:flex;
+      align-items:flex-end; justify-content:center; }
+    .asist-clase-modal { background:var(--blanco); width:100%; max-width:520px; max-height:88vh; overflow-y:auto;
+      border-radius:18px 18px 0 0; padding:16px 14px calc(16px + env(safe-area-inset-bottom));
+      box-shadow:0 -8px 30px rgba(0,0,0,.3); animation:gpSheetUp .18s ease-out; }
+    @media (min-width:700px){
+      .asist-clase-ov { align-items:center; padding:24px; }
+      .asist-clase-modal { max-width:900px; max-height:86vh; border-radius:18px; padding:18px 20px 20px; }
+    }
     .asist-franja-pill { background:var(--lila-suave); color:var(--lila); font-size:11px; font-weight:700; border-radius:7px; padding:4px 9px; flex-shrink:0; white-space:nowrap; }
     .asist-clase-row-info { flex:1; min-width:0; }
     .asist-clase-row-nombre { font-size:13px; font-weight:600; color:var(--texto); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -6462,6 +6515,19 @@
           <label class="form-label">Nombre de la clase (opcional)</label>
           <input id="asist-form-nombre" class="form-input" type="text" placeholder="Ej: Nivel iniciación, Adultos…">
         </div>
+        <!-- v0.224: nivel de la franja. Lo pone el entrenador (el gestor le
+             asigna la franja; el nivel de lo que se da en ella lo decide él).
+             Enlaza la franja con la planificación de ese nivel. -->
+        <div class="form-grupo" id="asist-form-nivel-grupo">
+          <label class="form-label" for="asist-form-nivel">Nivel de la clase</label>
+          <select id="asist-form-nivel" class="form-select">
+            <option value="">— sin asignar —</option>
+            <option value="iniciacion">🌱 Iniciación</option>
+            <option value="avanzado">🔥 Avanzado</option>
+            <option value="competicion">🏆 Competición</option>
+          </select>
+          <p class="form-hint">Enlaza esta franja con la planificación de ese nivel: en el calendario saldrá un botón con la clase preparada.</p>
+        </div>
         <!-- v0.212: fecha de alta a la vista y editable. Al crear viene puesta
              la de hoy; si se deja vacía, la franja vale desde el principio del
              curso (como todas las de antes de v0.210). -->
@@ -6536,6 +6602,11 @@
   <!-- v0.213: globo de un día del calendario (sus competiciones, añadir,
        editar y borrar). Va encima del calendario, que se sigue viendo detrás. -->
   <div id="torneo-dia-ov" class="tor-dia-ov" style="display:none" onclick="torDiaCerrar()"></div>
+
+  <!-- ══ CLASE PREPARADA DE UNA FRANJA (v0.224) ══════════
+       Globo con el carro y el área de trabajo de esa franja y ese día, para
+       consultarlo sin salir de Asistencia. -->
+  <div id="asist-clase-ov" class="asist-clase-ov" style="display:none" onclick="asistCerrarClase()"></div>
 
   <!-- ══ GLOBO / LIGHTBOX (foto y vídeo) ══════════ -->
   <div id="lightbox" class="lightbox" onclick="if(event.target===this)cerrarLightbox()">
@@ -6649,7 +6720,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.223.0';
+    var APP_VERSION = '0.224.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -6981,7 +7052,7 @@
           diaSemana:c.dia_semana||'', franja:c.franja||'',
           alumnos:c.alumnos||[],
           curso:c.curso||'',
-          inicio:c.inicio||'',                         // v0.210: fecha de alta
+          inicio:c.inicio||'', nivel:c.nivel||'',      // v0.210 alta · v0.224 nivel
           fin:c.fin||'', finMotivo:c.fin_motivo||'',   // v0.102
           _ownerUid:c.user_id                          // v0.182
         }; });
@@ -7247,6 +7318,7 @@
         alumnos:c.alumnos||[],
         curso:c.curso||'',      // v0.55: curso escolar de la clase ("2025-26")
         inicio:c.inicio||null,        // v0.210: fecha de alta (se ve desde ese día)
+        nivel:c.nivel||null,          // v0.224: nivel de lo que se da en la franja
         fin:c.fin||null,              // v0.102: fecha de finalización (conserva historial)
         fin_motivo:c.finMotivo||null  // v0.102: motivo ('finalizacion' | otro)
       }; },
@@ -7271,20 +7343,22 @@
     // quedaba un aviso en la consola). Se reintenta sin esa columna —la franja
     // se guarda, su fecha de alta se queda en local— y se avisa UNA vez.
     var _avisoInicioDado = false;
+    // v0.224: vale igual para `nivel`, la otra columna de asistencia_clases
+    // que puede faltar si no se ha ejecutado su migración.
     function _esErrorColInicio(err) {
       var msg = String((err && (err.message || err.hint || err.details)) || err || '');
-      return /inicio/i.test(msg) && /column|columna|schema/i.test(msg);
+      return /\b(inicio|nivel)\b/i.test(msg) && /column|columna|schema/i.test(msg);
     }
     function _avisarFaltaInicio() {
       if (_avisoInicioDado) return;
       _avisoInicioDado = true;
       setTimeout(function(){
-        alert('⚠️ Falta ejecutar la migración de v0.210 en Supabase (migraciones/migracion_inicio_clase.sql).\n\n' +
-              'La franja se ha guardado, pero su fecha de alta («empieza el día») no se comparte todavía: el resto de cuentas la verán desde el principio del curso.');
+        alert('⚠️ Falta ejecutar alguna migración en Supabase (migraciones/migracion_inicio_clase.sql o migracion_nivel_clase.sql).\n\n' +
+              'La franja se ha guardado, pero su fecha de alta («empieza el día») y su nivel no se comparten todavía con el resto de cuentas.');
       }, 0);
     }
     function _filasSinInicio(filas) {
-      return filas.map(function(row){ var o = {}; for (var k in row) if (k !== 'inicio') o[k] = row[k]; return o; });
+      return filas.map(function(row){ var o = {}; for (var k in row) if (k !== 'inicio' && k !== 'nivel') o[k] = row[k]; return o; });
     }
     function _bgUpsert(tabla, filas) {
       if (!_sb || !_sbUser || !filas.length) return;
@@ -7624,7 +7698,7 @@
         return { id:x.id, sustituto:sustId, nombre:x.nombre||'',
                  dia_semana:(x.diaSemana==null||x.diaSemana===''||x.diaSemana<0)?'':String(x.diaSemana),
                  franja:x.franja||'', alumnos:x.alumnos||[], curso:x.curso||'',
-                 inicio:x.inicio||null,   // v0.210
+                 inicio:x.inicio||null, nivel:x.nivel||null,   // v0.210 · v0.224
                  fin:x.fin||null, fin_motivo:x.finMotivo||null };
       }
       return { id:x.id, sustituto:sustId, clase_id:x.claseId, fecha:x.fecha,
@@ -7685,7 +7759,7 @@
         return { clases: g.clases.map(function(c){
           var ds = (c.dia_semana === '' || c.dia_semana == null) ? -1 : Number(c.dia_semana);
           return { id:c.id, nombre:c.nombre || '', diaSemana:ds, franja:c.franja || '', alumnos:c.alumnos || [], curso:c.curso || '',
-                   inicio:c.inicio || '',   // v0.210
+                   inicio:c.inicio || '', nivel:c.nivel || '',   // v0.210 · v0.224
                    fin:c.fin || '', finMotivo:c.fin_motivo || '' };
         }) };
       }
@@ -7870,7 +7944,7 @@
         var extC = (res[5] && !res[5].error && res[5].data || []).map(function(c){
           return { id:c.id, user_id:'ext:'+c.sustituto, sustituto:c.sustituto, nombre:c.nombre,
                    dia_semana:c.dia_semana, franja:c.franja, alumnos:c.alumnos,
-                   curso:c.curso, inicio:c.inicio, fin:c.fin, fin_motivo:c.fin_motivo };
+                   curso:c.curso, inicio:c.inicio, nivel:c.nivel, fin:c.fin, fin_motivo:c.fin_motivo };
         });
         var extR = (res[6] && !res[6].error && res[6].data || []).map(function(r){
           return { id:r.id, user_id:'ext:'+r.sustituto, sustituto:r.sustituto, clase_id:r.clase_id,
@@ -10044,7 +10118,7 @@
       return (d.clases || []).map(function(c){
         var ds = (c.dia_semana === '' || c.dia_semana == null) ? -1 : Number(c.dia_semana);
         return { id:c.id, nombre:c.nombre || 'Clase', diaSemana:ds, franja:c.franja || '', alumnos:c.alumnos || [], curso:c.curso || '',
-                 inicio:c.inicio || '',   // v0.210
+                 inicio:c.inicio || '', nivel:c.nivel || '',   // v0.210 · v0.224
                  fin:c.fin || '', finMotivo:c.fin_motivo || '' };
       });
     }
@@ -14275,6 +14349,7 @@
     function _rutaCopiarCurso(cOrig, cDest) {
       var p = leerPlan();
       var idsNivel = _compIdsNivel(p);
+      var nivCopia = _compNivel();   // v0.224: se copia lo del nivel que se mira
       var wO = _rutaSemanas(cOrig), wD = _rutaSemanas(cDest);
       var res = { copiadas:0, ocupadas:0, sinDia:0, vacias:0 };
       if (!p.compDias) p.compDias = {};
@@ -14288,10 +14363,10 @@
           vistos[x.areaId] = true;
           areasO.push({ id:x.areaId, dow:x.dow });
         });
-        var sesO = _rutaSesArr(p.rutaSes[wO[i].lunISO]);   // v0.219: puede haber varias
+        var sesO = _rutaSesArr(_rutaLeeSem(p.rutaSes, nivCopia, wO[i].lunISO));   // v0.219/v0.224
         if (!areasO.length && !sesO.length) { res.vacias++; continue; }
         // Destino ocupado (marcas en cualquier día o sesión) → no se toca
-        if (_rutaMarcasSemana(p, wD[i], idsNivel).length || _rutaSesArr(p.rutaSes[wD[i].lunISO]).length) { res.ocupadas++; continue; }
+        if (_rutaMarcasSemana(p, wD[i], idsNivel).length || _rutaSesArr(_rutaLeeSem(p.rutaSes, nivCopia, wD[i].lunISO)).length) { res.ocupadas++; continue; }
         var dias = _rutaDiasRealesDeSemana(wD[i]);
         if (areasO.length && !dias.length) { res.sinDia++; continue; }
         areasO.forEach(function(a, k){
@@ -14301,7 +14376,7 @@
           var arr = (p.compDias[destino.fecha] || []).slice();
           if (arr.indexOf(a.id) < 0) { arr.push(a.id); p.compDias[destino.fecha] = arr; }
         });
-        if (sesO.length) p.rutaSes[wD[i].lunISO] = sesO.slice();
+        if (sesO.length) _rutaEscribeSem(p.rutaSes, nivCopia, wD[i].lunISO, sesO.slice());
         res.copiadas++;
       }
       _planGuardar(p);
@@ -14365,7 +14440,14 @@
         var dow = d.getDay();
         if (!diasMap[dow] || !diasMap[dow].length) continue;
         var fISO = dateToISOLocal(d);
-        if (_compDiaEstado(fISO, diasMap, regs) === 'activa') out.push({ fecha: fISO, dow: dow });
+        if (_compDiaEstado(fISO, diasMap, regs) === 'activa') {
+          // v0.224: qué niveles se dan ese día (según el nivel de cada franja)
+          var nivs = [];
+          diasMap[dow].forEach(function(c){
+            if (c.nivel && nivs.indexOf(c.nivel) < 0 && _claseEnFecha(c, fISO)) nivs.push(c.nivel);
+          });
+          out.push({ fecha: fISO, dow: dow, niveles: nivs });
+        }
       }
       return out;
     }
@@ -14403,15 +14485,17 @@
     // Resumen de una semana (áreas marcadas + sesión + si cuenta como
     // trabajada) a partir de los datos compartidos. Sustituye al viejo `wd`
     // guardado por semana.
-    function _rutaSemanaDatos(p, w, idsNivel) {
+    function _rutaSemanaDatos(p, w, idsNivel, nivel) {
       var areasSemana = _rutaAreasDeSemana(p, w, idsNivel);
       // v0.219: una semana puede llevar VARIAS sesiones. Lo guardado antes era
       // un id suelto, así que se normaliza a lista al leer (nada que migrar).
-      var sesiones = _rutaSesArr((p.rutaSes || {})[w.lunISO]);
+      // v0.224: y la planificación es de un NIVEL concreto.
+      var niv = nivel || _compNivel();
+      var sesiones = _rutaSesArr(_rutaLeeSem(p.rutaSes, niv, w.lunISO));
       // v0.216: el CARRO de la semana — los ejercicios de la primera parte de
       // la clase (lanzamiento de bolas, repetición). Va junto a la sesión, que
       // es la segunda parte (el área de trabajo).
-      var carro = ((p.rutaCarro || {})[w.lunISO] || []).slice();
+      var carro = (_rutaLeeSem(p.rutaCarro, niv, w.lunISO) || []).slice();
       return { areasSemana: areasSemana, sesiones: sesiones, carro: carro, trab: areasSemana.length > 0 };
     }
     // v0.219 — Normaliza lo guardado en rutaSes: antes era UN id (número) y
@@ -14421,13 +14505,52 @@
       if (v == null || v === '') return [];
       return Array.isArray(v) ? v.slice() : [v];
     }
+    // ══════════════════════════════════════════════════════════════
+    // v0.224 — LA PLANIFICACIÓN DE UNA SEMANA ES POR NIVEL
+    // ══════════════════════════════════════════════════════════════
+    // Cada franja horaria lleva su nivel (clase.nivel) y comparte la
+    // planificación de ese nivel. Por eso la sesión y el carro dejan de
+    // guardarse solo por semana y pasan a guardarse por NIVEL + semana:
+    //     p.rutaSes['competicion|2025-09-01'] = [12, 7]
+    //     p.rutaCarro['iniciacion|2025-09-01'] = [3]
+    // Lo guardado antes de v0.224 no llevaba nivel: se lee como Competición
+    // (que es donde vivía la ruta), así que no hay nada que migrar. Al
+    // escribir sobre una de esas semanas, la clave vieja se recoloca.
+    function _rutaNivelSem(nivel) {
+      return (COMP_NIVELES.indexOf(nivel) >= 0) ? nivel : 'competicion';
+    }
+    function _rutaKeySem(nivel, lunISO) { return _rutaNivelSem(nivel) + '|' + lunISO; }
+    // Lee un mapa (rutaSes / rutaCarro) con la clave nueva y, si no la hay,
+    // con la vieja (solo para Competición).
+    function _rutaLeeSem(mapa, nivel, lunISO) {
+      mapa = mapa || {};
+      var k = _rutaKeySem(nivel, lunISO);
+      if (mapa[k] !== undefined) return mapa[k];
+      if (_rutaNivelSem(nivel) === 'competicion' && mapa[lunISO] !== undefined) return mapa[lunISO];
+      return undefined;
+    }
+    // Escribe (o borra, con valor vacío) y de paso limpia la clave vieja.
+    function _rutaEscribeSem(mapa, nivel, lunISO, valor) {
+      var k = _rutaKeySem(nivel, lunISO);
+      if (valor && valor.length) mapa[k] = valor; else delete mapa[k];
+      if (_rutaNivelSem(nivel) === 'competicion') delete mapa[lunISO];
+      return mapa;
+    }
+    // Todas las fechas (lunes) que hay en un mapa, venga la clave con nivel o
+    // sin él. Lo usa el archivo para saber qué cursos tienen algo.
+    function _rutaFechasDeMapa(mapa) {
+      return Object.keys(mapa || {}).map(function(k){
+        var i = k.indexOf('|');
+        return i >= 0 ? k.slice(i + 1) : k;
+      });
+    }
     // Cursos con algo planificado: cualquier fecha marcada en compDias o
     // cualquier semana con sesión en rutaSes cuyo cursoDeFecha() case.
     function _rutaCursosConDatos(p) {
       var set = {};
       Object.keys(p.compDias  || {}).forEach(function(f){ set[cursoDeFecha(f)] = true; });
-      Object.keys(p.rutaSes   || {}).forEach(function(f){ set[cursoDeFecha(f)] = true; });
-      Object.keys(p.rutaCarro || {}).forEach(function(f){ set[cursoDeFecha(f)] = true; });   // v0.216
+      _rutaFechasDeMapa(p.rutaSes  ).forEach(function(f){ set[cursoDeFecha(f)] = true; });   // v0.224
+      _rutaFechasDeMapa(p.rutaCarro).forEach(function(f){ set[cursoDeFecha(f)] = true; });
       return Object.keys(set);
     }
     // v0.207 — Migración ÚNICA del modelo viejo (padel-ruta-<curso> en
@@ -14488,6 +14611,11 @@
     var _rutaModalCurso     = null;   // curso del día/semana que se está editando; null = el de _rutaCurso()
     var _rutaModalFechaFija = null;   // fecha exacta si se abrió desde Mensual; null si se abrió desde Semanas
     function _rutaModalCursoActual() { return _rutaModalCurso || _rutaCurso(); }
+    // v0.224 — Nivel sobre el que trabaja el panel. Normalmente el que se está
+    // mirando en Planificación; si el panel se abrió desde una franja de
+    // Asistencia, el de esa franja.
+    var _rutaModalNivelSel = null;
+    function _rutaModalNivel() { return _rutaNivelSem(_rutaModalNivelSel || _compNivel()); }
     // v0.211: curso opcional. En el archivo se ven semanas de OTROS cursos
     // (además del que se mira arriba), así que la tarjeta dice de qué curso es
     // su semana; sin esto se abría la semana con el mismo número del curso
@@ -14498,6 +14626,7 @@
       _rutaModalCurso = (curso && curso !== _rutaCurso()) ? curso : null;
       _rutaModalFechaFija = null;
       _rutaModalSemLibre = null;   // v0.217: viene del tablero, es una de las 40
+      _rutaModalNivelSel = null;   // v0.224: el nivel que se esté mirando
       _rutaApAbierto = {};         // v0.223: los apartados, plegados al entrar
       _rutaModalRender();
     }
@@ -14526,8 +14655,9 @@
       if (_rutaModalSemLibre) return _rutaModalSemLibre;
       return _rutaSemanas(_rutaModalCursoActual())[idx];
     }
-    function rutaAbrirDia(fechaISO) {
+    function rutaAbrirDia(fechaISO, nivelFranja) {
       _rutaMigrarLocal();
+      _rutaModalNivelSel = nivelFranja || null;   // v0.224
       var curso = cursoDeFecha(fechaISO);
       var w = _rutaSemanas(curso).filter(function(w){ return fechaISO >= w.lunISO && fechaISO <= w.domISO; })[0];
       // v0.217: si el día queda fuera de las 40 semanas, se planifica igual
@@ -14543,7 +14673,7 @@
     }
     function rutaCerrarModal() {
       _rutaModalIdx = null; _rutaModalArea = null; _rutaEligeDia = null;
-      _rutaModalCurso = null; _rutaModalFechaFija = null; _rutaModalSemLibre = null;
+      _rutaModalCurso = null; _rutaModalFechaFija = null; _rutaModalSemLibre = null; _rutaModalNivelSel = null;
       var ov = document.getElementById('ruta-plan-ov');
       if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; }
     }
@@ -14581,12 +14711,23 @@
       _rutaEligeDia = areaId;
       _rutaModalRender();
     }
+    // v0.224 — De los días con clase de una semana, los de las franjas de un
+    // NIVEL. Si ninguna franja de esa semana tiene nivel puesto (todavía nadie
+    // los ha asignado), valen todos: así nada deja de funcionar por el camino.
+    function _rutaDiasDeNivel(w, nivel) {
+      var dias = _rutaDiasRealesDeSemana(w);
+      var n = _rutaNivelSem(nivel);
+      var conNivel = dias.filter(function(d){ return (d.niveles || []).length; });
+      if (!conNivel.length) return dias;
+      var suyos = dias.filter(function(d){ return (d.niveles || []).indexOf(n) >= 0; });
+      return suyos.length ? suyos : dias;
+    }
     // v0.217 — Días a los que se puede colgar un área en una semana: los que
     // tienen clase configurada y, si no hay ninguno, los SIETE de la semana.
     // Así siempre se puede planificar; el día de clase solo es una comodidad
     // para no tener que elegir.
     function _rutaDiasElegibles(w) {
-      var reales = _rutaDiasRealesDeSemana(w);
+      var reales = _rutaDiasDeNivel(w, _rutaModalNivel());   // v0.224
       if (reales.length) return reales;
       var out = [];
       for (var i = 0; i < 7; i++) {
@@ -14626,10 +14767,11 @@
       var w = _rutaSemanaActual(idx);
       var p = leerPlan();
       if (!p.rutaSes) p.rutaSes = {};
-      var arr = _rutaSesArr(p.rutaSes[w.lunISO]);
+      var nivS = _rutaModalNivel();
+      var arr = _rutaSesArr(_rutaLeeSem(p.rutaSes, nivS, w.lunISO));
       var i = arr.indexOf(+sesId);
       if (i >= 0) arr.splice(i, 1); else arr.push(+sesId);
-      if (arr.length) p.rutaSes[w.lunISO] = arr; else delete p.rutaSes[w.lunISO];
+      _rutaEscribeSem(p.rutaSes, nivS, w.lunISO, arr);
       _planGuardar(p);
       mostrarPlanificacion();
       _rutaModalRender();
@@ -14639,7 +14781,7 @@
     function rutaBorrarSemana(idx) {
       var w = _rutaSemanaActual(idx);
       var p = leerPlan();
-      if (p.rutaSes) { delete p.rutaSes[w.lunISO]; _planGuardar(p); }
+      if (p.rutaSes) { _rutaEscribeSem(p.rutaSes, _rutaModalNivel(), w.lunISO, null); _planGuardar(p); }
       mostrarPlanificacion();
       _rutaModalRender();   // v0.219: el panel se queda abierto
     }
@@ -14656,15 +14798,16 @@
     // El carro se elige del catálogo ENTERO con un buscador: el ejercicio de
     // carro no tiene por qué ser del área que se trabaja después.
     var _rutaCarroQ = '';   // lo que hay escrito en el buscador del carro
-    function _rutaCarroDe(w) { return ((leerPlan().rutaCarro || {})[w.lunISO] || []).slice(); }
+    function _rutaCarroDe(w) { return (_rutaLeeSem(leerPlan().rutaCarro, _rutaModalNivel(), w.lunISO) || []).slice(); }
     function rutaCarroToggle(idx, ejId) {
       var w = _rutaSemanaActual(idx);
       var p = leerPlan();
       if (!p.rutaCarro) p.rutaCarro = {};
-      var arr = (p.rutaCarro[w.lunISO] || []).slice();
+      var nivC = _rutaModalNivel();
+      var arr = (_rutaLeeSem(p.rutaCarro, nivC, w.lunISO) || []).slice();
       var i = arr.indexOf(ejId);
       if (i >= 0) arr.splice(i, 1); else arr.push(ejId);
-      if (arr.length) p.rutaCarro[w.lunISO] = arr; else delete p.rutaCarro[w.lunISO];
+      _rutaEscribeSem(p.rutaCarro, nivC, w.lunISO, arr);
       _planGuardar(p);
       _rutaCarroRefrescar(idx, arr, ejId);
       mostrarPlanificacion();
@@ -14672,7 +14815,7 @@
     function rutaCarroVaciar(idx) {
       var w = _rutaSemanaActual(idx);
       var p = leerPlan();
-      if (p.rutaCarro && p.rutaCarro[w.lunISO]) { delete p.rutaCarro[w.lunISO]; _planGuardar(p); }
+      if (p.rutaCarro) { _rutaEscribeSem(p.rutaCarro, _rutaModalNivel(), w.lunISO, null); _planGuardar(p); }
       _rutaModalRender();
       mostrarPlanificacion();
     }
@@ -19897,6 +20040,117 @@
       irA('pantalla-inicio');
     }
 
+    // ══════════════════════════════════════════════════════════════
+    // v0.224 — LA CLASE PREPARADA DE UNA FRANJA
+    // ══════════════════════════════════════════════════════════════
+    // Cada franja lleva su nivel y comparte la planificación de ese nivel.
+    // Desde el calendario de Asistencia se abre un globo con lo que toca ese
+    // día: 🛒 el carro y 🎯 el área de trabajo, sin salir de la pantalla.
+    var NIV_ICONO = { iniciacion:'🌱', avanzado:'🔥', competicion:'🏆' };
+    var NIV_NOMBRE = { iniciacion:'Iniciación', avanzado:'Avanzado', competicion:'Competición' };
+    function _nivIcono(n) { return NIV_ICONO[n] || '🎾'; }
+    function _nivNombre(n) { return NIV_NOMBRE[n] || ''; }
+    // ¿Hay algo planificado para ese nivel y ese día? (carro, sesión o área)
+    function _claseTienePlan(nivel, fechaISO) {
+      var p = leerPlan();
+      var lun = _rutaSemanaLibre(fechaISO).lunISO;
+      if ((_rutaLeeSem(p.rutaCarro, nivel, lun) || []).length) return true;
+      if (_rutaSesArr(_rutaLeeSem(p.rutaSes, nivel, lun)).length) return true;
+      return ((p.compDias && p.compDias[fechaISO]) || []).length > 0;
+    }
+    var _asistClaseVista = null;   // { claseId, fecha } o null
+    function asistVerClase(claseId, fechaISO) {
+      _asistClaseVista = { claseId: claseId, fecha: fechaISO };
+      _asistClaseRender();
+    }
+    function asistCerrarClase() {
+      _asistClaseVista = null;
+      var ov = document.getElementById('asist-clase-ov');
+      if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; }
+    }
+    // Ir a planificar esta franja: abre el panel de siempre, ya con el nivel
+    // de la franja y el día puestos.
+    function asistPlanificarClase(claseId, fechaISO) {
+      var clase = (leerAsistConfig().clases || []).filter(function(c){ return c.id === claseId; })[0];
+      var niv = clase && clase.nivel ? clase.nivel : 'competicion';
+      asistCerrarClase();
+      var p = leerPlan();
+      if (p.nivel !== niv) { p.nivel = niv; _planGuardar(p); }
+      irA('pantalla-planificacion');
+      rutaAbrirDia(fechaISO, niv);
+    }
+    function _asistClaseRender() {
+      var ov = document.getElementById('asist-clase-ov');
+      if (!ov) return;
+      if (!_asistClaseVista) { ov.style.display = 'none'; ov.innerHTML = ''; return; }
+      var claseId = _asistClaseVista.claseId, fechaISO = _asistClaseVista.fecha;
+      var clase = (leerAsistConfig().clases || []).filter(function(c){ return c.id === claseId; })[0];
+      if (!clase) { asistCerrarClase(); return; }
+      var niv = clase.nivel || 'competicion';
+      var p   = leerPlan();
+      var lun = _rutaSemanaLibre(fechaISO).lunISO;
+      var carroIds = _rutaLeeSem(p.rutaCarro, niv, lun) || [];
+      var sesIds   = _rutaSesArr(_rutaLeeSem(p.rutaSes, niv, lun));
+      // Las áreas marcadas ese día, del catálogo de ESE nivel
+      var pNiv = { nivel: niv, contenido: p.contenido, biblioteca: p.biblioteca,
+                   planEtapasV: p.planEtapasV, hechos: p.hechos || {}, etapasAbiertas: {} };
+      var idsNivel = _compIdsNivel(pNiv);
+      var areasFila = _compTodasFilas(pNiv);
+      var areaN = {}; areasFila.forEach(function(a){ areaN[a.id] = a.apartado + ' · ' + a.t; });
+      var marcadas = ((p.compDias && p.compDias[fechaISO]) || []).filter(function(id){ return idsNivel[id]; });
+      var dow = new Date(+fechaISO.slice(0,4), +fechaISO.slice(5,7)-1, +fechaISO.slice(8,10)).getDay();
+
+      var h = '<div class="asist-clase-modal" onclick="event.stopPropagation()">';
+      h += '<div class="ruta-modal-hdr">' +
+        '<div><div class="ruta-modal-tit">' + _nivIcono(niv) + ' ' + _gEsc(clase.franja || 'Clase') + '</div>' +
+        '<div class="ruta-modal-sub">' + DIAS_NOMBRES_A[dow] + ' ' + formatFechaDiaMes(fechaISO) +
+          ' · ' + _nivNombre(niv) + '</div></div>' +
+        '<button class="plan-modal-x" onclick="asistCerrarClase()" aria-label="Cerrar">✕</button></div>';
+
+      h += '<div class="comp-clase-cols">';
+      // 🛒 Carro
+      h += '<div class="comp-clase-parte comp-clase-carro">';
+      h += '<div class="ruta-parte-hdr">🛒 <b>Carro</b><span>primera parte</span>' +
+           '<span class="ruta-area-n">' + (carroIds.length || '—') + '</span></div>';
+      if (!carroIds.length) {
+        h += '<div class="comp-picker-vacio">Sin ejercicios de carro.</div>';
+      } else {
+        var mapEjA = _ejsById();
+        carroIds.forEach(function(id){ if (mapEjA[id]) h += _rutaCarroFichaHTML(mapEjA[id], ''); });
+      }
+      h += '</div>';
+      // 🎯 Área de trabajo
+      h += '<div class="comp-clase-parte comp-clase-area">';
+      h += '<div class="ruta-parte-hdr">🎯 <b>Área de trabajo</b><span>segunda parte</span></div>';
+      if (marcadas.length) {
+        h += '<div class="ruta-modal-resumen">';
+        marcadas.forEach(function(id){ h += '<span class="ruta-chip">' + _gEsc(areaN[id] || 'Área') + '</span>'; });
+        h += '</div>';
+      }
+      if (!sesIds.length) {
+        h += '<div class="comp-picker-vacio">Sin sesiones asignadas.</div>';
+      } else {
+        var todasS = leerClases();
+        sesIds.forEach(function(id){
+          var ses = todasS.filter(function(c){ return c.id === id; })[0];
+          var th  = ses ? _rutaSesThumb(ses) : null;
+          h += '<div class="ruta-ses-eleg' + (ses ? ' clicable' : '') + '"' +
+            (ses ? ' onclick="asistCerrarClase();verSesion(' + ses.id + ',\'planif\')"' : '') + '>' +
+            '<span class="ruta-ses-thumb">' + (th ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="ruta-ses-noimg">🎾</span>') + '</span>' +
+            '<span class="ruta-ses-nom">' + _gEsc(ses ? (ses.nombre || ses.fecha || ('Sesión ' + id)) : ('Sesión ' + id)) + '</span></div>';
+        });
+      }
+      h += '</div>';
+      h += '</div>';
+
+      h += '<button type="button" class="btn btn-sec" style="margin-top:12px;" onclick="asistPlanificarClase(' + claseId + ',\'' + fechaISO + '\')">' +
+        (carroIds.length || sesIds.length ? '✏️ Cambiar la planificación de esta clase' : '＋ Planificar esta clase') +
+        '</button>';
+      h += '</div>';
+      ov.innerHTML = h;
+      ov.style.display = 'flex';
+    }
+
     // Suma n días a una fecha ISO
     function addDiasISO(iso, n) {
       var p = iso.split('-');
@@ -20081,12 +20335,24 @@
 
             var nombre = clase.nombre || (diasNom + ' · ' + (clase.franja||''));
 
-            html += '<div class="asist-clase-row' + sustCls + '" onclick="asistAbrirLista(' + clase.id + ',\'' + fecha + '\')">';
+            html += '<div class="asist-clase-row' + sustCls + '">';
+            html += '<div class="asist-clase-row-main" onclick="asistAbrirLista(' + clase.id + ',\'' + fecha + '\')">';
             html += '<span class="asist-franja-pill">' + (clase.franja||'—') + '</span>';
             html += '<div class="asist-clase-row-info">';
-            html += '<div class="asist-clase-row-nombre">' + _gEsc(nombre) + '</div>';
+            html += '<div class="asist-clase-row-nombre">' + _gEsc(nombre) +
+                    (clase.nivel ? ' <span class="asist-niv-pill">' + _nivIcono(clase.nivel) + '</span>' : '') + '</div>';
             html += '<div class="asist-clase-row-alumnos">' + numAl + ' alumno' + (numAl!==1?'s':'') + '</div>';
             html += '</div>' + badge + '</div>';
+            // v0.224: si la franja tiene nivel, botón cuadrado con la clase
+            // planificada de ese nivel para ese día (carro + área de trabajo).
+            if (clase.nivel) {
+              var _pl = _claseTienePlan(clase.nivel, fecha);
+              html += '<button type="button" class="asist-plan-btn' + (_pl ? ' con' : '') +
+                '" onclick="asistVerClase(' + clase.id + ',\'' + fecha + '\')"' +
+                ' title="' + (_pl ? 'Ver la clase preparada' : 'Sin planificar todavía') + '" aria-label="Ver la clase preparada">' +
+                '<span>' + (_pl ? '📋' : '＋') + '</span></button>';
+            }
+            html += '</div>';
           });
 
           html += '</div>';
@@ -21003,6 +21269,7 @@
         // v0.212: fecha de alta. Vacío = vale desde el principio del curso
         // (así están todas las franjas creadas antes de v0.210).
         document.getElementById('asist-form-inicio').value  = clase.inicio || '';
+        document.getElementById('asist-form-nivel').value   = clase.nivel  || '';   // v0.224
         asistAlumnosForm = (clase.alumnos||[]).map(function(a){
           // v0.191: conserva su id; si no tenía, el id ESTABLE de persona.
           return { id: alId(a) || _alIdPersona(alNom(a), alApe(a)),
@@ -21016,6 +21283,7 @@
         document.getElementById('asist-form-nombre').value = '';
         // v0.212: una franja nueva empieza HOY (se puede cambiar aquí mismo)
         document.getElementById('asist-form-inicio').value  = hoyLocal();
+        document.getElementById('asist-form-nivel').value   = '';   // v0.224
         asistAlumnosForm = [];
       }
 
@@ -21213,12 +21481,14 @@
       // sin verse). Vacía = la franja vale desde el principio del curso.
       var inicioEl = document.getElementById('asist-form-inicio');
       var inicio   = inicioEl ? inicioEl.value.trim() : '';
+      var nivelEl  = document.getElementById('asist-form-nivel');   // v0.224
+      var nivelCl  = nivelEl ? nivelEl.value : '';
 
       if (asistClaseEditId) {
         cfg.clases = cfg.clases.map(function(c) {
           if (c.id !== asistClaseEditId) return c;
           return { id:c.id, diaSemana:dia, franja:franja, nombre:nombre, alumnos:asistAlumnosForm.slice(), curso:_claseCurso(c),
-                   inicio:inicio,                                      // v0.210/v0.212: fecha de alta
+                   inicio:inicio, nivel:nivelCl,                       // v0.210/v0.212 alta · v0.224 nivel
                    fin:c.fin || '', finMotivo:c.finMotivo || '' };   // v0.102: conservar finalización
         });
       } else {
@@ -21229,7 +21499,7 @@
         // en su calendario a partir de ese día, no en las semanas ya pasadas.
         cfg.clases.push({ id:newId, diaSemana:dia, franja:franja, nombre:nombre, alumnos:asistAlumnosForm.slice(),
                           curso: _cursoNuevoCtx || cursoDeFecha(hoyLocal()),
-                          inicio: inicio || hoyLocal() });
+                          inicio: inicio || hoyLocal(), nivel: nivelCl });
       }
 
       escribirAsistConfig(cfg);
