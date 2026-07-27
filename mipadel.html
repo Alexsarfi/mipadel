@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.229.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.230.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,27 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.230.0 — El tablero, por MESES · el curso llega a final de junio (2026-08)
+    (sin migraciones nuevas)
+    · Fuera los cuatro bloques (🧭 Preparación · 1er · 2º · 3er trimestre): el
+      tablero enseña ahora los DIEZ MESES del curso, de septiembre a junio,
+      cada uno con su progreso (3/4). Se entra directo al mes, sin pasar por
+      el trimestre: un clic menos y se ve de un vistazo dónde está cada cosa.
+    · El MES EN CURSO viene abierto y se señala con el borde verde. Los meses
+      ya pasados siguen ahí, atenuados pero abiertos: se puede repasar y
+      corregir lo dado sin bajar al archivo. Repinchando el mes abierto se
+      cierra, como hacían los trimestres.
+    · EL CURSO LLEGA HASTA LA ÚLTIMA SEMANA DE JUNIO. Antes eran 40 semanas
+      clavadas desde el primer lunes de septiembre, y según el año se quedaban
+      fuera las dos o tres últimas de junio: no había manera de planificarlas
+      (ni de que la app supiera que estabas en ellas). Ahora el curso acaba en
+      la semana que contiene el 30 de junio — 43 semanas, o las que hagan
+      falta ese año.
+    · El archivo no cambia: sigue agrupando por curso y, dentro, por trimestre,
+      que ahí sí ordena. De hecho _RUTA_BLOQUES ya solo se usa para eso.
+    · Se retira el código del selector de trimestres (rutaTriSel,
+      _rutaTriActivo, _rutaBloqueDefecto y su CSS), que quedaba sin uso.
 
   v0.229.0 — Cada clase, su plan: la sesión y el carro son de un DÍA (2026-08)
     (sin migraciones nuevas)
@@ -5202,13 +5223,20 @@
     .ruta-curso-lbl { flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
       font-size:13.5px; font-weight:800; color:var(--texto); }
     /* Fila de trimestres — siempre uno al lado de otro */
-    .ruta-tri-row { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:14px; }
-    .ruta-tri { display:flex; flex-direction:column; align-items:flex-start; gap:3px; padding:10px 12px; cursor:pointer;
-      border:1.5px solid var(--borde); border-radius:12px; background:var(--blanco); font-family:inherit; text-align:left; }
-    .ruta-tri.on { border-color:#0891b2; background:#ecfeff; box-shadow:0 0 0 3px #cffafe; }
-    .ruta-tri-lbl { font-size:12.5px; font-weight:800; color:var(--texto); }
-    .ruta-tri.on .ruta-tri-lbl { color:#0e7490; }
-    .ruta-tri-prog { font-size:11px; font-weight:700; color:var(--gris); }
+    /* v0.230 — fila de meses del curso (sep → jun) */
+    .ruta-mes-row { display:grid; grid-template-columns:repeat(5,1fr); gap:5px; margin-bottom:12px; }
+    .ruta-mesbtn { display:flex; flex-direction:column; align-items:center; gap:1px; padding:7px 4px;
+      border:1.5px solid var(--borde); border-radius:10px; background:var(--blanco);
+      font-family:inherit; cursor:pointer; }
+    .ruta-mesbtn:hover { border-color:#0891b2; }
+    .ruta-mesbtn.on { border-color:#0891b2; background:#ecfeff; }
+    .ruta-mesbtn.hoy { border-width:2px; border-color:var(--verde); }
+    .ruta-mesbtn.hoy.on { border-color:#0891b2; }
+    .ruta-mesbtn.pasado { opacity:.62; }
+    .ruta-mesbtn-lbl { font-size:11.5px; font-weight:800; color:var(--texto); text-transform:capitalize; }
+    .ruta-mesbtn-prog { font-size:9.5px; font-weight:700; color:var(--gris); }
+    .ruta-mesbtn.on .ruta-mesbtn-lbl, .ruta-mesbtn.on .ruta-mesbtn-prog { color:#0e7490; }
+    @media (min-width:700px){ .ruta-mes-row { grid-template-columns:repeat(10,1fr); } }
     /* Meses en columnas paralelas */
     .ruta-mes-cols { display:grid; grid-template-columns:1fr; gap:12px; align-items:start; }
     .ruta-mes-col { background:var(--blanco); border:1px solid var(--borde); border-radius:14px; padding:10px; }
@@ -5405,7 +5433,6 @@
     /* ORDENADOR: trimestres en fila de 4, meses en columnas, panel centrado
        en dos columnas (áreas | sesiones). Es donde se planifica de verdad. */
     @media (min-width:760px){
-      .ruta-tri-row { grid-template-columns:repeat(4,1fr); }
       .ruta-mes-cols { grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); }
       .ruta-modal-ov { align-items:center; padding:24px; }
       /* v0.218: el panel crece — a la izquierda el carro y a la derecha el
@@ -6831,7 +6858,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.229.0';
+    var APP_VERSION = '0.230.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -14355,7 +14382,24 @@
       { key:'t2',   label:'2º trimestre',     corto:'2º tri.',  meses:[0,1,2] },
       { key:'t3',   label:'3er trimestre',    corto:'3er tri.', meses:[3,4,5] }
     ];
-    var _rutaTri = null;       // trimestre seleccionado; null = el de la semana en curso
+    // v0.230 — MES elegido en el tablero ('2025-9'); null = el de hoy; '' = ninguno.
+    // Sustituye a los cuatro bloques de trimestre: se ven los diez meses del
+    // curso y se entra directo al que toque.
+    var _rutaMesSel = null;
+    function _rutaMesActivo(curso, meses) {
+      if (_rutaMesSel !== null) {
+        if (_rutaMesSel === '' || meses.some(function(m){ return m.key === _rutaMesSel; })) return _rutaMesSel;
+      }
+      var h = hoyLocal(), y = +h.slice(0,4), m = +h.slice(5,7) - 1;
+      var deHoy = meses.filter(function(x){ return x.y === y && x.m === m; })[0];
+      return deHoy ? deHoy.key : (meses.length ? meses[0].key : '');
+    }
+    function rutaMesSel(key) {
+      var meses = _rutaMeses(_rutaSemanas(_rutaCurso()));
+      _rutaMesSel = (_rutaMesActivo(_rutaCurso(), meses) === key) ? '' : key;
+      rutaCerrarModal();
+      mostrarPlanificacion();
+    }
     var _rutaArchivoOpen = false;
     // v0.205 — CURSO que se está mirando en la ruta. null = el de hoy. Permite
     // adelantarse y planificar el curso que viene (26-27, 27-28…).
@@ -14367,30 +14411,14 @@
     }
     function rutaCursoNav(delta) {
       _rutaCursoSel = _rutaCursoDesplaza(_rutaCurso(), delta);
-      _rutaTri = null;                 // al cambiar de curso, volver a su bloque por defecto
+      _rutaMesSel = null;              // al cambiar de curso, al mes por defecto
       rutaCerrarModal();
       mostrarPlanificacion();
     }
-    function rutaCursoHoy() { _rutaCursoSel = null; _rutaTri = null; mostrarPlanificacion(); }
-    function _rutaBloqueDeMes(mes) {
-      for (var i = 0; i < _RUTA_BLOQUES.length; i++) if (_RUTA_BLOQUES[i].meses.indexOf(mes) >= 0) return _RUTA_BLOQUES[i].key;
-      return _RUTA_BLOQUES[0].key;
-    }
-    function _rutaBloqueDefecto() {
-      var curso = _rutaCurso(), act = _rutaSemActual(curso);
-      if (act < 0) return _RUTA_BLOQUES[0].key;   // curso futuro/pasado → empieza por Preparación
-      return _rutaBloqueDeMes(_rutaSemanas(curso)[act].mes);
-    }
-    // v0.210: tres estados. null = el bloque de la semana en curso (al entrar);
-    // 'clave' = ese bloque abierto; '' = NINGUNO abierto. Solo hay uno abierto
-    // a la vez y volver a pulsar el que está abierto lo cierra, para dejar la
-    // pantalla limpia (arriba los círculos del mes, abajo solo los botones).
-    function _rutaTriActivo() { return _rutaTri === null ? _rutaBloqueDefecto() : _rutaTri; }
-    function rutaTriSel(key) {
-      _rutaTri = (_rutaTriActivo() === key) ? '' : key;
-      rutaCerrarModal();
-      mostrarPlanificacion();
-    }
+    function rutaCursoHoy() { _rutaCursoSel = null; _rutaMesSel = null; mostrarPlanificacion(); }
+    // v0.230: los cuatro bloques de trimestre ya no mandan en el tablero (ahora
+    // son los meses). _RUTA_BLOQUES se queda porque el ARCHIVO sigue agrupando
+    // por trimestre dentro de cada curso, que ahí sí ordena.
     // v0.206: sin repintar la pantalla (lo hace el classList de la cabecera).
     function rutaArchivoToggle() { _rutaArchivoOpen = !_rutaArchivoOpen; }
     // v0.206: dentro del archivo, cada curso y cada bloque se abre y se cierra
@@ -14410,13 +14438,13 @@
     var _rutaCursoAbierto = null;
     function rutaAbrirCurso(curso) {
       _rutaCursoSel = curso; _rutaCursoAbierto = curso;
-      _rutaTri = null; _rutaCopiaDe = null; _rutaCopiaMsg = '';
+      _rutaMesSel = null; _rutaCopiaDe = null; _rutaCopiaMsg = '';
       rutaCerrarModal();
       mostrarPlanificacion();
       try { window.scrollTo(0, 0); } catch (e) {}
     }
     function rutaCerrarCursoAbierto() {
-      _rutaCursoAbierto = null; _rutaCursoSel = null; _rutaTri = null;
+      _rutaCursoAbierto = null; _rutaCursoSel = null; _rutaMesSel = null;
       rutaCerrarModal();
       mostrarPlanificacion();
     }
@@ -14535,11 +14563,23 @@
       d.setDate(d.getDate() + add);
       return dateToISOLocal(d);
     }
+    // v0.230: el curso va del primer lunes de septiembre a la ÚLTIMA SEMANA DE
+    // JUNIO — la que contiene el 30 de junio. Antes eran 40 semanas clavadas y
+    // se quedaban fuera las últimas de junio (según el año, dos o tres).
+    function _rutaNSemanas(curso) {
+      var ini = _rutaInicioISO(curso), p = ini.split('-');
+      var base = new Date(+p[0], +p[1]-1, +p[2]);
+      var y0 = parseInt(String(curso).slice(0, 4), 10);
+      var finJun = new Date(y0 + 1, 5, 30);                   // 30 de junio
+      var lunFin = new Date(finJun);
+      lunFin.setDate(finJun.getDate() - ((finJun.getDay() + 6) % 7));   // su lunes
+      return Math.floor((lunFin - base) / (7 * 86400000)) + 1;
+    }
     function _rutaSemanas(curso) {
       var ini = _rutaInicioISO(curso), p = ini.split('-');
       var base = new Date(+p[0], +p[1]-1, +p[2]);
-      var out = [];
-      for (var i = 0; i < 40; i++) {
+      var out = [], n = _rutaNSemanas(curso);
+      for (var i = 0; i < n; i++) {
         var lun = new Date(base); lun.setDate(base.getDate() + i*7);
         var dom = new Date(lun);  dom.setDate(lun.getDate() + 6);
         out.push({ idx:i, lunISO:dateToISOLocal(lun), domISO:dateToISOLocal(dom),
@@ -14552,7 +14592,7 @@
       var base = new Date(+p[0], +p[1]-1, +p[2]);
       var h = hoyLocal().split('-'); var hoy = new Date(+h[0], +h[1]-1, +h[2]);
       var idx = Math.floor((hoy - base) / (7*86400000));
-      return (idx >= 0 && idx < 40) ? idx : -1;
+      return (idx >= 0 && idx < _rutaNSemanas(curso)) ? idx : -1;
     }
     // ── v0.207 — Datos COMPARTIDOS con Mensual ──
     // Días reales de clase (configurados, sin festivo/día sin clase del
@@ -15531,37 +15571,34 @@
         '<span>📂 Estás editando el curso <b>' + curso + '</b>, que ya está cerrado. Se ven todos sus meses, también los pasados.</span>' +
         '<button type="button" onclick="rutaCerrarCursoAbierto()">Volver al curso actual</button></div>';
 
-      // ── Fila de trimestres, uno al lado de otro ──
-      var triSel = _rutaTriActivo();
-      h += '<div class="ruta-tri-row">';
-      _RUTA_BLOQUES.forEach(function(bl){
-        var semsB = sems.filter(function(w){ return bl.meses.indexOf(w.mes) >= 0; });
-        if (!semsB.length) return;
-        var hechasB = semsB.filter(function(w){ return _rutaSemanaDatos(p, w, idsNivel).trab; }).length;
-        var contieneAct = semsB.some(function(w){ return w.idx === act; });
-        h += '<button type="button" class="ruta-tri' + (triSel === bl.key ? ' on' : '') + (contieneAct ? ' hoy' : '') + '" onclick="rutaTriSel(\'' + bl.key + '\')">' +
-          '<span class="ruta-tri-lbl">' + bl.label + '</span>' +
-          '<span class="ruta-tri-prog">' + hechasB + '/' + semsB.length + '</span>' +
-          (contieneAct ? '<span class="ruta-badge">en curso</span>' : '') +
+      // ── v0.230 — Fila de MESES del curso (sep → jun), en vez de los cuatro
+      //    trimestres. Se señala el mes en el que estamos y se entra directo
+      //    a él: un clic menos y se ve de un vistazo dónde está cada cosa.
+      //    Salen TODOS los meses, también los ya pasados, para poder repasar y
+      //    corregir lo dado sin bajar al archivo.
+      var mesesCurso = _rutaMeses(sems);
+      var mesSel = _rutaMesActivo(curso, mesesCurso);
+      h += '<div class="ruta-mes-row">';
+      mesesCurso.forEach(function(m){
+        var semsM = m.sems;
+        var hechasM = semsM.filter(function(w){ return _rutaSemanaDatos(p, w, idsNivel).trab; }).length;
+        var esAct = semsM.some(function(w){ return w.idx === act; });
+        var pasado = _rutaMesPasado(m.y, m.m);
+        h += '<button type="button" class="ruta-mesbtn' + (mesSel === m.key ? ' on' : '') +
+          (esAct ? ' hoy' : '') + (pasado ? ' pasado' : '') + '" onclick="rutaMesSel(\'' + m.key + '\')">' +
+          '<span class="ruta-mesbtn-lbl">' + _MESES_R[m.m].slice(0,3) + '</span>' +
+          '<span class="ruta-mesbtn-prog">' + hechasM + '/' + semsM.length + '</span>' +
         '</button>';
       });
       h += '</div>';
 
-      // ── Meses del trimestre elegido, en columnas paralelas. Los meses
-      //    cuya fecha ya pasó no salen aquí: bajan al archivo. ──
-      // v0.210: triSel vacío = ningún trimestre abierto (se cerró al
-      // repincharlo). No se pinta ningún mes: solo quedan los botones.
-      var blSel = triSel ? (_RUTA_BLOQUES.filter(function(b){ return b.key === triSel; })[0] || _RUTA_BLOQUES[0]) : null;
-      if (blSel) {
-        var mesesSel = _rutaMeses(sems.filter(function(w){ return blSel.meses.indexOf(w.mes) >= 0; }));
-        // v0.211: con el curso abierto a mano no se archiva nada — se ven sus
-        // 10 meses para poder repasar y editar lo ya dado.
-        var activos  = abierto ? mesesSel : mesesSel.filter(function(m){ return !_rutaMesPasado(m.y, m.m); });
-        if (!activos.length) {
-          h += '<div class="ruta-modal-vacio" style="margin-top:12px;">Este bloque ya está cerrado — lo tienes abajo, en 📦 Meses cerrados.</div>';
-        } else {
+      // ── Semanas del mes elegido. mesSel vacío = ninguno abierto (se cerró
+      //    al repincharlo): solo quedan los botones. ──
+      if (mesSel) {
+        var mSel = mesesCurso.filter(function(m){ return m.key === mesSel; })[0];
+        if (mSel) {
           h += '<div class="ruta-mes-cols">';
-          activos.forEach(function(m){ h += _rutaMesColHTML(m, act, p, idsNivel, areaN, sesN); });
+          h += _rutaMesColHTML(mSel, act, p, idsNivel, areaN, sesN);
           h += '</div>';
         }
       }
