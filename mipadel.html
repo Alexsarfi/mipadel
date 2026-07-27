@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.218.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.220.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,58 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.220.0 — Las dos partes de la clase, en dos tarjetas (2026-08)
+    (sin migraciones nuevas)
+    · Al planificar un día (o una semana) el panel se parte en DOS TARJETAS
+      bien diferenciadas, una al lado de otra, cada una con su borde, su fondo
+      y su cabecera:
+        🛒 1 · Carro          — primera parte
+        🎯 2 · Área de trabajo — segunda parte
+      En v0.218/v0.219 ya iban en dos columnas, pero solo las separaba una
+      línea fina y costaba ver dónde acababa una y empezaba la otra.
+    · Se ponen una al lado de otra ya desde 700 px (tablet apaisada incluida),
+      no solo a partir de 760. Por debajo se apilan, con el carro arriba.
+    · Dentro de la parte 2, la columna de sesiones aparece cuando hay sitio de
+      verdad (1040 px); por debajo, las sesiones se despliegan bajo su bloque,
+      como en el móvil. Antes ese cambio ocurría a 760 px y en pantallas
+      medianas las tres columnas quedaban estrechísimas.
+    · Las SESIONES YA ELEGIDAS se suben justo debajo de la cabecera del área de
+      trabajo, fuera de la columna que se pliega: así se ven siempre, tanto en
+      el móvil como en el ordenador.
+    · Los rótulos de dentro se simplifican (ya no hacen de pasos: los pasos son
+      las dos tarjetas): «Bloque» y «Sesiones», con «cambiar bloque» para
+      volver atrás.
+
+  v0.219.0 — Carro por golpes y varias sesiones por semana (2026-08)
+    (sin migraciones nuevas)
+    ── CARRO ──
+    · Fuera el botón «Todos». Al entrar solo se ven los botones de golpe.
+    · Al abrir un golpe, los DEMÁS DESAPARECEN: se queda su lista sola, sin
+      ruido. Volviendo a pulsarlo, vuelven todos.
+    · Se pueden abrir VARIOS golpes a la vez: con uno abierto sale un botón
+      «＋ N más» que trae de vuelta los otros para añadir el que quieras, sin
+      cerrar lo que ya tenías. Con dos o más abiertos, cada uno lleva su
+      subtítulo encima de sus ejercicios.
+    · Cada ejercicio enseña ahora su MINIATURA: la del vídeo de YouTube si lo
+      tiene, si no su foto, y si no el icono de siempre.
+    ── ÁREA DE TRABAJO ──
+    · Los apartados del catálogo se pliegan y despliegan (antes era una lista
+      corrida). Se abre solo el del área elegida; el resto empiezan cerrados,
+      con el número de bloques que tienen dentro. El que tiene el área elegida
+      lo marca con un ●.
+    ── SESIONES ──
+    · Se puede elegir MÁS DE UNA sesión por semana. Cada toque añade o quita, y
+      el panel ya no se cierra al elegir: se sigue trabajando.
+    · Las elegidas salen en la tercera columna, ARRIBA del todo y una debajo de
+      otra, con su miniatura y su ✕ — la foto de lo que se va a trabajar esa
+      semana. Siguen a la vista aunque cambies de área.
+    · Las tarjetas de semana del tablero listan todas sus sesiones, una debajo
+      de otra.
+    · Detalle técnico: p.rutaSes[lunes] pasa de un id suelto a una lista. Lo
+      guardado antes se lee igual (se normaliza al leer con _rutaSesArr), así
+      que no hay nada que migrar ni en local ni en Supabase — la columna
+      ruta_ses es jsonb y admite las dos formas.
 
   v0.218.0 — El panel, en dos columnas: carro | área de trabajo (2026-08)
     (sin migraciones nuevas)
@@ -4983,9 +5035,21 @@
       padding-bottom:10px; margin-bottom:12px; border-bottom:1px solid var(--borde); }
     .ruta-modal-tit { font-size:16px; font-weight:800; color:var(--texto); }
     .ruta-modal-sub { font-size:12px; color:var(--gris); }
-    .ruta-modal-cols { display:flex; flex-direction:column; gap:14px; }
-    /* v0.218: en móvil las dos partes se apilan (carro arriba, área debajo) */
-    .ruta-modal-trabajo { display:flex; flex-direction:column; gap:14px; min-width:0; }
+    /* v0.220 — LAS DOS PARTES DE LA CLASE, cada una en su tarjeta:
+       🛒 Carro (lo que se lanza) y 🎯 Área de trabajo (lo que se juega).
+       Apiladas en móvil y una al lado de otra a partir de 700 px. */
+    .ruta-modal-cols { display:flex; flex-direction:column; gap:12px; }
+    .ruta-modal-carro, .ruta-modal-trabajo { min-width:0; border:1.5px solid var(--borde);
+      border-radius:14px; padding:11px 12px 12px; }
+    .ruta-modal-carro { background:#f6fdff; border-color:#cffafe; }
+    .ruta-modal-trabajo { background:var(--blanco); }
+    .ruta-parte-hdr { display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--gris);
+      padding-bottom:8px; margin-bottom:10px; border-bottom:1.5px solid var(--borde); }
+    .ruta-parte-hdr b { font-size:13.5px; font-weight:800; color:var(--texto); }
+    .ruta-parte-hdr span { font-size:10.5px; }
+    .ruta-parte-hdr .ruta-area-n { margin-left:auto; }
+    .ruta-modal-carro .ruta-parte-hdr { border-bottom-color:#cffafe; }
+    .ruta-trabajo-cols { display:flex; flex-direction:column; gap:14px; min-width:0; }
     .ruta-modal-vacio { text-align:center; color:var(--gris); font-size:13px; line-height:1.7; padding:22px 10px; }
     /* v0.207 — resumen de lo ya marcado en Mensual esta semana (chips con
        día + ✕) y el picker "¿qué día?" cuando la semana tiene más de un
@@ -5002,8 +5066,16 @@
     .ruta-dia-chip:hover { background:#0891b2; color:#fff; }
     .ruta-panel-paso { display:flex; align-items:center; gap:8px; font-size:11px; font-weight:700; color:var(--gris); margin:0 2px 8px; }
     .ruta-panel-nota { font-size:11px; font-weight:400; color:var(--gris); }
-    .ruta-area-grupo { font-size:10px; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.04em; margin:10px 2px 5px; }
+    /* v0.219: los apartados del catálogo se pliegan y despliegan */
+    .ruta-area-grupo { display:flex; align-items:center; gap:6px; width:100%; box-sizing:border-box; text-align:left;
+      font-family:inherit; font-size:10.5px; font-weight:800; color:var(--gris); text-transform:uppercase;
+      letter-spacing:.04em; margin:8px 0 5px; padding:5px 6px; border:none; background:var(--arena);
+      border-radius:8px; cursor:pointer; }
     .ruta-area-grupo:first-of-type { margin-top:0; }
+    .ruta-area-grupo:hover { color:var(--texto); }
+    .ruta-area-grupo .chev { font-size:12px; transition:transform .18s; }
+    .ruta-area-grupo.abierto .chev { transform:rotate(90deg); }
+    .ruta-area-grupo .ruta-area-t { flex:1; min-width:0; }
     .ruta-area-row { display:flex; align-items:center; gap:8px; width:100%; box-sizing:border-box; text-align:left;
       padding:9px 11px; margin-bottom:5px; border:1.5px solid var(--borde); border-radius:10px; background:var(--blanco);
       font-family:inherit; font-size:12.5px; font-weight:600; color:var(--texto); cursor:pointer; }
@@ -5047,6 +5119,25 @@
     .ruta-carro-g:hover { border-color:#0891b2; color:#0e7490; }
     .ruta-carro-g.on { border-color:#0891b2; background:#ecfeff; color:#0e7490; }
     .ruta-carro-g b { font-weight:800; opacity:.65; margin-left:2px; }
+    .ruta-carro-g.mas { border-style:dashed; }
+    /* v0.219 — subtítulo de cada golpe cuando hay varios abiertos, y la
+       miniatura del ejercicio (vídeo de YouTube o foto) */
+    .ruta-carro-gsub { font-size:10px; font-weight:800; color:var(--gris); text-transform:uppercase;
+      letter-spacing:.04em; margin:8px 2px 4px; }
+    .ruta-carro-gsub:first-child { margin-top:2px; }
+    .ruta-carro-thumb { flex-shrink:0; width:52px; aspect-ratio:16/9; border-radius:6px; overflow:hidden;
+      background:#111; display:flex; align-items:center; justify-content:center; }
+    .ruta-carro-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+    .ruta-carro-thumb .ruta-ses-noimg { font-size:14px; }
+    /* v0.219 — sesiones ya elegidas de la semana, una debajo de otra */
+    .ruta-ses-elegidas { margin-bottom:12px; padding-bottom:10px; border-bottom:1px dashed var(--borde); }
+    .ruta-ses-eleg { display:flex; align-items:center; gap:8px; padding:5px; margin-bottom:5px;
+      border:1.5px solid #0891b2; border-radius:10px; background:#ecfeff; }
+    .ruta-ses-eleg .ruta-ses-thumb { width:56px; }
+    .ruta-ses-eleg .ruta-ses-nom { flex:1; min-width:0; font-size:12px; }
+    .ruta-ses-eleg button { flex-shrink:0; border:none; background:none; color:#0e7490; font-size:13px;
+      font-family:inherit; cursor:pointer; padding:0 4px; opacity:.75; }
+    .ruta-ses-eleg button:hover { opacity:1; }
     .ruta-carro-busca { padding:7px 11px; font-size:12.5px; margin-bottom:7px; }
     .ruta-carro-lista { max-height:210px; overflow-y:auto; border:1px solid var(--borde); border-radius:10px; padding:4px; }
     .ruta-carro-it { display:flex; align-items:center; gap:8px; width:100%; box-sizing:border-box; text-align:left;
@@ -5061,10 +5152,6 @@
     .ruta-carro-txt span { font-size:10.5px; color:var(--gris); }
     .ruta-wk .ruta-carro-n { display:block; margin:2px 0 0; font-size:10.5px; font-weight:700;
       color:#0e7490; background:none; padding:0; text-align:left; }
-    @media (min-width:760px){
-      .ruta-carro { margin-top:0; padding-top:0; border-top:none; }
-      .ruta-carro-lista { max-height:calc(60vh - 190px); min-height:150px; }
-    }
     .ruta-panel-borrar { display:block; width:100%; margin-top:14px; font-family:inherit; font-size:12px; font-weight:700;
       color:#b91c1c; background:none; border:1px dashed #fca5a5; border-radius:10px; padding:8px; cursor:pointer; }
     /* v0.205 — MÓVIL: al tocar un bloque, sus sesiones se despliegan justo
@@ -5079,19 +5166,30 @@
       .ruta-modal-ov { align-items:center; padding:24px; }
       /* v0.218: el panel crece — a la izquierda el carro y a la derecha el
          área de trabajo con sus sesiones, sin apretujarse. */
-      .ruta-modal { max-width:1140px; max-height:86vh; border-radius:18px; padding:18px 20px 20px; }
-      .ruta-modal-cols { flex-direction:row; align-items:flex-start; gap:18px; }
-      .ruta-modal-carro { flex:0 0 268px; min-width:0; }
-      .ruta-modal-trabajo { flex:1; min-width:0; display:flex; align-items:flex-start; gap:18px;
-        padding-left:18px; border-left:1px solid var(--borde); }
-      .ruta-modal-areas { flex:0 0 240px; max-height:60vh; overflow-y:auto; }
-      .ruta-modal-ses { flex:1; min-width:0; max-height:60vh; overflow-y:auto; }
+      .ruta-modal { max-width:1180px; max-height:86vh; border-radius:18px; padding:18px 20px 20px; }
       .ruta-ses-grid { grid-template-columns:repeat(2,1fr); }
       .ruta-ses-thumb { width:96px; }
-      .ruta-area-inline { display:none; }   /* en ancho manda la columna derecha */
     }
-    @media (max-width:759px){
-      .ruta-modal-ses { display:none; }     /* en móvil manda el desplegable */
+    /* v0.220: las dos partes, una al lado de otra ya desde 700 px (tablet
+       apaisada incluida), no solo en pantalla grande. */
+    @media (min-width:700px){
+      .ruta-modal-cols { flex-direction:row; align-items:stretch; gap:14px; }
+      .ruta-modal-carro { flex:0 0 300px; }
+      .ruta-modal-trabajo { flex:1; }
+      /* dentro de su tarjeta el carro ya no necesita el filete de separación */
+      .ruta-carro { margin-top:0; padding-top:0; border-top:none; }
+      .ruta-carro-lista { max-height:calc(58vh - 150px); min-height:150px; }
+    }
+    /* La sesión sale en su propia columna cuando hay sitio de verdad; por
+       debajo de eso se despliega bajo su bloque (.ruta-area-inline). */
+    @media (min-width:1040px){
+      .ruta-trabajo-cols { flex-direction:row; align-items:flex-start; gap:16px; }
+      .ruta-modal-areas { flex:0 0 235px; max-height:56vh; overflow-y:auto; }
+      .ruta-modal-ses { flex:1; min-width:0; max-height:56vh; overflow-y:auto; }
+      .ruta-area-inline { display:none; }   /* con sitio, manda la columna */
+    }
+    @media (max-width:1039px){
+      .ruta-modal-ses { display:none; }     /* sin sitio, manda el desplegable */
     }
     /* ── v0.210 — Calendario de competiciones ── */
     .tor-btn { display:flex; align-items:center; gap:10px; width:100%; box-sizing:border-box; text-align:left;
@@ -6465,7 +6563,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.218.0';
+    var APP_VERSION = '0.220.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -14104,10 +14202,10 @@
           vistos[x.areaId] = true;
           areasO.push({ id:x.areaId, dow:x.dow });
         });
-        var sesO = (p.rutaSes[wO[i].lunISO] || '');
-        if (!areasO.length && !sesO) { res.vacias++; continue; }
+        var sesO = _rutaSesArr(p.rutaSes[wO[i].lunISO]);   // v0.219: puede haber varias
+        if (!areasO.length && !sesO.length) { res.vacias++; continue; }
         // Destino ocupado (marcas en cualquier día o sesión) → no se toca
-        if (_rutaMarcasSemana(p, wD[i], idsNivel).length || p.rutaSes[wD[i].lunISO]) { res.ocupadas++; continue; }
+        if (_rutaMarcasSemana(p, wD[i], idsNivel).length || _rutaSesArr(p.rutaSes[wD[i].lunISO]).length) { res.ocupadas++; continue; }
         var dias = _rutaDiasRealesDeSemana(wD[i]);
         if (areasO.length && !dias.length) { res.sinDia++; continue; }
         areasO.forEach(function(a, k){
@@ -14117,7 +14215,7 @@
           var arr = (p.compDias[destino.fecha] || []).slice();
           if (arr.indexOf(a.id) < 0) { arr.push(a.id); p.compDias[destino.fecha] = arr; }
         });
-        if (sesO) p.rutaSes[wD[i].lunISO] = sesO;
+        if (sesO.length) p.rutaSes[wD[i].lunISO] = sesO.slice();
         res.copiadas++;
       }
       _planGuardar(p);
@@ -14221,12 +14319,21 @@
     // guardado por semana.
     function _rutaSemanaDatos(p, w, idsNivel) {
       var areasSemana = _rutaAreasDeSemana(p, w, idsNivel);
-      var sesion = (p.rutaSes || {})[w.lunISO] || '';
+      // v0.219: una semana puede llevar VARIAS sesiones. Lo guardado antes era
+      // un id suelto, así que se normaliza a lista al leer (nada que migrar).
+      var sesiones = _rutaSesArr((p.rutaSes || {})[w.lunISO]);
       // v0.216: el CARRO de la semana — los ejercicios de la primera parte de
       // la clase (lanzamiento de bolas, repetición). Va junto a la sesión, que
       // es la segunda parte (el área de trabajo).
       var carro = ((p.rutaCarro || {})[w.lunISO] || []).slice();
-      return { areasSemana: areasSemana, sesion: sesion, carro: carro, trab: areasSemana.length > 0 };
+      return { areasSemana: areasSemana, sesiones: sesiones, carro: carro, trab: areasSemana.length > 0 };
+    }
+    // v0.219 — Normaliza lo guardado en rutaSes: antes era UN id (número) y
+    // ahora es una lista. Las dos formas se leen igual, así que los datos
+    // viejos siguen valiendo sin tocar nada.
+    function _rutaSesArr(v) {
+      if (v == null || v === '') return [];
+      return Array.isArray(v) ? v.slice() : [v];
     }
     // Cursos con algo planificado: cualquier fecha marcada en compDias o
     // cualquier semana con sesión en rutaSes cuyo cursoDeFecha() case.
@@ -14414,16 +14521,30 @@
     }
     // "cambiar área" dentro del paso 2 → vuelve al paso 1 sin tocar lo guardado.
     function rutaCambiarArea() { _rutaModalArea = ''; _rutaEligeDia = null; _rutaModalRender(); }
+    // v0.219 — apartados del catálogo plegables dentro de la columna de áreas.
+    // Se indexan por su POSICIÓN (no por el nombre) para no tener que escapar
+    // comillas ni acentos en el onclick. Se le pasa el estado actual, porque
+    // el de por defecto depende de dónde esté el área elegida.
+    var _rutaApAbierto = {};
+    function rutaApToggle(i, estaAbierto) {
+      _rutaApAbierto[i] = !estaAbierto;
+      _rutaModalRender();
+    }
     // Paso 2 → elige sesión: se guarda en p.rutaSes (dato propio de la
     // semana, sincronizado con el resto del plan). Cierra el panel.
+    // v0.219: se pueden elegir VARIAS. Cada toque añade o quita, y el panel se
+    // queda abierto para seguir eligiendo (antes se cerraba al elegir una).
     function rutaElegirSesion(idx, sesId) {
       var w = _rutaSemanaActual(idx);
       var p = leerPlan();
       if (!p.rutaSes) p.rutaSes = {};
-      p.rutaSes[w.lunISO] = +sesId;
+      var arr = _rutaSesArr(p.rutaSes[w.lunISO]);
+      var i = arr.indexOf(+sesId);
+      if (i >= 0) arr.splice(i, 1); else arr.push(+sesId);
+      if (arr.length) p.rutaSes[w.lunISO] = arr; else delete p.rutaSes[w.lunISO];
       _planGuardar(p);
-      rutaCerrarModal();
       mostrarPlanificacion();
+      _rutaModalRender();
     }
     // Quita solo la sesión asignada a la semana (el área se quita desde su
     // propio ✕ en el resumen, o desde Mensual — es el mismo dato).
@@ -14431,8 +14552,8 @@
       var w = _rutaSemanaActual(idx);
       var p = leerPlan();
       if (p.rutaSes) { delete p.rutaSes[w.lunISO]; _planGuardar(p); }
-      rutaCerrarModal();
       mostrarPlanificacion();
+      _rutaModalRender();   // v0.219: el panel se queda abierto
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -14512,12 +14633,30 @@
     // v0.218 — Los ejercicios del carro se agrupan POR GOLPE: una fila de
     // botones (volea, bandeja, globo, pared…) y debajo los de ese golpe. Es
     // como se piensa el carro: «hoy toca bandeja». '' = todos.
-    var _rutaCarroGolpe = '';
+    // v0.219: se pueden tener VARIOS golpes abiertos. Al abrir uno, los que no
+    // están elegidos desaparecen (para no tener ruido); al cerrarlo, vuelven.
+    // El botón «＋» trae de vuelta los demás sin cerrar lo que ya hay abierto.
+    var _rutaCarroGolpes = [];   // golpes abiertos
+    var _rutaCarroMas    = false; // enseñar también los no elegidos
     function rutaCarroGolpe(k, idx) {
-      _rutaCarroGolpe = (_rutaCarroGolpe === k) ? '' : k;
+      var i = _rutaCarroGolpes.indexOf(k);
+      if (i >= 0) _rutaCarroGolpes.splice(i, 1); else _rutaCarroGolpes.push(k);
+      _rutaCarroMas = false;
+      if (!_rutaCarroGolpes.length) _rutaCarroQ = '';
+      _rutaCarroPintar(idx);
+    }
+    function rutaCarroMas(idx) { _rutaCarroMas = !_rutaCarroMas; _rutaCarroPintar(idx); }
+    function _rutaCarroPintar(idx) {
       var cont = document.getElementById('ruta-carro-bloque');
       if (cont) cont.innerHTML = _rutaCarroBloqueHTML(idx, _rutaCarroDe(_rutaSemanaActual(idx)));
       rutaCarroFiltrar(_rutaCarroQ);   // se respeta lo que hubiera escrito
+    }
+    // Miniatura de UN ejercicio: su vídeo de YouTube o su imagen.
+    function _rutaEjThumb(e) {
+      if (!e) return null;
+      var yt = extraerIdYoutube(e.video);
+      if (yt) return 'https://img.youtube.com/vi/' + yt + '/mqdefault.jpg';
+      return e.imagen || null;
     }
     // Ejercicios repartidos por golpe, en el orden canónico del catálogo.
     // Los que no tienen golpe puesto caen en el cajón '_'.
@@ -14542,45 +14681,67 @@
         return String(a.nombre || '').localeCompare(String(b.nombre || ''));
       });
       var grupos = _rutaCarroPorGolpe(ejs);
-      // Si el golpe elegido ya no tiene ejercicios, se vuelve a "todos"
-      var golpeSel = _rutaCarroGolpe;
-      if (golpeSel && !grupos.some(function(g){ return g.key === golpeSel; })) golpeSel = '';
-      var visibles = golpeSel
-        ? (grupos.filter(function(g){ return g.key === golpeSel; })[0] || { ejs:[] }).ejs
-        : ejs;
+      // Golpes abiertos que sigan existiendo en el catálogo
+      var abiertos = _rutaCarroGolpes.filter(function(k){
+        return grupos.some(function(g){ return g.key === k; });
+      });
+      var hayAbiertos = abiertos.length > 0;
 
       var h = '<div class="ruta-carro">';
-      h += '<div class="ruta-panel-paso">🛒 1 · Carro <span class="ruta-panel-nota">primera parte</span>' +
+      h += '<div class="ruta-parte-hdr">🛒 <b>1 · Carro</b><span>primera parte</span>' +
            '<span class="ruta-area-n" id="ruta-carro-n">' + (arr.length || '—') + '</span></div>';
       h += '<div id="ruta-carro-sel" class="ruta-carro-sel">' + _rutaCarroSelHTML(idx, arr) + '</div>';
       if (!ejs.length) {
         h += '<div class="ruta-panel-nota">Aún no tienes ejercicios en el catálogo.</div>';
-      } else {
-        // Botones de golpe
-        h += '<div class="ruta-carro-golpes">';
-        h += '<button type="button" class="ruta-carro-g' + (golpeSel ? '' : ' on') + '" onclick="rutaCarroGolpe(\'\',' + idx + ')">Todos <b>' + ejs.length + '</b></button>';
-        grupos.forEach(function(g){
-          h += '<button type="button" class="ruta-carro-g' + (golpeSel === g.key ? ' on' : '') + '" onclick="rutaCarroGolpe(\'' + g.key + '\',' + idx + ')">' +
-            g.icono + ' ' + _gEsc(g.label) + ' <b>' + g.ejs.length + '</b></button>';
-        });
         h += '</div>';
-        h += '<input type="search" class="form-input ruta-carro-busca" id="ruta-carro-busca" ' +
-             'placeholder="Buscar por nombre o zona…" value="' + _gEsc(_rutaCarroQ) + '" ' +
-             'oninput="rutaCarroFiltrar(this.value)">';
-        h += '<div class="ruta-carro-lista" id="ruta-carro-lista">';
-        visibles.forEach(function(e){
+        return h;
+      }
+
+      // v0.219 — Botones de golpe. Con alguno abierto, los demás se esconden
+      // (menos ruido) y queda un ＋ para traerlos de vuelta y abrir otro más.
+      var ocultos = grupos.length - abiertos.length;
+      h += '<div class="ruta-carro-golpes">';
+      grupos.forEach(function(g){
+        var on = abiertos.indexOf(g.key) >= 0;
+        if (hayAbiertos && !on && !_rutaCarroMas) return;
+        h += '<button type="button" class="ruta-carro-g' + (on ? ' on' : '') + '" onclick="rutaCarroGolpe(\'' + g.key + '\',' + idx + ')">' +
+          g.icono + ' ' + _gEsc(g.label) + ' <b>' + g.ejs.length + '</b></button>';
+      });
+      if (hayAbiertos && ocultos > 0)
+        h += '<button type="button" class="ruta-carro-g mas" onclick="rutaCarroMas(' + idx + ')">' +
+             (_rutaCarroMas ? '− menos' : '＋ ' + ocultos + ' más') + '</button>';
+      h += '</div>';
+
+      if (!hayAbiertos) {
+        h += '<div class="ruta-panel-nota">Elige un golpe para ver sus ejercicios. Puedes abrir varios.</div>';
+        h += '</div>';
+        return h;
+      }
+
+      h += '<input type="search" class="form-input ruta-carro-busca" id="ruta-carro-busca" ' +
+           'placeholder="Buscar por nombre o zona…" value="' + _gEsc(_rutaCarroQ) + '" ' +
+           'oninput="rutaCarroFiltrar(this.value)">';
+      h += '<div class="ruta-carro-lista" id="ruta-carro-lista">';
+      // Un apartado por golpe abierto, con sus ejercicios y su miniatura
+      abiertos.forEach(function(k){
+        var g = grupos.filter(function(x){ return x.key === k; })[0];
+        if (abiertos.length > 1) h += '<div class="ruta-carro-gsub">' + g.icono + ' ' + _gEsc(g.label) + '</div>';
+        g.ejs.forEach(function(e){
           var on = arr.indexOf(e.id) >= 0;
-          var meta = [ejFaceta(e, 'golpe'), ejFaceta(e, 'zona'), ejFaceta(e, 'intencion')].filter(Boolean).join(' · ');
-          var busca = ((e.nombre || '') + ' ' + meta).toLowerCase();
+          var meta = [ejFaceta(e, 'zona'), ejFaceta(e, 'intencion')].filter(Boolean).join(' · ');
+          var busca = ((e.nombre || '') + ' ' + ejFaceta(e, 'golpe') + ' ' + meta).toLowerCase();
+          var th = _rutaEjThumb(e);
           h += '<button type="button" class="ruta-carro-it' + (on ? ' on' : '') + '" id="carro-it-' + e.id + '"' +
             ' data-b="' + _gEsc(busca) + '" onclick="rutaCarroToggle(' + idx + ',' + e.id + ')">' +
             '<span class="ruta-carro-check">' + (on ? '✓' : '') + '</span>' +
+            // v0.219: si el ejercicio tiene vídeo o foto, su miniatura
+            '<span class="ruta-carro-thumb">' + (th ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="ruta-ses-noimg">🎾</span>') + '</span>' +
             '<span class="ruta-carro-txt"><b>' + _gEsc(e.nombre || ('Ejercicio ' + e.id)) + '</b>' +
               (meta ? '<span>' + _gEsc(meta) + '</span>' : '') + '</span></button>';
         });
-        h += '</div>';
-        h += '<div class="ruta-panel-nota" id="ruta-carro-vacio" style="display:none;">Ningún ejercicio con ese nombre.</div>';
-      }
+      });
+      h += '</div>';
+      h += '<div class="ruta-panel-nota" id="ruta-carro-vacio" style="display:none;">Ningún ejercicio con ese nombre.</div>';
       if (arr.length) h += '<button type="button" class="ruta-chip-x" style="margin-top:8px;" onclick="rutaCarroVaciar(' + idx + ')">Vaciar el carro</button>';
       h += '</div>';
       return h;
@@ -14622,10 +14783,11 @@
       return null;
     }
     // Tarjeta de una sesión dentro del panel (miniatura + nombre + nº ejercicios).
-    function _rutaSesCardHTML(s, idx, sesActual) {
+    function _rutaSesCardHTML(s, idx, elegidas) {
       var th  = _rutaSesThumb(s);
       var nEj = (s.ejercicioIds || []).length;
-      return '<button type="button" class="ruta-ses-card' + (sesActual === s.id ? ' on' : '') + '" onclick="rutaElegirSesion(' + idx + ',' + s.id + ')">' +
+      var on  = (elegidas || []).indexOf(s.id) >= 0;   // v0.219: varias a la vez
+      return '<button type="button" class="ruta-ses-card' + (on ? ' on' : '') + '" onclick="rutaElegirSesion(' + idx + ',' + s.id + ')">' +
         '<span class="ruta-ses-thumb">' + (th ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="ruta-ses-noimg">🎾</span>') + '</span>' +
         '<span class="ruta-ses-info">' +
           '<span class="ruta-ses-nom">' + _gEsc(s.nombre || s.fecha || ('Sesión ' + s.id)) + '</span>' +
@@ -14705,18 +14867,45 @@
       //    la otra, cada una en lo suyo.
       h += '<div class="ruta-modal-carro" id="ruta-carro-bloque">' + _rutaCarroBloqueHTML(idx, wd.carro) + '</div>';
 
-      // ── COLUMNA DERECHA: el ÁREA DE TRABAJO (segunda parte), tal cual
-      //    estaba: elegir el área y, al lado, sus sesiones con miniaturas.
+      // ── PARTE 2: el ÁREA DE TRABAJO. v0.220: su propia tarjeta, con
+      //    cabecera, las sesiones ya elegidas debajo y, dentro, el bloque y
+      //    sus sesiones.
       h += '<div class="ruta-modal-trabajo">';
+      h += '<div class="ruta-parte-hdr">🎯 <b>2 · Área de trabajo</b><span>segunda parte</span></div>';
+      // Las sesiones YA elegidas de esta semana, siempre a la vista (aunque la
+      // columna de sesiones se pliegue en pantallas medianas).
+      if (wd.sesiones.length) {
+        var todasSes = leerClases();
+        h += '<div class="ruta-ses-elegidas">';
+        h += '<div class="ruta-panel-paso">✓ Sesiones de esta semana<span class="ruta-area-n">' + wd.sesiones.length + '</span></div>';
+        wd.sesiones.forEach(function(id){
+          var s = todasSes.filter(function(c){ return c.id === id; })[0];
+          var th = s ? _rutaSesThumb(s) : null;
+          h += '<div class="ruta-ses-eleg">' +
+            '<span class="ruta-ses-thumb">' + (th ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="ruta-ses-noimg">🎾</span>') + '</span>' +
+            '<span class="ruta-ses-nom">' + _gEsc(s ? (s.nombre || s.fecha || ('Sesión ' + id)) : ('Sesión ' + id)) + '</span>' +
+            '<button type="button" onclick="rutaElegirSesion(' + idx + ',' + id + ')" aria-label="Quitar">✕</button></div>';
+        });
+        h += '</div>';
+      }
+      h += '<div class="ruta-trabajo-cols">';
       h += '<div class="ruta-modal-areas">';
-      h += '<div class="ruta-panel-paso">2 · Área de trabajo</div>';
+      h += '<div class="ruta-panel-paso">Bloque</div>';
       if (!areas.length) {
         h += '<div class="ruta-panel-nota">Aún no hay áreas en el catálogo de Competición.</div>';
       } else {
         var porApartado = {};
         areas.forEach(function(a){ (porApartado[a.apartado] = porApartado[a.apartado] || []).push(a); });
-        Object.keys(porApartado).forEach(function(ap){
-          h += '<div class="ruta-area-grupo">' + _gEsc(ap) + '</div>';
+        // v0.219 — Los apartados se pliegan y despliegan. Se abre solo el que
+        // tiene el área elegida (o todos, si no hay ninguna elegida todavía):
+        // con un catálogo grande, la lista entera era una parrafada.
+        Object.keys(porApartado).forEach(function(ap, iAp){
+          var tieneSel = areaSel && porApartado[ap].some(function(a){ return a.id === areaSel; });
+          var abierto = (_rutaApAbierto[iAp] !== undefined) ? _rutaApAbierto[iAp] : (!areaSel || tieneSel);
+          h += '<button type="button" class="ruta-area-grupo' + (abierto ? ' abierto' : '') + '" onclick="rutaApToggle(' + iAp + ',' + abierto + ')">' +
+               '<span class="chev">›</span><span class="ruta-area-t">' + _gEsc(ap) + '</span>' +
+               '<span class="ruta-area-n">' + (tieneSel ? '●' : porApartado[ap].length) + '</span></button>';
+          if (!abierto) return;
           porApartado[ap].forEach(function(a){
             // v0.204: cada bloque lleva al lado CUÁNTAS sesiones tiene, para
             // saber de un vistazo dónde hay material sin entrar a mirar.
@@ -14749,7 +14938,7 @@
                 h += '<div class="ruta-panel-nota" style="padding:4px 2px 8px;">Este bloque todavía no tiene ninguna sesión enlazada.</div>';
               } else {
                 h += '<div class="ruta-ses-grid">';
-                (sesDe[a.id] || []).forEach(function(s){ h += _rutaSesCardHTML(s, idx, wd.sesion); });
+                (sesDe[a.id] || []).forEach(function(s){ h += _rutaSesCardHTML(s, idx, wd.sesiones); });
                 h += '</div>';
               }
               h += '</div>';
@@ -14759,15 +14948,15 @@
       }
       h += '</div>';
 
-      // ── Columna derecha: SOLO las sesiones de esa área (ordenador) ──
+      // ── Dentro de la parte 2: las sesiones del bloque elegido ──
       h += '<div class="ruta-modal-ses">';
       if (!areaSel) {
-        h += '<div class="ruta-modal-vacio">👈 Elige primero un área de trabajo<br>' +
+        h += '<div class="ruta-modal-vacio">👈 Elige un bloque<br>' +
              '<span class="ruta-panel-nota">Te mostraré solo sus sesiones.</span></div>';
       } else {
         var lista = sesDe[areaSel] || [];
-        h += '<div class="ruta-panel-paso">3 · Sesión ' +
-          '<button type="button" class="ruta-chip-x" onclick="rutaCambiarArea()">cambiar área</button></div>';
+        h += '<div class="ruta-panel-paso">Sesiones ' +
+          '<button type="button" class="ruta-chip-x" onclick="rutaCambiarArea()">cambiar bloque</button></div>';
         h += '<div class="ruta-chip-sel">' + _gEsc(areaN[areaSel] || 'Área') + '</div>';
         if (!lista.length) {
           // v0.204: si el área no tiene sesiones, NO se cae a toda la
@@ -14776,12 +14965,12 @@
                '<span class="ruta-panel-nota">Enlázalas desde Áreas de trabajo (o con apartado + bloque en la ficha de la sesión).</span></div>';
         } else {
           h += '<div class="ruta-ses-grid">';
-          lista.forEach(function(s){ h += _rutaSesCardHTML(s, idx, wd.sesion); });
+          lista.forEach(function(s){ h += _rutaSesCardHTML(s, idx, wd.sesiones); });
           h += '</div>';
         }
       }
-      h += '</div></div></div>';   // /ses /trabajo /cols
-      if (wd.sesion) h += '<button type="button" class="ruta-panel-borrar" onclick="rutaBorrarSemana(' + idx + ')">🗑️ Quitar la sesión de esta semana</button>';
+      h += '</div></div></div></div>';   // /ses /trabajo-cols /trabajo /cols
+      if (wd.sesiones.length) h += '<button type="button" class="ruta-panel-borrar" onclick="rutaBorrarSemana(' + idx + ')">🗑️ Quitar las sesiones de esta semana</button>';
       h += '</div>';         // /ruta-modal
 
       ov.innerHTML = h;
@@ -14794,7 +14983,7 @@
     function _rutaSemanaHTML(w, act, wd, areaN, sesN) {
       var trab = wd.trab, esAct = (w.idx === act);
       // v0.216: una semana con solo el carro puesto ya cuenta como planificada
-      var tieneAlgo = trab || wd.sesion || wd.carro.length;
+      var tieneAlgo = trab || wd.sesiones.length || wd.carro.length;
       var estado = trab ? 'done' : (esAct ? 'now' : (tieneAlgo ? 'plan' : 'vacia'));
       var rango = w.lun.getDate() + '–' + w.dom.getDate();
       var punto = estado === 'done'
@@ -14816,8 +15005,10 @@
           '<span class="ruta-wk-rango">' + rango + '</span>' +
           (esAct ? '<span class="ruta-badge">hoy</span>' : '') + '</div>' +
         areasChips +
-        (wd.sesion ? '<div class="ruta-ses">' + _gEsc(sesN[wd.sesion] || 'Sesión') + '</div>'
-                   : '<div class="ruta-ses vacia">' + (tieneAlgo ? 'sin sesión' : '＋ planificar') + '</div>') +
+        // v0.219: pueden ser varias sesiones, una debajo de otra
+        (wd.sesiones.length
+          ? wd.sesiones.map(function(id){ return '<div class="ruta-ses">' + _gEsc(sesN[id] || 'Sesión') + '</div>'; }).join('')
+          : '<div class="ruta-ses vacia">' + (tieneAlgo ? 'sin sesión' : '＋ planificar') + '</div>') +
         // v0.216: el carro de la semana, de un vistazo
         (wd.carro.length ? '<div class="ruta-carro-n">🛒 ' + wd.carro.length + ' ejercicio' + (wd.carro.length !== 1 ? 's' : '') + '</div>' : '') +
       '</div>';
