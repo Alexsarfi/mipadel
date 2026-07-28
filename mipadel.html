@@ -39,6 +39,19 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.240.0 — La semana se lee de un vistazo (2026-08)
+    (sin migraciones nuevas)
+    · FUERA «Ya marcado esta semana (Mensual)». Ese bloque del panel traía lo
+      marcado en los OTROS días de la semana — clases ya dadas — y no pintaba
+      nada mientras preparas ESTA. Lo de este día no se pierde: el bloque
+      marcado sale ahora en la franja de «lo que llevas elegido», con su ✕
+      para desmarcarlo, al lado del carro y de las sesiones.
+    · DEBAJO DE CADA DÍA, LO QUE TOCA. En la vista de la semana (los círculos
+      de arriba) cada día lleva ahora dos etiquetas: el GOLPE que se trabaja
+      en el carro (primera parte, en azul) y debajo el ÁREA DE TRABAJO
+      (segunda parte, en morado). Se ve el mes entero sin abrir día por día.
+      Los nombres largos se recortan; el completo sale al posar el dedo/ratón.
+
   v0.239.0 — El panel de planificar, a mano y plegable (2026-08)
     (sin migraciones nuevas)
     · LOS GOLPES, ARRIBA. En el carro, los botones de golpe (volea, bandeja,
@@ -5343,8 +5356,17 @@
     .comp-sem-col.activa { background:var(--verde-suave); }
     .comp-sem-col.activa .comp-sem-titulo { color:var(--verde); }
     .comp-sem-titulo { font-size:11px; font-weight:800; color:var(--gris); margin:0 0 6px; text-align:center; }
-    .comp-sem-dias { display:flex; flex-direction:column; align-items:center; gap:8px; }
+    .comp-sem-dias { display:flex; flex-direction:column; align-items:center; gap:10px; }
     .comp-diacol { display:flex; flex-direction:column; align-items:center; gap:3px; }
+    /* v0.240 — Debajo del círculo del día: el golpe del carro (primera parte)
+       y el área de trabajo (segunda parte). Etiquetas pequeñas, una por línea,
+       recortadas si no caben (el nombre completo va en el title). */
+    .comp-diacol-tags { display:flex; flex-direction:column; align-items:center; gap:2px;
+      max-width:104px; margin-top:1px; }
+    .comp-daytag { max-width:100%; box-sizing:border-box; font-size:9px; font-weight:700; line-height:1.3;
+      padding:2px 6px; border-radius:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .comp-daytag.carro { background:#ecfeff; color:#0e7490; border:1px solid #a5f3fc; }
+    .comp-daytag.area  { background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe; }
     .comp-diacol-dow { font-size:9.5px; font-weight:800; color:var(--gris); text-transform:uppercase; }
     .comp-dia-abierto { margin-top:0.3rem; }
     .comp-dow-cont { font-size:11.5px; font-weight:600; color:var(--gris); }
@@ -5521,6 +5543,11 @@
       color:var(--texto); }
     .ruta-eleg-fila.carro .ruta-eleg-chip { background:#ecfeff; border-color:#a5f3fc; color:#0e7490; }
     .ruta-eleg-nada { font-size:11.5px; color:var(--gris); font-style:italic; }
+    /* v0.240: el chip del BLOQUE marcado ese día lleva su ✕ para desmarcarlo */
+    .ruta-eleg-chip.bloque { gap:6px; background:#eef2ff; border-color:#c7d2fe; color:#3730a3; }
+    .ruta-eleg-chip.bloque button { border:none; background:none; color:inherit; font-size:11px;
+      font-family:inherit; cursor:pointer; padding:0; line-height:1; opacity:.7; }
+    .ruta-eleg-chip.bloque button:hover { opacity:1; }
     /* v0.239 — El ✓ de la cabecera: guardar y cerrar */
     .ruta-modal-hdr-acc { display:flex; align-items:center; gap:8px; flex-shrink:0; }
     .ruta-modal-ok { background:#dcfce7 !important; color:#15803d !important; }
@@ -5530,7 +5557,6 @@
     /* v0.207 — resumen de lo ya marcado en Mensual esta semana (chips con
        día + ✕) y el picker "¿qué día?" cuando la semana tiene más de un
        día real de clase. */
-    .ruta-modal-resumen { margin-bottom:14px; padding-bottom:12px; border-bottom:1px dashed var(--borde); }
     .ruta-chip-rm { display:inline-flex; align-items:center; gap:6px; margin:0 6px 6px 0; }
     .ruta-chip-dia { font-size:10px; opacity:.75; }
     .ruta-chip-rm button { border:none; background:none; color:inherit; font-size:12px; font-family:inherit;
@@ -7106,7 +7132,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.239.0';
+    var APP_VERSION = '0.240.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -15775,19 +15801,10 @@
         }
       }
 
-      // v0.207 — Resumen de lo que YA está marcado en Mensual esta semana
-      // (mismo dato, no una copia). Cada chip lleva su día y una ✕ para
-      // desmarcarlo — es el mismo toggle que usa Mensual.
-      if (wd.areasSemana.length) {
-        h += '<div class="ruta-modal-resumen">';
-        h += '<div class="ruta-panel-paso">Ya marcado esta semana (Mensual)</div>';
-        wd.areasSemana.forEach(function(x){
-          h += '<span class="ruta-chip ruta-chip-rm">' + _gEsc(areaN[x.areaId] || 'Área') +
-            ' <span class="ruta-chip-dia">' + formatFechaDiaMes(x.fecha) + '</span>' +
-            '<button type="button" onclick="rutaQuitarArea(\'' + x.fecha + '\',\'' + x.areaId + '\')" aria-label="Quitar">✕</button></span>';
-        });
-        h += '</div>';
-      }
+      // v0.240 — FUERA el bloque «Ya marcado esta semana (Mensual)»: traía lo
+      // marcado en los OTROS días de la semana (clases ya dadas), que aquí no
+      // pinta nada. Lo de ESTE día, con su ✕ para quitarlo, va ahora en la
+      // franja de «lo que llevas elegido», justo debajo.
 
       // ── v0.239 — LO QUE LLEVAS ELEGIDO PARA ESTA CLASE, arriba del todo:
       //    el carro y el área de trabajo de este día, sin bajar a buscarlo.
@@ -15800,9 +15817,16 @@
         h += '<span class="ruta-eleg-chip">' + _gEsc(e ? (e.nombre || ('Ejercicio ' + id)) : ('Ejercicio ' + id)) + '</span>';
       });
       h += '</div>';
+      // v0.240: los BLOQUES marcados en este día (con su ✕ para desmarcarlos)
+      // y debajo, en la misma línea, las sesiones elegidas.
+      var bloqsDia = wd.areasSemana.filter(function(x){ return x.fecha === diaPanel; });
       h += '<div class="ruta-eleg-fila"><span class="ruta-eleg-tit">🎯 Área</span>';
-      if (!wd.sesiones.length) h += '<span class="ruta-eleg-nada">nada elegido todavía</span>';
-      else wd.sesiones.forEach(function(id){
+      if (!bloqsDia.length && !wd.sesiones.length) h += '<span class="ruta-eleg-nada">nada elegido todavía</span>';
+      bloqsDia.forEach(function(x){
+        h += '<span class="ruta-eleg-chip bloque">' + _gEsc(areaN[x.areaId] || 'Área') +
+          '<button type="button" onclick="rutaQuitarArea(\'' + x.fecha + '\',\'' + x.areaId + '\')" aria-label="Quitar">✕</button></span>';
+      });
+      wd.sesiones.forEach(function(id){
         var c = sesTodasEl.filter(function(x){ return x.id === id; })[0];
         h += '<span class="ruta-eleg-chip">' + _gEsc(c ? (c.nombre || c.fecha || ('Sesión ' + id)) : ('Sesión ' + id)) + '</span>';
       });
@@ -17107,6 +17131,11 @@
       lunHoy.setDate(lunHoy.getDate() - ((hoyD.getDay() + 6) % 7));
       var lunHoyISO = dateToISOLocal(lunHoy);
 
+      // v0.240 — Para las etiquetas de debajo de cada círculo (golpe del carro
+      // y área de trabajo): se indexa UNA vez para todo el mes.
+      var _areasN = {}; _compTodasFilas(p).forEach(function(a){ _areasN[a.id] = a.t; });
+      var _mapEjM = _ejsById();
+
       var abiertoHTML = '';
       var colsHTML = '';
       lunes.forEach(function(kL, i){
@@ -17131,9 +17160,40 @@
                       : (festivo ? ' title="Sin clase este día"'
                       : (marcada ? ' title="' + nFilas + ' fila(s) marcada(s) — toca para ver el resumen"'
                                  : ' title="Toca para marcar lo trabajado"'));
+          // v0.240 — Debajo del círculo, lo que toca ese día: el GOLPE que se
+          // trabaja en el carro (primera parte) y debajo el ÁREA DE TRABAJO
+          // (segunda parte). Así la vista de la semana se lee de un vistazo
+          // sin tener que abrir día por día.
+          var tags = '';
+          if (!bloq) {
+            var golpes = [], vistoG = {};
+            (_rutaLeeDia(p.rutaCarro, _nivM, fISO, kL) || []).forEach(function(idE){
+              var e = _mapEjM[idE]; if (!e) return;
+              var gk = ejFaceta(e, 'golpe');
+              if (!gk || vistoG[gk]) return;
+              vistoG[gk] = true;
+              golpes.push((GOLPE_ICONO[gk] ? GOLPE_ICONO[gk] + ' ' : '') + (GOLPE_LABEL[gk] || gk));
+            });
+            var bloqsD = ((p.compDias && p.compDias[fISO]) || [])
+              .filter(function(idA){ return idsNivel[idA]; })
+              .map(function(idA){ return _areasN[idA]; })
+              .filter(Boolean);
+            if (golpes.length || bloqsD.length) {
+              tags = '<div class="comp-diacol-tags">';
+              if (golpes.length)
+                tags += '<span class="comp-daytag carro" title="Carro: ' + _gEsc(golpes.join(', ')).replace(/"/g,'') + '">' +
+                        _gEsc(golpes.join(' · ')) + '</span>';
+              bloqsD.forEach(function(t){
+                tags += '<span class="comp-daytag area" title="Área de trabajo: ' + _gEsc(t).replace(/"/g,'') + '">' +
+                        _gEsc(t) + '</span>';
+              });
+              tags += '</div>';
+            }
+          }
           return '<div class="comp-diacol">' +
             '<span class="comp-diacol-dow">' + DIAS_NOMBRES_A[dowF].slice(0,3) + '</span>' +
             '<div class="' + cls + '"' + onclick + titulo + '>' + numDia + '</div>' +
+            tags +
           '</div>';
         }).join('');
 
