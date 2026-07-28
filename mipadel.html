@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.246.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.247.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,28 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.247.0 — Ejercicios: tres secciones, como las carpetas del vault (2026-07)
+    (sin migraciones nuevas)
+    · ANTES todo se agrupaba por GOLPE en una sola lista, así que un
+      ejercicio TÁCTICO de «Construcción» acababa metido dentro de «Volea»
+      junto a los técnicos y no había forma de distinguirlo.
+    · AHORA la pantalla se parte en tres secciones, igual que 03 EJERCICIOS
+      en el vault: 🎾 Técnica simple · 🔀 Técnica combinada · ♟️ Táctica
+      (y Físico/Otros si aparecen). Cada una con su cabecera y su contador.
+    · DENTRO DE CADA UNA:
+        · Técnica (simple y combinada) sigue por GOLPE, en orden de fases
+          del punto, con los subgrupos por `combo:` dentro de Combinada.
+        · TÁCTICA se agrupa por SU PROPIA subcategoría — Construcción,
+          Control, Definición, Red, Transición — que es como está el vault.
+          Como ahí el golpe ya no es el criterio, cada tarjeta lo lleva
+          como chapa (nuevo 3er parámetro `chipExtra` de ejercicioCardHTML).
+    · La táctica tiene color propio (terracota) en cabecera, subgrupos y
+      chapas: es otro tipo de trabajo, no un golpe más.
+    · Detalle técnico: renderListaEjercicios se parte en dos ayudantes,
+      _ejBloquesPorGolpe(lista, seccion, forzar) y _ejBloquesPorSubcat(...).
+      Las claves del acordeón pasan a llevar la sección ('g:Técnica
+      simple:volea'), porque el mismo golpe sale en dos secciones a la vez.
 
   v0.246.0 — Ejercicios: la tarjeta pasa a fila, con la miniatura al lado (2026-07)
     (sin migraciones nuevas)
@@ -4867,6 +4889,26 @@
     /* Short (vertical): se amplía para que las barras negras salgan de la caja */
     #lista-ejercicios .ejcard.vert .ejcard-img { transform:scale(1.85); }
     @media (min-width:560px) { #lista-ejercicios .grid-ejercicios { grid-template-columns:1fr 1fr; } }
+    /* v0.247 — Secciones por tipo (Técnica simple · Combinada · Táctica),
+       como las carpetas de 03 EJERCICIOS en el vault. */
+    #lista-ejercicios .secc { margin:0 0 22px; }
+    #lista-ejercicios .secc:last-child { margin-bottom:4px; }
+    #lista-ejercicios .secc-hdr { display:flex; align-items:center; gap:8px; padding:0 2px 7px;
+      border-bottom:2px solid var(--borde); margin-bottom:12px; }
+    #lista-ejercicios .secc-ico { font-size:16px; line-height:1; }
+    #lista-ejercicios .secc-hdr b { font-size:15px; font-weight:700; letter-spacing:-0.01em; color:var(--verde); }
+    #lista-ejercicios .secc-hdr .n { margin-left:auto; font-size:11.5px; font-weight:700; color:var(--gris);
+      background:var(--verde-suave); padding:1px 8px; border-radius:20px; }
+    #lista-ejercicios .secc .grupo-titulo { border-bottom:none; padding-bottom:2px; margin-bottom:6px; }
+    /* Táctica con identidad propia: es otro tipo de trabajo, no un golpe más */
+    #lista-ejercicios .secc-tactica .secc-hdr { border-bottom-color:#d85a30; }
+    #lista-ejercicios .secc-tactica .secc-hdr b { color:#993c1d; }
+    #lista-ejercicios .secc-tactica .secc-hdr .n { background:#faece7; color:#993c1d; }
+    #lista-ejercicios .secc-tactica .grupo-titulo { color:#993c1d; }
+    #lista-ejercicios .secc-comb .secc-hdr { border-bottom-color:#c19a3e; }
+    .ejcard-tag { font-size:9.5px; font-weight:700; padding:1px 6px; border-radius:5px;
+      background:var(--verde-suave); color:var(--verde); }
+    #lista-ejercicios .secc-tactica .ejcard-tag { background:#faece7; color:#993c1d; }
 
     /* ── VACÍO ── */
     .vacio { text-align:center; padding:2.5rem 1rem; color:var(--gris); }
@@ -7271,7 +7313,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.246.0';
+    var APP_VERSION = '0.247.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -18449,14 +18491,82 @@
         return;
       }
 
-      // ── Agrupación por GOLPE (v0.69) en orden por fases del punto ──
+      // Con búsqueda o filtro de golpe activos, expandir para ver resultados
+      var forzarAbierto = !!filtroEjTexto || filtroEjGolpe !== null;
+
+      // ── v0.247 — Tres SECCIONES por tipo, como las carpetas del vault:
+      //    Técnica simple · Técnica combinada · Táctica (+ Físico/Otros si hay).
+      //    Dentro, la técnica se agrupa por GOLPE (fases del punto) y la
+      //    TÁCTICA por su propia subcategoría (Construcción, Control,
+      //    Definición, Red, Transición), que es como está en 03 EJERCICIOS.
+      var html = '';
+      TIPO_SECC.forEach(function(secc) {
+        var lista = ejs.filter(function(e){ return ejTipo(e) === secc.key; });
+        if (!lista.length) return;
+        html += '<div class="secc ' + secc.cls + '">';
+        html += '<div class="secc-hdr"><span class="secc-ico">' + secc.ico + '</span>' +
+                '<b>' + secc.label + '</b><span class="n">' + lista.length + '</span></div>';
+        html += (secc.key === 'Táctica')
+              ? _ejBloquesPorSubcat(lista, secc.key, forzarAbierto, cats)
+              : _ejBloquesPorGolpe(lista, secc.key, forzarAbierto);
+        html += '</div>';
+      });
+      cont.innerHTML = html;
+    }
+
+    // Secciones de la pantalla Ejercicios, en el orden en que se construye
+    // una clase: primero el gesto suelto, luego encadenado, luego el juego.
+    var TIPO_SECC = [
+      { key:'Técnica simple',    label:'Técnica simple',    ico:'🎾', cls:'secc-simple'  },
+      { key:'Técnica combinada', label:'Técnica combinada', ico:'🔀', cls:'secc-comb'    },
+      { key:'Táctica',           label:'Táctica',           ico:'♟️', cls:'secc-tactica' },
+      { key:'Físico',            label:'Físico',            ico:'💪', cls:'secc-fisico'  },
+      { key:'Otros',             label:'Otros',             ico:'📋', cls:'secc-otros'   }
+    ];
+    // Orden de las subcategorías tácticas (las que no estén, al final).
+    var TACTICA_ORDEN = ['Construcción', 'Control', 'Definición', 'Red', 'Transición'];
+
+    // Táctica: acordeón por SUBCATEGORÍA en vez de por golpe. Cada tarjeta
+    // lleva su golpe como chapa, que ahí sí es información extra.
+    function _ejBloquesPorSubcat(lista, pref, forzarAbierto, cats) {
+      var nomCat = {};
+      (cats || []).forEach(function(c){ nomCat[c.id] = c.nombre; });
+      var por = {};
+      lista.forEach(function(e){
+        var k = nomCat[e.categoriaId] || 'Sin clasificar';
+        (por[k] = por[k] || []).push(e);
+      });
+      var claves = TACTICA_ORDEN.filter(function(k){ return por[k]; })
+        .concat(Object.keys(por).filter(function(k){ return TACTICA_ORDEN.indexOf(k) < 0; }).sort());
+      var h = '';
+      claves.forEach(function(k) {
+        var grupo = por[k].slice().sort(_ejOrdenGolpe);
+        var clave = 'sc:' + pref + ':' + k;
+        var abierto = forzarAbierto || acordeonAbierto(clave);
+        h += '<div class="grupo">';
+        h += '<div class="grupo-titulo" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onclick="toggleAcordeon(\'' + clave.replace(/'/g, "\\'") + '\')">' +
+               '<span>' + (abierto ? '▾' : '▸') + ' ' + _gEsc(k) + '</span>' +
+               '<span style="font-size:12px;color:var(--gris);font-weight:600;">' + grupo.length + '</span></div>';
+        if (abierto) {
+          h += '<div class="grid-ejercicios">';
+          grupo.forEach(function(ej){
+            var g = ejGolpe(ej);
+            h += ejercicioCardHTML(ej, 'ejercicios', g && GOLPE_LABEL[g] ? GOLPE_LABEL[g] : '');
+          });
+          h += '</div>';
+        }
+        h += '</div>';
+      });
+      return h;
+    }
+
+    // Técnica (simple y combinada) y Físico: acordeón por GOLPE, como hasta ahora.
+    function _ejBloquesPorGolpe(lista, pref, forzarAbierto) {
+      var ejs = lista;
       var golpesPresentes = {};
       ejs.forEach(function(e){ golpesPresentes[ejGolpe(e) || '_'] = true; });
       var golpes = GOLPE_ORDEN_EJ.filter(function(g){ return golpesPresentes[g]; });
       if (golpesPresentes['_']) golpes.push('_');   // ejercicios sin golpe → al final
-
-      // Con búsqueda o filtro de golpe activos, expandir para ver resultados
-      var forzarAbierto = !!filtroEjTexto || filtroEjGolpe !== null;
 
       var html = '';
       golpes.forEach(function(g) {
@@ -18467,7 +18577,9 @@
         grupoG.sort(_ejOrdenGolpe);
 
         var etiqueta = g === '_' ? '❓ Sin golpe' : (GOLPE_ICONO[g] + ' ' + GOLPE_LABEL[g]);
-        var clave = 'g:' + g;   // prefijo para no chocar con el acordeón antiguo por tipo
+        // v0.247: la clave lleva la sección, porque el mismo golpe puede
+        // salir en Técnica simple y en Técnica combinada a la vez.
+        var clave = 'g:' + pref + ':' + g;
         var abierto = forzarAbierto || acordeonAbierto(clave);
         html += '<div class="grupo">';
         html += '<div class="grupo-titulo" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onclick="toggleAcordeon(\'' + clave + '\')">' +
@@ -18516,19 +18628,22 @@
         }
         html += '</div>';
       });
-      cont.innerHTML = html;
+      return html;
     }
 
     // v0.70: tarjeta de cuadrícula con miniatura del vídeo (sustituye a la
     // fila de lista itemEjercicioHTML, retirada porque ahora TODO ejercicio
     // visible aquí tiene vídeo).
-    function ejercicioCardHTML(ej, origen) {
+    function ejercicioCardHTML(ej, origen, chipExtra) {
       var ytId = extraerIdYoutube(ej.video);
       var thumb = ytId ? ('https://img.youtube.com/vi/' + ytId + '/mqdefault.jpg') : (ej.imagen || null);
       var val = ej.valoracion || 0;
       var cod = ejCodigo(ej);
       var nvid = ejVideos(ej).length;
       var badges = '';
+      // v0.247: chapa contextual. En Táctica se le pone el GOLPE que trabaja,
+      // porque ahí el acordeón agrupa por subcategoría y el golpe no se ve.
+      if (chipExtra) badges += '<span class="ejcard-tag">' + _gEsc(chipExtra) + '</span>';
       if (cod) badges += '<span class="ejcard-cod">' + cod + '</span>';
       if (val > 0) badges += '<span class="ejcard-val">★' + val + '</span>';
       if (nvid > 1) badges += '<span class="ejcard-cod" title="Progresión de ' + nvid + ' vídeos">🎬×' + nvid + '</span>';
