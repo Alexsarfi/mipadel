@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.237.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.246.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,41 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.246.0 — Ejercicios: la tarjeta pasa a fila, con la miniatura al lado (2026-07)
+    (sin migraciones nuevas)
+    · EL PROBLEMA: 7 de los 17 vídeos son SHORTS (verticales). YouTube
+      devuelve su miniatura dentro de un marco 16:9 con barras negras a los
+      lados, así que en la cuadrícula de dos columnas quedaba una franja
+      estrecha entre dos bandas negras, al lado de los vídeos normales que
+      sí llenaban la tarjeta. La pantalla se veía descompensada.
+    · LA TARJETA PASA A FILA: una sola columna, con la miniatura a la
+      izquierda (132 px, 16:10) y el título y las chapas a la derecha. En el
+      móvil se lee mucho mejor y el título tiene sitio para 3 líneas. A
+      partir de 560 px vuelven las dos columnas.
+    · LOS SHORTS SE AMPLÍAN (scale 1.85) para que las barras negras se
+      salgan de la caja y quede solo la imagen útil. Se detectan por la URL
+      (`/shorts/`) con la nueva clase `vert` en ejercicioCardHTML.
+    · TODO ACOTADO A #lista-ejercicios: la misma tarjeta se reutiliza en
+      Planificación y en el resumen del día, y ahí sigue igual que estaba.
+
+  v0.245.0 — Orden pedagógico dentro de un golpe + auditoría de versión (2026-07)
+    (sin migraciones nuevas)
+    · Nuevo campo de vault `progresion:` (número, p.ej. 10/20/30…) para
+      ordenar los EJ de un mismo golpe como se enseñarían en una clase real,
+      en vez de por valoración/alfabético. Los que no lo tienen siguen
+      cayendo al criterio de siempre — no rompe nada de lo ya existente.
+      Nuevo comparador compartido `_ejOrdenGolpe()`, usado tanto en el
+      acordeón de Ejercicios como en el agrupado por golpe del 🛒 Carro.
+    · Aplicado a los 9 EJ reales de `voleas` (10 a 90, de estática a duelo
+      2v2). `sync_padel.py` ya lee `progresion:` del frontmatter.
+    · Auditoría de esta sesión: la cabecera del archivo (comentario de
+      arriba del todo) se había quedado en v0.237 mientras `APP_VERSION` y
+      el historial ya iban por v0.244 — desincronizados varias versiones.
+      No era una edición concurrente ni un conflicto de iCloud: revisado
+      `<script>`/`</script>`, llaves y funciones duplicadas, todo limpio
+      (`node --check` OK). Corregido para que cabecera y `APP_VERSION`
+      vuelvan a coincidir, como pide la convención del proyecto.
 
   v0.244.0 — El panel de editar, por delante del globo (2026-08)
     (sin migraciones nuevas)
@@ -4819,6 +4854,19 @@
     .ejcard-cod { font-family:ui-monospace,Menlo,monospace; font-size:9px; font-weight:700; color:var(--verde); background:var(--verde-suave); padding:1px 6px; border-radius:5px; }
     .ejcard-val { font-size:11px; color:var(--dorado); }
     @media (min-width:480px) { .grid-ejercicios { grid-template-columns:1fr 1fr 1fr; } }
+    /* v0.246 — Pantalla EJERCICIOS: tarjeta en FILA, miniatura al lado.
+       Va acotado a #lista-ejercicios para no tocar las mismas tarjetas
+       cuando se reutilizan en Planificación o en el resumen del día. */
+    #lista-ejercicios .grid-ejercicios { grid-template-columns:1fr; gap:8px; }
+    #lista-ejercicios .ejcard { display:flex; align-items:stretch; }
+    #lista-ejercicios .ejcard-thumb { width:132px; flex-shrink:0; aspect-ratio:16/10; }
+    #lista-ejercicios .ejcard-body { flex:1; min-width:0; padding:9px 12px; display:flex; flex-direction:column; justify-content:center; gap:2px; }
+    #lista-ejercicios .ejcard-titulo { font-size:13.5px; -webkit-line-clamp:3; }
+    #lista-ejercicios .ejcard-meta { margin-top:4px; }
+    #lista-ejercicios .ejcard-play { width:30px; height:30px; font-size:13px; }
+    /* Short (vertical): se amplía para que las barras negras salgan de la caja */
+    #lista-ejercicios .ejcard.vert .ejcard-img { transform:scale(1.85); }
+    @media (min-width:560px) { #lista-ejercicios .grid-ejercicios { grid-template-columns:1fr 1fr; } }
 
     /* ── VACÍO ── */
     .vacio { text-align:center; padding:2.5rem 1rem; color:var(--gris); }
@@ -7223,7 +7271,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.244.0';
+    var APP_VERSION = '0.246.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -15689,6 +15737,9 @@
         var g = ejFaceta(e, 'golpe') || '_';
         (por[g] = por[g] || []).push(e);
       });
+      // v0.236: dentro de cada golpe, orden pedagógico (progresion) en vez de
+      // solo alfabético — mismo criterio que el catálogo de Ejercicios.
+      Object.keys(por).forEach(function(k){ por[k].sort(_ejOrdenGolpe); });
       var orden = GOLPE_CANON.filter(function(g){ return por[g.key]; })
         .map(function(g){ return { key:g.key, label:g.label, icono:g.icono, ejs:por[g.key] }; });
       // Golpes que no están en el vocabulario canónico (por si acaso)
@@ -18135,6 +18186,21 @@
       return combo.slice().sort().join('+');
     }
 
+    // v0.236 — Orden pedagógico dentro de un mismo golpe (campo `progresion:`
+    // del vault, p.ej. 10/20/30…). Los que lo tienen van primero, en ese
+    // orden; los que no, caen al criterio de siempre (valoración, luego
+    // nombre) — así nada se rompe para golpes que aún no se han ordenado.
+    function _ejOrdenGolpe(a, b) {
+      var pa = ejFaceta(a, 'progresion'), pb = ejFaceta(b, 'progresion');
+      var na = (pa === '' || pa == null) ? null : parseInt(pa, 10);
+      var nb = (pb === '' || pb == null) ? null : parseInt(pb, 10);
+      if (na != null && nb != null && na !== nb) return na - nb;
+      if (na != null && nb == null) return -1;
+      if (na == null && nb != null) return 1;
+      var d = (b.valoracion || 0) - (a.valoracion || 0);
+      return d !== 0 ? d : (a.nombre || '').localeCompare(b.nombre || '');
+    }
+
     // Un EJ puede ser una progresión con varios vídeos (campo `videos:` del
     // vault) en vez de uno solo — p.ej. el mismo patrón con alimentación baja
     // y alta. Devuelve siempre un array; si no hay `videos`, cae a [ej.video].
@@ -18398,10 +18464,7 @@
         if (!grupoG.length) return;
 
         // Dentro de cada golpe: mejor valorados primero, luego alfabético.
-        grupoG.sort(function(a, b) {
-          var d = (b.valoracion || 0) - (a.valoracion || 0);
-          return d !== 0 ? d : (a.nombre || '').localeCompare(b.nombre || '');
-        });
+        grupoG.sort(_ejOrdenGolpe);
 
         var etiqueta = g === '_' ? '❓ Sin golpe' : (GOLPE_ICONO[g] + ' ' + GOLPE_LABEL[g]);
         var clave = 'g:' + g;   // prefijo para no chocar con el acordeón antiguo por tipo
@@ -18474,7 +18537,12 @@
       // reserva el marco 16:9 vacío (ni el ▶, que además sería mentira): la
       // tarjeta se queda con su título y ya. Con vídeo, la miniatura de
       // YouTube es 16:9 exacta, así que entra sin recortarse.
-      var h = '<div class="ejcard' + (thumb ? '' : ' ejcard-sinthumb') + '" onclick="verEjercicio(' + ej.id + ',\'' + origen + '\')">';
+      // v0.246: los Shorts son VERTICALES y YouTube devuelve su miniatura
+      // metida en un marco 16:9 con barras negras a los lados. Se marcan con
+      // la clase `vert` para poder ampliarlas y que las barras se salgan de
+      // la caja (solo en la pantalla de Ejercicios, ver CSS).
+      var esVert = /\/shorts\//i.test(String(ej.video || ''));
+      var h = '<div class="ejcard' + (thumb ? '' : ' ejcard-sinthumb') + (esVert ? ' vert' : '') + '" onclick="verEjercicio(' + ej.id + ',\'' + origen + '\')">';
       if (thumb) {
         h += '<div class="ejcard-thumb">' +
           '<img src="' + thumb + '" class="ejcard-img" alt="" loading="lazy" onerror="this.style.display=\'none\';this.parentNode.classList.add(\'sin-img\')">' +
