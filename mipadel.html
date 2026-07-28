@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.236.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.237.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,33 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.237.0 — Arriba, solo lo del nivel · adelantar trabajo bien hecho (2026-08)
+    (sin migraciones nuevas)
+    · ARRIBA SOLO SE VEN LOS DÍAS DE ESTE NIVEL. Si estás en Iniciación y no
+      tienes ningún grupo de Iniciación, no hay días que tocar: lo dice y te
+      remite a planificar abajo, en el curso. Antes salían los días de
+      cualquier franja, tuviera el nivel que tuviera.
+      (Red de seguridad: si NINGUNA franja tiene nivel asignado todavía, se
+      siguen viendo todas, para no dejar la pantalla en blanco.)
+    · SE RETIRAN los círculos de borde discontinuo de v0.236. Eran un error:
+      la comprobación «¿este día tiene algo planificado?» daba que sí para los
+      SIETE días de la semana, porque la sesión y el carro guardados a nivel
+      de semana los hereda cualquiera de sus días. En las semanas sin nada no
+      salía ninguno — de ahí que en unas semanas salieran todos y en otras
+      ninguno.
+    · FINES DE SEMANA FUERA. Al planificar una semana sin franjas, los días que
+      se ofrecen son de lunes a viernes, no los siete. Si el gestor configura
+      una clase en sábado, esa sí se respeta.
+    · ADELANTAR TRABAJO, como debe ser: si la semana no tiene ninguna franja de
+      ese nivel ya no se pregunta a qué día — se guarda como LA PRIMERA CLASE
+      DE LA SEMANA (colgada de su lunes). Y cuando el gestor pone las franjas,
+      esa planificación ATERRIZA SOLA en el primer día de clase de verdad de
+      esa semana. Una segunda clase de la misma semana se completa a mano, que
+      es lo suyo: la app no puede saber qué toca en la segunda sesión.
+      El aterrizaje es conservador: solo ocurre si el lunes no era día de clase,
+      si tenía algo de ese nivel y si la primera clase aún no tiene nada. Lo de
+      otros niveles que hubiera ese día no se toca.
 
   v0.236.0 — Fix del «¿qué día?» · adelantar trabajo se ve arriba (2026-08)
     (sin migraciones nuevas)
@@ -5288,8 +5315,6 @@
     .comp-circ { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;
       font-size:12.5px; font-weight:700; color:var(--azul); border:2px solid var(--azul); background:#fff;
       cursor:pointer; -webkit-tap-highlight-color:transparent; }
-    /* v0.235: día planificado por adelantado, aún sin clase configurada */
-    .comp-circ.suelto { border-style:dashed; border-color:#0891b2; color:#0e7490; }
     .comp-circ.marcada { background:var(--azul); color:#fff; }
     .comp-circ.festivo { border:1.5px dashed var(--borde); color:var(--gris); opacity:0.55; text-decoration:line-through; cursor:default; }
     /* v0.147: día sin clase marcado por el CLUB (gestor) — mismo lenguaje
@@ -7012,7 +7037,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.236.0';
+    var APP_VERSION = '0.237.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -14876,6 +14901,44 @@
     }
 
     // ══════════════════════════════════════════════════════════════
+    // v0.237 — ATERRIZAJE de lo planificado por adelantado
+    // ══════════════════════════════════════════════════════════════
+    // Cuando una semana no tiene franjas de un nivel, lo que se planifica se
+    // deja en el LUNES (que hace de «primera clase de la semana»). En cuanto
+    // el gestor pone las franjas, esa planificación tiene que aparecer en el
+    // primer día de clase de verdad. Eso es lo que hace esto, una sola vez y
+    // solo en ese caso concreto:
+    //   · la semana tiene ya días de clase de ese nivel,
+    //   · el lunes NO es uno de ellos pero tiene áreas marcadas de ese nivel,
+    //   · y el primer día de clase todavía no tiene ninguna.
+    // Una SEGUNDA clase de esa semana se completa a mano, que es lo suyo:
+    // la app no puede saber qué toca en la segunda sesión.
+    function _rutaAterrizarArea(p, nivel, w) {
+      var dias = _rutaDiasDeNivel(w, nivel);
+      if (!dias.length) return false;                       // aún no hay franjas
+      if (dias.some(function(d){ return d.fecha === w.lunISO; })) return false;   // el lunes ya es día de clase
+      var idsNivel = _compIdsNivel(p);
+      var enLunes = ((p.compDias && p.compDias[w.lunISO]) || []).filter(function(id){ return idsNivel[id]; });
+      if (!enLunes.length) return false;                    // nada adelantado
+      var destino = dias[0].fecha;
+      var yaEn = ((p.compDias && p.compDias[destino]) || []).filter(function(id){ return idsNivel[id]; });
+      if (yaEn.length) return false;                        // la primera clase ya tiene lo suyo
+      var arrD = (p.compDias[destino] || []).slice();
+      enLunes.forEach(function(id){ if (arrD.indexOf(id) < 0) arrD.push(id); });
+      p.compDias[destino] = arrD;
+      var resto = (p.compDias[w.lunISO] || []).filter(function(id){ return !idsNivel[id]; });
+      if (resto.length) p.compDias[w.lunISO] = resto; else delete p.compDias[w.lunISO];
+      return true;
+    }
+    // Pasa por las semanas de un mes y aterriza lo que haga falta.
+    function _rutaAterrizarMes(p, nivel, sems) {
+      var tocado = false;
+      (sems || []).forEach(function(w){ if (_rutaAterrizarArea(p, nivel, w)) tocado = true; });
+      if (tocado) _planGuardar(p);
+      return tocado;
+    }
+
+    // ══════════════════════════════════════════════════════════════
     // v0.229 — Y LA PLANIFICACIÓN ES DE UN DÍA, NO DE LA SEMANA
     // ══════════════════════════════════════════════════════════════
     // Un mismo grupo puede entrenar dos o tres días por semana, y cada día es
@@ -15112,10 +15175,19 @@
         mostrarPlanificacion(); _rutaModalRender();
         return;
       }
-      // v0.217: si la semana no tiene ningún día de clase configurado ya no se
-      // bloquea — se ofrecen sus 7 días para elegir. Planificar no depende de
-      // que la asistencia esté puesta (semanas viejas, franjas ya cerradas,
-      // periodos sin clases fijas…).
+      // v0.237 — ADELANTAR TRABAJO. Si la semana no tiene ninguna franja de
+      // este nivel, no se pregunta nada: el área se cuelga del LUNES de la
+      // semana, que es «la primera clase de la semana». Cuando el gestor ponga
+      // las franjas, esa planificación aterriza sola en el primer día de clase
+      // (ver _rutaAterrizarArea) y una segunda clase de esa semana se
+      // completa a mano, como quieres.
+      var reales = _rutaDiasDeNivel(w, _rutaModalNivel());
+      if (!reales.length) {
+        _compDiaMarcar(w.lunISO, areaId);
+        _rutaEligeDia = null; _rutaModalArea = areaId;
+        mostrarPlanificacion(); _rutaModalRender();
+        return;
+      }
       var dias = _rutaDiasElegibles(w);
       if (dias.length === 1) {
         _compDiaMarcar(dias[0].fecha, areaId);
@@ -15126,6 +15198,17 @@
       // Varios días reales esta semana: hay que elegir a cuál se aplica.
       _rutaEligeDia = areaId;
       _rutaModalRender();
+    }
+    // v0.237 — De las franjas que caen un día, las de un NIVEL. Si NINGUNA de
+    // ellas tiene nivel puesto todavía, valen todas (así nada deja de verse
+    // por no haber asignado niveles aún).
+    function _clasesDeNivelEnDia(clasesDia, nivel, fISO) {
+      var vivas = (clasesDia || []).filter(function(c){ return _claseEnFecha(c, fISO); });
+      if (!vivas.length) return [];
+      var conNivel = vivas.filter(function(c){ return !!c.nivel; });
+      if (!conNivel.length) return vivas;
+      var n = _rutaNivelSem(nivel);
+      return vivas.filter(function(c){ return c.nivel === n; });
     }
     // v0.224 — De los días con clase de una semana, los de las franjas de un
     // NIVEL. Si ninguna franja de esa semana tiene nivel puesto (todavía nadie
@@ -15145,8 +15228,10 @@
     function _rutaDiasElegibles(w) {
       var reales = _rutaDiasDeNivel(w, _rutaModalNivel());   // v0.224
       if (reales.length) return reales;
+      // v0.237: los fines de semana no hay clases, así que solo se ofrecen de
+      // lunes a viernes (antes salían los siete días).
       var out = [];
-      for (var i = 0; i < 7; i++) {
+      for (var i = 0; i < 5; i++) {
         var d = new Date(w.lun); d.setDate(w.lun.getDate() + i);
         out.push({ fecha: dateToISOLocal(d), dow: d.getDay(), libre: true });
       }
@@ -15768,6 +15853,9 @@
       //    a él: un clic menos y se ve de un vistazo dónde está cada cosa.
       //    Salen TODOS los meses, también los ya pasados, para poder repasar y
       //    corregir lo dado sin bajar al archivo.
+      // v0.237: antes de pintar, lo adelantado que ya tenga día de clase
+      // aterriza en la primera clase de su semana.
+      if (_rutaAterrizarMes(p, _compNivel(), sems)) p = leerPlan();
       var mesesCurso = _rutaMeses(sems);
       var mesSel = _rutaMesActivo(curso, mesesCurso);
       h += '<div class="ruta-mes-row">';
@@ -16814,30 +16902,18 @@
       // semana en columnas). Cada semana es una fila con los días de clase
       // que caen en ella, en orden Lunes→Domingo. El desplegable del día
       // abierto sigue yendo a ancho completo, debajo de todo.
-      // v0.235: además de los días con clase configurada, salen los días que
-      // YA TIENEN ALGO PLANIFICADO de este nivel — área marcada, sesión o
-      // carro. Así lo que adelantas abajo, en el formato del año (por ejemplo
-      // septiembre del curso que viene, cuando el gestor aún no ha puesto las
-      // franjas), se ve también aquí arriba. Cuando el gestor ponga los días
-      // de clase, aparecerán junto a lo que ya habías dejado planificado.
-      var _idsNivM = _compIdsNivel(p);
-      var _nivM    = _compNivel();
-      function _diaPlanificado(fISO) {
-        var marcado = ((p.compDias && p.compDias[fISO]) || []).some(function(id){ return _idsNivM[id]; });
-        if (marcado) return true;
-        var lunM = _rutaSemanaLibre(fISO).lunISO;
-        if ((_rutaLeeDia(p.rutaCarro, _nivM, fISO, lunM) || []).length) return true;
-        return _rutaSesArr(_rutaLeeDia(p.rutaSes, _nivM, fISO, lunM)).length > 0;
-      }
+      // v0.237: aquí arriba SOLO se ven los días con clase configurada DE ESTE
+      // NIVEL. Si el nivel no tiene ningún grupo, no hay días que tocar: se
+      // planifica abajo, en el curso. (En v0.236 se colaban además los días
+      // «con algo planificado», y como la sesión y el carro de una semana los
+      // hereda cualquiera de sus días, salían los siete con borde de puntos.)
+      var _nivM = _compNivel();
       var semanas = {};   // lunesISO → [fechaISO, ...]
-      var sueltos = {};   // fechas sin clase configurada, pero con algo planificado
       for (var d = 1; d <= ultimoDia; d++) {
         var dd  = new Date(y, m - 1, d);
         var dow = dd.getDay();
         var fD  = dateToISOLocal(dd);
-        var hayClase = !!(diasMap[dow] && diasMap[dow].length);
-        if (!hayClase && !_diaPlanificado(fD)) continue;   // ni clase ni nada planificado
-        if (!hayClase) sueltos[fD] = true;
+        if (!_clasesDeNivelEnDia(diasMap[dow], _nivM, fD).length) continue;
         var lun = new Date(dd);
         lun.setDate(lun.getDate() - ((dow + 6) % 7));          // lunes de esa semana
         var kL = dateToISOLocal(lun);
@@ -16869,22 +16945,15 @@
           var marcada = !bloq && nFilas > 0;
           var numDia  = parseInt(fISO.slice(8,10), 10);
           var dowF    = new Date(+fISO.slice(0,4), +fISO.slice(5,7)-1, +fISO.slice(8,10)).getDay();
-          // v0.235: un día SIN clase configurada pero con algo planificado se
-          // pinta con borde de puntos y sigue siendo clicable — es trabajo
-          // adelantado esperando a que el gestor ponga la franja.
-          var suelto = !!sueltos[fISO];
-          if (suelto) { dsc = false; festivo = false; bloq = false; activas++; if (nFilas) marcadas++; marcada = nFilas > 0; }
           var cls = 'comp-circ' + (dsc ? ' dsc' : (festivo ? ' festivo' : '')) +
-                    (marcada ? ' marcada' : '') + (suelto ? ' suelto' : '') +
-                    (fISO === hoyISO ? ' hoy' : '') +
+                    (marcada ? ' marcada' : '') + (fISO === hoyISO ? ' hoy' : '') +
                     // v0.148: el día que se está viendo queda resaltado
                     (fISO === compDiaAbierta ? ' abierta' : '');
           var onclick = bloq ? '' : (' onclick="compDiaAbrir(\'' + fISO + '\')"');
-          var titulo  = suelto ? ' title="Planificado — todavía sin clase configurada este día"'
-                      : (dsc ? ' title="Sin clase — lo marcó el club"'
+          var titulo  = dsc ? ' title="Sin clase — lo marcó el club"'
                       : (festivo ? ' title="Sin clase este día"'
                       : (marcada ? ' title="' + nFilas + ' fila(s) marcada(s) — toca para ver el resumen"'
-                                 : ' title="Toca para marcar lo trabajado"')));
+                                 : ' title="Toca para marcar lo trabajado"'));
           return '<div class="comp-diacol">' +
             '<span class="comp-diacol-dow">' + DIAS_NOMBRES_A[dowF].slice(0,3) + '</span>' +
             '<div class="' + cls + '"' + onclick + titulo + '>' + numDia + '</div>' +
@@ -16913,8 +16982,12 @@
       });
 
       if (!lunes.length) {
-        h += '<div class="comp-picker-vacio" style="padding:0.5rem 0 1rem;text-align:center;">Sin clases configuradas este mes.<br>' +
-             '<span class="ruta-panel-nota">Puedes adelantar trabajo abajo, en el curso: aparecerá aquí.</span></div>';
+        // v0.237: sin grupos de este nivel no hay nada que tocar aquí arriba.
+        // Se planifica abajo, semana a semana, y cuando el gestor ponga las
+        // franjas la primera clase de cada semana ya llega preparada.
+        h += '<div class="comp-picker-vacio" style="padding:0.5rem 0 1rem;text-align:center;">Sin clases de ' +
+             _gEsc(planNivelLabel(_nivM)) + ' este mes.<br>' +
+             '<span class="ruta-panel-nota">Planifica abajo, en el curso: cuando el gestor ponga las franjas de este nivel, la primera clase de cada semana llegará ya preparada.</span></div>';
       } else {
         h += '<div class="comp-sem-cols">' + colsHTML + '</div>';
         if (abiertoHTML) h += '<div class="comp-dia-abierto">' + abiertoHTML + '</div>';
