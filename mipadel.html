@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.235.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.236.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,26 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.236.0 — Fix del «¿qué día?» · adelantar trabajo se ve arriba (2026-08)
+    (sin migraciones nuevas)
+    · FIX — al planificar una semana SIN clases configuradas (por ejemplo
+      septiembre del curso que viene) se podía elegir el ejercicio del carro,
+      pero al pulsar un bloque del área de trabajo no pasaba nada. El motivo:
+      el selector «¿Qué día de esta semana?» se pintaba dentro de
+      .ruta-area-inline, que el CSS oculta a partir de 1040 px (ahí las
+      sesiones salen en su propia columna). En el móvil funcionaba; en el
+      ordenador, no. Ahora tiene su propia caja (.ruta-area-dia) y se ve
+      siempre.
+    · Los CÍRCULOS DEL MES enseñan ahora también los días que ya tienen algo
+      planificado de ese nivel aunque todavía NO haya clase configurada:
+      área marcada, sesión o carro. Salen con el borde de puntos y se tocan
+      igual, para seguir editándolos.
+      Así, lo que adelantas abajo en el formato del curso se ve arriba desde
+      el primer momento, y cuando el gestor ponga las franjas esos días
+      aparecerán junto a lo que ya tenías preparado.
+    · Un mes sin clases configuradas ya no dice solo «Sin clases configuradas»:
+      explica que puedes adelantar trabajo abajo y que aparecerá ahí.
 
   v0.235.0 — Un EJ puede ser una progresión de varios vídeos (2026-07)
     (sin migraciones nuevas: `videos` viaja dentro de `facetas`, jsonb ya
@@ -5268,6 +5288,8 @@
     .comp-circ { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;
       font-size:12.5px; font-weight:700; color:var(--azul); border:2px solid var(--azul); background:#fff;
       cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    /* v0.235: día planificado por adelantado, aún sin clase configurada */
+    .comp-circ.suelto { border-style:dashed; border-color:#0891b2; color:#0e7490; }
     .comp-circ.marcada { background:var(--azul); color:#fff; }
     .comp-circ.festivo { border:1.5px dashed var(--borde); color:var(--gris); opacity:0.55; text-decoration:line-through; cursor:default; }
     /* v0.147: día sin clase marcado por el CLUB (gestor) — mismo lenguaje
@@ -5552,6 +5574,8 @@
        debajo (acordeón). La columna de sesiones de la derecha se oculta,
        porque en pantalla estrecha esa segunda columna quedaba lejos. */
     .ruta-area-inline { padding:2px 0 10px 10px; margin-bottom:6px; border-left:2px solid #cffafe; }
+    /* v0.235: el «¿qué día?» se ve SIEMPRE, también en pantalla ancha */
+    .ruta-area-dia { padding:4px 0 8px 10px; margin-bottom:6px; border-left:2px solid #0891b2; }
     /* ORDENADOR: trimestres en fila de 4, meses en columnas, panel centrado
        en dos columnas (áreas | sesiones). Es donde se planifica de verdad. */
     @media (min-width:760px){
@@ -6988,7 +7012,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.235.0';
+    var APP_VERSION = '0.236.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -15598,7 +15622,11 @@
               // días, para poder planificar igual.
               var elegibles = _rutaDiasElegibles(w);
               var sinClases = elegibles.length && elegibles[0].libre;
-              h += '<div class="ruta-area-inline"><div class="ruta-panel-paso">¿Qué día de esta semana?' +
+              // v0.235 FIX: iba dentro de .ruta-area-inline, que el CSS oculta
+              // a partir de 1040 px (ahí las sesiones salen en su columna). En
+              // el ordenador pulsabas el bloque y no pasaba nada. Ahora tiene
+              // su propia caja, que se ve siempre.
+              h += '<div class="ruta-area-dia"><div class="ruta-panel-paso">¿Qué día de esta semana?' +
                    (sinClases ? '<span class="ruta-panel-nota"> · sin clases configuradas</span>' : '') + '</div><div class="ruta-dia-chips">';
               elegibles.forEach(function(d){
                 h += '<button type="button" class="ruta-dia-chip" onclick="rutaElegirDia(' + idx + ',\'' + a.id + '\',\'' + d.fecha + '\')">' +
@@ -16786,15 +16814,34 @@
       // semana en columnas). Cada semana es una fila con los días de clase
       // que caen en ella, en orden Lunes→Domingo. El desplegable del día
       // abierto sigue yendo a ancho completo, debajo de todo.
+      // v0.235: además de los días con clase configurada, salen los días que
+      // YA TIENEN ALGO PLANIFICADO de este nivel — área marcada, sesión o
+      // carro. Así lo que adelantas abajo, en el formato del año (por ejemplo
+      // septiembre del curso que viene, cuando el gestor aún no ha puesto las
+      // franjas), se ve también aquí arriba. Cuando el gestor ponga los días
+      // de clase, aparecerán junto a lo que ya habías dejado planificado.
+      var _idsNivM = _compIdsNivel(p);
+      var _nivM    = _compNivel();
+      function _diaPlanificado(fISO) {
+        var marcado = ((p.compDias && p.compDias[fISO]) || []).some(function(id){ return _idsNivM[id]; });
+        if (marcado) return true;
+        var lunM = _rutaSemanaLibre(fISO).lunISO;
+        if ((_rutaLeeDia(p.rutaCarro, _nivM, fISO, lunM) || []).length) return true;
+        return _rutaSesArr(_rutaLeeDia(p.rutaSes, _nivM, fISO, lunM)).length > 0;
+      }
       var semanas = {};   // lunesISO → [fechaISO, ...]
+      var sueltos = {};   // fechas sin clase configurada, pero con algo planificado
       for (var d = 1; d <= ultimoDia; d++) {
         var dd  = new Date(y, m - 1, d);
         var dow = dd.getDay();
-        if (!diasMap[dow] || !diasMap[dow].length) continue;   // ese día nunca hay clase
+        var fD  = dateToISOLocal(dd);
+        var hayClase = !!(diasMap[dow] && diasMap[dow].length);
+        if (!hayClase && !_diaPlanificado(fD)) continue;   // ni clase ni nada planificado
+        if (!hayClase) sueltos[fD] = true;
         var lun = new Date(dd);
         lun.setDate(lun.getDate() - ((dow + 6) % 7));          // lunes de esa semana
         var kL = dateToISOLocal(lun);
-        (semanas[kL] = semanas[kL] || []).push(dateToISOLocal(dd));
+        (semanas[kL] = semanas[kL] || []).push(fD);
       }
       var lunes = Object.keys(semanas).sort();
       // v0.152: solo cuentan como marcadas las filas del NIVEL activo, para
@@ -16822,15 +16869,22 @@
           var marcada = !bloq && nFilas > 0;
           var numDia  = parseInt(fISO.slice(8,10), 10);
           var dowF    = new Date(+fISO.slice(0,4), +fISO.slice(5,7)-1, +fISO.slice(8,10)).getDay();
+          // v0.235: un día SIN clase configurada pero con algo planificado se
+          // pinta con borde de puntos y sigue siendo clicable — es trabajo
+          // adelantado esperando a que el gestor ponga la franja.
+          var suelto = !!sueltos[fISO];
+          if (suelto) { dsc = false; festivo = false; bloq = false; activas++; if (nFilas) marcadas++; marcada = nFilas > 0; }
           var cls = 'comp-circ' + (dsc ? ' dsc' : (festivo ? ' festivo' : '')) +
-                    (marcada ? ' marcada' : '') + (fISO === hoyISO ? ' hoy' : '') +
+                    (marcada ? ' marcada' : '') + (suelto ? ' suelto' : '') +
+                    (fISO === hoyISO ? ' hoy' : '') +
                     // v0.148: el día que se está viendo queda resaltado
                     (fISO === compDiaAbierta ? ' abierta' : '');
           var onclick = bloq ? '' : (' onclick="compDiaAbrir(\'' + fISO + '\')"');
-          var titulo  = dsc ? ' title="Sin clase — lo marcó el club"'
+          var titulo  = suelto ? ' title="Planificado — todavía sin clase configurada este día"'
+                      : (dsc ? ' title="Sin clase — lo marcó el club"'
                       : (festivo ? ' title="Sin clase este día"'
                       : (marcada ? ' title="' + nFilas + ' fila(s) marcada(s) — toca para ver el resumen"'
-                                 : ' title="Toca para marcar lo trabajado"'));
+                                 : ' title="Toca para marcar lo trabajado"')));
           return '<div class="comp-diacol">' +
             '<span class="comp-diacol-dow">' + DIAS_NOMBRES_A[dowF].slice(0,3) + '</span>' +
             '<div class="' + cls + '"' + onclick + titulo + '>' + numDia + '</div>' +
@@ -16859,7 +16913,8 @@
       });
 
       if (!lunes.length) {
-        h += '<div class="comp-picker-vacio" style="padding:0.5rem 0 1rem;text-align:center;">Sin clases configuradas.</div>';
+        h += '<div class="comp-picker-vacio" style="padding:0.5rem 0 1rem;text-align:center;">Sin clases configuradas este mes.<br>' +
+             '<span class="ruta-panel-nota">Puedes adelantar trabajo abajo, en el curso: aparecerá aquí.</span></div>';
       } else {
         h += '<div class="comp-sem-cols">' + colsHTML + '</div>';
         if (abiertoHTML) h += '<div class="comp-dia-abierto">' + abiertoHTML + '</div>';
