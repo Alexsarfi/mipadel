@@ -39,6 +39,43 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.239.0 — El panel de planificar, a mano y plegable (2026-08)
+    (sin migraciones nuevas)
+    · LOS GOLPES, ARRIBA. En el carro, los botones de golpe (volea, bandeja,
+      globo…) pasan a la primera línea, encima de los ejercicios que ya has
+      metido: primero decides «hoy toca bandeja» y luego ves lo que llevas.
+      Antes quedaban enterrados debajo de las fichas.
+    · LOS EJERCICIOS ELEGIDOS SE MINIMIZAN. Una barra «En el carro (2)» con su
+      galón: la pulsas y las fichas se recogen para seguir buscando sin tener
+      medio panel ocupado. El número se sigue viendo plegado.
+    · SE PLIEGAN LAS DOS PARTES. Pulsando el título «1 · Carro» o
+      «2 · Área de trabajo» se cierra esa parte entera. En el móvil se puede
+      trabajar una y dejar la otra recogida.
+    · LO QUE LLEVAS ELEGIDO, ARRIBA DEL TODO. Justo debajo de la cabecera del
+      panel (donde pone la semana o el día) hay ahora una franja con el carro
+      y el área de trabajo de esa clase, en chips. Ya no hay que bajar a las
+      columnas para saber qué tienes montado.
+    · ✓ PARA CONFIRMAR LA CLASE, al lado de la ✕. Todo se guarda al tocarlo,
+      pero faltaba el gesto de «esta clase ya está»: cierra el panel, refresca
+      el tablero y avisa con lo que queda montado (🛒 y 🎯). La ✕ sigue
+      cerrando sin más.
+
+  v0.238.0 — La sesión, debajo de su bloque también en el día (2026-08)
+    (sin migraciones nuevas)
+    · AL PINCHAR UN DÍA en Planificación, la sesión elegida ya NO aparece
+      suelta encima, debajo del título «Área de trabajo». Ahora sale DEBAJO
+      del botón de su bloque: pulsas «Presión en la red en pareja» y ahí
+      tienes su sesión con la miniatura, y luego sus vídeos. Es exactamente el
+      mismo comportamiento que el globo de Asistencia desde la v0.228.
+      Si una sesión no cuelga de ninguno de los bloques marcados no se pierde:
+      se queda al final, bajo «Otras sesiones de la semana».
+    · FUERA EL TÍTULO REPETIDO. Se quita la línea en negrita «área · bloque»
+      que salía cada vez que pulsabas un apartado: ya lo pone el propio botón
+      que acabas de pulsar.
+    · ARREGLADO DE PASO: esta vista buscaba los ejercicios del bloque siempre
+      en el catálogo de Competición, aunque estuvieras en Iniciación o en
+      Avanzado. Ahora usa el nivel en el que estás.
+
   v0.237.0 — Arriba, solo lo del nivel · adelantar trabajo bien hecho (2026-08)
     (sin migraciones nuevas)
     · ARRIBA SOLO SE VEN LOS DÍAS DE ESTE NIVEL. Si estás en Iniciación y no
@@ -5456,6 +5493,38 @@
     .comp-clase-carro .ruta-parte-hdr { background:#cffafe; color:#0e7490; }
     .ruta-modal-carro .ruta-parte-hdr b,
     .comp-clase-carro .ruta-parte-hdr b { color:#0e7490; }
+    /* v0.239 — Las cabeceras de las dos partes son BOTONES: se pulsa el
+       título y la parte entera se pliega. El galón (chevron) dice si está
+       abierta o cerrada. */
+    button.ruta-parte-hdr { width:100%; box-sizing:border-box; font-family:inherit; text-align:left;
+      border:none; cursor:pointer; }
+    button.ruta-parte-hdr:hover { filter:brightness(.97); }
+    .ruta-parte-chev { display:inline-block; font-size:11px; opacity:.65; width:10px;
+      transition:transform .12s ease; }
+    .ruta-parte-chev.abierto { transform:rotate(90deg); }
+    /* v0.239 — Los ejercicios ya metidos en el carro, con su propia barra
+       plegable: en pista molestan si ocupan media pantalla. */
+    .ruta-carro-selhdr { display:flex; align-items:center; gap:6px; width:100%; box-sizing:border-box;
+      text-align:left; font-family:inherit; font-size:10.5px; font-weight:800; color:#0e7490;
+      text-transform:uppercase; letter-spacing:.04em; margin:2px 0 7px; padding:5px 7px;
+      border:none; border-radius:8px; background:#ecfeff; cursor:pointer; }
+    .ruta-carro-selhdr .ruta-area-n { margin-left:auto; }
+    /* v0.239 — Debajo de la cabecera del panel: lo que llevas elegido para
+       esta clase (carro + área de trabajo), sin tener que bajar a mirarlo. */
+    .ruta-modal-elegido { display:flex; flex-direction:column; gap:8px; margin:0 0 14px;
+      padding:10px 11px; border-radius:12px; background:var(--arena); }
+    .ruta-eleg-fila { display:flex; align-items:flex-start; gap:8px; flex-wrap:wrap; }
+    .ruta-eleg-tit { flex:0 0 auto; font-size:10.5px; font-weight:800; text-transform:uppercase;
+      letter-spacing:.04em; color:var(--gris); padding-top:3px; }
+    .ruta-eleg-chip { display:inline-flex; align-items:center; font-size:11.5px; font-weight:700;
+      padding:3px 9px; border-radius:999px; background:var(--blanco); border:1px solid var(--borde);
+      color:var(--texto); }
+    .ruta-eleg-fila.carro .ruta-eleg-chip { background:#ecfeff; border-color:#a5f3fc; color:#0e7490; }
+    .ruta-eleg-nada { font-size:11.5px; color:var(--gris); font-style:italic; }
+    /* v0.239 — El ✓ de la cabecera: guardar y cerrar */
+    .ruta-modal-hdr-acc { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+    .ruta-modal-ok { background:#dcfce7 !important; color:#15803d !important; }
+    .ruta-modal-ok:active { background:#bbf7d0 !important; }
     .ruta-trabajo-cols { display:flex; flex-direction:column; gap:14px; min-width:0; }
     .ruta-modal-vacio { text-align:center; color:var(--gris); font-size:13px; line-height:1.7; padding:22px 10px; }
     /* v0.207 — resumen de lo ya marcado en Mensual esta semana (chips con
@@ -7037,7 +7106,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.237.0';
+    var APP_VERSION = '0.239.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -15106,6 +15175,7 @@
       _rutaModalNivelSel = null;   // v0.224: el nivel que se esté mirando
       _rutaModalDiaSel = null;     // v0.229: el día lo decide la semana
       _rutaApAbierto = {};         // v0.223: los apartados, plegados al entrar
+      _rutaCarroSelMin = false; _rutaParteMin = { carro:false, area:false };   // v0.239
       _rutaModalRender();
     }
     // v0.208 — Abre el mismo panel para un DÍA concreto de Mensual (en vez
@@ -15148,7 +15218,27 @@
       _rutaModalIdx = w ? w.idx : -1;
       _rutaModalArea = null; _rutaEligeDia = null;
       _rutaApAbierto = {};   // v0.223: los apartados, plegados al entrar
+      _rutaCarroSelMin = false; _rutaParteMin = { carro:false, area:false };   // v0.239
       _rutaModalRender();
+    }
+    // v0.239 — Confirmar la clase. No hay nada que «enviar» (todo se guarda
+    // al tocarlo), así que esto cierra el panel, refresca el tablero y avisa
+    // con lo que queda montado — el gesto de «esta clase ya está».
+    function rutaConfirmarClase() {
+      var idx = _rutaModalIdx;
+      var msg = 'Clase guardada';
+      if (idx !== null) {
+        var w = _rutaSemanaActual(idx);
+        if (w) {
+          var p = leerPlan(), niv = _rutaModalNivel(), dia = _rutaModalDia(w);
+          var nC = (_rutaLeeDia(p.rutaCarro, niv, dia, w.lunISO) || []).length;
+          var nS = _rutaSesArr(_rutaLeeDia(p.rutaSes, niv, dia, w.lunISO)).length;
+          msg = 'Clase guardada · 🛒 ' + nC + ' · 🎯 ' + nS;
+        }
+      }
+      rutaCerrarModal();
+      mostrarPlanificacion();
+      planToast(msg);
     }
     function rutaCerrarModal() {
       _rutaModalIdx = null; _rutaModalArea = null; _rutaEligeDia = null;
@@ -15326,8 +15416,8 @@
     // Así no se rehace el bloque entero y no se pierde lo escrito en el
     // buscador ni salta el scroll al marcar un ejercicio detrás de otro.
     function _rutaCarroRefrescar(idx, arr, ejId) {
-      var cont = document.getElementById('ruta-carro-sel');
-      if (cont) cont.innerHTML = _rutaCarroSelHTML(idx, arr);
+      var cont = document.getElementById('ruta-carro-selwrap');
+      if (cont) cont.innerHTML = _rutaCarroSelWrapHTML(idx, arr);
       var n = document.getElementById('ruta-carro-n');
       if (n) n.textContent = arr.length ? arr.length : '—';
       var fila = document.getElementById('carro-it-' + ejId);
@@ -15394,6 +15484,19 @@
       '</div>';
     }
     // Los ejercicios ya metidos en el carro, encima de los botones de golpe.
+    // v0.239 — Cabecera plegable + fichas de lo que ya está en el carro.
+    function _rutaCarroSelWrapHTML(idx, arr) {
+      var h = '';
+      if (arr.length) {
+        h += '<button type="button" class="ruta-carro-selhdr" onclick="rutaCarroSelMin(' + idx + ')" ' +
+             'title="Plegar / desplegar los ejercicios elegidos">' +
+             '<span class="ruta-parte-chev' + (_rutaCarroSelMin ? '' : ' abierto') + '">›</span>' +
+             'En el carro<span class="ruta-area-n">' + arr.length + '</span></button>';
+      }
+      h += '<div id="ruta-carro-sel" class="ruta-carro-sel">' +
+           (_rutaCarroSelMin && arr.length ? '' : _rutaCarroSelHTML(idx, arr)) + '</div>';
+      return h;
+    }
     function _rutaCarroSelHTML(idx, arr) {
       if (!arr.length) return '<div class="ruta-panel-nota">Todavía no hay ningún ejercicio en el carro.</div>';
       var mapEj = _ejsById(), h = '';
@@ -15412,6 +15515,17 @@
     // El botón «＋» trae de vuelta los demás sin cerrar lo que ya hay abierto.
     var _rutaCarroGolpes = [];   // golpes abiertos
     var _rutaCarroMas    = false; // enseñar también los no elegidos
+    // v0.239 — Plegados: los ejercicios ya elegidos del carro, y cada una de
+    // las dos partes de la clase (se pliegan pulsando su título).
+    var _rutaCarroSelMin = false;
+    var _rutaParteMin    = { carro:false, area:false };
+    function rutaCarroSelMin(idx) {
+      _rutaCarroSelMin = !_rutaCarroSelMin;
+      var cont = document.getElementById('ruta-carro-selwrap');
+      if (cont) cont.innerHTML = _rutaCarroSelWrapHTML(idx, _rutaCarroDe(_rutaSemanaActual(idx)));
+      else _rutaCarroPintar(idx);
+    }
+    function rutaParteMin(cual) { _rutaParteMin[cual] = !_rutaParteMin[cual]; _rutaModalRender(); }
     function rutaCarroGolpe(k, idx) {
       var i = _rutaCarroGolpes.indexOf(k);
       if (i >= 0) _rutaCarroGolpes.splice(i, 1); else _rutaCarroGolpes.push(k);
@@ -15462,29 +15576,44 @@
       var hayAbiertos = abiertos.length > 0;
 
       var h = '<div class="ruta-carro">';
-      h += '<div class="ruta-parte-hdr">🛒 <b>1 · Carro</b><span>primera parte</span>' +
-           '<span class="ruta-area-n" id="ruta-carro-n">' + (arr.length || '—') + '</span></div>';
-      h += '<div id="ruta-carro-sel" class="ruta-carro-sel">' + _rutaCarroSelHTML(idx, arr) + '</div>';
+      // v0.239 — La cabecera es un botón: se pulsa y se pliega el carro entero.
+      h += '<button type="button" class="ruta-parte-hdr" onclick="rutaParteMin(\'carro\')" ' +
+           'title="Plegar / desplegar el carro">' +
+           '<span class="ruta-parte-chev' + (_rutaParteMin.carro ? '' : ' abierto') + '">›</span>' +
+           '🛒 <b>1 · Carro</b><span>primera parte</span>' +
+           '<span class="ruta-area-n" id="ruta-carro-n">' + (arr.length || '—') + '</span></button>';
+      if (_rutaParteMin.carro) { h += '</div>'; return h; }
+
+      // v0.239 — Los GOLPES van ARRIBA del todo, encima de los ejercicios ya
+      // elegidos: primero decides «hoy toca bandeja» y luego ves lo que llevas.
+      // (Hasta v0.238 los botones de golpe quedaban enterrados debajo.)
+      if (ejs.length) {
+        // v0.219 — Con algún golpe abierto, los demás se esconden (menos ruido)
+        // y queda un ＋ para traerlos de vuelta y abrir otro más.
+        var ocultos = grupos.length - abiertos.length;
+        h += '<div class="ruta-carro-golpes">';
+        grupos.forEach(function(g){
+          var on = abiertos.indexOf(g.key) >= 0;
+          if (hayAbiertos && !on && !_rutaCarroMas) return;
+          h += '<button type="button" class="ruta-carro-g' + (on ? ' on' : '') + '" onclick="rutaCarroGolpe(\'' + g.key + '\',' + idx + ')">' +
+            g.icono + ' ' + _gEsc(g.label) + ' <b>' + g.ejs.length + '</b></button>';
+        });
+        if (hayAbiertos && ocultos > 0)
+          h += '<button type="button" class="ruta-carro-g mas" onclick="rutaCarroMas(' + idx + ')">' +
+               (_rutaCarroMas ? '− menos' : '＋ ' + ocultos + ' más') + '</button>';
+        h += '</div>';
+      }
+
+      // v0.239 — Los ejercicios YA elegidos, con su barra para minimizarlos:
+      // cuando el carro está montado ocupan mucho y estorban para seguir
+      // buscando. El número sigue viéndose plegado.
+      h += '<div id="ruta-carro-selwrap">' + _rutaCarroSelWrapHTML(idx, arr) + '</div>';
+
       if (!ejs.length) {
         h += '<div class="ruta-panel-nota">Aún no tienes ejercicios en el catálogo.</div>';
         h += '</div>';
         return h;
       }
-
-      // v0.219 — Botones de golpe. Con alguno abierto, los demás se esconden
-      // (menos ruido) y queda un ＋ para traerlos de vuelta y abrir otro más.
-      var ocultos = grupos.length - abiertos.length;
-      h += '<div class="ruta-carro-golpes">';
-      grupos.forEach(function(g){
-        var on = abiertos.indexOf(g.key) >= 0;
-        if (hayAbiertos && !on && !_rutaCarroMas) return;
-        h += '<button type="button" class="ruta-carro-g' + (on ? ' on' : '') + '" onclick="rutaCarroGolpe(\'' + g.key + '\',' + idx + ')">' +
-          g.icono + ' ' + _gEsc(g.label) + ' <b>' + g.ejs.length + '</b></button>';
-      });
-      if (hayAbiertos && ocultos > 0)
-        h += '<button type="button" class="ruta-carro-g mas" onclick="rutaCarroMas(' + idx + ')">' +
-             (_rutaCarroMas ? '− menos' : '＋ ' + ocultos + ' más') + '</button>';
-      h += '</div>';
 
       if (!hayAbiertos) {
         h += '<div class="ruta-panel-nota">Elige un golpe para ver sus ejercicios. Puedes abrir varios.</div>';
@@ -15620,7 +15749,11 @@
       h += '<div class="ruta-modal-hdr">' +
         '<div><div class="ruta-modal-tit">' + tit + '</div>' +
         '<div class="ruta-modal-sub">' + sub + '</div></div>' +
-        '<button class="plan-modal-x" onclick="rutaCerrarModal()" aria-label="Cerrar">✕</button></div>';
+        '<div class="ruta-modal-hdr-acc">' +
+        // v0.239 — El ✓ confirma la clase: todo se guarda al momento, pero
+        // hacía falta un gesto que diga «ya está» y te devuelva al tablero.
+        '<button class="plan-modal-x ruta-modal-ok" onclick="rutaConfirmarClase()" title="Guardar la clase y cerrar" aria-label="Guardar la clase y cerrar">✓</button>' +
+        '<button class="plan-modal-x" onclick="rutaCerrarModal()" aria-label="Cerrar">✕</button></div></div>';
 
       // v0.229 — El carro y las sesiones son de un DÍA. Si la semana tiene
       // varios días de clase de este nivel (mismo grupo, varios días), aquí se
@@ -15656,6 +15789,25 @@
         h += '</div>';
       }
 
+      // ── v0.239 — LO QUE LLEVAS ELEGIDO PARA ESTA CLASE, arriba del todo:
+      //    el carro y el área de trabajo de este día, sin bajar a buscarlo.
+      var mapEjEl = _ejsById(), sesTodasEl = leerClases();
+      h += '<div class="ruta-modal-elegido">';
+      h += '<div class="ruta-eleg-fila carro"><span class="ruta-eleg-tit">🛒 Carro</span>';
+      if (!wd.carro.length) h += '<span class="ruta-eleg-nada">nada elegido todavía</span>';
+      else wd.carro.forEach(function(id){
+        var e = mapEjEl[id];
+        h += '<span class="ruta-eleg-chip">' + _gEsc(e ? (e.nombre || ('Ejercicio ' + id)) : ('Ejercicio ' + id)) + '</span>';
+      });
+      h += '</div>';
+      h += '<div class="ruta-eleg-fila"><span class="ruta-eleg-tit">🎯 Área</span>';
+      if (!wd.sesiones.length) h += '<span class="ruta-eleg-nada">nada elegido todavía</span>';
+      else wd.sesiones.forEach(function(id){
+        var c = sesTodasEl.filter(function(x){ return x.id === id; })[0];
+        h += '<span class="ruta-eleg-chip">' + _gEsc(c ? (c.nombre || c.fecha || ('Sesión ' + id)) : ('Sesión ' + id)) + '</span>';
+      });
+      h += '</div></div>';
+
       h += '<div class="ruta-modal-cols">';
 
       // ── v0.218 — COLUMNA IZQUIERDA: el CARRO (primera parte de la clase),
@@ -15669,8 +15821,19 @@
       //    aquí debajo: repetía lo que ya se ve marcado (✓) en la lista de
       //    sesiones del bloque, y en la tarjeta de la semana del tablero.
       h += '<div class="ruta-modal-trabajo">';
-      h += '<div class="ruta-parte-hdr">🎯 <b>2 · Área de trabajo</b><span>segunda parte</span>' +
-           (wd.sesiones.length ? '<span class="ruta-area-n">' + wd.sesiones.length + '</span>' : '') + '</div>';
+      // v0.239 — Cabecera-botón: se pulsa el título y se pliega toda la parte.
+      h += '<button type="button" class="ruta-parte-hdr" onclick="rutaParteMin(\'area\')" ' +
+           'title="Plegar / desplegar el área de trabajo">' +
+           '<span class="ruta-parte-chev' + (_rutaParteMin.area ? '' : ' abierto') + '">›</span>' +
+           '🎯 <b>2 · Área de trabajo</b><span>segunda parte</span>' +
+           (wd.sesiones.length ? '<span class="ruta-area-n">' + wd.sesiones.length + '</span>' : '') + '</button>';
+      if (_rutaParteMin.area) {
+        h += '</div></div>';   // /trabajo /cols
+        if (wd.sesiones.length) h += '<button type="button" class="ruta-panel-borrar" onclick="rutaBorrarSemana(' + idx + ')">🗑️ Quitar las sesiones de esta clase</button>';
+        h += '</div>';
+        ov.innerHTML = h; ov.style.display = 'flex';
+        return;
+      }
       h += '<div class="ruta-trabajo-cols">';
       h += '<div class="ruta-modal-areas">';
       if (!areas.length) {
@@ -16213,20 +16376,19 @@
       // COLUMNA 2 · Área de trabajo
       h += '<div class="comp-clase-parte comp-clase-area">';
       h += '<div class="ruta-parte-hdr">🎯 <b>Área de trabajo</b><span>segunda parte</span></div>';
-      // Las sesiones elegidas para la semana, arriba del todo
-      if (sesIds.length) {
-        var todasSesR = leerClases();
-        h += '<div class="ruta-ses-elegidas">';
-        sesIds.forEach(function(id){
-          var s = todasSesR.filter(function(c){ return c.id === id; })[0];
-          var th = s ? _rutaSesThumb(s) : null;
-          h += '<div class="ruta-ses-eleg' + (s ? ' clicable' : '') + '"' +
-            (s ? ' onclick="verSesion(' + s.id + ',\'planif\')"' : '') + '>' +
-            '<span class="ruta-ses-thumb">' + (th ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="ruta-ses-noimg">🎾</span>') + '</span>' +
-            '<span class="ruta-ses-nom">' + _gEsc(s ? (s.nombre || s.fecha || ('Sesión ' + id)) : ('Sesión ' + id)) + '</span></div>';
-        });
-        h += '</div>';
+      // v0.238 — Cada sesión va DEBAJO de la pestaña de su bloque (igual que
+      // en el globo de Asistencia desde v0.228), no suelta encima de todo.
+      var todasSesR = leerClases();
+      function _sesFichaDia(id) {
+        var s = todasSesR.filter(function(c){ return c.id === id; })[0];
+        var th = s ? _rutaSesThumb(s) : null;
+        return '<div class="ruta-ses-eleg' + (s ? ' clicable' : '') + '"' +
+          (s ? ' onclick="verSesion(' + s.id + ',\'planif\')"' : '') + '>' +
+          '<span class="ruta-ses-thumb">' + (th ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="ruta-ses-noimg">🎾</span>') + '</span>' +
+          '<span class="ruta-ses-nom">' + _gEsc(s ? (s.nombre || s.fecha || ('Sesión ' + id)) : ('Sesión ' + id)) + '</span></div>';
       }
+      var sesPorAreaD = _rutaSesPorArea(todas);
+      var sesColocadasD = {};
       if (!filas.length) {
         h += '<div class="comp-picker-vacio">Nada marcado todavía.</div>';
       } else {
@@ -16244,10 +16406,19 @@
           });
           h += '</div>';
         }
+        // Una sesión que cuelgue de CUALQUIER bloque marcado ya tiene su sitio
+        // (en la pestaña de ese bloque), aunque ahora no sea la abierta.
+        filas.forEach(function(f0){
+          (sesPorAreaD[f0.id] || []).forEach(function(c){ if (sesIds.indexOf(c.id) >= 0) sesColocadasD[c.id] = true; });
+        });
+        var idsDeSelD = (sesPorAreaD[selId] || []).map(function(c){ return c.id; });
+        sesIds.filter(function(id){ return idsDeSelD.indexOf(id) >= 0; })
+              .forEach(function(id){ h += _sesFichaDia(id); });
         [filas.filter(function(f){ return f.id === selId; })[0]].forEach(function(f){
+          // v0.238: fuera el título en negrita «apartado · bloque»: es lo mismo
+          // que ya pone la pestaña que acabas de pulsar.
           h += '<div class="comp-resumen-fila">';
-          h += '<div class="comp-resumen-fila-tit">' + f.apartado + ' · ' + f.t + '</div>';
-          var ejs = _planEjerciciosDeBloque('competicion', { ejInc: f.ejInc || [] });
+          var ejs = _planEjerciciosDeBloque(nivDia, { ejInc: f.ejInc || [] });
           if (ejs.length) {
             // v0.133: en el resumen del día las miniaturas van en UNA sola
             // línea (nunca dos), repartiéndose el ancho — pensado para hasta
@@ -16262,7 +16433,7 @@
             // resumen del día, faltaba: si no hay ejercicios (ejInc) pero
             // SÍ hay una sesión del modelo antiguo (sesInc, sin migrar),
             // se muestra esa sesión en vez de "Sin ejercicios enlazados".
-            var sesLeg = _planSesionesDeBloque('competicion', { sesInc: f.sesInc || [] });
+            var sesLeg = _planSesionesDeBloque(nivDia, { sesInc: f.sesInc || [] });
             if (sesLeg.length) {
               h += '<div class="plan-item-ses" style="border:1px solid var(--borde);border-radius:10px;">';
               sesLeg.forEach(function(c){
@@ -16288,6 +16459,12 @@
           }
           h += '</div>';
         });
+      }
+      // Las que no cuelgan de ningún bloque marcado no se pierden: van al final.
+      var sesSueltasD = sesIds.filter(function(id){ return !sesColocadasD[id]; });
+      if (sesSueltasD.length) {
+        if (filas.length) h += '<div class="ruta-panel-paso" style="margin-top:8px;">Otras sesiones de la semana</div>';
+        sesSueltasD.forEach(function(id){ h += _sesFichaDia(id); });
       }
       h += '</div>';   // /comp-clase-area
       h += '</div>';   // /comp-clase-cols
