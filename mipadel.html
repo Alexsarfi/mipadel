@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.247.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.248.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,30 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.248.0 — Ejercicios: en Táctica manda la INTENCIÓN, no el golpe (2026-07)
+    (sin migraciones nuevas)
+    · LA FILA DE FILTROS CAMBIA DE EJE. Al filtrar por Táctica, la barra de
+      golpes (Volea, Bandeja, Pared…) desaparece y en su sitio salen las
+      INTENCIONES: 🛡️ Anular · ♟️ Dominar · 🏁 Definir. En táctica el golpe
+      no ordena nada; lo que ordena es para qué se juega. Nuevo
+      filtroEjIntencion; al entrar o salir de Táctica se limpia el filtro
+      del eje que se abandona, para no dejar filtros fantasma puestos.
+    · LA TARJETA, REHECHA en la pantalla de Ejercicios:
+        · Táctica → chapa de INTENCIÓN con color propio (azul anular,
+          ámbar dominar, rosa definir) en vez del golpe.
+        · Todas → FORMATO en monoespaciado (1+A, 4J, 2v0: cuánta gente
+          hace falta) y NIVEL en puntos (●●●○).
+        · El código deja de ocupar sitio aquí; sigue en el detalle y en las
+          otras pantallas, que no se tocan.
+    · LOS QUE NO TIENEN VÍDEO ya no descuadran la fila: llevan un marco gris
+      con icono y la tarjeta atenuada, para leerlos como «por grabar» sin
+      que desaparezcan.
+    · RESUMEN DE INTENCIONES bajo la cabecera de Táctica (Anular 7 ·
+      Dominar 9 · Definir 4): de un vistazo se ve si el trabajo está
+      equilibrado o cargado hacia un lado.
+    · Cabeceras de sección con barra de color y subtítulo que dice cómo está
+      agrupada cada una.
 
   v0.247.0 — Ejercicios: tres secciones, como las carpetas del vault (2026-07)
     (sin migraciones nuevas)
@@ -4893,22 +4917,39 @@
        como las carpetas de 03 EJERCICIOS en el vault. */
     #lista-ejercicios .secc { margin:0 0 22px; }
     #lista-ejercicios .secc:last-child { margin-bottom:4px; }
-    #lista-ejercicios .secc-hdr { display:flex; align-items:center; gap:8px; padding:0 2px 7px;
-      border-bottom:2px solid var(--borde); margin-bottom:12px; }
-    #lista-ejercicios .secc-ico { font-size:16px; line-height:1; }
-    #lista-ejercicios .secc-hdr b { font-size:15px; font-weight:700; letter-spacing:-0.01em; color:var(--verde); }
-    #lista-ejercicios .secc-hdr .n { margin-left:auto; font-size:11.5px; font-weight:700; color:var(--gris);
-      background:var(--verde-suave); padding:1px 8px; border-radius:20px; }
+    /* v0.248 — Cabecera de sección: barra de color + subtítulo + contador */
+    #lista-ejercicios .secc-hdr { display:flex; align-items:center; gap:9px; margin-bottom:11px; }
+    #lista-ejercicios .secc-bar { width:3px; align-self:stretch; min-height:26px; border-radius:2px;
+      background:var(--borde); flex-shrink:0; }
+    #lista-ejercicios .secc-txt { flex:1; min-width:0; display:flex; flex-direction:column; }
+    #lista-ejercicios .secc-hdr b { font-size:16px; font-weight:700; letter-spacing:-0.01em;
+      color:var(--verde); line-height:1.2; }
+    #lista-ejercicios .secc-hdr i { font-style:normal; font-size:11px; color:var(--gris); margin-top:1px; }
+    #lista-ejercicios .secc-hdr .n { flex-shrink:0; font-size:11.5px; font-weight:700; color:var(--gris);
+      background:var(--verde-suave); padding:2px 9px; border-radius:20px; }
     #lista-ejercicios .secc .grupo-titulo { border-bottom:none; padding-bottom:2px; margin-bottom:6px; }
+    #lista-ejercicios .secc-int { display:flex; gap:5px; flex-wrap:wrap; margin:0 0 13px 12px; }
     /* Táctica con identidad propia: es otro tipo de trabajo, no un golpe más */
-    #lista-ejercicios .secc-tactica .secc-hdr { border-bottom-color:#d85a30; }
+    #lista-ejercicios .secc-tactica .secc-bar { background:#d85a30; }
     #lista-ejercicios .secc-tactica .secc-hdr b { color:#993c1d; }
     #lista-ejercicios .secc-tactica .secc-hdr .n { background:#faece7; color:#993c1d; }
     #lista-ejercicios .secc-tactica .grupo-titulo { color:#993c1d; }
-    #lista-ejercicios .secc-comb .secc-hdr { border-bottom-color:#c19a3e; }
+    #lista-ejercicios .secc-comb .secc-bar { background:#c19a3e; }
+    /* Chapas de la tarjeta */
     .ejcard-tag { font-size:9.5px; font-weight:700; padding:1px 6px; border-radius:5px;
       background:var(--verde-suave); color:var(--verde); }
-    #lista-ejercicios .secc-tactica .ejcard-tag { background:#faece7; color:#993c1d; }
+    .ejcard-int { font-size:9.5px; font-weight:700; padding:1px 8px; border-radius:20px; }
+    .ejcard-int.anular  { background:#e6f1fb; color:#0c447c; }
+    .ejcard-int.dominar { background:#faeeda; color:#854f0b; }
+    .ejcard-int.definir { background:#fbeaf0; color:#993556; }
+    .ejcard-form { font-family:ui-monospace,Menlo,monospace; font-size:9.5px; font-weight:700;
+      color:var(--gris); background:var(--verde-suave); padding:1px 6px; border-radius:5px; }
+    .ejcard-niv { font-size:9px; color:var(--gris); letter-spacing:1.5px; }
+    /* Pendientes de grabar: se ven, pero apagados */
+    #lista-ejercicios .ejcard.porgrabar { opacity:.62; }
+    #lista-ejercicios .ejcard-nov { background:var(--verde-suave); display:flex; align-items:center;
+      justify-content:center; }
+    #lista-ejercicios .ejcard-nov span { font-size:19px; filter:grayscale(1); opacity:.5; }
 
     /* ── VACÍO ── */
     .vacio { text-align:center; padding:2.5rem 1rem; color:var(--gris); }
@@ -7313,7 +7354,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.247.0';
+    var APP_VERSION = '0.248.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -8131,6 +8172,7 @@
     var filtroEjVal   = 0;    // 0 = todos, 3 = ★★★+, 4 = ★★★★+, 5 = ★★★★★
     var filtroEjZona  = null; // null = todas las zonas (faceta zona)
     var filtroEjGolpe = null; // null = todos los golpes (faceta golpe canónica)
+    var filtroEjIntencion = null; // v0.248: en Táctica, la fila de filtros pasa a ser por intención
     var filtroEjSituacion = null; // null = todas las situaciones de juego
     var filtroEjTexto = '';   // búsqueda por nombre o código
     var ejAcordeon    = null; // {tipo: abierto?} — estado de las secciones colapsables (lazy load)
@@ -18363,7 +18405,11 @@
 
     function aplicarFiltroTipo(tipo) {
       filtroEjTipo = (filtroEjTipo === tipo) ? null : tipo; // toca el activo → deselecciona
+      // v0.248: al entrar o salir de Táctica la fila de abajo cambia de eje
+      // (golpes ↔ intenciones), así que se limpia el filtro del eje que se va.
+      if (filtroEjTipo === 'Táctica') filtroEjGolpe = null; else filtroEjIntencion = null;
       renderFiltrosTipoEj();
+      renderFiltrosGolpeEj();
       renderListaEjercicios();
     }
 
@@ -18379,11 +18425,25 @@
       renderListaEjercicios();
     }
 
+    // v0.248 — En TÁCTICA el golpe no manda: lo que ordena el trabajo es la
+    // INTENCIÓN (anular / dominar / definir). Así que al filtrar por Táctica,
+    // esta misma fila deja de ofrecer golpes y pasa a ofrecer intenciones.
     function renderFiltrosGolpeEj() {
       var cont = document.getElementById('filtros-golpe-ej');
       if (!cont) return;
+      var ejs = leerEjercicios();
+      if (filtroEjTipo === 'Táctica') {
+        var pInt = {};
+        ejs.forEach(function(e){ if (ejTipo(e) === 'Táctica') { var i = ejIntencion(e); if (i) pInt[i] = true; } });
+        var ints = INTENCION_CANON.filter(function(i){ return pInt[i.key]; });
+        cont.innerHTML = ints.map(function(i) {
+          return '<div class="fpill' + (filtroEjIntencion === i.key ? ' activo' : '') +
+                 '" onclick="aplicarFiltroIntencion(\'' + i.key + '\')">' + i.icono + ' ' + i.label + '</div>';
+        }).join('');
+        return;
+      }
       var presentes = {};
-      leerEjercicios().forEach(function(e){ var g = ejGolpe(e); if (g) presentes[g] = true; });
+      ejs.forEach(function(e){ var g = ejGolpe(e); if (g) presentes[g] = true; });
       var golpes = GOLPE_CANON.filter(function(g){ return presentes[g.key]; });
       if (!golpes.length) { cont.innerHTML = ''; return; }
       var html = '';
@@ -18396,6 +18456,11 @@
 
     function aplicarFiltroGolpe(golpe) {
       filtroEjGolpe = (filtroEjGolpe === golpe) ? null : golpe; // toca el activo → deselecciona
+      renderFiltrosGolpeEj();
+      renderListaEjercicios();
+    }
+    function aplicarFiltroIntencion(k) {
+      filtroEjIntencion = (filtroEjIntencion === k) ? null : k;
       renderFiltrosGolpeEj();
       renderListaEjercicios();
     }
@@ -18467,11 +18532,12 @@
         var pasaVal  = filtroEjVal === 0 || (e.valoracion || 0) >= filtroEjVal;
         var pasaZona = filtroEjZona === null || ejFaceta(e, 'zona') === filtroEjZona;
         var pasaGolpe = filtroEjGolpe === null || ejGolpe(e) === filtroEjGolpe;
+        var pasaInt   = filtroEjIntencion === null || ejIntencion(e) === filtroEjIntencion;
         var pasaSit  = filtroEjSituacion === null || ejSituacion(e) === filtroEjSituacion;
         var pasaTxt  = !filtroEjTexto ||
                        (e.nombre || '').toLowerCase().indexOf(filtroEjTexto) !== -1 ||
                        ejCodigo(e).toLowerCase().indexOf(filtroEjTexto) !== -1;
-        return pasaTipo && pasaVal && pasaZona && pasaGolpe && pasaSit && pasaTxt;
+        return pasaTipo && pasaVal && pasaZona && pasaGolpe && pasaInt && pasaSit && pasaTxt;
       });
 
       // Subtítulo dinámico
@@ -18504,8 +18570,22 @@
         var lista = ejs.filter(function(e){ return ejTipo(e) === secc.key; });
         if (!lista.length) return;
         html += '<div class="secc ' + secc.cls + '">';
-        html += '<div class="secc-hdr"><span class="secc-ico">' + secc.ico + '</span>' +
-                '<b>' + secc.label + '</b><span class="n">' + lista.length + '</span></div>';
+        html += '<div class="secc-hdr"><span class="secc-bar"></span>' +
+                  '<span class="secc-txt"><b>' + secc.label + '</b>' +
+                  '<i>' + secc.sub + '</i></span>' +
+                  '<span class="n">' + lista.length + '</span></div>';
+        // v0.248 — En Táctica, un resumen de intenciones: de un vistazo se ve
+        // si el trabajo está equilibrado o cargado hacia un lado.
+        if (secc.key === 'Táctica') {
+          var cInt = {};
+          lista.forEach(function(e){ var i = ejIntencion(e); if (i) cInt[i] = (cInt[i] || 0) + 1; });
+          var chips = INTENCION_CANON.filter(function(i){ return cInt[i.key]; });
+          if (chips.length) {
+            html += '<div class="secc-int">' + chips.map(function(i) {
+              return '<span class="ejcard-int ' + i.key + '">' + i.label + ' ' + cInt[i.key] + '</span>';
+            }).join('') + '</div>';
+          }
+        }
         html += (secc.key === 'Táctica')
               ? _ejBloquesPorSubcat(lista, secc.key, forzarAbierto, cats)
               : _ejBloquesPorGolpe(lista, secc.key, forzarAbierto);
@@ -18517,11 +18597,14 @@
     // Secciones de la pantalla Ejercicios, en el orden en que se construye
     // una clase: primero el gesto suelto, luego encadenado, luego el juego.
     var TIPO_SECC = [
-      { key:'Técnica simple',    label:'Técnica simple',    ico:'🎾', cls:'secc-simple'  },
-      { key:'Técnica combinada', label:'Técnica combinada', ico:'🔀', cls:'secc-comb'    },
-      { key:'Táctica',           label:'Táctica',           ico:'♟️', cls:'secc-tactica' },
-      { key:'Físico',            label:'Físico',            ico:'💪', cls:'secc-fisico'  },
-      { key:'Otros',             label:'Otros',             ico:'📋', cls:'secc-otros'   }
+      { key:'Técnica simple',    label:'Técnica simple',    cls:'secc-simple',
+        sub:'Por golpe, en orden de aprendizaje' },
+      { key:'Técnica combinada', label:'Técnica combinada', cls:'secc-comb',
+        sub:'Golpes encadenados' },
+      { key:'Táctica',           label:'Táctica',           cls:'secc-tactica',
+        sub:'Construcción · Control · Definición · Red · Transición' },
+      { key:'Físico',            label:'Físico',            cls:'secc-fisico',  sub:'Preparación física' },
+      { key:'Otros',             label:'Otros',             cls:'secc-otros',   sub:'Sin carpeta asignada' }
     ];
     // Orden de las subcategorías tácticas (las que no estén, al final).
     var TACTICA_ORDEN = ['Construcción', 'Control', 'Definición', 'Red', 'Transición'];
@@ -18641,10 +18724,28 @@
       var cod = ejCodigo(ej);
       var nvid = ejVideos(ej).length;
       var badges = '';
-      // v0.247: chapa contextual. En Táctica se le pone el GOLPE que trabaja,
-      // porque ahí el acordeón agrupa por subcategoría y el golpe no se ve.
-      if (chipExtra) badges += '<span class="ejcard-tag">' + _gEsc(chipExtra) + '</span>';
-      if (cod) badges += '<span class="ejcard-cod">' + cod + '</span>';
+      // v0.248 — En la pantalla de Ejercicios la chapa principal cambia según
+      // el tipo: en TÁCTICA manda la intención (anular/dominar/definir) y en
+      // técnica el puesto que ocupa en la progresión del golpe. Detrás van
+      // formato y nivel, que es lo que necesitas saber para montar la clase.
+      var esEj = (origen === 'ejercicios');
+      if (esEj && ejTipo(ej) === 'Táctica') {
+        var itn = ejIntencion(ej);
+        if (itn) badges += '<span class="ejcard-int ' + itn + '">' + INTENCION_LABEL[itn] + '</span>';
+      } else if (chipExtra) {
+        badges += '<span class="ejcard-tag">' + _gEsc(chipExtra) + '</span>';
+      }
+      if (esEj) {
+        var fmt = ejFaceta(ej, 'formato');
+        if (fmt) badges += '<span class="ejcard-form">' + _gEsc(fmt) + '</span>';
+        var niv = parseInt(ejFaceta(ej, 'nivel'), 10);
+        if (niv >= 1 && niv <= 4) {
+          badges += '<span class="ejcard-niv" title="Nivel ' + niv + ' de 4">' +
+                    '●●●●'.slice(0, niv) + '○○○○'.slice(0, 4 - niv) + '</span>';
+        }
+      } else {
+        if (cod) badges += '<span class="ejcard-cod">' + cod + '</span>';
+      }
       if (val > 0) badges += '<span class="ejcard-val">★' + val + '</span>';
       if (nvid > 1) badges += '<span class="ejcard-cod" title="Progresión de ' + nvid + ' vídeos">🎬×' + nvid + '</span>';
 
@@ -18657,11 +18758,19 @@
       // la clase `vert` para poder ampliarlas y que las barras se salgan de
       // la caja (solo en la pantalla de Ejercicios, ver CSS).
       var esVert = /\/shorts\//i.test(String(ej.video || ''));
-      var h = '<div class="ejcard' + (thumb ? '' : ' ejcard-sinthumb') + (esVert ? ' vert' : '') + '" onclick="verEjercicio(' + ej.id + ',\'' + origen + '\')">';
+      // v0.248: en Ejercicios, los que no tienen vídeo ya no se quedan sin
+      // hueco de miniatura (dejaban la fila descuadrada): llevan un marco
+      // gris con icono y la tarjeta atenuada, para verlos como "por grabar".
+      var sinVid = !thumb;
+      var h = '<div class="ejcard' + ((thumb || esEj) ? '' : ' ejcard-sinthumb') +
+              (esVert ? ' vert' : '') + (sinVid && esEj ? ' porgrabar' : '') +
+              '" onclick="verEjercicio(' + ej.id + ',\'' + origen + '\')">';
       if (thumb) {
         h += '<div class="ejcard-thumb">' +
           '<img src="' + thumb + '" class="ejcard-img" alt="" loading="lazy" onerror="this.style.display=\'none\';this.parentNode.classList.add(\'sin-img\')">' +
           (ej.video ? '<div class="ejcard-play">▶</div>' : '') + '</div>';
+      } else if (esEj) {
+        h += '<div class="ejcard-thumb ejcard-nov"><span>🎬</span></div>';
       }
       h += '<div class="ejcard-body">' +
           '<div class="ejcard-titulo">' + ej.nombre + '</div>' +
