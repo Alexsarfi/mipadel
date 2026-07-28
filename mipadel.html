@@ -39,6 +39,17 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.244.0 — El panel de editar, por delante del globo (2026-08)
+    (sin migraciones nuevas)
+    · ARREGLADO: al pulsar el ⚙ dentro del globo del día, el panel grande de
+      planificación se abría DETRÁS y no se podía tocar. Los dos globos
+      compartían altura (z-index 10000) y ganaba el que va después en el
+      documento, que es el del día. El panel sube a 10035 y manda él; el
+      globo del día se queda de fondo. (El vídeo, en 10050, sigue arriba.)
+    · Y AL CERRAR EL PANEL, el globo del día que quedaba detrás se repinta:
+      enseña ya el carro y el área de trabajo que acabas de cambiar, sin
+      tener que cerrarlo y volver a abrirlo.
+
   v0.243.0 — El día se abre en globo (2026-08)
     (sin migraciones nuevas)
     · AL PINCHAR UN DÍA, su clase se abre como VENTANA encima del mes, no
@@ -5556,6 +5567,12 @@
     /* Panel grande de planificación de la semana */
     .ruta-modal-ov { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:10000; display:flex;
       align-items:flex-end; justify-content:center; }
+    /* v0.244 — El panel grande de planificar se abre DESDE el globo del día
+       (con el ⚙). Los dos son .ruta-modal-ov, y como el globo va después en
+       el documento se ponía delante: el panel de edición quedaba detrás y no
+       se podía tocar. Se sube por encima; el globo se queda de fondo y se
+       refresca al cerrar. (El lightbox del vídeo, en 10050, sigue mandando.) */
+    #ruta-plan-ov { z-index:10035; }
     .ruta-modal { background:var(--blanco); width:100%; max-width:520px; max-height:88vh; overflow-y:auto;
       border-radius:18px 18px 0 0; padding:16px 14px calc(16px + env(safe-area-inset-bottom)); box-shadow:0 -8px 30px rgba(0,0,0,.25); }
     .ruta-modal-hdr { display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
@@ -7206,7 +7223,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.243.0';
+    var APP_VERSION = '0.244.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -15360,6 +15377,9 @@
       _rutaModalCurso = null; _rutaModalFechaFija = null; _rutaModalSemLibre = null; _rutaModalNivelSel = null; _rutaModalDiaSel = null;
       var ov = document.getElementById('ruta-plan-ov');
       if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; }
+      // v0.244: si detrás había un día abierto en globo, se repinta para que
+      // enseñe ya lo que se acaba de cambiar en el panel.
+      if (compDiaAbierta) _compDiaOvPintar();
     }
     // Paso 1 → elige área. v0.207: el área se marca directamente en
     // compDias (mismo dato que Mensual). Si la semana tiene MÁS de un día
