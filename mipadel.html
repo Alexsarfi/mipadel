@@ -39,6 +39,20 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.241.0 — En el móvil, puntos; en el ordenador, nombres (2026-08)
+    (sin migraciones nuevas)
+    · ARREGLADO lo de la v0.240 en el móvil. Las columnas de semana miden 58 px
+      y los nombres escritos las reventaban (se iba todo a scroll lateral).
+      Ahora en el móvil cada día lleva debajo solo dos PUNTOS: azul si hay
+      carro, morado si hay área de trabajo. Los círculos se quedan limpios y
+      la semana entera se ve de un golpe.
+    · LOS NOMBRES, AL ABRIR EL DÍA — donde ya estaban, con sus miniaturas.
+      Y manteniendo el dedo sobre los puntos también se leen.
+    · CLAVE DEBAJO de las semanas («● carro · ● área de trabajo»), para no
+      tener que adivinar de qué es cada punto. Solo sale en el móvil.
+    · A PARTIR DE 760 px, donde sí hay sitio, se siguen viendo los nombres
+      escritos bajo cada día, como en la v0.240.
+
   v0.240.0 — La semana se lee de un vistazo (2026-08)
     (sin migraciones nuevas)
     · FUERA «Ya marcado esta semana (Mensual)». Ese bloque del panel traía lo
@@ -5356,12 +5370,19 @@
     .comp-sem-col.activa { background:var(--verde-suave); }
     .comp-sem-col.activa .comp-sem-titulo { color:var(--verde); }
     .comp-sem-titulo { font-size:11px; font-weight:800; color:var(--gris); margin:0 0 6px; text-align:center; }
-    .comp-sem-dias { display:flex; flex-direction:column; align-items:center; gap:10px; }
+    .comp-sem-dias { display:flex; flex-direction:column; align-items:center; gap:8px; }
     .comp-diacol { display:flex; flex-direction:column; align-items:center; gap:3px; }
     /* v0.240 — Debajo del círculo del día: el golpe del carro (primera parte)
-       y el área de trabajo (segunda parte). Etiquetas pequeñas, una por línea,
-       recortadas si no caben (el nombre completo va en el title). */
-    .comp-diacol-tags { display:flex; flex-direction:column; align-items:center; gap:2px;
+       y el área de trabajo (segunda parte).
+       v0.241 — En el MÓVIL las columnas de semana miden 58 px: los nombres las
+       reventaban. Ahí van solo dos PUNTOS (azul = carro, morado = área) y los
+       nombres se leen al abrir el día. Los nombres escritos vuelven a partir
+       de 760 px, donde sí hay sitio. */
+    .comp-diacol-puntos { display:flex; justify-content:center; gap:4px; height:6px; margin-top:2px; }
+    .comp-daypto { width:6px; height:6px; border-radius:50%; }
+    .comp-daypto.carro { background:#06b6d4; }
+    .comp-daypto.area  { background:#6366f1; }
+    .comp-diacol-tags { display:none; flex-direction:column; align-items:center; gap:2px;
       max-width:104px; margin-top:1px; }
     .comp-daytag { max-width:100%; box-sizing:border-box; font-size:9px; font-weight:700; line-height:1.3;
       padding:2px 6px; border-radius:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -5384,6 +5405,15 @@
        vista en qué día estamos mientras se mira su contenido abajo. */
     .comp-circ.abierta { transform:scale(1.12); box-shadow:0 0 0 3px var(--verde), 0 3px 8px rgba(0,0,0,.18); }
     .comp-diacol:has(.comp-circ.abierta) .comp-diacol-dow { color:var(--verde); }
+    .comp-puntos-clave { display:flex; align-items:center; justify-content:center; flex-wrap:wrap;
+      gap:4px 12px; font-size:10px; font-weight:700; color:var(--gris); margin:-2px 0 6px; }
+    .comp-puntos-clave span { display:inline-flex; align-items:center; gap:4px; }
+    .comp-puntos-clave i { display:inline-block; }
+    @media (min-width: 760px) {
+      .comp-diacol-puntos, .comp-puntos-clave { display:none; }
+      .comp-diacol-tags   { display:flex; }
+      .comp-sem-dias      { gap:10px; }
+    }
     .comp-cal-picker { background:var(--arena); border:1.5px solid var(--borde); border-radius:11px; padding:0.6rem 0.85rem; margin-top:8px; }
     .comp-cal-picker-hdr { font-size:12px; font-weight:800; color:var(--texto); margin-bottom:0.4rem; }
     .comp-picker-grupo { font-size:11px; font-weight:800; color:var(--gris); margin:8px 0 3px; }
@@ -7132,7 +7162,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.240.0';
+    var APP_VERSION = '0.241.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -17179,7 +17209,17 @@
               .map(function(idA){ return _areasN[idA]; })
               .filter(Boolean);
             if (golpes.length || bloqsD.length) {
-              tags = '<div class="comp-diacol-tags">';
+              // v0.241 — En el MÓVIL las columnas de semana son estrechas: ahí
+              // solo van dos PUNTOS (azul = hay carro, morado = hay área) y los
+              // nombres se leen al abrir el día. A partir de 760 px sí caben
+              // escritos, y el CSS cambia unos por otros.
+              var titPuntos = [];
+              if (golpes.length)  titPuntos.push('Carro: ' + golpes.join(', '));
+              if (bloqsD.length)  titPuntos.push('Área de trabajo: ' + bloqsD.join(', '));
+              tags = '<div class="comp-diacol-puntos" title="' + _gEsc(titPuntos.join(' · ')).replace(/"/g,'') + '">' +
+                (golpes.length ? '<span class="comp-daypto carro"></span>' : '') +
+                (bloqsD.length ? '<span class="comp-daypto area"></span>' : '') + '</div>';
+              tags += '<div class="comp-diacol-tags">';
               if (golpes.length)
                 tags += '<span class="comp-daytag carro" title="Carro: ' + _gEsc(golpes.join(', ')).replace(/"/g,'') + '">' +
                         _gEsc(golpes.join(' · ')) + '</span>';
@@ -17227,6 +17267,11 @@
              '<span class="ruta-panel-nota">Planifica abajo, en el curso: cuando el gestor ponga las franjas de este nivel, la primera clase de cada semana llegará ya preparada.</span></div>';
       } else {
         h += '<div class="comp-sem-cols">' + colsHTML + '</div>';
+        // v0.241: los puntos del móvil necesitan una clave; en pantalla ancha
+        // sobra (los nombres van escritos) y el CSS la esconde.
+        h += '<div class="comp-puntos-clave"><span><i class="comp-daypto carro"></i>carro</span>' +
+             '<span><i class="comp-daypto area"></i>área de trabajo</span>' +
+             '<span class="ruta-panel-nota">toca un día para ver los nombres</span></div>';
         if (abiertoHTML) h += '<div class="comp-dia-abierto">' + abiertoHTML + '</div>';
       }
       h += '</div>';
