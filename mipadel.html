@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.248.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.249.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,20 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.249.0 — Ejercicios: pestañas en la cabecera (2026-07)
+    (sin migraciones nuevas)
+    · LA FILA DE TIPOS DEJA DE SER UN FILTRO Y PASA A SER LA NAVEGACIÓN.
+      En la cabecera salen ahora como PESTAÑAS, cada una con su contador:
+        Todos 105 · Técnica 56 · Combinada 23 · Táctica 20 · Otros 6
+      Al tocar una se ve solo esa sección; «Todos» las devuelve apiladas.
+    · Las pestañas heredan el color de su sección: Táctica en terracota y
+      Combinada en dorado cuando están activas, para que se reconozca de un
+      vistazo dónde estás.
+    · Solo aparecen las pestañas que tienen ejercicios, así que Físico no
+      sale hasta que haya alguno.
+    · Encaja con lo de v0.248: al elegir la pestaña Táctica, la fila de
+      abajo cambia sola de golpes a intenciones.
 
   v0.248.0 — Ejercicios: en Táctica manda la INTENCIÓN, no el golpe (2026-07)
     (sin migraciones nuevas)
@@ -4828,6 +4842,21 @@
     .fpill:active { transform:scale(0.96); }
     .fpill-dorado { border-color:var(--dorado); color:#92400e; background:var(--ambar); }
     .fpill-dorado.activo { background:var(--dorado); color:var(--blanco); border-color:var(--dorado); }
+    /* v0.249 — Pestañas de tipo en la cabecera de Ejercicios */
+    .ejtabs { display:flex; gap:6px; overflow-x:auto; padding:2px 0 5px; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+    .ejtabs::-webkit-scrollbar { display:none; }
+    .ejtab { display:flex; align-items:center; gap:6px; flex-shrink:0; white-space:nowrap; cursor:pointer;
+      background:var(--blanco); border:1.5px solid var(--borde); border-radius:11px; padding:7px 12px;
+      font-family:'Outfit',sans-serif; font-size:12.5px; font-weight:700; color:var(--texto);
+      transition:all 0.15s; box-shadow:0 1px 2px rgba(14,27,60,0.04); }
+    .ejtab b { font-size:10.5px; font-weight:700; color:var(--gris); background:var(--verde-suave);
+      padding:1px 6px; border-radius:20px; }
+    .ejtab.on { background:var(--verde); color:var(--blanco); border-color:var(--verde);
+      box-shadow:0 2px 9px rgba(14,27,60,0.20); }
+    .ejtab.on b { background:rgba(255,255,255,0.22); color:var(--blanco); }
+    .ejtab.secc-tactica.on { background:#993c1d; border-color:#993c1d; }
+    .ejtab.secc-comb.on { background:#8a6d24; border-color:#8a6d24; }
+    .ejtab:active { transform:scale(0.97); }
 
     /* ── ESTRELLAS ── */
     .stars { display:flex; gap:1px; align-items:center; }
@@ -7354,7 +7383,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.248.0';
+    var APP_VERSION = '0.249.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -18169,21 +18198,28 @@
     var TIPO_ORDEN = ['Técnica simple', 'Técnica combinada', 'Táctica', 'Físico'];
     function ejTipo(ej) { return ejFaceta(ej, 'tipo') || 'Otros'; }
 
+    // v0.249 — La fila de tipos deja de ser un filtro más y pasa a ser la
+    // NAVEGACIÓN de la pantalla: pestañas con su contador, y al tocar una se
+    // ve solo esa sección. «Todos» las devuelve todas apiladas.
     function renderFiltrosTipoEj() {
       var cont = document.getElementById('filtros-tipo-ej');
       if (!cont) return;
-      // Tipos presentes en los ejercicios, en orden fijo (+ Otros al final si aplica)
-      var presentes = {};
-      leerEjercicios().forEach(function(e){ presentes[ejTipo(e)] = true; });
-      var tipos = TIPO_ORDEN.filter(function(t){ return presentes[t]; });
-      if (presentes['Otros']) tipos.push('Otros');
-      if (!tipos.length) { cont.innerHTML = ''; return; }
-      var html = '';
-      tipos.forEach(function(t) {
-        html += '<div class="fpill' + (filtroEjTipo === t ? ' activo' : '') +
-                '" onclick="aplicarFiltroTipo(\'' + t + '\')">' + t + '</div>';
+      var ejs = leerEjercicios();
+      var cuenta = {};
+      ejs.forEach(function(e){ var t = ejTipo(e); cuenta[t] = (cuenta[t] || 0) + 1; });
+      var tabs = [{ key:null, label:'Todos', n:ejs.length, cls:'' }];
+      TIPO_SECC.forEach(function(s) {
+        if (!cuenta[s.key]) return;
+        tabs.push({ key:s.key, label:s.tab, n:cuenta[s.key], cls:s.cls });
       });
-      cont.innerHTML = html;
+      if (tabs.length < 2) { cont.innerHTML = ''; return; }
+      cont.className = 'ejtabs';
+      cont.innerHTML = tabs.map(function(t) {
+        var arg = (t.key === null) ? 'null' : "'" + t.key.replace(/'/g, "\\'") + "'";
+        return '<button type="button" class="ejtab ' + t.cls + (filtroEjTipo === t.key ? ' on' : '') +
+               '" onclick="aplicarFiltroTipo(' + arg + ')">' +
+               '<span>' + t.label + '</span><b>' + t.n + '</b></button>';
+      }).join('');
     }
 
     function renderFiltrosValEj() {
@@ -18404,7 +18440,8 @@
     }
 
     function aplicarFiltroTipo(tipo) {
-      filtroEjTipo = (filtroEjTipo === tipo) ? null : tipo; // toca el activo → deselecciona
+      // v0.249: «Todos» llega como null. Tocar la pestaña activa la suelta.
+      filtroEjTipo = (tipo === null || filtroEjTipo === tipo) ? null : tipo;
       // v0.248: al entrar o salir de Táctica la fila de abajo cambia de eje
       // (golpes ↔ intenciones), así que se limpia el filtro del eje que se va.
       if (filtroEjTipo === 'Táctica') filtroEjGolpe = null; else filtroEjIntencion = null;
@@ -18597,14 +18634,14 @@
     // Secciones de la pantalla Ejercicios, en el orden en que se construye
     // una clase: primero el gesto suelto, luego encadenado, luego el juego.
     var TIPO_SECC = [
-      { key:'Técnica simple',    label:'Técnica simple',    cls:'secc-simple',
+      { key:'Técnica simple',    label:'Técnica simple',    tab:'Técnica',    cls:'secc-simple',
         sub:'Por golpe, en orden de aprendizaje' },
-      { key:'Técnica combinada', label:'Técnica combinada', cls:'secc-comb',
+      { key:'Técnica combinada', label:'Técnica combinada', tab:'Combinada',  cls:'secc-comb',
         sub:'Golpes encadenados' },
-      { key:'Táctica',           label:'Táctica',           cls:'secc-tactica',
+      { key:'Táctica',           label:'Táctica',           tab:'Táctica',    cls:'secc-tactica',
         sub:'Construcción · Control · Definición · Red · Transición' },
-      { key:'Físico',            label:'Físico',            cls:'secc-fisico',  sub:'Preparación física' },
-      { key:'Otros',             label:'Otros',             cls:'secc-otros',   sub:'Sin carpeta asignada' }
+      { key:'Físico',            label:'Físico',            tab:'Físico',     cls:'secc-fisico',  sub:'Preparación física' },
+      { key:'Otros',             label:'Otros',             tab:'Otros',      cls:'secc-otros',   sub:'Sin carpeta asignada' }
     ];
     // Orden de las subcategorías tácticas (las que no estén, al final).
     var TACTICA_ORDEN = ['Construcción', 'Control', 'Definición', 'Red', 'Transición'];
