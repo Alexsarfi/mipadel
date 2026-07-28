@@ -39,6 +39,18 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.242.0 — Los meses, plegados al entrar · y el mes en curso, sombreado (2026-08)
+    (sin migraciones nuevas)
+    · AL ENTRAR EN UN NIVEL no se abre ningún mes. Antes se abría solo el de
+      hoy y la pantalla arrancaba con un muro de semanas: ahora se ve la fila
+      de meses limpia y abres el que quieras tocándolo (y se cierra al
+      repincharlo, como hasta ahora). Cambiar de nivel también los pliega.
+    · EL MES EN CURSO, SOMBREADO de verde, no solo con el borde. Y si el mes
+      de hoy no existe en el curso — julio y agosto, o un curso ya cerrado —
+      se sombrea el ÚLTIMO anterior: en julio, junio. Antes en esos meses no
+      se marcaba ninguno, porque se miraba "la semana de hoy" y no había.
+      Un curso que todavía no ha empezado no sombrea ninguno.
+
   v0.241.0 — En el móvil, puntos; en el ordenador, nombres (2026-08)
     (sin migraciones nuevas)
     · ARREGLADO lo de la v0.240 en el móvil. Las columnas de semana miden 58 px
@@ -5478,8 +5490,13 @@
       font-family:inherit; cursor:pointer; }
     .ruta-mesbtn:hover { border-color:#0891b2; }
     .ruta-mesbtn.on { border-color:#0891b2; background:#ecfeff; }
-    .ruta-mesbtn.hoy { border-width:2px; border-color:var(--verde); }
-    .ruta-mesbtn.hoy.on { border-color:#0891b2; }
+    /* v0.242: el mes en curso (o el último anterior, en julio y agosto) va
+       sombreado, no solo con el borde: es el ancla de "estamos aquí". */
+    .ruta-mesbtn.hoy { border-width:2px; border-color:var(--verde); background:var(--verde-suave); }
+    .ruta-mesbtn.hoy .ruta-mesbtn-lbl { color:var(--verde); }
+    .ruta-mesbtn.hoy.pasado { opacity:1; }
+    .ruta-mesbtn.hoy.on { border-color:#0891b2; background:#ecfeff; }
+    .ruta-mesbtn.hoy.on .ruta-mesbtn-lbl { color:#0e7490; }
     .ruta-mesbtn.pasado { opacity:.62; }
     .ruta-mesbtn-lbl { font-size:11.5px; font-weight:800; color:var(--texto); text-transform:capitalize; }
     .ruta-mesbtn-prog { font-size:9.5px; font-weight:700; color:var(--gris); }
@@ -7162,7 +7179,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.241.0';
+    var APP_VERSION = '0.242.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -13959,6 +13976,7 @@
       // Al cambiar de nivel se cierra el día abierto: su contenido es de
       // otro catálogo y no tiene sentido arrastrarlo.
       compDiaAbierta = null; compDiaEditando = false; compFilaSel = null;
+      _rutaMesSel = null;   // v0.242: los meses, plegados al entrar en el nivel
       mostrarPlanificacion(); window.scrollTo(0,0);
     }
     function planToggleEtapa(key) { var p = leerPlan(); p.etapasAbiertas[key] = !p.etapasAbiertas[key]; _planGuardar(p); }
@@ -14707,9 +14725,23 @@
       if (_rutaMesSel !== null) {
         if (_rutaMesSel === '' || meses.some(function(m){ return m.key === _rutaMesSel; })) return _rutaMesSel;
       }
-      var h = hoyLocal(), y = +h.slice(0,4), m = +h.slice(5,7) - 1;
-      var deHoy = meses.filter(function(x){ return x.y === y && x.m === m; })[0];
-      return deHoy ? deHoy.key : (meses.length ? meses[0].key : '');
+      // v0.242: al entrar en un nivel NO se abre ningún mes. Antes se abría
+      // solo el de hoy y la pantalla arrancaba con un muro de semanas; ahora
+      // se ve la fila de meses limpia (con el de hoy sombreado) y se abre el
+      // que se quiera tocando.
+      return '';
+    }
+    // v0.242 — Mes que se sombrea: el de HOY si está en el curso y, si no
+    // (julio y agosto, o un curso ya cerrado), el ÚLTIMO anterior a hoy —
+    // junio en el caso de julio. Si el curso entero está por venir no se
+    // sombrea ninguno: todavía no hay un "estamos aquí".
+    function _rutaMesHoyKey(meses) {
+      if (!meses.length) return '';
+      var h = hoyLocal(), ym = (+h.slice(0,4)) * 12 + (+h.slice(5,7) - 1);
+      var deHoy = meses.filter(function(x){ return (x.y * 12 + x.m) === ym; })[0];
+      if (deHoy) return deHoy.key;
+      var previos = meses.filter(function(x){ return (x.y * 12 + x.m) < ym; });
+      return previos.length ? previos[previos.length - 1].key : '';
     }
     function rutaMesSel(key) {
       var meses = _rutaMeses(_rutaSemanas(_rutaCurso()));
@@ -16075,11 +16107,15 @@
       if (_rutaAterrizarMes(p, _compNivel(), sems)) p = leerPlan();
       var mesesCurso = _rutaMeses(sems);
       var mesSel = _rutaMesActivo(curso, mesesCurso);
+      var mesHoy = _rutaMesHoyKey(mesesCurso);   // v0.242
       h += '<div class="ruta-mes-row">';
       mesesCurso.forEach(function(m){
         var semsM = m.sems;
         var hechasM = semsM.filter(function(w){ return _rutaSemanaDatos(p, w, idsNivel).trab; }).length;
-        var esAct = semsM.some(function(w){ return w.idx === act; });
+        // v0.242: en julio no hay ninguna semana "de hoy" (act = -1) y no se
+        // sombreaba nada. Ahora manda _rutaMesHoyKey, que cae al último mes
+        // anterior cuando el de hoy no existe en el curso.
+        var esAct = (m.key === mesHoy);
         var pasado = _rutaMesPasado(m.y, m.m);
         h += '<button type="button" class="ruta-mesbtn' + (mesSel === m.key ? ' on' : '') +
           (esAct ? ' hoy' : '') + (pasado ? ' pasado' : '') + '" onclick="rutaMesSel(\'' + m.key + '\')">' +
@@ -18949,7 +18985,9 @@
     // Inicio → Planificación de un nivel concreto (un clic).
     function irPlanNivel(nivel) {
       if (!nivelPermitido(nivel)) nivel = 'iniciacion';
-      var p = leerPlan(); p.nivel = nivel; _planGuardar(p); irA('pantalla-planificacion');
+      var p = leerPlan(); p.nivel = nivel; _planGuardar(p);
+      _rutaMesSel = null;   // v0.242: los meses, plegados al entrar en el nivel
+      irA('pantalla-planificacion');
     }
     function _restoreHomeSes() {
       var drop = document.getElementById('home-ses-drop'), btn = document.getElementById('home-ses-btn');
