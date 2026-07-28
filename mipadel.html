@@ -39,6 +39,19 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.243.0 — El día se abre en globo (2026-08)
+    (sin migraciones nuevas)
+    · AL PINCHAR UN DÍA, su clase se abre como VENTANA encima del mes, no
+      desplegada debajo de los círculos. En el móvil aquello quedaba estrujado
+      al final de la pantalla y había que bajar a buscarlo; ahora tiene el
+      alto entero para el carro y el área de trabajo, y en el ordenador la
+      ventana se ensancha (860 px) para que las dos columnas respiren.
+    · SE EDITA IGUAL: dentro va lo mismo de siempre, y el ⚙ de la cabecera
+      lleva al panel grande de planificación, como antes. La ✕ cierra.
+    · El globo vive FUERA de las pantallas (como el calendario de
+      competiciones y la clase de Asistencia) y se cierra solo si te vas de
+      Planificación, para que no se quede flotando.
+
   v0.242.0 — Los meses, plegados al entrar · y el mes en curso, sombreado (2026-08)
     (sin migraciones nuevas)
     · AL ENTRAR EN UN NIVEL no se abre ningún mes. Antes se abría solo el de
@@ -5401,7 +5414,14 @@
     .comp-daytag.carro { background:#ecfeff; color:#0e7490; border:1px solid #a5f3fc; }
     .comp-daytag.area  { background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe; }
     .comp-diacol-dow { font-size:9.5px; font-weight:800; color:var(--gris); text-transform:uppercase; }
-    .comp-dia-abierto { margin-top:0.3rem; }
+    /* v0.243 — El día se abre en GLOBO. Hoja por abajo en el móvil (como el
+       resto de paneles) y ventana centrada y ancha en el ordenador, para que
+       el carro y el área de trabajo quepan en dos columnas de verdad. */
+    .comp-dia-modal .comp-cal-picker { background:none; border:none; padding:0; margin:0; }
+    .comp-dia-modal .comp-clase-cols { margin-top:0; }
+    @media (min-width: 700px) {
+      .comp-dia-modal { max-width:860px; }
+    }
     .comp-dow-cont { font-size:11.5px; font-weight:600; color:var(--gris); }
     .comp-circ-fila { display:flex; gap:8px; flex-wrap:wrap; }
     .comp-circ { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;
@@ -7058,6 +7078,13 @@
        editar y borrar). Va encima del calendario, que se sigue viendo detrás. -->
   <div id="torneo-dia-ov" class="tor-dia-ov" style="display:none" onclick="torDiaCerrar()"></div>
 
+  <!-- ══ EL DÍA DE PLANIFICACIÓN, EN GLOBO (v0.243) ══════════
+       Antes el contenido del día se desplegaba DEBAJO de los círculos del
+       mes: en el móvil quedaba estrujado y había que bajar a buscarlo. Ahora
+       se abre como ventana, con sitio de sobra para el carro y el área de
+       trabajo. Fuera de .pantalla, como el resto de globos. -->
+  <div id="comp-dia-ov" class="ruta-modal-ov" style="display:none" onclick="compDiaCerrar()"></div>
+
   <!-- ══ CLASE PREPARADA DE UNA FRANJA (v0.224) ══════════
        Globo con el carro y el área de trabajo de esa franja y ese día, para
        consultarlo sin salir de Asistencia. -->
@@ -7179,7 +7206,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.242.0';
+    var APP_VERSION = '0.243.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -16301,6 +16328,40 @@
       compDiaEditando = true;
       mostrarPlanificacion();
     }
+    // ── v0.243 — EL DÍA, EN GLOBO ──────────────────────────────────
+    // Se abre como ventana encima del mes en vez de desplegarse debajo de
+    // los círculos: en el móvil aquello quedaba estrujado en la parte baja
+    // de la pantalla y había que hacer scroll para verlo. Dentro va lo
+    // mismo de siempre (carro + área de trabajo, o el selector de filas),
+    // así que se sigue editando igual: ⚙ lleva al panel grande.
+    function compDiaCerrar() {
+      compDiaAbierta = null; compDiaEditando = false;
+      mostrarPlanificacion();
+    }
+    function _compDiaOvPintar() {
+      var ov = document.getElementById('comp-dia-ov');
+      if (!ov) return;
+      if (!compDiaAbierta) { ov.style.display = 'none'; ov.innerHTML = ''; return; }
+      var f = compDiaAbierta;
+      var p = leerPlan();
+      var dow = new Date(+f.slice(0,4), +f.slice(5,7)-1, +f.slice(8,10)).getDay();
+      var w = _rutaSemanaLibre(f);
+      var rango = w.lun.getDate() + ' ' + _MESES_R[w.lun.getMonth()].slice(0,3) +
+                  ' – ' + w.dom.getDate() + ' ' + _MESES_R[w.dom.getMonth()].slice(0,3);
+      var h = '<div class="ruta-modal comp-dia-modal" onclick="event.stopPropagation()">';
+      h += '<div class="ruta-modal-hdr">' +
+        '<div><div class="ruta-modal-tit">' + DIAS_NOMBRES_A[dow] + ' ' + formatFechaDiaMes(f) + '</div>' +
+        '<div class="ruta-modal-sub">' + rango + '</div></div>' +
+        '<div class="ruta-modal-hdr-acc">' +
+          (compDiaEditando ? '' :
+            '<button class="plan-modal-x" onclick="compDiaEditar(\'' + f + '\')" title="Cambiar la clase de este día" aria-label="Editar">⚙</button>') +
+          '<button class="plan-modal-x" onclick="compDiaCerrar()" aria-label="Cerrar">✕</button>' +
+        '</div></div>';
+      h += compDiaEditando ? _compPickerHTML(p, f, true) : _compResumenHTML(p, f, true);
+      h += '</div>';
+      ov.innerHTML = h;
+      ov.style.display = 'flex';
+    }
     // v0.148: cambiar de sesión dentro del resumen del día
     function compFilaVer(filaId) {
       compFilaSel = filaId;
@@ -16338,13 +16399,14 @@
       });
       return out;
     }
-    function _compPickerHTML(p, fechaISO) {
+    function _compPickerHTML(p, fechaISO, sinHdr) {
       var todas = _compTodasFilas(p);
       var elegidas = (p.compDias && p.compDias[fechaISO]) || [];
       var contador = _compContadorTrabajo(p, cursoDeFecha(fechaISO));
       var dow = new Date(+fechaISO.slice(0,4), +fechaISO.slice(5,7)-1, +fechaISO.slice(8,10)).getDay();
       var h = '<div class="comp-cal-picker">';
-      h += '<div class="comp-cal-picker-hdr">' + DIAS_NOMBRES_A[dow] + ' ' + formatFechaDiaMes(fechaISO) + ' — marca lo trabajado</div>';
+      // v0.243: dentro del globo la fecha ya está en la cabecera de la ventana
+      if (!sinHdr) h += '<div class="comp-cal-picker-hdr">' + DIAS_NOMBRES_A[dow] + ' ' + formatFechaDiaMes(fechaISO) + ' — marca lo trabajado</div>';
       if (!todas.length) {
         h += '<div class="comp-picker-vacio">Aún no hay filas en el catálogo de Competición.</div>';
       } else {
@@ -16414,7 +16476,7 @@
     // elegidas con sus vídeos enlazados en fila, para consultar fácil desde
     // la pista (poco ruido visual). Con botón para volver a modo selección
     // si hay que corregir.
-    function _compResumenHTML(p, fechaISO) {
+    function _compResumenHTML(p, fechaISO, sinHdr) {
       var elegidas = (p.compDias && p.compDias[fechaISO]) || [];
       var todas = _compTodasFilas(p);
       var filas = elegidas.map(function(id){
@@ -16425,7 +16487,8 @@
       // v0.131: la cabecera lleva a la derecha el icono ⚙ para editar la
       // selección (antes era un botón de texto "Cambiar selección" al final
       // — más ruido visual, sobre todo en móvil).
-      h += '<div class="comp-cal-picker-hdr comp-resumen-hdr">' +
+      // v0.243: dentro del globo, la fecha y el ⚙ están en la ventana.
+      if (!sinHdr) h += '<div class="comp-cal-picker-hdr comp-resumen-hdr">' +
         '<span>' + DIAS_NOMBRES_A[dow] + ' ' + formatFechaDiaMes(fechaISO) + '</span>' +
         '<button class="comp-resumen-editar-ic" onclick="compDiaEditar(\'' + fechaISO + '\')" title="Cambiar selección" aria-label="Cambiar selección">⚙</button>' +
       '</div>';
@@ -17202,7 +17265,6 @@
       var _areasN = {}; _compTodasFilas(p).forEach(function(a){ _areasN[a.id] = a.t; });
       var _mapEjM = _ejsById();
 
-      var abiertoHTML = '';
       var colsHTML = '';
       lunes.forEach(function(kL, i){
         var fechas = semanas[kL].sort();
@@ -17289,9 +17351,6 @@
         colsHTML += '<div class="comp-sem-dias">' + circulos + '</div>';
         colsHTML += '</div>';
 
-        if (compDiaAbierta && fechas.indexOf(compDiaAbierta) >= 0) {
-          abiertoHTML = compDiaEditando ? _compPickerHTML(p, compDiaAbierta) : _compResumenHTML(p, compDiaAbierta);
-        }
       });
 
       if (!lunes.length) {
@@ -17302,13 +17361,14 @@
              _gEsc(planNivelLabel(_nivM)) + ' este mes.<br>' +
              '<span class="ruta-panel-nota">Planifica abajo, en el curso: cuando el gestor ponga las franjas de este nivel, la primera clase de cada semana llegará ya preparada.</span></div>';
       } else {
+        // v0.243: el contenido del día ya no va aquí debajo — se abre en globo
+        // (_compDiaOvPintar), que es lo que se pinta al final del repintado.
         h += '<div class="comp-sem-cols">' + colsHTML + '</div>';
         // v0.241: los puntos del móvil necesitan una clave; en pantalla ancha
         // sobra (los nombres van escritos) y el CSS la esconde.
         h += '<div class="comp-puntos-clave"><span><i class="comp-daypto carro"></i>carro</span>' +
              '<span><i class="comp-daypto area"></i>área de trabajo</span>' +
              '<span class="ruta-panel-nota">toca un día para ver los nombres</span></div>';
-        if (abiertoHTML) h += '<div class="comp-dia-abierto">' + abiertoHTML + '</div>';
       }
       h += '</div>';
       return h;
@@ -17468,6 +17528,7 @@
       }
 
       cont.innerHTML = h;
+      _compDiaOvPintar();   // v0.243: el día abierto va en globo, no aquí dentro
     }
 
     // ══════════════════════════════════════════
@@ -17640,6 +17701,14 @@
 
       document.querySelectorAll('.pantalla').forEach(function(p) { p.classList.remove('activa'); });
       document.getElementById(id).classList.add('activa');
+
+      // v0.243: el globo del día vive fuera de las pantallas, así que si se
+      // sale de Planificación con él abierto se quedaría flotando.
+      if (id !== 'pantalla-planificacion' && compDiaAbierta) {
+        compDiaAbierta = null; compDiaEditando = false;
+        var _ovD = document.getElementById('comp-dia-ov');
+        if (_ovD) { _ovD.style.display = 'none'; _ovD.innerHTML = ''; }
+      }
 
       if (id === 'pantalla-inicio')          actualizarInicio();
       if (id === 'pantalla-ajustes')         mostrarAjustes();
