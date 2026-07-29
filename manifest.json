@@ -1,0 +1,32 @@
+{
+  "name": "Escuela Padel Premium",
+  "short_name": "Escuela Padel Premium",
+  "description": "Gestión de clases, alumnos, asistencia, ejercicios y partidos de Escuela Padel Premium.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0e1b3c",
+  "theme_color": "#0e1b3c",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
