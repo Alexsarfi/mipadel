@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.255.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.256.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,22 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.256.0 — Táctica se navega sin scroll (2026-07)
+    (sin migraciones nuevas)
+    · LAS SUBCATEGORÍAS DEJAN DE SER ACORDEONES APILADOS. Construcción,
+      Control, Definición, Red y Transición salen ahora como FILA HORIZONTAL
+      de botones, cada uno con su contador. Se toca uno y sus ejercicios
+      aparecen justo debajo; se vuelve a tocar y se ven todos otra vez.
+      Nuevo filtroEjSubcat + aplicarFiltroSubcat().
+    · Sin nada elegido se ven todos los ejercicios seguidos, en el orden de
+      las subcategorías (Construcción → Control → Definición → Red →
+      Transición) y, dentro de cada una, lo grabado primero.
+    · LAS INTENCIONES (Anular · Dominar · Definir) van también en una sola
+      fila horizontal y sin emoji, igual que los golpes.
+    · ARREGLADO de paso: al volver a Táctica desde otra pestaña, la fila de
+      intenciones se quedaba con el formato en bloques por zona que usan los
+      golpes, porque no se reponía la clase del contenedor.
 
   v0.255.0 — Ejercicios: fuera la información repetida (2026-07)
     (sin migraciones nuevas)
@@ -4957,6 +4973,12 @@
     .fpill:active { transform:scale(0.96); }
     .fpill-dorado { border-color:var(--dorado); color:#92400e; background:var(--ambar); }
     .fpill-dorado.activo { background:var(--dorado); color:var(--blanco); border-color:var(--dorado); }
+    /* v0.256 — Subcategorías de Táctica en fila, dentro de la lista */
+    .filtros.subcats { margin:0 0 11px; }
+    .filtros.subcats .fpill b { font-size:10px; font-weight:800; color:var(--gris);
+      background:var(--verde-suave); padding:0 5px; border-radius:20px; margin-left:3px; }
+    .filtros.subcats .fpill.activo { background:#993c1d; border-color:#993c1d; color:var(--blanco); }
+    .filtros.subcats .fpill.activo b { background:rgba(255,255,255,0.22); color:var(--blanco); }
     /* v0.255 — Golpes agrupados por zona de pista, como en el carro */
     .filtros-zonas { display:flex; flex-direction:column; gap:5px; padding:2px 0 4px; }
     .fz-blq { display:flex; align-items:center; gap:8px; min-width:0; }
@@ -7563,7 +7585,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.255.0';
+    var APP_VERSION = '0.256.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -18791,9 +18813,13 @@
         var pInt = {};
         ejs.forEach(function(e){ if (ejTipo(e) === 'Táctica') { var i = ejIntencion(e); if (i) pInt[i] = true; } });
         var ints = INTENCION_CANON.filter(function(i){ return pInt[i.key]; });
+        // v0.256: en una sola fila horizontal, y sin emoji (como los golpes).
+        // Ojo: hay que reponer la clase, porque el otro camino la deja en
+        // 'filtros-zonas' y se quedaba pegada al volver a Táctica.
+        cont.className = 'filtros';
         cont.innerHTML = ints.map(function(i) {
           return '<div class="fpill' + (filtroEjIntencion === i.key ? ' activo' : '') +
-                 '" onclick="aplicarFiltroIntencion(\'' + i.key + '\')">' + i.icono + ' ' + i.label + '</div>';
+                 '" onclick="aplicarFiltroIntencion(\'' + i.key + '\')">' + i.label + '</div>';
         }).join('');
         return;
       }
@@ -18984,6 +19010,14 @@
 
     // Táctica: acordeón por SUBCATEGORÍA en vez de por golpe. Cada tarjeta
     // lleva su golpe como chapa, que ahí sí es información extra.
+    // v0.256 — Táctica: las subcategorías dejan de ser acordeones apilados y
+    // pasan a ser una FILA HORIZONTAL de botones. Se toca uno y sus ejercicios
+    // salen justo debajo, sin tener que bajar la pantalla.
+    var filtroEjSubcat = null;   // null = todas
+    function aplicarFiltroSubcat(k) {
+      filtroEjSubcat = (filtroEjSubcat === k) ? null : k;
+      renderListaEjercicios();
+    }
     function _ejBloquesPorSubcat(lista, pref, forzarAbierto, cats) {
       var nomCat = {};
       (cats || []).forEach(function(c){ nomCat[c.id] = c.nombre; });
@@ -18994,25 +19028,27 @@
       });
       var claves = TACTICA_ORDEN.filter(function(k){ return por[k]; })
         .concat(Object.keys(por).filter(function(k){ return TACTICA_ORDEN.indexOf(k) < 0; }).sort());
-      var h = '';
+      if (!claves.length) return '';
+      // Si lo elegido ya no está (por otro filtro), se cae a «todas»
+      var sel = (filtroEjSubcat && claves.indexOf(filtroEjSubcat) >= 0) ? filtroEjSubcat : null;
+
+      var h = '<div class="filtros subcats">';
       claves.forEach(function(k) {
-        var grupo = por[k].slice().sort(_ejOrdenGolpe);
-        var clave = 'sc:' + pref + ':' + k;
-        var abierto = forzarAbierto || acordeonAbierto(clave);
-        h += '<div class="grupo">';
-        h += '<div class="grupo-titulo" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onclick="toggleAcordeon(\'' + clave.replace(/'/g, "\\'") + '\')">' +
-               '<span>' + (abierto ? '▾' : '▸') + ' ' + _gEsc(k) + '</span>' +
-               '<span style="font-size:12px;color:var(--gris);font-weight:600;">' + grupo.length + '</span></div>';
-        if (abierto) {
-          h += '<div class="grid-ejercicios">';
-          grupo.forEach(function(ej){
-            var g = ejGolpe(ej);
-            h += ejercicioCardHTML(ej, 'ejercicios', g && GOLPE_LABEL[g] ? GOLPE_LABEL[g] : '');
-          });
-          h += '</div>';
-        }
-        h += '</div>';
+        h += '<div class="fpill' + (sel === k ? ' activo' : '') +
+             '" onclick="aplicarFiltroSubcat(\'' + k.replace(/'/g, "\\'") + '\')">' +
+             _gEsc(k) + ' <b>' + por[k].length + '</b></div>';
       });
+      h += '</div>';
+
+      var mostrar = sel ? [sel] : claves;
+      h += '<div class="grid-ejercicios">';
+      mostrar.forEach(function(k) {
+        por[k].slice().sort(_ejOrdenGolpe).forEach(function(ej){
+          var g = ejGolpe(ej);
+          h += ejercicioCardHTML(ej, 'ejercicios', g && GOLPE_LABEL[g] ? GOLPE_LABEL[g] : '');
+        });
+      });
+      h += '</div>';
       return h;
     }
 
