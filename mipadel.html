@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.253.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.255.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,43 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.255.0 — Ejercicios: fuera la información repetida (2026-07)
+    (sin migraciones nuevas)
+    · FUERA LA CABECERA DE SECCIÓN. Al pulsar la pestaña «Técnica» salía
+      debajo otra vez «Técnica simple» con su subtítulo y su contador. La
+      pestaña ya dice dónde estás.
+    · FUERA LOS ACORDEONES VERTICALES POR GOLPE. Repetían la fila horizontal
+      de golpes de la cabecera, que es desde donde se elige. Ahora la lista va
+      seguida, ordenada por zona de pista y, dentro de cada golpe, con lo
+      grabado primero y luego la progresión. (La versión agrupada se conserva
+      como _ejBloquesPorGolpeAgrupado por si se quiere recuperar.)
+    · LA FILA DE GOLPES SE AGRUPA POR ZONA DE PISTA, igual que el carro:
+      Desde el fondo · Aéreos · En la red · Saque y resto · Combinados. Cada
+      bloque con su rótulo a la izquierda y sus golpes en horizontal.
+    · Y solo ofrece los golpes que EXISTEN en la pestaña activa: en Técnica
+      no salen golpes que solo tiene Táctica. Sin botón de «todos» — se toca
+      el golpe activo para soltarlo. Y sin emojis, como en el carro.
+    · Táctica no cambia: sigue agrupada por su subcategoría (Construcción,
+      Control, Definición, Red, Transición), que ahí sí ordena de verdad.
+
+  v0.254.0 — Menos ruido y el carro numerado (2026-07)
+    (sin migraciones nuevas)
+    · FUERA EL RÓTULO «Otras sesiones de la semana» del día. Era ruido y
+      además engañaba: esas sesiones son de ESE día, no de la semana — solo
+      que no cuelgan de ningún bloque marcado. Las fichas se quedan, sin el
+      título que las separaba.
+    · EL CARRO VA NUMERADO (1, 2, 3…) tanto al editar el día como al ver la
+      clase. En pista se lanza en orden y hasta ahora no se veía cuál iba
+      primero. Nuevo 3er parámetro de _rutaCarroFichaHTML.
+    · SIN EMOJIS DE GOLPE EN EL CARRO: ni en los botones de golpe, ni en el
+      subtítulo cuando hay varios abiertos, ni en la ficha del ejercicio.
+      Queda el nombre, que es lo que se lee. (En el catálogo de Ejercicios y
+      en los grupos de clase siguen, ahí no molestan.)
+    · LA CLASE DEL DÍA, MÁS LEGIBLE EN EL MÓVIL: las dos partes con borde más
+      marcado, la cabecera a todo el ancho y con su color (cian el carro,
+      lila el área), miniaturas y nombres más grandes. Es la pantalla que se
+      mira con prisa en pista.
 
   v0.253.0 — Plegar una parte ya no esconde lo que llevas elegido (2026-07)
     (sin migraciones nuevas)
@@ -4920,6 +4957,15 @@
     .fpill:active { transform:scale(0.96); }
     .fpill-dorado { border-color:var(--dorado); color:#92400e; background:var(--ambar); }
     .fpill-dorado.activo { background:var(--dorado); color:var(--blanco); border-color:var(--dorado); }
+    /* v0.255 — Golpes agrupados por zona de pista, como en el carro */
+    .filtros-zonas { display:flex; flex-direction:column; gap:5px; padding:2px 0 4px; }
+    .fz-blq { display:flex; align-items:center; gap:8px; min-width:0; }
+    .fz-tit { flex:0 0 68px; font-size:9px; font-weight:800; color:var(--gris);
+      text-transform:uppercase; letter-spacing:.05em; line-height:1.15; }
+    .fz-pills { display:flex; gap:5px; overflow-x:auto; padding:1px 0; flex:1; min-width:0;
+      -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+    .fz-pills::-webkit-scrollbar { display:none; }
+    .fz-pills .fpill { padding:4px 11px; font-size:11.5px; }
     /* v0.249 — Pestañas de tipo en la cabecera de Ejercicios */
     .ejtabs { display:flex; gap:6px; overflow-x:auto; padding:2px 0 5px; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
     .ejtabs::-webkit-scrollbar { display:none; }
@@ -5870,6 +5916,10 @@
     button.ruta-parte-hdr { width:100%; box-sizing:border-box; font-family:inherit; text-align:left;
       border:none; cursor:pointer; }
     button.ruta-parte-hdr:hover { filter:brightness(.97); }
+    /* v0.254 — Número de orden del ejercicio dentro del carro */
+    .ruta-carro-num { flex-shrink:0; width:21px; height:21px; border-radius:50%; background:#0891b2;
+      color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center;
+      justify-content:center; margin-right:1px; }
     /* v0.253 — Lo elegido sigue a la vista con la parte plegada */
     .ruta-parte-plegado { padding:8px 2px 2px; display:flex; flex-direction:column; gap:6px; }
     .ruta-parte-plegado > .ruta-eleg-chip { align-self:flex-start; }
@@ -6014,6 +6064,23 @@
     .comp-clase-parte { min-width:0; border:1.5px solid var(--borde); border-radius:14px; padding:11px 12px 12px; }
     .comp-clase-carro { background:#f6fdff; border-color:#cffafe; }
     .comp-clase-area { background:var(--blanco); }
+    /* v0.254 — En el MÓVIL la clase del día se lee en pista: las dos partes
+       más marcadas y con más aire, que es donde se mira con prisa. */
+    @media (max-width:699px){
+      .comp-clase-cols { gap:14px; }
+      .comp-clase-parte { border-width:2px; padding:0 0 12px; overflow:hidden; }
+      .comp-clase-parte > .ruta-parte-hdr { margin:0 0 10px; padding:10px 12px; border-radius:0;
+        font-size:13.5px; }
+      .comp-clase-parte > .ruta-parte-hdr b { font-size:15px; }
+      .comp-clase-area > .ruta-parte-hdr { background:#efe7f7; color:#4b2e6b; }
+      .comp-clase-area > .ruta-parte-hdr b { color:#4b2e6b; }
+      .comp-clase-parte > *:not(.ruta-parte-hdr) { margin-left:12px; margin-right:12px; }
+      .comp-carro-grid { gap:8px; }
+      .comp-clase-parte .ruta-carro-ficha { padding:7px; }
+      .comp-clase-parte .ruta-carro-ficha .ruta-carro-thumb { width:74px; }
+      .comp-clase-parte .ruta-carro-ficha-txt b { font-size:13.5px; }
+      .comp-clase-parte .ruta-ses-eleg { padding:9px 10px; }
+    }
     .comp-clase-parte .comp-resumen-fila { margin:0 0 8px; }
     .ruta-ses-eleg.clicable { cursor:pointer; }
     .ruta-ses-eleg.clicable:hover { background:#cffafe; }
@@ -7496,7 +7563,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.253.0';
+    var APP_VERSION = '0.255.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -15867,9 +15934,10 @@
     // Si se le pasa un `quitar` (el onclick de la ✕), lleva el botón de borrar.
     // Es la misma ficha en el panel de planificar y en la vista del día, para
     // que en pista se reconozca lo mismo que se eligió.
-    function _rutaCarroFichaHTML(e, quitar) {
+    function _rutaCarroFichaHTML(e, quitar, num) {
       var gk = ejFaceta(e, 'golpe');
-      var g  = gk ? (GOLPE_ICONO[gk] ? GOLPE_ICONO[gk] + ' ' + (GOLPE_LABEL[gk] || gk) : gk) : '';
+      // v0.254: sin emoji — en el carro el icono era ruido, basta el nombre.
+      var g  = gk ? (GOLPE_LABEL[gk] || gk) : '';
       // v0.235: si el EJ es una progresión (varios vídeos), se ven TODAS sus
       // miniaturas en fila, no solo la primera — así en pista se reconoce que
       // hay que pasar por las 3 fases, no solo lanzar la primera.
@@ -15899,6 +15967,7 @@
           (ver1 ? '<span class="ejcard-play">▶</span>' : '') + '</span>';
       }
       return '<div class="ruta-carro-ficha">' +
+        (num ? '<span class="ruta-carro-num">' + num + '</span>' : '') +
         thumbsHTML +
         '<span class="ruta-carro-ficha-txt"><b>' + _gEsc(e.nombre || ('Ejercicio ' + e.id)) + '</b>' +
           (g ? '<span>' + _gEsc(g) + '</span>' : '') +
@@ -15923,9 +15992,11 @@
     function _rutaCarroSelHTML(idx, arr) {
       if (!arr.length) return '<div class="ruta-panel-nota">Todavía no hay ningún ejercicio en el carro.</div>';
       var mapEj = _ejsById(), h = '';
-      arr.forEach(function(id){
+      // v0.254: numerados. En pista el carro se lanza en orden, así que hay
+      // que ver de un vistazo cuál va primero y cuál después.
+      arr.forEach(function(id, i){
         var e = mapEj[id] || { id:id, nombre:'Ejercicio ' + id, facetas:{} };
-        h += _rutaCarroFichaHTML(e, 'rutaCarroToggle(' + idx + ',' + id + ')');
+        h += _rutaCarroFichaHTML(e, 'rutaCarroToggle(' + idx + ',' + id + ')', i + 1);
       });
       return h;
     }
@@ -16059,7 +16130,7 @@
           visibles.forEach(function(k) {
             var g = porKey[k], on = abiertos.indexOf(k) >= 0;
             h += '<button type="button" class="ruta-carro-g' + (on ? ' on' : '') + '" onclick="rutaCarroGolpe(\'' + k + '\',' + idx + ')">' +
-              g.icono + ' ' + _gEsc(g.label) + ' <b>' + g.ejs.length + '</b></button>';
+              _gEsc(g.label) + ' <b>' + g.ejs.length + '</b></button>';
           });
           h += '</div>';
         });
@@ -16074,7 +16145,7 @@
           sueltos.forEach(function(g){
             var on = abiertos.indexOf(g.key) >= 0;
             h += '<button type="button" class="ruta-carro-g' + (on ? ' on' : '') + '" onclick="rutaCarroGolpe(\'' + g.key + '\',' + idx + ')">' +
-              g.icono + ' ' + _gEsc(g.label) + ' <b>' + g.ejs.length + '</b></button>';
+              _gEsc(g.label) + ' <b>' + g.ejs.length + '</b></button>';
           });
           h += '</div>';
         }
@@ -16109,7 +16180,7 @@
       // Un apartado por golpe abierto, con sus ejercicios y su miniatura
       abiertos.forEach(function(k){
         var g = grupos.filter(function(x){ return x.key === k; })[0];
-        if (abiertos.length > 1) h += '<div class="ruta-carro-gsub">' + g.icono + ' ' + _gEsc(g.label) + '</div>';
+        if (abiertos.length > 1) h += '<div class="ruta-carro-gsub">' + _gEsc(g.label) + '</div>';
         g.ejs.forEach(function(e){
           var on = arr.indexOf(e.id) >= 0;
           var meta = [ejFaceta(e, 'zona'), ejFaceta(e, 'intencion')].filter(Boolean).join(' · ');
@@ -16904,11 +16975,12 @@
       } else {
         var mapEjC = _ejsById();
         h += '<div class="comp-carro-grid">';
-        carroIds.forEach(function(id){
+        carroIds.forEach(function(id, i){
           var e = mapEjC[id];
           if (!e) return;
-          // Misma tarjeta con golpe y miniatura que en el panel de planificar
-          h += _rutaCarroFichaHTML(e, '');
+          // Misma tarjeta con golpe y miniatura que en el panel de planificar,
+          // v0.254 numerada: en pista se lanza en este orden.
+          h += _rutaCarroFichaHTML(e, '', i + 1);
         });
         h += '</div>';
       }
@@ -17004,7 +17076,9 @@
       // Las que no cuelgan de ningún bloque marcado no se pierden: van al final.
       var sesSueltasD = sesIds.filter(function(id){ return !sesColocadasD[id]; });
       if (sesSueltasD.length) {
-        if (filas.length) h += '<div class="ruta-panel-paso" style="margin-top:8px;">Otras sesiones de la semana</div>';
+        // v0.254: fuera el rótulo «Otras sesiones de la semana». Era ruido y
+        // además engañaba: son sesiones de ESTE día que no cuelgan de ningún
+        // bloque marcado, no de la semana. Las fichas se quedan.
         sesSueltasD.forEach(function(id){ h += _sesFichaDia(id); });
       }
       h += '</div>';   // /comp-clase-area
@@ -18723,15 +18797,34 @@
         }).join('');
         return;
       }
+      // v0.255 — Los golpes se ofrecen agrupados por ZONA DE PISTA, igual que
+      // en el carro: desde el fondo → aéreos → en la red → saque. Sin botón
+      // de «todos»: se toca el golpe activo para soltarlo.
       var presentes = {};
-      ejs.forEach(function(e){ var g = ejGolpe(e); if (g) presentes[g] = true; });
-      var golpes = GOLPE_CANON.filter(function(g){ return presentes[g.key]; });
-      if (!golpes.length) { cont.innerHTML = ''; return; }
-      var html = '';
-      golpes.forEach(function(g) {
-        html += '<div class="fpill' + (filtroEjGolpe === g.key ? ' activo' : '') +
-                '" onclick="aplicarFiltroGolpe(\'' + g.key + '\')">' + g.icono + ' ' + g.label + '</div>';
+      var ambito = filtroEjTipo ? ejs.filter(function(e){ return ejTipo(e) === filtroEjTipo; }) : ejs;
+      ambito.forEach(function(e){ var g = ejGolpe(e); if (g) presentes[g] = true; });
+      if (!Object.keys(presentes).length) { cont.innerHTML = ''; return; }
+      cont.className = 'filtros-zonas';
+      var html = '', usadas = {};
+      GOLPE_ZONAS.forEach(function(z) {
+        var ks = z.keys.filter(function(k){ usadas[k] = true; return presentes[k]; });
+        if (!ks.length) return;
+        html += '<div class="fz-blq"><span class="fz-tit">' + z.label + '</span><span class="fz-pills">';
+        ks.forEach(function(k) {
+          html += '<div class="fpill' + (filtroEjGolpe === k ? ' activo' : '') +
+                  '" onclick="aplicarFiltroGolpe(\'' + k + '\')">' + (GOLPE_LABEL[k] || k) + '</div>';
+        });
+        html += '</span></div>';
       });
+      var sueltos = Object.keys(presentes).filter(function(k){ return !usadas[k]; });
+      if (sueltos.length) {
+        html += '<div class="fz-blq"><span class="fz-tit">Otros</span><span class="fz-pills">';
+        sueltos.forEach(function(k) {
+          html += '<div class="fpill' + (filtroEjGolpe === k ? ' activo' : '') +
+                  '" onclick="aplicarFiltroGolpe(\'' + k + '\')">' + (GOLPE_LABEL[k] || k) + '</div>';
+        });
+        html += '</span></div>';
+      }
       cont.innerHTML = html;
     }
 
@@ -18852,10 +18945,8 @@
         var lista = ejs.filter(function(e){ return ejTipo(e) === secc.key; });
         if (!lista.length) return;
         html += '<div class="secc ' + secc.cls + '">';
-        html += '<div class="secc-hdr"><span class="secc-bar"></span>' +
-                  '<span class="secc-txt"><b>' + secc.label + '</b>' +
-                  '<i>' + secc.sub + '</i></span>' +
-                  '<span class="n">' + lista.length + '</span></div>';
+        // v0.255: fuera la cabecera de sección — repetía el nombre de la
+        // pestaña que acabas de pulsar. La pestaña ya dice dónde estás.
         // v0.248 — En Táctica, un resumen de intenciones: de un vistazo se ve
         // si el trabajo está equilibrado o cargado hacia un lado.
         if (secc.key === 'Táctica') {
@@ -18925,8 +19016,28 @@
       return h;
     }
 
-    // Técnica (simple y combinada) y Físico: acordeón por GOLPE, como hasta ahora.
+    // v0.255 — Técnica y Físico: LISTA SEGUIDA, sin los acordeones verticales
+    // por golpe. Repetían la fila horizontal de golpes de la cabecera, que es
+    // desde donde se elige. El orden sigue siendo el de zona de pista (y
+    // dentro de cada golpe, lo grabado primero y luego la progresión).
     function _ejBloquesPorGolpe(lista, pref, forzarAbierto) {
+      var orden = {};
+      GOLPE_ORDEN_EJ.forEach(function(g, i){ orden[g] = i; });
+      var ejs = lista.slice().sort(function(a, b) {
+        var oa = orden[ejGolpe(a) || '_'], ob = orden[ejGolpe(b) || '_'];
+        if (oa === undefined) oa = 99;
+        if (ob === undefined) ob = 99;
+        if (oa !== ob) return oa - ob;
+        return _ejOrdenGolpe(a, b);
+      });
+      var h = '<div class="grid-ejercicios">';
+      ejs.forEach(function(ej){ h += ejercicioCardHTML(ej, 'ejercicios'); });
+      return h + '</div>';
+    }
+
+    // Versión anterior con acordeón por golpe (se conserva por si se quiere
+    // recuperar el agrupado; hoy no se llama desde ninguna pantalla).
+    function _ejBloquesPorGolpeAgrupado(lista, pref, forzarAbierto) {
       var ejs = lista;
       var golpesPresentes = {};
       ejs.forEach(function(e){ golpesPresentes[ejGolpe(e) || '_'] = true; });
