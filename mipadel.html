@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.249.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.250.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,31 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.250.0 — Pestañas en la cabecera · golpes ordenados por zona de pista (2026-07)
+    (sin migraciones nuevas)
+    · FUERA EL BOTÓN «TODOS». Siempre hay una sección activa, así que las
+      pestañas se mudan DENTRO DE LA CABECERA AZUL, debajo del título
+      «Ejercicios», con los tonos invertidos (translúcidas sobre el azul, y
+      la activa en blanco o en el color de su sección). Al entrar arranca en
+      la primera con contenido.
+    · EL VOCABULARIO DE GOLPES SE REORDENA POR DÓNDE SE EJECUTA EL GOLPE,
+      que es como se piensa una clase en pista:
+        · Desde el fondo — Fondo · Pared · Globo · Bajada
+        · Aéreos ........ Bandeja · Víbora · Remate · Rulo
+        · En la red ..... Volea · Chiquita · Dejada
+        · Saque y resto . Saque/Resto
+      En el selector del carro los botones salen agrupados en esos bloques,
+      con su rótulo, en vez de una fila corrida.
+    · CUATRO GOLPES NUEVOS: bajada, rulo, chiquita y dejada. Los tres
+      primeros ya existían en el vault pero NO estaban en el vocabulario, así
+      que caían en «Combinada» por descarte. Se arreglan 3 ejercicios:
+      «Todo por el centro (bajada de pared)» y «Bajada de pared con marcado
+      del punto de impacto» → Bajada; «Chiquita y avance a la red» → Chiquita.
+    · Ojo al orden dentro de golpeCanonico(): 'bajada' se comprueba ANTES que
+      'pared', porque una bajada de pared es una bajada, no una pared.
+    · El catálogo de Ejercicios usa el mismo orden que el carro, para que las
+      dos pantallas se lean igual.
 
   v0.249.0 — Ejercicios: pestañas en la cabecera (2026-07)
     (sin migraciones nuevas)
@@ -4857,6 +4882,18 @@
     .ejtab.secc-tactica.on { background:#993c1d; border-color:#993c1d; }
     .ejtab.secc-comb.on { background:#8a6d24; border-color:#8a6d24; }
     .ejtab:active { transform:scale(0.97); }
+    /* v0.250 — Las pestañas viven en la cabecera azul: se invierten los tonos */
+    .cabecera .ejtabs { position:relative; margin-top:13px; padding:0; }
+    .cabecera .ejtab { background:rgba(255,255,255,0.13); border-color:rgba(255,255,255,0.20);
+      color:rgba(255,255,255,0.85); box-shadow:none; padding:6px 11px; font-size:12px; }
+    .cabecera .ejtab b { background:rgba(255,255,255,0.16); color:rgba(255,255,255,0.8); }
+    .cabecera .ejtab.on { background:var(--blanco); border-color:var(--blanco); color:var(--verde);
+      box-shadow:0 2px 10px rgba(0,0,0,0.18); }
+    .cabecera .ejtab.on b { background:var(--verde-suave); color:var(--verde); }
+    .cabecera .ejtab.secc-tactica.on { background:#f7d9cd; border-color:#f7d9cd; color:#7d2f16; }
+    .cabecera .ejtab.secc-tactica.on b { background:rgba(153,60,29,0.14); color:#7d2f16; }
+    .cabecera .ejtab.secc-comb.on { background:#f3e4c2; border-color:#f3e4c2; color:#6d5518; }
+    .cabecera .ejtab.secc-comb.on b { background:rgba(109,85,24,0.14); color:#6d5518; }
 
     /* ── ESTRELLAS ── */
     .stars { display:flex; gap:1px; align-items:center; }
@@ -5873,6 +5910,11 @@
        miniatura del ejercicio (vídeo de YouTube o foto) */
     .ruta-carro-gsub { font-size:10px; font-weight:800; color:var(--gris); text-transform:uppercase;
       letter-spacing:.04em; margin:8px 2px 4px; }
+    /* v0.250 — Rótulo de la zona de pista sobre cada bloque de golpes */
+    .ruta-carro-zona { font-size:9.5px; font-weight:800; color:var(--gris); text-transform:uppercase;
+      letter-spacing:.09em; margin:9px 2px 4px; display:flex; align-items:center; gap:7px; }
+    .ruta-carro-zona::after { content:''; flex:1; height:1px; background:var(--borde); }
+    .ruta-carro-zona:first-child { margin-top:2px; }
     .ruta-carro-gsub:first-child { margin-top:2px; }
     .ruta-carro-thumb { position:relative; flex-shrink:0; width:52px; aspect-ratio:16/9; border-radius:6px; overflow:hidden;
       background:#111; display:flex; align-items:center; justify-content:center; }
@@ -6667,13 +6709,13 @@
       <button class="btn-volver" onclick="irA('pantalla-inicio')">‹ Inicio</button>
       <div class="cab-titulo">Ejercicios</div>
       <div class="cab-sub" id="sub-ejercicios">0 ejercicios</div>
+      <div id="filtros-tipo-ej"></div>
     </div>
     <!-- Filtros fuera del scroll del contenido -->
     <div class="filtros-zona">
       <input id="busqueda-ej" type="search" inputmode="search" autocomplete="off"
              placeholder="🔍 Buscar por nombre o código…" oninput="buscarEjercicios(this.value)"
              style="width:100%;box-sizing:border-box;border:1px solid var(--borde,#d8d8d2);border-radius:10px;padding:9px 12px;font-size:14px;font-family:inherit;background:#fff;color:var(--tinta);outline:none;margin-bottom:2px;">
-      <div class="filtros" id="filtros-tipo-ej"></div>
       <div class="filtros" id="filtros-golpe-ej"></div>
     </div>
     <div class="contenido">
@@ -7383,7 +7425,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.249.0';
+    var APP_VERSION = '0.250.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -15890,17 +15932,47 @@
         // v0.219 — Con algún golpe abierto, los demás se esconden (menos ruido)
         // y queda un ＋ para traerlos de vuelta y abrir otro más.
         var ocultos = grupos.length - abiertos.length;
-        h += '<div class="ruta-carro-golpes">';
-        grupos.forEach(function(g){
-          var on = abiertos.indexOf(g.key) >= 0;
-          if (hayAbiertos && !on && !_rutaCarroMas) return;
-          h += '<button type="button" class="ruta-carro-g' + (on ? ' on' : '') + '" onclick="rutaCarroGolpe(\'' + g.key + '\',' + idx + ')">' +
-            g.icono + ' ' + _gEsc(g.label) + ' <b>' + g.ejs.length + '</b></button>';
+        // v0.250 — Los golpes se reparten en BLOQUES por la zona de pista
+        // donde se ejecutan (fondo → aéreos → red → saque), que es el orden
+        // en el que se piensa una clase, en vez de una fila corrida.
+        var porKey = {};
+        grupos.forEach(function(g){ porKey[g.key] = g; });
+        var usadas = {};
+        GOLPE_ZONAS.forEach(function(z) {
+          var visibles = z.keys.filter(function(k) {
+            if (!porKey[k]) return false;
+            usadas[k] = true;
+            var on = abiertos.indexOf(k) >= 0;
+            return !(hayAbiertos && !on && !_rutaCarroMas);
+          });
+          if (!visibles.length) return;
+          h += '<div class="ruta-carro-zona">' + _gEsc(z.label) + '</div>';
+          h += '<div class="ruta-carro-golpes">';
+          visibles.forEach(function(k) {
+            var g = porKey[k], on = abiertos.indexOf(k) >= 0;
+            h += '<button type="button" class="ruta-carro-g' + (on ? ' on' : '') + '" onclick="rutaCarroGolpe(\'' + k + '\',' + idx + ')">' +
+              g.icono + ' ' + _gEsc(g.label) + ' <b>' + g.ejs.length + '</b></button>';
+          });
+          h += '</div>';
         });
+        // Golpes que no estén en ninguna zona (por si aparece uno nuevo)
+        var sueltos = grupos.filter(function(g) {
+          if (usadas[g.key]) return false;
+          var on = abiertos.indexOf(g.key) >= 0;
+          return !(hayAbiertos && !on && !_rutaCarroMas);
+        });
+        if (sueltos.length) {
+          h += '<div class="ruta-carro-zona">Otros</div><div class="ruta-carro-golpes">';
+          sueltos.forEach(function(g){
+            var on = abiertos.indexOf(g.key) >= 0;
+            h += '<button type="button" class="ruta-carro-g' + (on ? ' on' : '') + '" onclick="rutaCarroGolpe(\'' + g.key + '\',' + idx + ')">' +
+              g.icono + ' ' + _gEsc(g.label) + ' <b>' + g.ejs.length + '</b></button>';
+          });
+          h += '</div>';
+        }
         if (hayAbiertos && ocultos > 0)
-          h += '<button type="button" class="ruta-carro-g mas" onclick="rutaCarroMas(' + idx + ')">' +
-               (_rutaCarroMas ? '− menos' : '＋ ' + ocultos + ' más') + '</button>';
-        h += '</div>';
+          h += '<div class="ruta-carro-golpes"><button type="button" class="ruta-carro-g mas" onclick="rutaCarroMas(' + idx + ')">' +
+               (_rutaCarroMas ? '− menos' : '＋ ' + ocultos + ' más') + '</button></div>';
       }
 
       // v0.239 — Los ejercicios YA elegidos, con su barra para minimizarlos:
@@ -18207,19 +18279,28 @@
       var ejs = leerEjercicios();
       var cuenta = {};
       ejs.forEach(function(e){ var t = ejTipo(e); cuenta[t] = (cuenta[t] || 0) + 1; });
-      var tabs = [{ key:null, label:'Todos', n:ejs.length, cls:'' }];
+      // v0.250: fuera «Todos». Siempre hay una sección activa, así que las
+      // pestañas viven en la cabecera azul y la lista enseña solo esa.
+      var tabs = [];
       TIPO_SECC.forEach(function(s) {
-        if (!cuenta[s.key]) return;
-        tabs.push({ key:s.key, label:s.tab, n:cuenta[s.key], cls:s.cls });
+        if (cuenta[s.key]) tabs.push({ key:s.key, label:s.tab, n:cuenta[s.key], cls:s.cls });
       });
-      if (tabs.length < 2) { cont.innerHTML = ''; return; }
+      if (!tabs.length) { cont.innerHTML = ''; return; }
       cont.className = 'ejtabs';
       cont.innerHTML = tabs.map(function(t) {
-        var arg = (t.key === null) ? 'null' : "'" + t.key.replace(/'/g, "\\'") + "'";
+        var arg = "'" + t.key.replace(/'/g, "\\'") + "'";
         return '<button type="button" class="ejtab ' + t.cls + (filtroEjTipo === t.key ? ' on' : '') +
                '" onclick="aplicarFiltroTipo(' + arg + ')">' +
                '<span>' + t.label + '</span><b>' + t.n + '</b></button>';
       }).join('');
+    }
+    // Sin «Todos» hay que arrancar en alguna: la primera con contenido.
+    function _ejTipoPorDefecto() {
+      if (filtroEjTipo !== null) return;
+      var cuenta = {};
+      leerEjercicios().forEach(function(e){ var t = ejTipo(e); cuenta[t] = (cuenta[t] || 0) + 1; });
+      var prim = TIPO_SECC.filter(function(s){ return cuenta[s.key]; })[0];
+      if (prim) filtroEjTipo = prim.key;
     }
 
     function renderFiltrosValEj() {
@@ -18252,23 +18333,41 @@
     var NIVEL_LABEL = { 1: 'Iniciación', 2: 'Intermedio', 3: 'Avanzado', 4: 'Élite' };
 
     // ── Golpe: vocabulario canónico (ver PROPUESTA_FACETAS_EJERCICIOS.md) ──
+    // v0.250 — El vocabulario se ordena por DÓNDE se ejecuta el golpe, que es
+    // como se piensa el carro en pista: primero lo del fondo, luego lo aéreo,
+    // luego la red, y el saque aparte. Nuevos: bajada, rulo, chiquita, dejada.
     var GOLPE_CANON = [
-      { key: 'volea',   icono: '🎯', label: 'Volea'       },
-      { key: 'bandeja', icono: '🪃', label: 'Bandeja'     },
-      { key: 'vibora',  icono: '🐍', label: 'Víbora'      },
-      { key: 'remate',  icono: '💥', label: 'Remate'      },
-      { key: 'globo',   icono: '🎈', label: 'Globo'       },
-      { key: 'pared',   icono: '🧱', label: 'Pared'       },
-      { key: 'fondo',   icono: '🎾', label: 'Fondo'       },
-      { key: 'saque',   icono: '🚀', label: 'Saque/Resto' },
-      { key: 'mixto',   icono: '🔀', label: 'Combinada'   },
+      { key: 'fondo',    icono: '🎾', label: 'Fondo'       },
+      { key: 'pared',    icono: '🧱', label: 'Pared'       },
+      { key: 'globo',    icono: '🎈', label: 'Globo'       },
+      { key: 'bajada',   icono: '⬇️', label: 'Bajada'      },
+      { key: 'bandeja',  icono: '🪃', label: 'Bandeja'     },
+      { key: 'vibora',   icono: '🐍', label: 'Víbora'      },
+      { key: 'remate',   icono: '💥', label: 'Remate'      },
+      { key: 'rulo',     icono: '🌀', label: 'Rulo'        },
+      { key: 'volea',    icono: '🎯', label: 'Volea'       },
+      { key: 'chiquita', icono: '🤏', label: 'Chiquita'    },
+      { key: 'dejada',   icono: '🍃', label: 'Dejada'      },
+      { key: 'saque',    icono: '🚀', label: 'Saque/Resto' },
+      { key: 'mixto',    icono: '🔀', label: 'Combinada'   },
+    ];
+    // Bloques por zona de ejecución, para el selector del carro.
+    var GOLPE_ZONAS = [
+      { label: 'Desde el fondo', keys: ['fondo', 'pared', 'globo', 'bajada'] },
+      { label: 'Aéreos',         keys: ['bandeja', 'vibora', 'remate', 'rulo'] },
+      { label: 'En la red',      keys: ['volea', 'chiquita', 'dejada'] },
+      { label: 'Saque y resto',  keys: ['saque'] },
+      { label: 'Combinados',     keys: ['mixto'] }
     ];
     var GOLPE_LABEL = {}, GOLPE_ICONO = {};
     GOLPE_CANON.forEach(function(g){ GOLPE_LABEL[g.key] = g.label; GOLPE_ICONO[g.key] = g.icono; });
     // Orden de los golpes en la lista de ejercicios (v0.69): sigue la
     // secuencia del punto + progresión defensa→ataque, que es como se
     // construye una clase (no alfabético).
-    var GOLPE_ORDEN_EJ = ['saque','fondo','pared','globo','volea','bandeja','vibora','remate','mixto'];
+    // v0.250: mismo orden por zona de pista que GOLPE_CANON, para que el
+    // catálogo y el carro se lean igual.
+    var GOLPE_ORDEN_EJ = ['fondo','pared','globo','bajada','bandeja','vibora','remate','rulo',
+                          'volea','chiquita','dejada','saque','mixto'];
 
     // Normaliza cualquier texto de golpe (incluido texto libre del vault) a una
     // clave canónica. Si aparecen 2+ golpes distintos → 'mixto'.
@@ -18282,9 +18381,16 @@
       if (has('víbora', 'vibora')) fams.push('vibora');
       if (has('bandeja'))          fams.push('bandeja');
       if (has('remate'))           fams.push('remate');
+      // v0.250: rulo, bajada, chiquita y dejada dejan de caer en «Combinada».
+      // Ojo al orden: 'bajada' se mira ANTES que 'pared', porque una bajada de
+      // pared es una bajada, no una pared.
+      if (has('rulo'))             fams.push('rulo');
+      if (has('bajada'))           fams.push('bajada');
+      if (has('chiquita', 'volcada')) fams.push('chiquita');
+      if (has('dejada'))           fams.push('dejada');
       if (has('globo'))            fams.push('globo');
       if (has('volea'))            fams.push('volea');
-      if (has('pared'))            fams.push('pared');
+      if (has('pared') && fams.indexOf('bajada') < 0) fams.push('pared');
       if (has('saque', 'resto', 'resta')) fams.push('saque');
       if (fams.length >= 2) return 'mixto';
       if (fams.length === 1) return fams[0];
@@ -18440,8 +18546,9 @@
     }
 
     function aplicarFiltroTipo(tipo) {
-      // v0.249: «Todos» llega como null. Tocar la pestaña activa la suelta.
-      filtroEjTipo = (tipo === null || filtroEjTipo === tipo) ? null : tipo;
+      // v0.250: sin «Todos», la pestaña activa no se puede soltar — se cambia
+      // a otra. Volver a tocarla no hace nada.
+      filtroEjTipo = tipo;
       // v0.248: al entrar o salir de Táctica la fila de abajo cambia de eje
       // (golpes ↔ intenciones), así que se limpia el filtro del eje que se va.
       if (filtroEjTipo === 'Táctica') filtroEjGolpe = null; else filtroEjIntencion = null;
@@ -18548,6 +18655,7 @@
 
     function mostrarEjercicios() {
       _cargarAcordeon();
+      _ejTipoPorDefecto();   // v0.250: sin «Todos», siempre hay una activa
       var inp = document.getElementById('busqueda-ej');
       if (inp) inp.value = filtroEjTexto;
       renderFiltrosTipoEj();
