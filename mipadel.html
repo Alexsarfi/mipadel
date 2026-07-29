@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.252.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.253.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,19 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.253.0 — Plegar una parte ya no esconde lo que llevas elegido (2026-07)
+    (sin migraciones nuevas)
+    · AL PLEGAR el 🛒 Carro o el 🎯 Área de trabajo se ocultaba TODO y solo
+      quedaba la cabecera con un número. Plegabas para quitarte de encima el
+      catálogo y te quedabas sin ver lo que habías metido.
+    · AHORA PLEGADO ESCONDE EL CATÁLOGO, NO TU SELECCIÓN:
+        · Carro plegado → siguen viéndose las fichas de los ejercicios
+          elegidos, con su miniatura y su ✕.
+        · Área plegada → siguen viéndose el bloque marcado (con su ✕) y las
+          tarjetas de las sesiones elegidas para ese día.
+    · Lo que desaparece al plegar es solo lo de elegir: los botones de golpe
+      y sus ejercicios en el carro, y la lista de apartados en el área.
 
   v0.252.0 — El carro solo ofrece lo que se puede lanzar con cesta (2026-07)
     (sin migraciones nuevas)
@@ -5857,6 +5870,9 @@
     button.ruta-parte-hdr { width:100%; box-sizing:border-box; font-family:inherit; text-align:left;
       border:none; cursor:pointer; }
     button.ruta-parte-hdr:hover { filter:brightness(.97); }
+    /* v0.253 — Lo elegido sigue a la vista con la parte plegada */
+    .ruta-parte-plegado { padding:8px 2px 2px; display:flex; flex-direction:column; gap:6px; }
+    .ruta-parte-plegado > .ruta-eleg-chip { align-self:flex-start; }
     .ruta-parte-chev { display:inline-block; font-size:11px; opacity:.65; width:10px;
       transition:transform .12s ease; }
     .ruta-parte-chev.abierto { transform:rotate(90deg); }
@@ -7480,7 +7496,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.252.0';
+    var APP_VERSION = '0.253.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -16008,7 +16024,14 @@
            '<span class="ruta-parte-chev' + (_rutaParteMin.carro ? '' : ' abierto') + '">›</span>' +
            '🛒 <b>1 · Carro</b><span>primera parte</span>' +
            '<span class="ruta-area-n" id="ruta-carro-n">' + (arr.length || '—') + '</span></button>';
-      if (_rutaParteMin.carro) { h += '</div>'; return h; }
+      // v0.253 — Plegado NO es vacío: se esconde el catálogo (los golpes y sus
+      // ejercicios), pero lo que ya llevas elegido se sigue viendo. Si no, al
+      // plegar el carro te quedabas sin saber qué habías metido.
+      if (_rutaParteMin.carro) {
+        if (arr.length) h += '<div class="ruta-parte-plegado">' + _rutaCarroSelHTML(idx, arr) + '</div>';
+        h += '</div>';
+        return h;
+      }
 
       // v0.239 — Los GOLPES van ARRIBA del todo, encima de los ejercicios ya
       // elegidos: primero decides «hoy toca bandeja» y luego ves lo que llevas.
@@ -16284,6 +16307,27 @@
            '🎯 <b>2 · Área de trabajo</b><span>segunda parte</span>' +
            (wd.sesiones.length ? '<span class="ruta-area-n">' + wd.sesiones.length + '</span>' : '') + '</button>';
       if (_rutaParteMin.area) {
+        // v0.253 — Igual que el carro: plegada se esconde el catálogo de
+        // apartados, pero se siguen viendo el bloque marcado y las sesiones
+        // que ya has elegido para este día.
+        var bloqsMin = wd.areasSemana.filter(function(x){ return x.fecha === diaPanel; });
+        if (bloqsMin.length || wd.sesiones.length) {
+          h += '<div class="ruta-parte-plegado">';
+          bloqsMin.forEach(function(x){
+            h += '<span class="ruta-eleg-chip bloque">' + _gEsc(areaN[x.areaId] || 'Área') +
+              '<button type="button" onclick="rutaQuitarArea(\'' + x.fecha + '\',\'' + x.areaId + '\')" aria-label="Quitar">✕</button></span>';
+          });
+          if (wd.sesiones.length) {
+            var _todasMin = leerClases();
+            h += '<div class="ruta-ses-grid">';
+            wd.sesiones.forEach(function(sid){
+              var c = _todasMin.filter(function(x){ return x.id === sid; })[0];
+              if (c) h += _rutaSesCardHTML(c, idx, wd.sesiones);
+            });
+            h += '</div>';
+          }
+          h += '</div>';
+        }
         h += '</div></div>';   // /trabajo /cols
         if (wd.sesiones.length) h += '<button type="button" class="ruta-panel-borrar" onclick="rutaBorrarSemana(' + idx + ')">🗑️ Quitar las sesiones de esta clase</button>';
         h += '</div>';
