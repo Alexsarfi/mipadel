@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.251.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.252.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,23 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.252.0 — El carro solo ofrece lo que se puede lanzar con cesta (2026-07)
+    (sin migraciones nuevas)
+    · EL CARRO OFRECÍA TODO EL CATÁLOGO, incluidos puntos competitivos 2v2
+      que no se pueden lanzar desde la cesta. Ahora descarta lo que sabemos
+      que NO es de carro: los formatos entre jugadores (2v2 · 3J · 4J · 2v0 ·
+      rotación-capitán · todos-con-todos) y todo lo marcado como
+      `competitivo` en condicionantes. Nuevo _esDeCarro().
+    · LO QUE NO TIENE `formato:` PUESTO SIGUE SALIENDO. De 105 ejercicios, 27
+      no lo tienen: filtrarlos también habría escondido material sin avisar,
+      que es justo el fallo silencioso que venimos persiguiendo. Preferimos
+      que sobre a que desaparezca.
+    · Y SE DICE CUÁNTOS QUEDAN FUERA, en la nota del panel («30 no salen
+      aquí: son de punto o competitivos, no de cesta»), para que el filtro no
+      sea invisible.
+    · Resultado con los datos actuales: 75 ejercicios ofrecidos en el carro,
+      30 descartados.
 
   v0.251.0 — Lo grabado primero · y el vídeo deja de comerse la pantalla (2026-07)
     (sin migraciones nuevas)
@@ -7463,7 +7480,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.251.0';
+    var APP_VERSION = '0.252.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -15957,10 +15974,26 @@
       if (por['_']) orden.push({ key:'_', label:'Sin golpe', icono:'❓', ejs:por['_'] });
       return orden;
     }
+    // v0.252 — El CARRO es la primera parte: el entrenador abastece con la
+    // cesta. Un punto competitivo 2v2 no se puede lanzar con carro, así que no
+    // pinta nada aquí. Se descarta lo que sabemos que NO es de carro:
+    // formatos entre jugadores (2v2/3J/4J/2v0…) y lo marcado como competitivo.
+    // Lo que no tiene formato puesto se deja pasar: preferimos que sobre a que
+    // desaparezca material sin avisar.
+    var FORMATO_JUGADORES = ['2v2','3j','4j','2v0','rotación-capitán','rotacion-capitan','todos-con-todos'];
+    function _esDeCarro(e) {
+      var f = String(ejFaceta(e, 'formato') || '').trim().toLowerCase();
+      if (FORMATO_JUGADORES.indexOf(f) >= 0) return false;
+      var cond = ejFaceta(e, 'condicionantes') || [];
+      if (Array.isArray(cond) && cond.some(function(c){ return String(c).toLowerCase() === 'competitivo'; })) return false;
+      return true;
+    }
     function _rutaCarroBloqueHTML(idx, arr) {
-      var ejs = leerEjercicios().slice().sort(function(a, b){
+      var todos = leerEjercicios();
+      var ejs = todos.filter(_esDeCarro).sort(function(a, b){
         return String(a.nombre || '').localeCompare(String(b.nombre || ''));
       });
+      var _fuera = todos.length - ejs.length;
       var grupos = _rutaCarroPorGolpe(ejs);
       // Golpes abiertos que sigan existiendo en el catálogo
       var abiertos = _rutaCarroGolpes.filter(function(k){
@@ -16039,7 +16072,9 @@
       }
 
       if (!hayAbiertos) {
-        h += '<div class="ruta-panel-nota">Elige un golpe para ver sus ejercicios. Puedes abrir varios.</div>';
+        h += '<div class="ruta-panel-nota">Elige un golpe para ver sus ejercicios. Puedes abrir varios.' +
+             (_fuera ? ' <b>' + _fuera + '</b> no salen aquí: son de punto o competitivos, no de cesta.' : '') +
+             '</div>';
         h += '</div>';
         return h;
       }
