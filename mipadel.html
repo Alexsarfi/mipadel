@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.250.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.251.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,29 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.251.0 — Lo grabado primero · y el vídeo deja de comerse la pantalla (2026-07)
+    (sin migraciones nuevas)
+    · LO QUE TIENE VÍDEO VA PRIMERO. En Ejercicios y en el carro, dentro de
+      cada golpe salen delante los que ya están grabados (respetando entre
+      ellos la progresión), y detrás los que faltan por grabar, también en su
+      orden. Al pegarle el enlace a uno, sube solo al puesto que le toca.
+      Mismo criterio en las SESIONES de cada bloque del plan: las que tienen
+      algún ejercicio con vídeo van arriba (nuevos _sesConVideo /
+      _ordenSesPorVideo).
+    · EL VÍDEO YA NO SE DESBORDA:
+        · En la ficha del ejercicio los vídeos van en REJILLA (dos columnas a
+          partir de 640 px) y con la miniatura acotada a 380 px. Antes cada
+          uno ocupaba el ancho entero, así que un ejercicio con 3 vídeos era
+          una pantalla y media de scroll en el ordenador.
+        · En el globo, el alto se acota a 84vh: el marco apaisado limita su
+          ancho para que quepa, y los SHORTS pasan a marco 9:16 en vez de
+          16:9 — antes se veían diminutos entre dos barras negras.
+        · Para saber si un vídeo es vertical se mira su url (`/shorts/`), así
+          que ahora se pasa SIEMPRE la url a abrirLightboxVideo(), también
+          cuando hay id de YouTube.
+    · Las miniaturas de Short en la ficha se recortan al 4:3 con zoom, para
+      quitarles las barras negras que trae la miniatura de YouTube.
 
   v0.250.0 — Pestañas en la cabecera · golpes ordenados por zona de pista (2026-07)
     (sin migraciones nuevas)
@@ -5065,9 +5088,24 @@
     .lightbox-inner img { max-width:100%; max-height:88vh; border-radius:12px; object-fit:contain; }
     .lb-video { position:relative; width:100%; aspect-ratio:16/9; }
     .lb-video iframe { width:100%; height:100%; border:0; border-radius:12px; }
+    /* v0.251 — El globo nunca debe pasarse del alto de la pantalla.
+       Apaisado: se acota el ancho para que 16:9 quepa en 84vh.
+       Vertical (Shorts): marco 9:16 con el alto como referencia. */
+    .lightbox-inner { max-width:min(960px, 149vh); }
+    .lb-video.vert { width:auto; height:84vh; aspect-ratio:9/16; margin:0 auto; }
     .lightbox-close { position:fixed; top:14px; right:14px; width:46px; height:46px; border-radius:50%; background:rgba(255,255,255,0.16); color:#fff; border:none; font-size:20px; cursor:pointer; z-index:10051; -webkit-tap-highlight-color:transparent; }
     .lightbox-close:active { background:rgba(255,255,255,0.3); }
     .video-thumb-img { width:100%; display:block; aspect-ratio:16/9; object-fit:cover; }
+    /* v0.251 — En la ficha, los vídeos en rejilla y acotados. Antes cada uno
+       ocupaba el ancho entero y en el ordenador había que hacer scroll. */
+    .detalle-videos { display:grid; gap:16px; grid-template-columns:1fr; }
+    @media (min-width:640px) { .detalle-videos { grid-template-columns:1fr 1fr; } }
+    .detalle-vid { min-width:0; }
+    .detalle-vid .video-thumb-wrap { max-width:380px; }
+    .detalle-vid-n { font-size:12px; font-weight:700; color:var(--gris); margin:0 0 5px; }
+    /* Short: la miniatura de YouTube trae barras negras, se recorta al 4:3 */
+    .video-thumb-wrap.vert { max-width:250px; }
+    .video-thumb-wrap.vert .video-thumb-img { aspect-ratio:4/3; transform:scale(1.34); }
     .video-thumb-fallback { width:100%; aspect-ratio:16/9; background:#111; color:#fff; font-size:15px; font-weight:600; align-items:center; justify-content:center; }
     .video-play-btn { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:56px; height:56px; background:rgba(255,0,0,0.85); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:22px; padding-left:4px; pointer-events:none; }
 
@@ -7425,7 +7463,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.250.0';
+    var APP_VERSION = '0.251.0';
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -14669,7 +14707,19 @@
                      nivelDeSesion(c, mapEj) === nivel;
         if ((enManual || enAuto) && !vistos[c.id]) { vistos[c.id] = true; res.push(c); }
       });
-      return res;
+      return _ordenSesPorVideo(res, mapEj);
+    }
+    // v0.251 — Una sesión "tiene vídeo" si alguno de sus ejercicios lo tiene.
+    // Las que sí van primero; las que están por grabar, detrás.
+    function _sesConVideo(c, mapEj) {
+      return (c.ejercicioIds || []).some(function(id){ var e = mapEj[id]; return e && e.video; });
+    }
+    function _ordenSesPorVideo(lista, mapEj) {
+      return lista.slice().sort(function(a, b) {
+        var va = _sesConVideo(a, mapEj) ? 0 : 1, vb = _sesConVideo(b, mapEj) ? 0 : 1;
+        if (va !== vb) return va - vb;
+        return String(b.fecha || '').localeCompare(String(a.fecha || ''));
+      });
     }
     // ¿Esta sesión llega al bloque por su ficha (apartado+bloque) y no por sesInc?
     function _sesEsAuto(c, nivel, etapaKey, it) {
@@ -15797,8 +15847,10 @@
         vids.forEach(function(v, vi) {
           var yt = extraerIdYoutube(v);
           var th = yt ? ('https://img.youtube.com/vi/' + yt + '/mqdefault.jpg') : null;
-          var verV = yt ? ' onclick="abrirLightboxVideo(\'' + yt + '\',null);event.stopPropagation()"'
-                   : (v ? ' onclick="abrirLightboxVideo(null,\'' + String(v).replace(/'/g, "\\'") + '\');event.stopPropagation()"' : '');
+          // v0.251: se pasa SIEMPRE la url, aunque haya id de YouTube, para
+          // que el globo sepa si el vídeo es vertical (Short) o apaisado.
+          var verV = v ? ' onclick="abrirLightboxVideo(' + (yt ? "'" + yt + "'" : 'null') +
+                     ',\'' + String(v).replace(/'/g, "\\'") + '\');event.stopPropagation()"' : '';
           thumbsHTML += '<span class="ruta-carro-thumb ruta-carro-thumb-mini"' + verV + ' title="Vídeo ' + (vi + 1) + '">' +
             (th ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="ruta-ses-noimg">🎾</span>') +
             (verV ? '<span class="ejcard-play">▶</span>' : '') + '</span>';
@@ -15807,8 +15859,8 @@
       } else {
         var th1 = _rutaEjThumb(e);
         var yt1 = extraerIdYoutube(e.video);
-        var ver1 = yt1 ? ' onclick="abrirLightboxVideo(\'' + yt1 + '\',null)"'
-                 : (e.video ? ' onclick="abrirLightboxVideo(null,\'' + String(e.video).replace(/'/g, "\\'") + '\')"' : '');
+        var ver1 = e.video ? ' onclick="abrirLightboxVideo(' + (yt1 ? "'" + yt1 + "'" : 'null') +
+                   ',\'' + String(e.video).replace(/'/g, "\\'") + '\')"' : '';
         thumbsHTML = '<span class="ruta-carro-thumb"' + ver1 + '>' +
           (th1 ? '<img src="' + th1 + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="ruta-ses-noimg">🎾</span>') +
           (ver1 ? '<span class="ejcard-play">▶</span>' : '') + '</span>';
@@ -16042,7 +16094,7 @@
                        nivelDeSesion(c, mapEj) === nivel;
           if ((enManual || enAuto) && !vistos[c.id]) { vistos[c.id] = true; res.push(c); }
         });
-        out[a.id] = res;
+        out[a.id] = _ordenSesPorVideo(res, mapEj);   // v0.251: con vídeo primero
       });
       return out;
     }
@@ -16713,8 +16765,9 @@
       var thumb = ytId ? ('https://img.youtube.com/vi/' + ytId + '/mqdefault.jpg') : (ej.imagen || null);
       var tieneVid = !!(ytId || ej.video);
       var click = '';
-      if (ytId)          click = ' onclick="abrirLightboxVideo(\'' + ytId + '\',null)"';
-      else if (ej.video) click = ' onclick="abrirLightboxVideo(null,\'' + String(ej.video).replace(/'/g, "\\'") + '\')"';
+      // v0.251: la url va siempre, para que el globo detecte los Shorts
+      if (ej.video) click = ' onclick="abrirLightboxVideo(' + (ytId ? "'" + ytId + "'" : 'null') +
+                            ',\'' + String(ej.video).replace(/'/g, "\\'") + '\')"';
       var thumbHTML = thumb
         ? '<img src="' + thumb + '" class="ejcard-img" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
         : '';
@@ -18417,6 +18470,11 @@
     // orden; los que no, caen al criterio de siempre (valoración, luego
     // nombre) — así nada se rompe para golpes que aún no se han ordenado.
     function _ejOrdenGolpe(a, b) {
+      // v0.251 — Lo que TIENE VÍDEO va primero. Los que faltan por grabar se
+      // quedan detrás, y en cuanto se les pega el enlace suben solos al puesto
+      // que les toca por progresión.
+      var va = a && a.video ? 0 : 1, vb = b && b.video ? 0 : 1;
+      if (va !== vb) return va - vb;
       var pa = ejFaceta(a, 'progresion'), pb = ejFaceta(b, 'progresion');
       var na = (pa === '' || pa == null) ? null : parseInt(pa, 10);
       var nb = (pb === '' || pb == null) ? null : parseInt(pb, 10);
@@ -19113,11 +19171,14 @@
     }
     function abrirLightboxVideo(ytId, url) {
       var inner = document.getElementById('lightbox-inner');
+      // v0.251: los Shorts son verticales. Si se les da un marco 16:9 se ven
+      // diminutos entre dos barras negras; con marco 9:16 llenan el alto.
+      var cls = 'lb-video' + (/\/shorts\//i.test(String(url || '')) ? ' vert' : '');
       if (ytId) {
-        inner.innerHTML = '<div class="lb-video"><iframe src="https://www.youtube-nocookie.com/embed/' +
+        inner.innerHTML = '<div class="' + cls + '"><iframe src="https://www.youtube-nocookie.com/embed/' +
           ytId + '?autoplay=1&rel=0&playsinline=1" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>';
       } else if (url) {
-        inner.innerHTML = '<div class="lb-video"><iframe src="' + url + '" allow="autoplay; fullscreen" allowfullscreen></iframe></div>';
+        inner.innerHTML = '<div class="' + cls + '"><iframe src="' + url + '" allow="autoplay; fullscreen" allowfullscreen></iframe></div>';
       } else { return; }
       document.getElementById('lightbox').classList.add('activa');
     }
@@ -19171,26 +19232,32 @@
       var _vids = ejVideos(ej);
       if (_vids.length) {
         var _tituloVid = _vids.length > 1 ? 'Vídeos · progresión (' + _vids.length + ')' : 'Vídeo';
+        // v0.251: los vídeos van en rejilla acotada. Antes cada uno ocupaba el
+        // ancho entero del contenido, así que en el ordenador un ejercicio con
+        // 3 vídeos era una pantalla y media de scroll.
         html += '<div><div class="detalle-seccion-titulo">' + _tituloVid + '</div>';
+        html += '<div class="detalle-videos">';
         _vids.forEach(function(v, vi) {
           var ytId = extraerIdYoutube(v);
           var vidUrl = v.replace(/'/g, "\\'");
-          var etiqueta = _vids.length > 1 ? ('<div style="font-size:12px;font-weight:700;color:var(--gris);margin:' + (vi ? '14px' : '0') + ' 0 4px;">Vídeo ' + (vi + 1) + '</div>') : '';
+          var esV = /\/shorts\//i.test(v);
+          var etiqueta = _vids.length > 1 ? ('<div class="detalle-vid-n">Vídeo ' + (vi + 1) + '</div>') : '';
           if (ytId) {
-            html += etiqueta +
-              '<div class="video-thumb-wrap" onclick="abrirLightboxVideo(\'' + ytId + '\',\'' + vidUrl + '\')">' +
+            html += '<div class="detalle-vid">' + etiqueta +
+              '<div class="video-thumb-wrap' + (esV ? ' vert' : '') + '" onclick="abrirLightboxVideo(\'' + ytId + '\',\'' + vidUrl + '\')">' +
                 '<img src="https://img.youtube.com/vi/' + ytId + '/hqdefault.jpg" ' +
                      'class="video-thumb-img" alt="Miniatura del vídeo" ' +
                      'onerror="this.style.display=\'none\';this.nextSibling.style.display=\'flex\'">' +
                 '<div class="video-thumb-fallback" style="display:none">▶ Ver vídeo</div>' +
                 '<div class="video-play-btn">▶</div>' +
               '</div>' +
-              '<a href="' + v + '" target="_blank" class="detalle-enlace" style="margin-top:6px;">↗ Abrir en YouTube</a>';
+              '<a href="' + v + '" target="_blank" class="detalle-enlace" style="margin-top:6px;">↗ Abrir en YouTube</a></div>';
           } else {
-            html += etiqueta + '<a href="' + v + '" target="_blank" class="detalle-enlace">▶ Abrir vídeo</a>';
+            html += '<div class="detalle-vid">' + etiqueta +
+              '<a href="' + v + '" target="_blank" class="detalle-enlace">▶ Abrir vídeo</a></div>';
           }
         });
-        html += '</div>';
+        html += '</div></div>';
       }
 
       // Ficha (código + facetas)
