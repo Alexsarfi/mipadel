@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.258.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.259.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,21 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.259.0 — El club, en la cabecera de Inicio (2026-07)
+    (sin migraciones nuevas)
+    · LA CABECERA DE INICIO deja de poner «Club de Pádel» (texto genérico
+      escrito a mano desde siempre) y pasa a mostrar el LOGO de la pala
+      junto a «Escuela Padel Premium». Nuevas clases .cab-titulo-marca
+      y .cab-logo (fila flex, icono de 46px).
+    · Fuera el emoji 🎾 de la etiqueta pequeña, que ahora solo lleva
+      «Mi aplicación · versión». El icono real ya cumple esa función.
+    · El logo se carga de icon-192.png. Si el archivo no estuviera subido,
+      la imagen se oculta sola (onerror) y queda solo el texto: no se
+      rompe la cabecera en ningún caso.
+    · OJO: esto es la pantalla de INICIO, distinta de la de login que se
+      cambió en v0.258. Quien tiene la sesión iniciada nunca ve el login,
+      y por eso seguía viendo el nombre viejo.
 
   v0.258.0 — Identidad de Escuela Padel Premium (2026-07)
     (sin migraciones nuevas)
@@ -4273,6 +4288,9 @@
     }
     .cab-etiqueta { font-size:11px; font-weight:600; letter-spacing:0.15em; text-transform:uppercase; color:var(--verde-claro); margin-bottom:6px; position:relative; }
     .cab-titulo   { font-size:26px; font-weight:800; line-height:1.1; position:relative; }
+    /* Cabecera de Inicio con el logo del club al lado del nombre */
+    .cab-titulo-marca { display:flex; align-items:center; gap:12px; }
+    .cab-logo { width:58px; height:58px; flex-shrink:0; display:block; border-radius:10px; }
     .cab-sub      { font-size:13px; color:rgba(255,255,255,0.6); margin-top:5px; position:relative; }
     /* Botón Perfil en el encabezado (arriba a la derecha) */
     .cab-perfil-btn { position:absolute; top:1.5rem; right:1.5rem; z-index:2; width:42px; height:42px; border-radius:50%; background:rgba(255,255,255,0.14); border:none; color:#fff; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent; }
@@ -6556,8 +6574,11 @@
   <div id="pantalla-inicio" class="pantalla activa">
     <div class="cabecera">
       <button id="cab-perfil-btn" class="cab-perfil-btn" onclick="irA('pantalla-ajustes')" title="Perfil" aria-label="Perfil">👤</button>
-      <div class="cab-etiqueta">🎾 Mi aplicación · <span id="cab-version"></span></div>
-      <div class="cab-titulo">Club de Pádel</div>
+      <div class="cab-etiqueta">Mi aplicación · <span id="cab-version"></span></div>
+      <div class="cab-titulo cab-titulo-marca">
+        <img src="./icon-192.png" alt="" class="cab-logo" onerror="this.style.display='none';">
+        <span>Escuela Padel Premium</span>
+      </div>
       <div class="cab-sub" id="inicio-fecha">—</div>
     </div>
     <div class="contenido">
@@ -7627,7 +7648,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.258.0';
+    var APP_VERSION = '0.259.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
