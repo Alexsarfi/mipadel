@@ -39,6 +39,54 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.261.0 — El mes se pliega · y el golpe te dice qué encaja (2026-07)
+    (sin migraciones nuevas)
+    · LOS DÍAS DE CLASE DE ARRIBA pasan a vivir en su propia CAJA, con borde,
+      y se pliegan tocando el NOMBRE DEL MES. Las flechas ‹ › siguen pasando
+      de mes con la caja abierta o cerrada. Plegada deja una línea de resumen
+      («12 días de clase · 5 con plan») para saber si merece la pena abrirla.
+    · Y SE PLIEGA SOLA al abrir un mes del curso ahí abajo: las dos cosas no
+      caben a la vez en una pantalla de móvil. Al cerrar ese mes, vuelve.
+    · LA ZONA DE PISTA del carro (Desde el fondo · Aéreos · En la red · Saque
+      y resto) pasa a turquesa oscuro, para no confundirla con los golpes que
+      cuelgan de ella, que son los que se pulsan.
+    · AL ABRIR UN GOLPE, LAS ÁREAS DE TRABAJO QUE ENCAJAN SE SOMBREAN. Abres
+      «Fondo» y se te encienden Consistencia y Construir desde el fondo
+      (ámbar fuerte), y en tono suave Defensa paciente, Pared y globo y toda
+      la parte de Estrategia. Con «Volea» se encienden las de la red y se
+      apagan las de fondo. Cada apartado dice además cuántos de sus bloques
+      encajan, para saber dónde mirar sin abrirlos todos.
+      CÓMO SE DECIDE (sin tablas inventadas: sale de los datos que ya hay):
+        · FUERTE — el bloque ES de ese golpe: o su campo `g` del catálogo, o
+          alguno de sus ejercicios/sesiones enlazados es de ese golpe. Esto
+          último manda sobre lo demás: es el material real.
+        · SUAVE — comparte ZONA DE PISTA. Fondo/pared/globo/bajada van con los
+          bloques de fondo y campo-medio; bandeja/víbora/remate/rulo y
+          volea/chiquita/dejada con los de red; saque con todo-campo. Los
+          bloques de `todo-campo` (táctica, pareja, cabeza) sirven para
+          cualquier golpe, así que entran aquí y no en fuerte: si contaran
+          como fuertes se encendería media pantalla y el sombreado dejaría de
+          significar nada.
+        · «Combinada» no sombrea nada, por lo mismo: va con todo.
+      NO SE OCULTA NI SE BLOQUEA NADA. Es una ayuda visual: se puede seguir
+      eligiendo cualquier bloque, encaje o no.
+
+  v0.260.0 — Bajo el icono, «EPP» (2026-07)
+    (sin migraciones nuevas · HAY QUE RESUBIR manifest.json)
+    · EL NOMBRE BAJO EL ICONO pasa de «Escuela Padel Premium» a «EPP». iOS y
+      Android cortan esa etiqueta sobre los 11-12 caracteres, así que en el
+      móvil se leía «Escuela Pad…» y no se entendía nada. Con tres letras no
+      se corta en ningún teléfono y el icono de la pala hace el resto.
+    · SOLO cambia la etiqueta corta: `short_name` del manifest y el meta
+      `apple-mobile-web-app-title`. El nombre largo se queda como estaba en
+      `name` (el aviso de instalar y la lista de apps) y en el <title> de la
+      pestaña, así que la marca completa no se pierde en ningún sitio.
+    · El logo NO se toca: se mantiene la pala dorada sobre navy de la v0.258.
+    · OJO AL SUBIR: además de index.html hay que resubir manifest.json, que
+      normalmente no se toca. Si no, el móvil sigue con la etiqueta larga
+      (y puede hacer falta quitar y volver a añadir el acceso directo, porque
+      iOS se guarda el nombre cuando lo creaste).
+
   v0.259.0 — El club, en la cabecera de Inicio (2026-07)
     (sin migraciones nuevas)
     · LA CABECERA DE INICIO deja de poner «Club de Pádel» (texto genérico
@@ -4235,7 +4283,7 @@
   <!-- PWA: se abre como app nativa al añadir a pantalla de inicio -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Escuela Padel Premium">
+  <meta name="apple-mobile-web-app-title" content="EPP">
   <meta name="mobile-web-app-capable" content="yes">
   <!-- PWA: manifest + iconos + color de tema, para poder instalarla como app real -->
   <link rel="manifest" href="./manifest.json">
@@ -5789,6 +5837,16 @@
     .comp-cal-nav button { width:26px; height:26px; border-radius:50%; border:1.5px solid var(--borde); background:#fff; font-size:13px; cursor:pointer; color:var(--texto); }
     .comp-cal-lbl { font-size:12.5px; font-weight:800; color:var(--texto); }
     .comp-lista { margin-bottom:0.7rem; }
+    /* v0.261 — Los días de clase de arriba viven en su propia CAJA, que se
+       pliega tocando el nombre del mes (y sola al abrir un mes del curso). */
+    .comp-mes-caja { border:1.5px solid var(--borde); border-radius:12px; padding:9px 10px 4px;
+      background:var(--blanco); }
+    .comp-mes-caja.plegada { padding-bottom:9px; }
+    button.comp-cal-lbl { font-family:inherit; border:none; background:none; cursor:pointer;
+      display:inline-flex; align-items:center; gap:6px; padding:3px 8px; border-radius:8px; }
+    button.comp-cal-lbl:hover { background:var(--arena); }
+    .comp-mes-resumen { font-size:11.5px; color:var(--gris); text-align:center; padding:2px 0 2px; }
+    .comp-mes-resumen b { color:var(--texto); }
     /* v0.147: las SEMANAS van una al lado de otra (columnas), separadas por
        una barra vertical. Dentro de cada semana, sus días apilados. */
     .comp-sem-cols { display:flex; align-items:flex-start; overflow-x:auto; padding-bottom:2px; margin-bottom:0.5rem; }
@@ -6035,6 +6093,18 @@
     .ruta-modal-hdr-acc { display:flex; align-items:center; gap:8px; flex-shrink:0; }
     .ruta-modal-ok { background:#dcfce7 !important; color:#15803d !important; }
     .ruta-modal-ok:active { background:#bbf7d0 !important; }
+    /* v0.261 — Al abrir un golpe en el carro, las áreas de trabajo que tienen
+       que ver con él se sombrean: fuerte las que trabajan ESE golpe, suave las
+       que comparten zona de pista. El resto se queda igual (no se oculta nada:
+       se puede planificar lo que se quiera). */
+    .ruta-area-row.rel      { background:#fffbeb; border-color:#fcd34d; }
+    .ruta-area-row.rel-suave{ background:#fefce8; }
+    .ruta-area-row.rel .ruta-area-t { color:#92400e; }
+    .ruta-area-rel-n { font-size:9px; font-weight:800; color:#92400e; background:#fde68a;
+      border-radius:999px; padding:1px 6px; margin-left:4px; }
+    .ruta-rel-nota { display:flex; align-items:center; gap:6px; font-size:10.5px; font-weight:700;
+      color:#92400e; background:#fffbeb; border:1px solid #fde68a; border-radius:8px;
+      padding:5px 8px; margin:0 0 8px; }
     .ruta-trabajo-cols { display:flex; flex-direction:column; gap:14px; min-width:0; }
     .ruta-modal-vacio { text-align:center; color:var(--gris); font-size:13px; line-height:1.7; padding:22px 10px; }
     /* v0.207 — resumen de lo ya marcado en Mensual esta semana (chips con
@@ -6113,9 +6183,11 @@
     .ruta-carro-gsub { font-size:10px; font-weight:800; color:var(--gris); text-transform:uppercase;
       letter-spacing:.04em; margin:8px 2px 4px; }
     /* v0.250 — Rótulo de la zona de pista sobre cada bloque de golpes */
-    .ruta-carro-zona { font-size:9.5px; font-weight:800; color:var(--gris); text-transform:uppercase;
+    /* v0.261: la zona de pista en su propio color (turquesa oscuro), para
+       distinguirla de un vistazo de los golpes que cuelgan de ella. */
+    .ruta-carro-zona { font-size:9.5px; font-weight:800; color:#0e7490; text-transform:uppercase;
       letter-spacing:.09em; margin:9px 2px 4px; display:flex; align-items:center; gap:7px; }
-    .ruta-carro-zona::after { content:''; flex:1; height:1px; background:var(--borde); }
+    .ruta-carro-zona::after { content:''; flex:1; height:1px; background:#a5f3fc; }
     .ruta-carro-zona:first-child { margin-top:2px; }
     .ruta-carro-gsub:first-child { margin-top:2px; }
     .ruta-carro-thumb { position:relative; flex-shrink:0; width:52px; aspect-ratio:16/9; border-radius:6px; overflow:hidden;
@@ -7648,7 +7720,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.259.0';
+    var APP_VERSION = '0.261.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -14457,7 +14529,7 @@
       // Al cambiar de nivel se cierra el día abierto: su contenido es de
       // otro catálogo y no tiene sentido arrastrarlo.
       compDiaAbierta = null; compDiaEditando = false; compFilaSel = null;
-      _rutaMesSel = null;   // v0.242: los meses, plegados al entrar en el nivel
+      _rutaMesSel = null; _compMesPlegado = false;   // v0.242/v0.261: meses plegados, días a la vista
       mostrarPlanificacion(); window.scrollTo(0,0);
     }
     function planToggleEtapa(key) { var p = leerPlan(); p.etapasAbiertas[key] = !p.etapasAbiertas[key]; _planGuardar(p); }
@@ -15117,6 +15189,11 @@
     // ══════════════════════════════════════════════════════════════════
     var compMesOff     = 0;    // navegación ‹ › (meses relativos a hoy)
     var compDiaAbierta = null; // fecha ISO del día con el desplegable abierto (o null)
+    // v0.261 — La caja del mes (los días de clase de arriba) se pliega tocando
+    // el nombre del mes. Y se pliega SOLA al abrir un mes del curso ahí abajo:
+    // las dos cosas juntas no caben en una pantalla de móvil.
+    var _compMesPlegado = false;
+    function compMesPlegar() { _compMesPlegado = !_compMesPlegado; mostrarPlanificacion(); }
     var compDiaEditando = false; // v0.125: dentro del día abierto, ¿modo selección (todo el catálogo) o modo resumen (solo lo elegido + vídeos)?
     var compFilaSel = null;      // v0.148: sesión (fila) elegida en el resumen del día
     var DOW_ORDEN = [1,2,3,4,5,6,0]; // Lunes..Domingo
@@ -15167,7 +15244,11 @@
       var out = [];
       etapas.forEach(function(et){
         (cont[et.key] || []).forEach(function(it){
-          out.push({ id: it.id, t: it.t, int: it.int, apartado: et.nombre, ejInc: it.ejInc || [], sesInc: it.sesInc || [] });
+          // v0.261: z (zona de pista) y g (golpe) viajan con la fila — ya se
+          // guardaban en el catálogo, solo faltaba traerlos aquí para poder
+          // relacionar cada bloque con el golpe que se abre en el carro.
+          out.push({ id: it.id, t: it.t, int: it.int, z: it.z, g: it.g, apartado: et.nombre,
+                     ejInc: it.ejInc || [], sesInc: it.sesInc || [] });
         });
       });
       return out;
@@ -15238,7 +15319,12 @@
     }
     function rutaMesSel(key) {
       var meses = _rutaMeses(_rutaSemanas(_rutaCurso()));
-      _rutaMesSel = (_rutaMesActivo(_rutaCurso(), meses) === key) ? '' : key;
+      var cerrando = (_rutaMesActivo(_rutaCurso(), meses) === key);
+      _rutaMesSel = cerrando ? '' : key;
+      // v0.261: al ABRIR un mes del curso se pliega sola la caja de días de
+      // arriba (no caben las dos a la vez, sobre todo en el móvil). Al
+      // cerrarlo, la de arriba vuelve.
+      _compMesPlegado = !cerrando;
       rutaCerrarModal();
       mostrarPlanificacion();
     }
@@ -16121,7 +16207,9 @@
       if (i >= 0) _rutaCarroGolpes.splice(i, 1); else _rutaCarroGolpes.push(k);
       _rutaCarroMas = false;
       if (!_rutaCarroGolpes.length) _rutaCarroQ = '';
-      _rutaCarroPintar(idx);
+      // v0.261: ya no basta con repintar el carro — el golpe abierto sombrea
+      // las áreas de trabajo que encajan, que están en la otra columna.
+      _rutaModalRender();
     }
     function rutaCarroMas(idx) { _rutaCarroMas = !_rutaCarroMas; _rutaCarroPintar(idx); }
     function _rutaCarroPintar(idx) {
@@ -16301,6 +16389,57 @@
     // mano (sesInc) MÁS las que traen apartado+bloque en su ficha desde
     // Obsidian (mismo criterio que _sesionesDeBloqueUnion, pero indexando
     // las clases UNA sola vez para todo el catálogo).
+    // ── v0.261 — ¿QUÉ ÁREAS DE TRABAJO TIENEN QUE VER CON EL GOLPE ABIERTO? ──
+    // Cuando en el carro abres «Fondo», lo que se juega después no da igual:
+    // encaja mejor con Solidez y defensa que con Definición. Esto lo deduce
+    // con lo que YA hay en los datos, sin tablas inventadas a mano:
+    //
+    //   FUERTE (2) — el bloque es de ese golpe:
+    //       · su campo `g` del catálogo es ese golpe, o
+    //       · alguno de sus ejercicios enlazados es de ese golpe (dato real).
+    //   SUAVE  (1) — comparte ZONA DE PISTA con el golpe: si estás con fondo,
+    //       pared o globo, los bloques de fondo y campo-medio pintan; si estás
+    //       con volea o remate, los de red. Los bloques `todo-campo` (táctica,
+    //       pareja, cabeza) valen para cualquier golpe, así que entran aquí:
+    //       si contaran como fuertes se encendería media pantalla y el
+    //       sombreado dejaría de decir nada.
+    //   0      — sin relación: se queda como está. NADA se oculta ni se
+    //       bloquea; esto es una ayuda visual, no una regla.
+    var GOLPE_ZONA_BLOQUE = {
+      fondo:   ['fondo','campo-medio'], pared: ['fondo','campo-medio'],
+      globo:   ['fondo','campo-medio'], bajada:['campo-medio','fondo'],
+      bandeja: ['red','campo-medio'],   vibora:['red','campo-medio'],
+      remate:  ['red'],                 rulo:  ['red','campo-medio'],
+      volea:   ['red'],                 chiquita:['red'], dejada:['red'],
+      saque:   ['todo-campo','fondo'],
+      mixto:   []   // «Combinada» va con todo: no destaca nada en concreto
+    };
+    // Golpes de los ejercicios que cuelgan de un bloque (los suyos y los de
+    // sus sesiones). Es el dato REAL, el que manda sobre el campo del catálogo.
+    function _rutaGolpesDeBloque(f, sesDeF, mapEj) {
+      var out = {};
+      (f.ejInc || []).forEach(function(id){
+        var e = mapEj[id]; if (e) { var g = ejFaceta(e, 'golpe'); if (g) out[g] = true; }
+      });
+      (sesDeF || []).forEach(function(c){
+        (c.ejercicioIds || []).forEach(function(id){
+          var e = mapEj[id]; if (e) { var g = ejFaceta(e, 'golpe'); if (g) out[g] = true; }
+        });
+      });
+      return out;
+    }
+    function _rutaRelacion(f, golpes, golpesReales) {
+      if (!golpes || !golpes.length) return 0;
+      var nivelRel = 0;
+      golpes.forEach(function(k){
+        if (k === 'mixto') return;                        // combinada no destaca nada
+        if (f.g === k || golpesReales[k]) { nivelRel = 2; return; }
+        if (nivelRel === 2) return;
+        var zonas = GOLPE_ZONA_BLOQUE[k] || [];
+        if (f.z === 'todo-campo' || zonas.indexOf(f.z) >= 0) nivelRel = 1;
+      });
+      return nivelRel;
+    }
     function _rutaSesPorArea(areas) {
       var nivel  = _compNivel();
       var mapEj  = _ejsById();
@@ -16502,6 +16641,21 @@
         return;
       }
       h += '<div class="ruta-trabajo-cols">';
+      // v0.261 — Relación de cada bloque con los golpes abiertos en el carro.
+      var golpesOn = _rutaCarroGolpes.slice();
+      var relacion = {}, relPorAp = {};
+      if (golpesOn.length) {
+        var mapEjRel = _ejsById();
+        areas.forEach(function(a){
+          var r = _rutaRelacion(a, golpesOn, _rutaGolpesDeBloque(a, sesDe[a.id], mapEjRel));
+          relacion[a.id] = r;
+          if (r === 2) relPorAp[a.apartado] = (relPorAp[a.apartado] || 0) + 1;
+        });
+        var nGolpes = golpesOn.filter(function(k){ return k !== 'mixto'; })
+                              .map(function(k){ return GOLPE_LABEL[k] || k; });
+        if (nGolpes.length) h += '<div class="ruta-rel-nota">✨ Sombreado: lo que encaja con ' +
+          _gEsc(nGolpes.join(' y ')) + '</div>';
+      }
       h += '<div class="ruta-modal-areas">';
       if (!areas.length) {
         h += '<div class="ruta-panel-nota">Aún no hay áreas en el catálogo de Competición.</div>';
@@ -16519,6 +16673,8 @@
           var abierto = (_rutaApAbierto[iAp] !== undefined) ? _rutaApAbierto[iAp] : !!tieneSel;
           h += '<button type="button" class="ruta-area-grupo' + (abierto ? ' abierto' : '') + '" onclick="rutaApToggle(' + iAp + ',' + abierto + ')">' +
                '<span class="chev">›</span><span class="ruta-area-t">' + _gEsc(ap) + '</span>' +
+               // v0.261: con un golpe abierto, cuántos de sus bloques encajan
+               (relPorAp[ap] ? '<span class="ruta-area-rel-n">' + relPorAp[ap] + ' encaja' + (relPorAp[ap] !== 1 ? 'n' : '') + '</span>' : '') +
                '<span class="ruta-area-n">' + (tieneSel ? '●' : porApartado[ap].length) + '</span></button>';
           if (!abierto) return;
           porApartado[ap].forEach(function(a){
@@ -16527,7 +16683,10 @@
             var n    = (sesDe[a.id] || []).length;
             var abto = (areaSel === a.id);
             var eligiendoDia = (_rutaEligeDia === a.id);
-            h += '<button type="button" class="ruta-area-row' + ((abto || eligiendoDia) ? ' on' : '') + (n ? '' : ' sinses') + '" onclick="rutaElegirArea(' + idx + ',\'' + a.id + '\')">' +
+            var rel = relacion[a.id] || 0;   // v0.261
+            h += '<button type="button" class="ruta-area-row' + ((abto || eligiendoDia) ? ' on' : '') + (n ? '' : ' sinses') +
+              (rel === 2 ? ' rel' : (rel === 1 ? ' rel-suave' : '')) +
+              '" onclick="rutaElegirArea(' + idx + ',\'' + a.id + '\')">' +
               '<span class="ruta-area-ico">◆</span><span class="ruta-area-t">' + _gEsc(a.t) + '</span>' +
               '<span class="ruta-area-n">' + (n || '—') + '</span></button>';
             // v0.207 — Semana con MÁS de un día real de clase: hay que
@@ -16595,6 +16754,9 @@
 
       ov.innerHTML = h;
       ov.style.display = 'flex';
+      // v0.261: el panel se repinta entero al abrir un golpe; se vuelve a
+      // aplicar el filtro escrito para no perderlo.
+      if (_rutaCarroQ) rutaCarroFiltrar(_rutaCarroQ);
     }
 
     // Tarjeta compacta de una semana dentro de la columna de su mes.
@@ -17779,10 +17941,14 @@
       var ultimoDia = new Date(y, m, 0).getDate();
       var hoyISO = hoyLocal();
 
-      var h = '<div class="comp-lista">';
+      var h = '<div class="comp-lista comp-mes-caja' + (_compMesPlegado ? ' plegada' : '') + '">';
       h += '<div class="comp-cal-nav">' +
         '<button onclick="compMesNav(-1)" title="Mes anterior">‹</button>' +
-        '<span class="comp-cal-lbl">' + mesLabel + '</span>' +
+        // v0.261: el nombre del mes es el botón de plegar/desplegar la caja
+        '<button type="button" class="comp-cal-lbl" onclick="compMesPlegar()" ' +
+          'title="Plegar / desplegar los días de este mes">' +
+          '<span class="ruta-parte-chev' + (_compMesPlegado ? '' : ' abierto') + '">›</span>' +
+          mesLabel + '</button>' +
         '<button onclick="compMesNav(1)" title="Mes siguiente">›</button>' +
       '</div>';
 
@@ -17918,6 +18084,18 @@
         h += '<div class="comp-picker-vacio" style="padding:0.5rem 0 1rem;text-align:center;">Sin clases de ' +
              _gEsc(planNivelLabel(_nivM)) + ' este mes.<br>' +
              '<span class="ruta-panel-nota">Planifica abajo, en el curso: cuando el gestor ponga las franjas de este nivel, la primera clase de cada semana llegará ya preparada.</span></div>';
+      } else if (_compMesPlegado) {
+        // v0.261: plegada, la caja resume en una línea qué hay este mes —
+        // suficiente para saber si merece la pena abrirla.
+        var totD = 0, totM = 0;
+        lunes.forEach(function(kL){
+          semanas[kL].forEach(function(fISO){
+            totD++;
+            if (((p.compDias && p.compDias[fISO]) || []).some(function(id){ return idsNivel[id]; })) totM++;
+          });
+        });
+        h += '<div class="comp-mes-resumen">' + totD + (totD === 1 ? ' día de clase' : ' días de clase') +
+             ' · <b>' + totM + '</b> con plan</div>';
       } else {
         // v0.243: el contenido del día ya no va aquí debajo — se abre en globo
         // (_compDiaOvPintar), que es lo que se pinta al final del repintado.
@@ -19879,7 +20057,7 @@
     function irPlanNivel(nivel) {
       if (!nivelPermitido(nivel)) nivel = 'iniciacion';
       var p = leerPlan(); p.nivel = nivel; _planGuardar(p);
-      _rutaMesSel = null;   // v0.242: los meses, plegados al entrar en el nivel
+      _rutaMesSel = null; _compMesPlegado = false;   // v0.242/v0.261: meses plegados, días a la vista
       irA('pantalla-planificacion');
     }
     function _restoreHomeSes() {
