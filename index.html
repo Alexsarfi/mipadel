@@ -39,6 +39,35 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.263.0 — Solo el sombreado, en rojo claro (2026-07)
+    (sin migraciones nuevas)
+    · AL ABRIR UN GOLPE del carro sobraba media pantalla de explicaciones: el
+      rótulo «✨ Sombreado: lo que encaja con Volea» encima de la lista y el
+      contador «3 encajan» en cada apartado. Fuera los dos: con ver las áreas
+      sombreadas basta.
+    · EL SOMBREADO PASA A ROJO CLARO. Marcadas las que trabajan ESE golpe,
+      apenas teñidas las que comparten zona de pista. La lógica de la v0.261
+      no cambia; solo se ve, ya no se explica.
+
+  v0.262.0 — Arreglado el mes de la programación semanal (2026-07)
+    (sin migraciones nuevas)
+    · «JULIO 2026» SALÍA PARTIDO Y RECORTADO («Juli / 202…»). La culpa era de
+      la regla genérica `.comp-cal-nav button`, que mete cualquier botón de esa
+      barra en un círculo de 26 px — pensada para las flechas ‹ ›. Al convertir
+      el nombre del mes en botón (v0.261) se lo tragó también. Ahora el rótulo
+      tiene su propia regla: ancho automático y sin partir palabras.
+    · LAS COLUMNAS DE SEMANA YA NO SE ESTIRAN. Eran `flex:1 1 0`, así que se
+      repartían TODO el ancho de la pantalla: en el ordenador quedaban cuatro
+      columnas separadas por medio metro de vacío, con las etiquetas perdidas
+      en el centro y la semana en curso sombreada ocupando un tercio de la
+      pantalla. Ahora cada columna mide lo suyo (76 px en el móvil, 168 con los
+      nombres escritos) y el bloque entero se centra. Si no caben, la fila
+      sigue haciendo scroll lateral como siempre.
+    · LAS ETIQUETAS ocupan el ancho de su columna en vez de 104 px sueltos, con
+      el texto centrado y algo más grandes (9,5 px). Se recorta bastante menos.
+    · MÁS AIRE ENTRE DÍAS en pantalla ancha (16 px): con dos nombres debajo de
+      cada círculo, los días se leían como un bloque continuo.
+
   v0.261.0 — El mes se pliega · y el golpe te dice qué encaja (2026-07)
     (sin migraciones nuevas)
     · LOS DÍAS DE CLASE DE ARRIBA pasan a vivir en su propia CAJA, con borde,
@@ -5842,15 +5871,29 @@
     .comp-mes-caja { border:1.5px solid var(--borde); border-radius:12px; padding:9px 10px 4px;
       background:var(--blanco); }
     .comp-mes-caja.plegada { padding-bottom:9px; }
+    /* v0.262: el rótulo del mes no se parte ni se encoge («Juli / 202…») */
     button.comp-cal-lbl { font-family:inherit; border:none; background:none; cursor:pointer;
-      display:inline-flex; align-items:center; gap:6px; padding:3px 8px; border-radius:8px; }
+      display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:8px;
+      white-space:nowrap; flex-shrink:0; }
+    /* La regla genérica .comp-cal-nav button lo metía en un círculo de 26px:
+       de ahí que «Julio 2026» saliera partido y recortado. */
+    .comp-cal-nav button.comp-cal-lbl { width:auto; height:auto; border:none; border-radius:8px;
+      background:none; font-size:13px; font-weight:800; color:var(--texto); }
+    .comp-cal-nav button.comp-cal-lbl:hover { background:var(--arena); }
     button.comp-cal-lbl:hover { background:var(--arena); }
     .comp-mes-resumen { font-size:11.5px; color:var(--gris); text-align:center; padding:2px 0 2px; }
     .comp-mes-resumen b { color:var(--texto); }
     /* v0.147: las SEMANAS van una al lado de otra (columnas), separadas por
        una barra vertical. Dentro de cada semana, sus días apilados. */
-    .comp-sem-cols { display:flex; align-items:flex-start; overflow-x:auto; padding-bottom:2px; margin-bottom:0.5rem; }
-    .comp-sem-col { flex:1 1 0; min-width:58px; padding:6px 8px 8px; border-radius:10px; }
+    /* v0.262 — Antes las columnas eran `flex:1 1 0` y se estiraban a lo ancho
+       de la pantalla: en el ordenador quedaban cuatro columnas separadas por
+       medio metro de vacío y la semana sombreada ocupaba un tercio de la
+       pantalla. Ahora cada columna mide lo que necesita, y el bloque entero se
+       centra (`width:fit-content` + `margin:0 auto`); si no caben, la fila
+       sigue haciendo scroll lateral. */
+    .comp-sem-cols { display:flex; align-items:flex-start; overflow-x:auto; padding-bottom:2px;
+      margin:0 auto 0.5rem; width:fit-content; max-width:100%; }
+    .comp-sem-col { flex:0 0 auto; width:76px; padding:6px 6px 8px; border-radius:10px; }
     .comp-sem-col + .comp-sem-col { border-left:1.5px solid var(--borde); }
     /* v0.150: semana en la que se está trabajando, sombreada entera */
     .comp-sem-col.activa { background:var(--verde-suave); }
@@ -5868,10 +5911,11 @@
     .comp-daypto { width:6px; height:6px; border-radius:50%; }
     .comp-daypto.carro { background:#06b6d4; }
     .comp-daypto.area  { background:#6366f1; }
-    .comp-diacol-tags { display:none; flex-direction:column; align-items:center; gap:2px;
-      max-width:104px; margin-top:1px; }
-    .comp-daytag { max-width:100%; box-sizing:border-box; font-size:9px; font-weight:700; line-height:1.3;
-      padding:2px 6px; border-radius:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .comp-diacol-tags { display:none; flex-direction:column; align-items:stretch; gap:3px;
+      width:100%; margin-top:2px; }
+    .comp-daytag { max-width:100%; box-sizing:border-box; font-size:9.5px; font-weight:700; line-height:1.3;
+      padding:3px 6px; border-radius:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+      text-align:center; }
     .comp-daytag.carro { background:#ecfeff; color:#0e7490; border:1px solid #a5f3fc; }
     .comp-daytag.area  { background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe; }
     .comp-diacol-dow { font-size:9.5px; font-weight:800; color:var(--gris); text-transform:uppercase; }
@@ -5905,7 +5949,11 @@
     @media (min-width: 760px) {
       .comp-diacol-puntos, .comp-puntos-clave { display:none; }
       .comp-diacol-tags   { display:flex; }
-      .comp-sem-dias      { gap:10px; }
+      /* v0.262: con los nombres escritos, la columna necesita ancho y los días
+         necesitan aire entre ellos para no leerse como un solo bloque. */
+      .comp-sem-col  { width:168px; padding:6px 10px 10px; }
+      .comp-sem-dias { gap:16px; }
+      .comp-diacol   { width:100%; }
     }
     .comp-cal-picker { background:var(--arena); border:1.5px solid var(--borde); border-radius:11px; padding:0.6rem 0.85rem; margin-top:8px; }
     .comp-cal-picker-hdr { font-size:12px; font-weight:800; color:var(--texto); margin-bottom:0.4rem; }
@@ -6094,17 +6142,13 @@
     .ruta-modal-ok { background:#dcfce7 !important; color:#15803d !important; }
     .ruta-modal-ok:active { background:#bbf7d0 !important; }
     /* v0.261 — Al abrir un golpe en el carro, las áreas de trabajo que tienen
-       que ver con él se sombrean: fuerte las que trabajan ESE golpe, suave las
-       que comparten zona de pista. El resto se queda igual (no se oculta nada:
-       se puede planificar lo que se quiera). */
-    .ruta-area-row.rel      { background:#fffbeb; border-color:#fcd34d; }
-    .ruta-area-row.rel-suave{ background:#fefce8; }
-    .ruta-area-row.rel .ruta-area-t { color:#92400e; }
-    .ruta-area-rel-n { font-size:9px; font-weight:800; color:#92400e; background:#fde68a;
-      border-radius:999px; padding:1px 6px; margin-left:4px; }
-    .ruta-rel-nota { display:flex; align-items:center; gap:6px; font-size:10.5px; font-weight:700;
-      color:#92400e; background:#fffbeb; border:1px solid #fde68a; border-radius:8px;
-      padding:5px 8px; margin:0 0 8px; }
+       que ver con él se sombrean. v0.263: SOLO el sombreado, en rojo claro —
+       fuera el rótulo de la cabecera y el contador de cada apartado, que era
+       más información de la necesaria. Fuerte las que trabajan ESE golpe,
+       apenas teñidas las que comparten zona de pista. Nada se oculta ni se
+       bloquea: se puede planificar lo que se quiera. */
+    .ruta-area-row.rel      { background:#fee2e2; border-color:#fca5a5; }
+    .ruta-area-row.rel-suave{ background:#fef4f4; }
     .ruta-trabajo-cols { display:flex; flex-direction:column; gap:14px; min-width:0; }
     .ruta-modal-vacio { text-align:center; color:var(--gris); font-size:13px; line-height:1.7; padding:22px 10px; }
     /* v0.207 — resumen de lo ya marcado en Mensual esta semana (chips con
@@ -7720,7 +7764,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.261.0';
+    var APP_VERSION = '0.263.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -16642,19 +16686,14 @@
       }
       h += '<div class="ruta-trabajo-cols">';
       // v0.261 — Relación de cada bloque con los golpes abiertos en el carro.
+      // v0.263: solo el sombreado, sin rótulos ni contadores. Bastaba con verlo.
       var golpesOn = _rutaCarroGolpes.slice();
-      var relacion = {}, relPorAp = {};
+      var relacion = {};
       if (golpesOn.length) {
         var mapEjRel = _ejsById();
         areas.forEach(function(a){
-          var r = _rutaRelacion(a, golpesOn, _rutaGolpesDeBloque(a, sesDe[a.id], mapEjRel));
-          relacion[a.id] = r;
-          if (r === 2) relPorAp[a.apartado] = (relPorAp[a.apartado] || 0) + 1;
+          relacion[a.id] = _rutaRelacion(a, golpesOn, _rutaGolpesDeBloque(a, sesDe[a.id], mapEjRel));
         });
-        var nGolpes = golpesOn.filter(function(k){ return k !== 'mixto'; })
-                              .map(function(k){ return GOLPE_LABEL[k] || k; });
-        if (nGolpes.length) h += '<div class="ruta-rel-nota">✨ Sombreado: lo que encaja con ' +
-          _gEsc(nGolpes.join(' y ')) + '</div>';
       }
       h += '<div class="ruta-modal-areas">';
       if (!areas.length) {
@@ -16673,8 +16712,6 @@
           var abierto = (_rutaApAbierto[iAp] !== undefined) ? _rutaApAbierto[iAp] : !!tieneSel;
           h += '<button type="button" class="ruta-area-grupo' + (abierto ? ' abierto' : '') + '" onclick="rutaApToggle(' + iAp + ',' + abierto + ')">' +
                '<span class="chev">›</span><span class="ruta-area-t">' + _gEsc(ap) + '</span>' +
-               // v0.261: con un golpe abierto, cuántos de sus bloques encajan
-               (relPorAp[ap] ? '<span class="ruta-area-rel-n">' + relPorAp[ap] + ' encaja' + (relPorAp[ap] !== 1 ? 'n' : '') + '</span>' : '') +
                '<span class="ruta-area-n">' + (tieneSel ? '●' : porApartado[ap].length) + '</span></button>';
           if (!abierto) return;
           porApartado[ap].forEach(function(a){
