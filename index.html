@@ -39,6 +39,58 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.270.0 — Marcador de árbitro cuando analizas (2026-07)
+    (sin migraciones nuevas)
+    · ANALIZANDO JUGADORES, el tanteo gigante se cambia por el MARCADOR DE
+      ÁRBITRO: el mismo reparto que llevan los árbitros de silla y las
+      retransmisiones. Una fila por pareja y, de izquierda a derecha: quién
+      saca (●), el nombre, los SETS ya jugados en pequeño, los JUEGOS del set
+      en curso, y a la derecha EL PUNTO en grande y sobre su recuadro —que es
+      lo único que cambia en cada bola. Ocupa un tercio de lo que ocupaba y
+      deja la pantalla para los botones de anotar.
+    · Sin analizar a nadie se conserva el tanteo grande de siempre: ahí no hay
+      nada que quitarle sitio y se lee mejor de lejos.
+    · LOS BOTONES DE ANOTAR YA NO SE PLIEGAN. Eran un desplegable y con el
+      partido en marcha un toque de más en la cabecera te lo cerraba justo
+      cuando lo estabas usando. Ahora van fijos debajo de sumar punto.
+    · DESHACER, EN SITIO FIJO: barra pegada al borde inferior (por encima de la
+      barra de navegación) que no se va con el scroll, con sombra para que se
+      despegue del fondo. Es el botón que más se busca —se pulsa un punto de
+      más y hay que corregir sin perder el hilo— y estaba enterrado dentro de
+      «Acciones», que ahora solo guarda «Abandonar partido».
+
+  v0.269.0 — Configurar el partido, en cuatro desplegables (2026-07)
+    (sin migraciones nuevas)
+    · ERA UN FORMULARIO LARGO de una sola columna: en el móvil había que bajar
+      tres pantallas para llegar a «Empezar», y en el ordenador quedaba media
+      pantalla vacía a la derecha. Ahora son CUATRO SECCIONES plegables:
+      👥 Jugadores · 🎾 Saque · 📊 Analizar jugadores · ⚙️ Formato.
+    · CADA CABECERA LLEVA SU RESUMEN, así que se puede dejar todo cerrado y ver
+      la configuración entera de un vistazo: «Ana / Bea vs Carla / Dani»,
+      «Saca Ana», «Bea + Ana», «Premier Padel · FIP 2026». Se actualiza según
+      escribes. Al abrir una sección su resumen se esconde, que ya lo estás
+      viendo entero.
+    · LOS DOS EQUIPOS, UNO AL LADO DEL OTRO a partir de 700 px, con el equipo B
+      en su color naranja. Igual con quién saca de cada equipo y con los cuatro
+      formatos, que pasan a una sola fila. Al entrar solo viene abierta la
+      sección de jugadores, que es por donde se empieza.
+    · DETALLE TÉCNICO: las secciones cerradas se ocultan por CSS, NO se quitan
+      del documento. `iniciarPartida()` lee los campos directamente del DOM, así
+      que si se borraran, lo escrito se perdería al plegar una sección. Por lo
+      mismo, plegar solo cambia una clase: no se repinta el formulario y no se
+      pierde nada de lo tecleado.
+
+  v0.268.0 — El golpe, en rojo más claro y sin emojis (2026-07)
+    (sin migraciones nuevas)
+    · EL ROJO DE LA ETIQUETA DEL GOLPE se aclara (de #dc2626 a #e03a3a), en la
+      semana del curso y en el mes de arriba. Sigue leyéndose el blanco encima:
+      el contraste se queda en 4,5:1, que es el mínimo que pide la norma de
+      accesibilidad para texto pequeño. Más claro que esto ya obligaría a
+      cambiar la letra a un rojo oscuro.
+    · FUERA LOS EMOJIS de esas etiquetas: ahora pone «Volea», no «🎯 Volea».
+      Con la chapa roja el icono no aportaba nada y ensuciaba una etiqueta que
+      es estrecha por definición.
+
   v0.267.0 — El golpe del carro, en rojo arriba y abajo (2026-07)
     (sin migraciones nuevas)
     · EN LA SEMANA DEL CURSO, debajo de los ejercicios del carro, sale ahora el
@@ -5534,6 +5586,42 @@
     .marc-fmt-t { font-size:12.5px; font-weight:800; color:var(--texto); }
     .marc-fmt.on .marc-fmt-t { color:#0e7490; }
     .marc-fmt-d { font-size:10.5px; color:var(--gris); line-height:1.3; }
+    /* ══ v0.270 — MARCADOR DE ÁRBITRO (modo análisis) ═══════════════════
+       El mismo reparto que usan los árbitros de silla y las retransmisiones:
+       una fila por pareja, los sets ya jugados a la izquierda, los juegos del
+       set en curso y, a la derecha y en grande, EL PUNTO. Ocupa un tercio de
+       lo que ocupaba el tanteo gigante, y deja la pantalla para anotar. */
+    .marc-board { background:var(--verde); border-radius:14px; padding:8px 10px 9px; color:#fff; }
+    .marc-board-fila { display:grid; align-items:center; gap:6px; padding:5px 2px; }
+    .marc-board-fila.cab { padding:0 2px 3px; }
+    .marc-board-fila + .marc-board-fila { border-top:1px solid rgba(255,255,255,.12); }
+    .mb-h { font-size:9px; font-weight:800; color:rgba(255,255,255,.5); text-align:center;
+      text-transform:uppercase; letter-spacing:.06em; }
+    .mb-saque { font-size:11px; color:#fbbf24; text-align:center; }
+    .mb-nom { font-size:13.5px; font-weight:700; min-width:0; overflow:hidden;
+      text-overflow:ellipsis; white-space:nowrap; }
+    .marc-board-fila.saca .mb-nom { color:#fbbf24; }
+    .mb-set { font-size:14px; font-weight:700; text-align:center; color:rgba(255,255,255,.55);
+      font-variant-numeric:tabular-nums; }
+    .mb-set.gan { color:#fff; }
+    .mb-j { font-size:22px; font-weight:800; text-align:center; font-variant-numeric:tabular-nums; }
+    .mb-p { font-size:30px; font-weight:800; text-align:center; line-height:1;
+      font-variant-numeric:tabular-nums; background:rgba(255,255,255,.12); border-radius:9px;
+      padding:5px 0; }
+    .mb-p.ad { color:#fbbf24; }
+    .marc-board-badge { text-align:center; font-size:10px; font-weight:800; letter-spacing:.08em;
+      text-transform:uppercase; color:#fbbf24; margin-top:5px; }
+    /* Los botones de anotar, fijos: no se pliegan durante el partido */
+    .marc-stats-fija { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+    /* Deshacer siempre a la vista, por encima de la barra de navegación */
+    .marc-undo-bar { position:sticky; bottom:calc(64px + env(safe-area-inset-bottom));
+      z-index:40; margin-top:10px; padding-top:6px; }
+    .marc-undo-big { width:100%; font-family:inherit; font-size:14px; font-weight:800;
+      padding:0.85rem; border-radius:13px; border:1.5px solid var(--borde);
+      background:var(--blanco); color:var(--texto); cursor:pointer;
+      box-shadow:0 4px 14px rgba(0,0,0,.14); }
+    .marc-undo-big:active { transform:scale(0.98); }
+    .marc-undo-big:disabled { opacity:.45; box-shadow:none; }
     /* Desplegables de la pantalla de pista */
     .marc-desp { border:1px solid var(--borde); border-radius:12px; margin-top:8px; background:var(--blanco); overflow:hidden; }
     .marc-desp-hdr { display:flex; align-items:center; gap:9px; width:100%; box-sizing:border-box;
@@ -5604,6 +5692,37 @@
     .marc-saque-opcion { background:var(--blanco); border:1.5px solid var(--borde); border-radius:11px; padding:0.7rem 0.9rem; display:flex; align-items:center; gap:10px; cursor:pointer; transition:all 0.15s; }
     .marc-saque-opcion.activo { border-color:var(--verde-claro); background:var(--verde-suave); }
     .marc-saque-opcion input[type=radio] { width:17px; height:17px; accent-color:var(--verde); flex-shrink:0; cursor:pointer; }
+    /* ══ v0.269 — CONFIGURAR EL PARTIDO, en secciones plegables ══════════
+       Cada sección lleva en su cabecera un resumen de lo que hay dentro, así
+       que se puede dejar todo cerrado y ver la configuración de un vistazo. */
+    .marc-setup { display:flex; flex-direction:column; }
+    .marc-sec { border:1px solid var(--borde); border-radius:13px; margin-bottom:9px;
+      background:var(--blanco); overflow:hidden; }
+    .marc-sec-hdr { display:flex; align-items:center; gap:9px; width:100%; box-sizing:border-box;
+      font-family:inherit; text-align:left; padding:12px 13px; border:none; background:none; cursor:pointer; }
+    .marc-sec-t { font-size:13px; font-weight:800; color:var(--texto); flex-shrink:0; }
+    .marc-sec-r { flex:1; min-width:0; font-size:11.5px; color:var(--gris); text-align:right;
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .marc-sec-chev { flex-shrink:0; color:var(--gris); font-size:15px; transition:transform .15s; }
+    .marc-sec.abierto .marc-sec-chev { transform:rotate(90deg); }
+    .marc-sec.abierto .marc-sec-r { display:none; }   /* abierta, el resumen sobra */
+    .marc-sec-body { display:none; padding:0 13px 13px; }
+    .marc-sec.abierto .marc-sec-body { display:block; }
+    .marc-sec-nota { font-size:12px; color:var(--gris); line-height:1.5; margin:0 0 9px; }
+    .marc-jug-fila { display:flex; gap:6px; align-items:center; }
+    .marc-jug-fila .form-input { flex:1; min-width:0; margin-bottom:0; }
+    .marc-equipos-cols, .marc-saque-cols { display:grid; grid-template-columns:1fr; gap:10px; }
+    .marc-saque-grid { display:grid; grid-template-columns:1fr; gap:6px; }
+    #marc-rival-saque-wrap { display:grid; grid-template-columns:1fr; gap:6px; }
+    .marc-empezar { margin-top:4px; }
+    @media (min-width: 700px) {
+      /* Los dos equipos, uno al lado del otro: en el ordenador sobraba la
+         mitad de la pantalla y había que bajar para ver el equipo B. */
+      .marc-equipos-cols, .marc-saque-cols { grid-template-columns:1fr 1fr; gap:12px; }
+      .marc-saque-grid { grid-template-columns:1fr 1fr; }
+      .marc-fmt-grid  { grid-template-columns:repeat(4, 1fr); }
+    }
+    .marc-equipo-bloque.eq-b { background:#fff7ed; }
 
     /* ── Panel de estadísticas del jugador analizado ── */
     .marc-stats-card { background:var(--blanco); border-radius:14px; padding:0.75rem 0.875rem; border:1px solid var(--borde); display:flex; flex-direction:column; gap:7px; }
@@ -6048,7 +6167,7 @@
        de 760 px, donde sí hay sitio. */
     .comp-diacol-puntos { display:flex; justify-content:center; gap:4px; height:6px; margin-top:2px; }
     .comp-daypto { width:6px; height:6px; border-radius:50%; }
-    .comp-daypto.carro { background:#dc2626; }   /* v0.267: mismo rojo que su etiqueta */
+    .comp-daypto.carro { background:#e03a3a; }   /* v0.267: mismo rojo que su etiqueta */
     .comp-daypto.area  { background:#6366f1; }
     .comp-diacol-tags { display:none; flex-direction:column; align-items:stretch; gap:3px;
       width:100%; margin-top:2px; }
@@ -6056,7 +6175,7 @@
       padding:3px 6px; border-radius:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
       text-align:center; }
     /* v0.267: el golpe, en rojo con letra blanca — mismo código que abajo */
-    .comp-daytag.carro { background:#dc2626; color:#fff; border:1px solid #b91c1c; font-weight:800; }
+    .comp-daytag.carro { background:#e03a3a; color:#fff; border:1px solid #d13232; font-weight:800; }
     .comp-daytag.area  { background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe; }
     .comp-diacol-dow { font-size:9.5px; font-weight:800; color:var(--gris); text-transform:uppercase; }
     /* v0.243 — El día se abre en GLOBO. Hoja por abajo en el móvil (como el
@@ -6213,7 +6332,7 @@
        visual que la etiqueta del mes de arriba. */
     .ruta-wk-golpes { display:flex; flex-wrap:wrap; gap:4px; margin-top:3px; }
     .ruta-wk-golpe { display:inline-block; font-size:11px; font-weight:800; line-height:1.35;
-      padding:3px 9px; border-radius:6px; background:#dc2626; color:#fff; }
+      padding:3px 9px; border-radius:6px; background:#e03a3a; color:#fff; }
     .ruta-ses { font-size:12.5px; color:var(--texto); line-height:1.3; margin-top:2px; }
     .ruta-ses.vacia { color:var(--gris); font-size:12px; }
     .ruta-leyenda { font-size:11px; color:var(--gris); margin-top:12px; padding-top:10px; border-top:1px solid var(--borde); }
@@ -7936,7 +8055,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.267.0';
+    var APP_VERSION = '0.270.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -17024,7 +17143,8 @@
           var k = ejG ? ejG[id] : '';
           if (!k || _gv[k]) return;
           _gv[k] = true;
-          _gl.push((GOLPE_ICONO[k] ? GOLPE_ICONO[k] + ' ' : '') + (GOLPE_LABEL[k] || k));
+          // v0.268: solo el nombre del golpe — el emoji ensuciaba la etiqueta
+          _gl.push(GOLPE_LABEL[k] || k);
         });
         if (_gl.length) {
           zCarro += '<div class="ruta-wk-golpes">';
@@ -18291,7 +18411,7 @@
               var gk = ejFaceta(e, 'golpe');
               if (!gk || vistoG[gk]) return;
               vistoG[gk] = true;
-              golpes.push((GOLPE_ICONO[gk] ? GOLPE_ICONO[gk] + ' ' : '') + (GOLPE_LABEL[gk] || gk));
+              golpes.push(GOLPE_LABEL[gk] || gk);   // v0.268: sin emoji
             });
             var bloqsD = ((p.compDias && p.compDias[fISO]) || [])
               .filter(function(idA){ return idsNivel[idA]; })
@@ -20929,6 +21049,7 @@
       if (!marcadorEst.activo) {
         c.innerHTML = renderSetupMarcador();
         actualizarRivalOpciones(0); // por defecto sirve Equipo A → rival = Equipo B
+        marcSetupResumen();         // v0.269: los resúmenes de cada sección
         document.getElementById('marc-sub').textContent = 'Configura el partido';
       } else if (marcadorEst.terminado) {
         c.innerHTML = renderResultadoMarcador();
@@ -20942,11 +21063,64 @@
       }
     }
 
+    // ══════════════════════════════════════════════════════════════
+    // v0.269 — CONFIGURAR EL PARTIDO, EN SECCIONES PLEGABLES
+    // ══════════════════════════════════════════════════════════════
+    // Antes era un formulario largo de una sola columna: en el móvil obligaba
+    // a bajar tres pantallas antes de llegar a «Empezar», y en el ordenador
+    // dejaba media pantalla vacía a la derecha.
+    // Ahora: cuatro secciones que se pliegan, cada una con un RESUMEN en su
+    // cabecera (quién juega, quién saca, a quién analizas, qué formato), y los
+    // dos equipos uno al lado del otro a partir de 700 px.
+    // Importante: las secciones cerradas se ocultan por CSS, NO se quitan del
+    // documento. iniciarPartida() lee los campos directamente del DOM, así que
+    // si se borraran, lo escrito se perdería al plegar.
+    var _marcSetupAb = { jug:true, saque:false, analisis:false, formato:false };
+    function marcSetupDesp(k) {
+      _marcSetupAb[k] = !_marcSetupAb[k];
+      var el = document.getElementById('marc-sec-' + k);
+      if (el) el.classList.toggle('abierto', _marcSetupAb[k]);
+    }
+    function _marcNom(i) {
+      var el = document.getElementById('marc-jug-' + i);
+      var v = el ? el.value.trim() : '';
+      return v || ('Jugador ' + (i + 1));
+    }
+    // Los resúmenes de las cabeceras, recalculados desde el propio formulario.
+    function marcSetupResumen() {
+      var r = document.getElementById('marc-res-jug');
+      if (r) r.textContent = _marcNom(0) + ' / ' + _marcNom(1) + '  vs  ' + _marcNom(2) + ' / ' + _marcNom(3);
+      var sel = document.querySelector('input[name="marc-saque"]:checked');
+      var iS = sel ? parseInt(sel.value, 10) : 0;
+      var rs = document.getElementById('marc-res-saque');
+      if (rs) rs.textContent = 'Saca ' + _marcNom(iS);
+      var ra = document.getElementById('marc-res-analisis');
+      if (ra) {
+        var sa = document.getElementById('marc-analizar');
+        var ia = sa ? parseInt(sa.value, 10) : -1;
+        if (isNaN(ia) || ia === -1) ra.textContent = 'Nadie';
+        else {
+          var chk = document.getElementById('marc-analizar-pareja');
+          ra.textContent = _marcNom(ia) + (chk && chk.checked ? ' + ' + _marcNom(companeroDe(ia)) : '');
+        }
+      }
+      var rf = document.getElementById('marc-res-formato');
+      if (rf) rf.textContent = (MARC_FORMATOS[marcFmtSel] || MARC_FORMATOS.clasico).label;
+    }
+    function _marcSecHTML(k, titulo, resumenId, resumenIni, cuerpo) {
+      return '<div class="marc-sec' + (_marcSetupAb[k] ? ' abierto' : '') + '" id="marc-sec-' + k + '">' +
+        '<button type="button" class="marc-sec-hdr" onclick="marcSetupDesp(\'' + k + '\')">' +
+          '<span class="marc-sec-t">' + titulo + '</span>' +
+          '<span class="marc-sec-r" id="' + resumenId + '">' + resumenIni + '</span>' +
+          '<span class="marc-sec-chev">›</span></button>' +
+        '<div class="marc-sec-body">' + cuerpo + '</div></div>';
+    }
+
     function renderSetupMarcador() {
       function filaJugador(i, placeholder, val) {
         var pos = marcPosiciones[i] || (i%2===0?'D':'R');
-        return '<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">' +
-          '<input id="marc-jug-'+i+'" class="form-input" style="flex:1;margin-bottom:0;" type="text" placeholder="'+placeholder+'" value="'+val+'">' +
+        return '<div class="marc-jug-fila">' +
+          '<input id="marc-jug-'+i+'" class="form-input" type="text" placeholder="'+placeholder+'" value="'+val+'" oninput="marcSetupResumen()">' +
           '<button type="button" class="marc-pos-btn'+(pos==='D'?' pos-d':'')+'" id="marc-pos-'+i+'-D" onclick="setPosicion('+i+',\'D\')">D</button>' +
           '<button type="button" class="marc-pos-btn'+(pos==='R'?' pos-r':'')+'" id="marc-pos-'+i+'-R" onclick="setPosicion('+i+',\'R\')">R</button>' +
         '</div>';
@@ -20958,48 +21132,61 @@
           '<span style="flex:1;font-size:13px;"><strong>Jugador '+(i+1)+'</strong> <span style="color:var(--gris);">· '+equipo+'</span></span>' +
           '</label>';
       }).join('');
-      return '<div class="form-card">' +
-        '<p style="font-size:14px;color:var(--gris);line-height:1.6;">Apunta a los 4 jugadores, marca posición (<strong>D</strong> = derecha · <strong>R</strong> = revés) y elige quién saca primero en cada equipo. El saque rota automáticamente juego a juego.</p>' +
-        '<div class="marc-equipo-bloque"><div class="marc-equipo-titulo">Equipo A</div>' +
-          filaJugador(0,'Jugador 1','Jugador 1') +
-          filaJugador(1,'Jugador 2','Jugador 2') +
+
+      // ── 1 · Jugadores: los dos equipos, uno al lado del otro si hay sitio ──
+      var cuerpoJug =
+        '<p class="marc-sec-nota">Marca la posición de cada uno: <strong>D</strong> = derecha · <strong>R</strong> = revés.</p>' +
+        '<div class="marc-equipos-cols">' +
+          '<div class="marc-equipo-bloque"><div class="marc-equipo-titulo">Equipo A</div>' +
+            filaJugador(0,'Jugador 1','Jugador 1') + filaJugador(1,'Jugador 2','Jugador 2') + '</div>' +
+          '<div class="marc-equipo-bloque eq-b"><div class="marc-equipo-titulo">Equipo B</div>' +
+            filaJugador(2,'Jugador 3','Jugador 3') + filaJugador(3,'Jugador 4','Jugador 4') + '</div>' +
+        '</div>';
+
+      // ── 2 · Saque ──
+      var cuerpoSaque =
+        '<p class="marc-sec-nota">El saque rota solo, juego a juego. Aquí solo se dice quién abre.</p>' +
+        '<div class="marc-saque-cols">' +
+          '<div><div class="form-label">🎾 Saca primero (juego 1)</div><div class="marc-saque-grid">' + opciones + '</div></div>' +
+          '<div><div class="form-label">🔄 Del equipo contrario (juego 2)</div><div id="marc-rival-saque-wrap"></div></div>' +
+        '</div>';
+
+      // ── 3 · Análisis ──
+      var cuerpoAnal =
+        '<select id="marc-analizar" class="form-select" onchange="marcAnalizarCambio();marcSetupResumen();">' +
+          '<option value="-1" selected>Ninguno</option>' +
+          '<option value="0">Jugador 1 · Equipo A</option>' +
+          '<option value="1">Jugador 2 · Equipo A</option>' +
+          '<option value="2">Jugador 3 · Equipo B</option>' +
+          '<option value="3">Jugador 4 · Equipo B</option>' +
+        '</select>' +
+        '<label class="marc-check-fila" id="marc-analizar-pareja-wrap" style="display:none;">' +
+          '<input type="checkbox" id="marc-analizar-pareja" onchange="marcSetupResumen()">' +
+          '<span id="marc-analizar-pareja-txt">También anotar a su compañero/a</span></label>' +
+        '<div class="form-hint">Anota al instante aces, winners, dobles faltas y errores —de 1 o 2 jugadores de la misma pareja— y luego revisa sus estadísticas por set.</div>';
+
+      // ── 4 · Formato ──
+      var cuerpoFmt =
+        '<div class="marc-fmt-grid">' +
+          Object.keys(MARC_FORMATOS).map(function(k){
+            var f = MARC_FORMATOS[k];
+            return '<button type="button" class="marc-fmt' + (k === marcFmtSel ? ' on' : '') + '" id="marc-fmt-' + k + '" ' +
+              'onclick="marcSetFormato(\'' + k + '\')">' +
+              '<span class="marc-fmt-t">' + f.label + '</span>' +
+              '<span class="marc-fmt-d">' + f.desc + '</span></button>';
+          }).join('') +
         '</div>' +
-        '<div class="marc-equipo-bloque"><div class="marc-equipo-titulo">Equipo B</div>' +
-          filaJugador(2,'Jugador 3','Jugador 3') +
-          filaJugador(3,'Jugador 4','Jugador 4') +
-        '</div>' +
-        '<div class="form-grupo"><label class="form-label">🎾 ¿Quién saca primero (juego 1)?</label>' + opciones + '</div>' +
-        '<div class="form-grupo"><label class="form-label">🔄 ¿Quién saca primero del equipo contrario (juego 2)?</label><div id="marc-rival-saque-wrap"></div></div>' +
-        '<div class="form-grupo"><label class="form-label">📊 Analizar jugadores en detalle (opcional)</label>' +
-          '<select id="marc-analizar" class="form-select" onchange="marcAnalizarCambio()">' +
-            '<option value="-1" selected>Ninguno</option>' +
-            '<option value="0">Jugador 1 · Equipo A</option>' +
-            '<option value="1">Jugador 2 · Equipo A</option>' +
-            '<option value="2">Jugador 3 · Equipo B</option>' +
-            '<option value="3">Jugador 4 · Equipo B</option>' +
-          '</select>' +
-          '<label class="marc-check-fila" id="marc-analizar-pareja-wrap" style="display:none;">' +
-            '<input type="checkbox" id="marc-analizar-pareja">' +
-            '<span id="marc-analizar-pareja-txt">También anotar a su compañero/a</span>' +
-          '</label>' +
-          '<div class="form-hint">Anota al instante aces, winners, dobles faltas, errores forzados y no forzados — para 1 o 2 jugadores de la misma pareja — y luego revisa estadísticas individuales y de pareja por set.</div>' +
-        '</div>' +
-        '<div class="form-grupo"><label class="form-label">⚙️ Formato del partido</label>' +
-          '<div class="marc-fmt-grid">' +
-            Object.keys(MARC_FORMATOS).map(function(k){
-              var f = MARC_FORMATOS[k];
-              return '<button type="button" class="marc-fmt' + (k === marcFmtSel ? ' on' : '') + '" id="marc-fmt-' + k + '" ' +
-                'onclick="marcSetFormato(\'' + k + '\')">' +
-                '<span class="marc-fmt-t">' + f.label + '</span>' +
-                '<span class="marc-fmt-d">' + f.desc + '</span></button>';
-            }).join('') +
-          '</div>' +
-          '<label class="marc-check-fila" style="margin-bottom:4px;"><input type="checkbox" id="marc-opt-tiebreak" checked><span>Con tie-break al final del set</span></label>' +
-          '<label class="marc-check-fila" style="margin-bottom:4px;"><input type="checkbox" id="marc-opt-supertb"><span>Super tie-break a 10 pts (al 1-1 en sets)</span></label>' +
-          '<label class="marc-check-fila"><input type="checkbox" id="marc-opt-crono20"><span>Avisar de los 20 s entre puntos</span></label>' +
-          '<div class="form-hint">Los descansos del reglamento (90 s al cambiar de lado, 120 s entre sets, 20 s en el tie-break) y los 3 min de fisio van siempre: arrancan solos cuando toca.</div>' +
-        '</div>' +
-        '<button class="btn btn-verde" onclick="iniciarPartida()">🏆 Empezar partido</button></div>';
+        '<label class="marc-check-fila" style="margin-bottom:4px;"><input type="checkbox" id="marc-opt-tiebreak" checked><span>Con tie-break al final del set</span></label>' +
+        '<label class="marc-check-fila" style="margin-bottom:4px;"><input type="checkbox" id="marc-opt-supertb"><span>Super tie-break a 10 pts (al 1-1 en sets)</span></label>' +
+        '<label class="marc-check-fila"><input type="checkbox" id="marc-opt-crono20"><span>Avisar de los 20 s entre puntos</span></label>' +
+        '<div class="form-hint">Los descansos del reglamento (90 s al cambiar de lado, 120 s entre sets, 20 s en el tie-break) y los 3 min de fisio van siempre: arrancan solos cuando toca.</div>';
+
+      return '<div class="marc-setup">' +
+        _marcSecHTML('jug', '👥 Jugadores', 'marc-res-jug', 'Jugador 1 / Jugador 2  vs  Jugador 3 / Jugador 4', cuerpoJug) +
+        _marcSecHTML('saque', '🎾 Saque', 'marc-res-saque', 'Saca Jugador 1', cuerpoSaque) +
+        _marcSecHTML('analisis', '📊 Analizar jugadores', 'marc-res-analisis', 'Nadie', cuerpoAnal) +
+        _marcSecHTML('formato', '⚙️ Formato', 'marc-res-formato', MARC_FORMATOS[marcFmtSel].label, cuerpoFmt) +
+        '<button class="btn btn-verde marc-empezar" onclick="iniciarPartida()">🏆 Empezar partido</button></div>';
     }
 
     // v0.266 — Preset de formato elegido en la pantalla de configuración.
@@ -21017,10 +21204,12 @@
       var st = document.getElementById('marc-opt-supertb');
       if (tb) tb.checked = f.tb;
       if (st) st.checked = f.superTb;
+      marcSetupResumen();
     }
     function marcSaqueSeleccionado(i) {
       for (var k=0; k<4; k++) document.getElementById('marc-saque-op-'+k).classList.toggle('activo', k===i);
       actualizarRivalOpciones(i < 2 ? 0 : 1);
+      marcSetupResumen();
     }
 
     function setPosicion(idx, pos) {
@@ -21387,6 +21576,36 @@
         '<button type="button" class="marc-undo" onclick="deshacerPunto()"'+((!est.historial.length)?' disabled':'')+' aria-label="Deshacer">↩</button>' +
       '</div>';
       html+=_marcDescansoHTML();
+
+      // ── v0.270 — MODO ANÁLISIS: marcador de árbitro ──────────────────
+      // Cuando estás anotando winners y errores, el tanteo gigante estorba:
+      // ocupa la pantalla que necesitan los botones de anotar. Se cambia por
+      // el marcador que llevan los árbitros de silla —una fila por pareja,
+      // los sets pasados a la izquierda, los juegos del set en curso y, a la
+      // derecha y en grande, EL PUNTO, que es lo que cambia en cada bola.
+      var _modoAnalisis = !!(est.jugadoresAnalizados && est.jugadoresAnalizados.length);
+      if (_modoAnalisis) {
+        var nSets = est.sets.length;
+        var cols = '18px minmax(0,1fr)' + (nSets ? ' repeat(' + nSets + ', 22px)' : '') + ' 30px 62px';
+        html += '<div class="marc-board">';
+        html += '<div class="marc-board-fila cab" style="grid-template-columns:' + cols + '">' +
+          '<span></span><span></span>' +
+          est.sets.map(function(_, i){ return '<span class="mb-h">S' + (i+1) + '</span>'; }).join('') +
+          '<span class="mb-h">J</span><span class="mb-h">PTS</span></div>';
+        [0,1].forEach(function(eq){
+          var saca = est.jugadores ? (infoSaqueActual().equipoServidor === eq) : false;
+          html += '<div class="marc-board-fila' + (eq===0?' eq-a':' eq-b') + (saca?' saca':'') +
+                  '" style="grid-template-columns:' + cols + '">' +
+            '<span class="mb-saque">' + (saca ? '●' : '') + '</span>' +
+            '<span class="mb-nom">' + _gEsc(est.equipos[eq]) + '</span>' +
+            est.sets.map(function(sx){ return '<span class="mb-set' + (sx[eq]>sx[1-eq]?' gan':'') + '">' + sx[eq] + '</span>'; }).join('') +
+            '<span class="mb-j">' + est.juegos[eq] + '</span>' +
+            '<span class="mb-p' + (pts[eq]==='AD'?' ad':'') + '">' + pts[eq] + '</span>' +
+          '</div>';
+        });
+        if (badge) html += '<div class="marc-board-badge">' + badge + '</div>';
+        html += '</div>';
+      } else {
       html+='<div class="marcador-score">';
       if(setsHistHTML) html+='<div class="marc-sets-hist">'+setsHistHTML+'</div>';
       if(badge) html+='<div class="'+badgeCls+'">'+badge+'</div>';
@@ -21394,21 +21613,31 @@
       html+='<div class="marcador-score-juegos"><span class="marc-juegos-num">'+est.juegos[0]+'</span><span class="marc-juegos-sep">–</span><span class="marc-juegos-num">'+est.juegos[1]+'</span></div>';
       html+='<div class="marcador-score-pts"><div class="marc-pts-display"><div class="marc-pts-num'+(pts[0]==='AD'?' ad':'')+'">'+pts[0]+'</div><div class="marc-pts-label">'+est.equipos[0]+'</div></div><span class="marc-pts-sep">·</span><div class="marc-pts-display"><div class="marc-pts-num'+(pts[1]==='AD'?' ad':'')+'">'+pts[1]+'</div><div class="marc-pts-label">'+est.equipos[1]+'</div></div></div>';
       html+='</div>';
+      }
       html+='<div class="marcador-botones"><button class="btn-marcador equipo-a '+(l0?'ganando':'')+'" onclick="agregarPunto(0)"><span class="btn-marc-nombre">'+est.equipos[0]+'</span><span class="btn-marc-pts">+1</span><span class="btn-marc-hint">sumar punto</span></button><button class="btn-marcador equipo-b '+(!l0?'ganando':'')+'" onclick="agregarPunto(1)"><span class="btn-marc-nombre">'+est.equipos[1]+'</span><span class="btn-marc-pts">+1</span><span class="btn-marc-hint">sumar punto</span></button></div>';
-      // ── Desplegables ──
+      // ── v0.270 — Los botones de ANOTAR nunca se pliegan ─────────────
+      // Van fijos, debajo de los de sumar punto: con el partido en marcha, un
+      // toque de más en la cabecera te cerraría el panel justo cuando lo
+      // necesitas. Lo demás sí se recoge.
       var stats = renderPanelEstadisticas();
-      if (stats) html += _marcDespHTML('stats', '📊', 'Estadísticas', stats);
+      if (stats) html += '<div class="marc-stats-fija">' + stats + '</div>';
       html += _marcDespHTML('saque', '🎾', 'Saque y posiciones', renderChipsJugadores());
       html += _marcDespHTML('tiempos', '🩺', 'Tiempos y fisio', _marcTiemposHTML());
-      html += _marcDespHTML('acciones', '⚙️', 'Acciones', 
-        '<div class="acciones"><button class="btn btn-sec" style="flex:1;" onclick="deshacerPunto()"'+((!est.historial.length)?' disabled':'')+'>↩ Deshacer punto</button>' +
-        '<button class="btn btn-rojo btn-sm" onclick="confirmarAbandonar()">✕ Abandonar</button></div>');
+      html += _marcDespHTML('acciones', '⚙️', 'Acciones',
+        '<div class="acciones"><button class="btn btn-rojo btn-sm" style="flex:1;" onclick="confirmarAbandonar()">✕ Abandonar partido</button></div>');
+      // v0.270 — DESHACER, siempre a mano: barra pegada al borde inferior que
+      // no se va con el scroll. Es el botón que más se busca (se pulsa un
+      // punto de más y hay que corregir sin perder el hilo del partido).
+      html += '<div class="marc-undo-bar">' +
+        '<button type="button" class="marc-undo-big" onclick="deshacerPunto()"' +
+        ((!est.historial.length)?' disabled':'') + '>↩ Deshacer punto</button></div>';
       return html;
     }
 
     // v0.266 — Desplegables de la pantalla de pista. Estado en memoria: al
     // salir y volver arrancan cerrados, que es lo que interesa en pista.
-    var _marcDesp = { stats:false, saque:false, tiempos:false, acciones:false };
+    // v0.270: «stats» ya no es un desplegable (los botones de anotar van fijos)
+    var _marcDesp = { saque:false, tiempos:false, acciones:false };
     function marcDesp(k) { _marcDesp[k] = !_marcDesp[k]; renderizarMarcador(); }
     function _marcDespHTML(k, ico, titulo, cuerpo) {
       var ab = !!_marcDesp[k];
