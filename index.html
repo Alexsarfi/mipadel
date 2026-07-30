@@ -39,6 +39,15 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.271.0 — Deshacer, justo debajo de los dos botones (2026-07)
+    (sin migraciones nuevas)
+    · EL BOTÓN DE DESHACER pasa a ir pegado DEBAJO de los dos recuadros de
+      sumar punto y a todo el ancho, en vez de flotando al pie de la pantalla.
+      Es el gesto que viene justo después de pulsar un «+1» de más: tiene que
+      estar donde acabas de tocar, no en otro sitio.
+    · Se le quita la sombra flotante y el pegado al borde: ya no hace falta,
+      porque no se va de la vista.
+
   v0.270.0 — Marcador de árbitro cuando analizas (2026-07)
     (sin migraciones nuevas)
     · ANALIZANDO JUGADORES, el tanteo gigante se cambia por el MARCADOR DE
@@ -5613,15 +5622,14 @@
       text-transform:uppercase; color:#fbbf24; margin-top:5px; }
     /* Los botones de anotar, fijos: no se pliegan durante el partido */
     .marc-stats-fija { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
-    /* Deshacer siempre a la vista, por encima de la barra de navegación */
-    .marc-undo-bar { position:sticky; bottom:calc(64px + env(safe-area-inset-bottom));
-      z-index:40; margin-top:10px; padding-top:6px; }
+    /* Deshacer: justo debajo de los dos botones de sumar punto y a todo el
+       ancho — donde acabas de tocar cuando has sumado un punto de más. */
+    .marc-undo-bar { margin-top:8px; }
     .marc-undo-big { width:100%; font-family:inherit; font-size:14px; font-weight:800;
-      padding:0.85rem; border-radius:13px; border:1.5px solid var(--borde);
-      background:var(--blanco); color:var(--texto); cursor:pointer;
-      box-shadow:0 4px 14px rgba(0,0,0,.14); }
+      padding:0.8rem; border-radius:14px; border:1.5px solid var(--borde);
+      background:var(--blanco); color:var(--texto); cursor:pointer; }
     .marc-undo-big:active { transform:scale(0.98); }
-    .marc-undo-big:disabled { opacity:.45; box-shadow:none; }
+    .marc-undo-big:disabled { opacity:.45; }
     /* Desplegables de la pantalla de pista */
     .marc-desp { border:1px solid var(--borde); border-radius:12px; margin-top:8px; background:var(--blanco); overflow:hidden; }
     .marc-desp-hdr { display:flex; align-items:center; gap:9px; width:100%; box-sizing:border-box;
@@ -8055,7 +8063,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.270.0';
+    var APP_VERSION = '0.271.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -21615,6 +21623,12 @@
       html+='</div>';
       }
       html+='<div class="marcador-botones"><button class="btn-marcador equipo-a '+(l0?'ganando':'')+'" onclick="agregarPunto(0)"><span class="btn-marc-nombre">'+est.equipos[0]+'</span><span class="btn-marc-pts">+1</span><span class="btn-marc-hint">sumar punto</span></button><button class="btn-marcador equipo-b '+(!l0?'ganando':'')+'" onclick="agregarPunto(1)"><span class="btn-marc-nombre">'+est.equipos[1]+'</span><span class="btn-marc-pts">+1</span><span class="btn-marc-hint">sumar punto</span></button></div>';
+      // v0.270 — DESHACER, pegado debajo de los dos botones de sumar punto y a
+      // todo el ancho: es el gesto que sigue a pulsar un +1 de más, así que
+      // tiene que estar donde acabas de tocar, no enterrado en un desplegable.
+      html+='<div class="marc-undo-bar">' +
+        '<button type="button" class="marc-undo-big" onclick="deshacerPunto()"' +
+        ((!est.historial.length)?' disabled':'') + '>↩ Deshacer punto</button></div>';
       // ── v0.270 — Los botones de ANOTAR nunca se pliegan ─────────────
       // Van fijos, debajo de los de sumar punto: con el partido en marcha, un
       // toque de más en la cabecera te cerraría el panel justo cuando lo
@@ -21625,12 +21639,6 @@
       html += _marcDespHTML('tiempos', '🩺', 'Tiempos y fisio', _marcTiemposHTML());
       html += _marcDespHTML('acciones', '⚙️', 'Acciones',
         '<div class="acciones"><button class="btn btn-rojo btn-sm" style="flex:1;" onclick="confirmarAbandonar()">✕ Abandonar partido</button></div>');
-      // v0.270 — DESHACER, siempre a mano: barra pegada al borde inferior que
-      // no se va con el scroll. Es el botón que más se busca (se pulsa un
-      // punto de más y hay que corregir sin perder el hilo del partido).
-      html += '<div class="marc-undo-bar">' +
-        '<button type="button" class="marc-undo-big" onclick="deshacerPunto()"' +
-        ((!est.historial.length)?' disabled':'') + '>↩ Deshacer punto</button></div>';
       return html;
     }
 
