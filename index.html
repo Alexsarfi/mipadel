@@ -39,6 +39,56 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.267.0 — El golpe del carro, en rojo arriba y abajo (2026-07)
+    (sin migraciones nuevas)
+    · EN LA SEMANA DEL CURSO, debajo de los ejercicios del carro, sale ahora el
+      GOLPE que se trabaja —fondo, pared, volea, bandeja…— en rojo con letra
+      blanca. El nombre del ejercicio dice qué haces; el golpe dice de qué va
+      la clase, y es lo que se busca de un vistazo al repasar el año. Si varios
+      ejercicios comparten golpe, sale una sola vez.
+    · MISMO CÓDIGO DE COLOR ARRIBA, en la planificación del mes: la etiqueta
+      del golpe bajo cada día pasa de turquesa a ese mismo rojo con letra
+      blanca, y el punto del móvil también. Así el golpe se lee igual en las
+      dos zonas de la pantalla.
+    · El área de trabajo se queda en morado: son las dos partes de la clase y
+      conviene que sigan distinguiéndose.
+
+  v0.266.0 — El marcador, para llevarlo en pista (2026-07)
+    (sin migraciones nuevas)
+    · FORMATOS DE PARTIDO, en cuatro botones al configurar:
+        · Clásico — ventajas de siempre, sets a 6.
+        · Punto de oro — a 40-40 el siguiente punto cierra el juego.
+        · Premier Padel · FIP 2026 — el STAR POINT que entró en vigor el
+          1-1-2026: en el 40-40 se juegan hasta DOS ventajas y, si sigue el
+          empate, un punto de oro decide. Con el peloteo en 3 min, como manda
+          el nuevo reglamento (antes 5).
+        · Set corto a 4 — sets a 4 juegos con tie-break al 4-4, para ligas y
+          torneos con horarios apretados.
+      El tie-break y el super tie-break se siguen pudiendo retocar a mano; el
+      preset solo deja las casillas como toca.
+    · LOS TIEMPOS DEL REGLAMENTO, y los arranca la app sola porque ya sabe qué
+      acaba de pasar:
+        · 90 s al CAMBIAR DE LADO al final de un juego. Se cambia tras los
+          juegos impares, pero tras el PRIMERO de cada set el juego es continuo
+          y no se abre ningún crono — eso lo distingue.
+        · 120 s al final de cada set. Si el set cierra el partido, no.
+        · 20 s en los cambios de campo del tie-break (cada 6 puntos).
+        · 20 s entre puntos, opcional (casilla al configurar): un descanso
+          mayor siempre manda sobre este.
+        · 3 min de ATENCIÓN MÉDICA, con la regla entera: UNA vez por jugador y
+          sin poder cederla al compañero. La app lleva la cuenta de quién la ha
+          gastado y no deja repetir.
+      Al llegar a cero el móvil vibra largo (en pista va en el bolsillo) y la
+      barra se pone en ámbar. Sumar un punto cierra el descanso; también hay ✕.
+    · LA PANTALLA, PENSADA PARA LA PISTA. El tanteo y los dos botones de sumar
+      punto ocupan lo que tienen que ocupar (botones un 75% más altos y el
+      «+1» a 26 px). Todo lo demás —estadísticas, saque y posiciones, tiempos y
+      fisio, abandonar— se recoge en desplegables que se abren al tocarlos. El
+      DESHACER no: se queda a mano en la barra del crono, que es lo que más se
+      usa cuando se pulsa un punto de más.
+    · La barra del crono lleva además el formato en el que estás jugando, para
+      no dudar a mitad de partido de si toca punto de oro o ventajas.
+
   v0.265.0 — La semana del curso, en tres zonas (2026-07)
     (sin migraciones nuevas)
     · EN EL NAVEGADOR cada semana del mes se reparte en tres: a la izquierda el
@@ -5450,8 +5500,67 @@
     .marc-pts-num.ad { color:#fbbf24; font-size:32px; }
     .marc-pts-label { font-size:10px; color:rgba(255,255,255,0.6); text-transform:uppercase; letter-spacing:0.08em; margin-top:4px; }
     .marc-pts-sep { font-size:22px; color:rgba(255,255,255,0.3); }
+    /* ══ v0.266 — MARCADOR DE PISTA ══════════════════════════════════
+       El móvil en la mano, un partido delante y poco tiempo para mirar: el
+       tanteo y los dos botones mandan, y lo demás se recoge. */
+    .marc-fmt-chip { margin-left:auto; font-size:10px; font-weight:800; text-transform:uppercase;
+      letter-spacing:.05em; background:rgba(255,255,255,.16); padding:3px 9px; border-radius:999px;
+      white-space:nowrap; max-width:46%; overflow:hidden; text-overflow:ellipsis; }
+    .marc-undo { flex-shrink:0; width:30px; height:30px; border-radius:50%; border:none; cursor:pointer;
+      background:rgba(255,255,255,.18); color:#fff; font-size:15px; font-family:inherit;
+      letter-spacing:normal; display:flex; align-items:center; justify-content:center; }
+    .marc-undo:disabled { opacity:.35; }
+    /* Cuenta atrás del descanso reglamentario */
+    .marc-desc-bar { display:flex; align-items:center; gap:10px; margin:0 0 8px; padding:8px 12px;
+      border-radius:12px; background:#ecfeff; border:1.5px solid #67e8f9; }
+    .marc-desc-bar.medico { background:#fef2f2; border-color:#fca5a5; }
+    .marc-desc-bar.fin { background:#fef3c7; border-color:#f59e0b; }
+    .marc-desc-txt { display:flex; flex-direction:column; min-width:0; }
+    .marc-desc-lbl { font-size:12px; font-weight:800; color:#0e7490; }
+    .marc-desc-bar.medico .marc-desc-lbl { color:#991b1b; }
+    .marc-desc-bar.fin .marc-desc-lbl { color:#92400e; }
+    .marc-desc-max { font-size:10px; color:var(--gris); }
+    .marc-desc-num { margin-left:auto; font-size:26px; font-weight:800; font-variant-numeric:tabular-nums;
+      color:#0e7490; line-height:1; }
+    .marc-desc-bar.medico .marc-desc-num { color:#991b1b; }
+    .marc-desc-bar.fin .marc-desc-num { color:#92400e; font-size:18px; }
+    .marc-desc-x { flex-shrink:0; width:26px; height:26px; border-radius:50%; border:none; cursor:pointer;
+      background:rgba(0,0,0,.06); color:var(--texto); font-size:12px; font-family:inherit; }
+    /* Presets de formato en la configuración */
+    .marc-fmt-grid { display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-bottom:9px; }
+    .marc-fmt { display:flex; flex-direction:column; gap:2px; text-align:left; font-family:inherit;
+      padding:8px 10px; border:1.5px solid var(--borde); border-radius:11px; background:var(--blanco); cursor:pointer; }
+    .marc-fmt.on { border-color:#0891b2; background:#ecfeff; }
+    .marc-fmt-t { font-size:12.5px; font-weight:800; color:var(--texto); }
+    .marc-fmt.on .marc-fmt-t { color:#0e7490; }
+    .marc-fmt-d { font-size:10.5px; color:var(--gris); line-height:1.3; }
+    /* Desplegables de la pantalla de pista */
+    .marc-desp { border:1px solid var(--borde); border-radius:12px; margin-top:8px; background:var(--blanco); overflow:hidden; }
+    .marc-desp-hdr { display:flex; align-items:center; gap:9px; width:100%; box-sizing:border-box;
+      font-family:inherit; font-size:13px; font-weight:700; color:var(--texto); text-align:left;
+      padding:11px 12px; border:none; background:none; cursor:pointer; }
+    .marc-desp-t { flex:1; }
+    .marc-desp-chev { color:var(--gris); font-size:15px; transition:transform .15s; }
+    .marc-desp.abierto .marc-desp-chev { transform:rotate(90deg); }
+    .marc-desp-body { padding:0 12px 12px; }
+    /* Tiempos y fisio */
+    .marc-tiempos-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; }
+    .marc-t-btn { display:flex; flex-direction:column; gap:1px; align-items:center; font-family:inherit;
+      font-size:15px; font-weight:800; color:#0e7490; padding:9px 4px; border:1.5px solid #a5f3fc;
+      border-radius:11px; background:#ecfeff; cursor:pointer; }
+    .marc-t-btn span { font-size:9.5px; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.03em; }
+    .marc-t-sub { font-size:11px; font-weight:800; color:var(--gris); text-transform:uppercase;
+      letter-spacing:.04em; margin:12px 0 6px; }
+    .marc-fisio-grid { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+    .marc-fisio { display:flex; flex-direction:column; gap:1px; font-family:inherit; text-align:left;
+      padding:8px 10px; border:1.5px solid #fca5a5; border-radius:11px; background:#fef2f2; cursor:pointer; }
+    .marc-fisio.usado { border-color:var(--borde); background:var(--arena); opacity:.7; cursor:default; }
+    .marc-fisio-n { font-size:12px; font-weight:800; color:#991b1b; }
+    .marc-fisio.usado .marc-fisio-n { color:var(--gris); }
+    .marc-fisio-e { font-size:10px; color:var(--gris); }
+    .marc-t-nota { font-size:10.5px; color:var(--gris); line-height:1.5; margin-top:9px; }
     .marcador-botones { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-    .btn-marcador { background:var(--blanco); border:2px solid var(--borde); border-radius:14px; padding:0.6rem 0.5rem; font-family:'Outfit',sans-serif; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; transition:all 0.12s; user-select:none; -webkit-user-select:none; -webkit-tap-highlight-color:transparent; }
+    .btn-marcador { background:var(--blanco); border:2px solid var(--borde); border-radius:14px; padding:1.05rem 0.5rem; font-family:'Outfit',sans-serif; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; transition:all 0.12s; user-select:none; -webkit-user-select:none; -webkit-tap-highlight-color:transparent; }
     .btn-marcador:active { transform:scale(0.94); }
     /* Equipo A — azul */
     .btn-marcador.equipo-a { background:#eff6ff; border-color:#93c5fd; }
@@ -5463,8 +5572,8 @@
     .btn-marcador.equipo-b .btn-marc-pts { color:#c2410c; }
     .btn-marcador.equipo-b .btn-marc-nombre { color:#c2410c; }
     .btn-marcador.equipo-b.ganando { background:#ffedd5; border-color:#ea580c; border-width:3px; }
-    .btn-marc-nombre { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; }
-    .btn-marc-pts { font-size:18px; font-weight:800; }
+    .btn-marc-nombre { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; }
+    .btn-marc-pts { font-size:26px; font-weight:800; }
     .btn-marc-hint { font-size:9px; color:var(--gris); }
     .marcador-resultado { text-align:center; padding:1.25rem 0; }
     .marc-res-titulo { font-size:26px; font-weight:800; color:var(--verde); margin-bottom:4px; }
@@ -5939,14 +6048,15 @@
        de 760 px, donde sí hay sitio. */
     .comp-diacol-puntos { display:flex; justify-content:center; gap:4px; height:6px; margin-top:2px; }
     .comp-daypto { width:6px; height:6px; border-radius:50%; }
-    .comp-daypto.carro { background:#06b6d4; }
+    .comp-daypto.carro { background:#dc2626; }   /* v0.267: mismo rojo que su etiqueta */
     .comp-daypto.area  { background:#6366f1; }
     .comp-diacol-tags { display:none; flex-direction:column; align-items:stretch; gap:3px;
       width:100%; margin-top:2px; }
     .comp-daytag { max-width:100%; box-sizing:border-box; font-size:9.5px; font-weight:700; line-height:1.3;
       padding:3px 6px; border-radius:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
       text-align:center; }
-    .comp-daytag.carro { background:#ecfeff; color:#0e7490; border:1px solid #a5f3fc; }
+    /* v0.267: el golpe, en rojo con letra blanca — mismo código que abajo */
+    .comp-daytag.carro { background:#dc2626; color:#fff; border:1px solid #b91c1c; font-weight:800; }
     .comp-daytag.area  { background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe; }
     .comp-diacol-dow { font-size:9.5px; font-weight:800; color:var(--gris); text-transform:uppercase; }
     /* v0.243 — El día se abre en GLOBO. Hoja por abajo en el móvil (como el
@@ -6098,6 +6208,12 @@
     .ruta-wk-area  .ruta-wk-zlbl { color:#3730a3; }
     .ruta-wk-ej { display:inline-block; font-size:11.5px; line-height:1.35; padding:2px 8px;
       border-radius:6px; margin:0 4px 4px 0; background:#ecfeff; color:#0e7490; border:1px solid #a5f3fc; }
+    /* v0.267 — El GOLPE que se trabaja en el carro, destacado en rojo. Va
+       debajo de los ejercicios en la semana del curso, y es el mismo lenguaje
+       visual que la etiqueta del mes de arriba. */
+    .ruta-wk-golpes { display:flex; flex-wrap:wrap; gap:4px; margin-top:3px; }
+    .ruta-wk-golpe { display:inline-block; font-size:11px; font-weight:800; line-height:1.35;
+      padding:3px 9px; border-radius:6px; background:#dc2626; color:#fff; }
     .ruta-ses { font-size:12.5px; color:var(--texto); line-height:1.3; margin-top:2px; }
     .ruta-ses.vacia { color:var(--gris); font-size:12px; }
     .ruta-leyenda { font-size:11px; color:var(--gris); margin-top:12px; padding-top:10px; border-top:1px solid var(--borde); }
@@ -7820,7 +7936,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.265.0';
+    var APP_VERSION = '0.267.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -16861,7 +16977,7 @@
     // Tarjeta compacta de una semana dentro de la columna de su mes.
     // v0.207: wd viene de _rutaSemanaDatos (derivado de compDias + rutaSes),
     // así que wd.areasSemana puede traer VARIAS áreas (una por día marcado).
-    function _rutaSemanaHTML(w, act, wd, areaN, sesN, ejN) {
+    function _rutaSemanaHTML(w, act, wd, areaN, sesN, ejN, ejG) {
       var trab = wd.trab, esAct = (w.idx === act);
       // v0.216: una semana con solo el carro puesto ya cuenta como planificada
       // v0.265: y una con solo el BLOQUE marcado, también. Antes salía como
@@ -16899,6 +17015,22 @@
         wd.carro.forEach(function(id){
           zCarro += '<span class="ruta-wk-ej">' + _gEsc(ejN[id] || ('Ejercicio ' + id)) + '</span>';
         });
+        // v0.267 — Debajo de los ejercicios, EL GOLPE que se trabaja (fondo,
+        // pared, volea, bandeja…), en rojo. Es el dato que se busca de un
+        // vistazo al repasar el curso: el nombre del ejercicio dice qué haces,
+        // el golpe dice de qué va la clase.
+        var _gv = {}, _gl = [];
+        wd.carro.forEach(function(id){
+          var k = ejG ? ejG[id] : '';
+          if (!k || _gv[k]) return;
+          _gv[k] = true;
+          _gl.push((GOLPE_ICONO[k] ? GOLPE_ICONO[k] + ' ' : '') + (GOLPE_LABEL[k] || k));
+        });
+        if (_gl.length) {
+          zCarro += '<div class="ruta-wk-golpes">';
+          _gl.forEach(function(t){ zCarro += '<span class="ruta-wk-golpe">' + _gEsc(t) + '</span>'; });
+          zCarro += '</div>';
+        }
       } else if (!tieneAlgo) {
         zCarro += '<div class="ruta-ses vacia">＋ planificar</div>';
       }
@@ -16927,12 +17059,12 @@
     // Columna de un mes (cabecera + sus semanas). v0.207: recibe el plan (p)
     // + idsNivel en vez del viejo blob por curso, para leer los datos
     // compartidos con Mensual.
-    function _rutaMesColHTML(mes, act, p, idsNivel, areaN, sesN, ejN) {
+    function _rutaMesColHTML(mes, act, p, idsNivel, areaN, sesN, ejN, ejG) {
       var hechasM = mes.sems.filter(function(w){ return _rutaSemanaDatos(p, w, idsNivel).trab; }).length;
       var h = '<div class="ruta-mes-col">';
       h += '<div class="ruta-mes-hdr"><span>' + _MESES_R[mes.m] + '</span>' +
            '<span class="ruta-mes-prog">' + hechasM + '/' + mes.sems.length + '</span></div>';
-      mes.sems.forEach(function(w){ h += _rutaSemanaHTML(w, act, _rutaSemanaDatos(p, w, idsNivel), areaN, sesN, ejN); });
+      mes.sems.forEach(function(w){ h += _rutaSemanaHTML(w, act, _rutaSemanaDatos(p, w, idsNivel), areaN, sesN, ejN, ejG); });
       h += '</div>';
       return h;
     }
@@ -16950,7 +17082,11 @@
       var sesN  = {}; ses.forEach(function(s){ sesN[s.id] = s.nombre || (s.fecha || 'Sesión'); });
       // v0.265: nombres de los ejercicios, para que el carro de cada semana
       // diga CUÁLES son y no solo cuántos.
-      var ejN = {}; leerEjercicios().forEach(function(e){ ejN[e.id] = e.nombre || ('Ejercicio ' + e.id); });
+      var ejN = {}, ejG = {};
+      leerEjercicios().forEach(function(e){
+        ejN[e.id] = e.nombre || ('Ejercicio ' + e.id);
+        ejG[e.id] = ejFaceta(e, 'golpe');    // v0.267: y su golpe
+      });
       var esHoy  = (curso === _cursoActual());
 
       // ── Selector de CURSO: permite adelantarse y planificar el que viene ──
@@ -17005,12 +17141,12 @@
         var mSel = mesesCurso.filter(function(m){ return m.key === mesSel; })[0];
         if (mSel) {
           h += '<div class="ruta-mes-cols">';
-          h += _rutaMesColHTML(mSel, act, p, idsNivel, areaN, sesN, ejN);
+          h += _rutaMesColHTML(mSel, act, p, idsNivel, areaN, sesN, ejN, ejG);
           h += '</div>';
         }
       }
 
-      h += _rutaArchivoHTML(p, idsNivel, areaN, sesN, ejN);
+      h += _rutaArchivoHTML(p, idsNivel, areaN, sesN, ejN, ejG);
       h += '<div class="ruta-leyenda">✓ trabajada · ◉ esta semana · ● planificada · ○ vacía</div>';
       return h;
     }
@@ -17062,7 +17198,7 @@
       return h;
     }
 
-    function _rutaArchivoHTML(p, idsNivel, areaN, sesN, ejN) {
+    function _rutaArchivoHTML(p, idsNivel, areaN, sesN, ejN, ejG) {
       // Cursos candidatos: los que tienen datos + el actual + el que se mira.
       var cursos = _rutaCursosConDatos(p);
       [_cursoActual(), _rutaCurso()].forEach(function(c){ if (cursos.indexOf(c) < 0) cursos.push(c); });
@@ -17114,7 +17250,7 @@
             '<span class="chev">›</span></div>';
           h += '<div class="plan-otros-body"><div class="ruta-mes-cols">';
           // act = -1: en el archivo nunca hay "semana de hoy" que resaltar.
-          mesesB.forEach(function(m){ h += _rutaMesColHTML(m, -1, p, idsNivel, areaN, sesN, ejN); });
+          mesesB.forEach(function(m){ h += _rutaMesColHTML(m, -1, p, idsNivel, areaN, sesN, ejN, ejG); });
           h += '</div></div></div>';
         });
         h += '</div></div>';
@@ -20729,6 +20865,28 @@
 
     var marcCronoInterval = null;
 
+    // ── v0.266 — FORMATO DEL PARTIDO ─────────────────────────────────
+    // punt: cómo se resuelve el 40-40
+    //   'ventajas' → clásico: ventajas sin límite
+    //   'oro'      → punto de oro: a 40-40 el siguiente punto gana el juego
+    //   'star'     → STAR POINT (FIP, en vigor desde el 1-1-2026): en el 40-40
+    //                se juegan hasta DOS ventajas y, si sigue el empate, un
+    //                punto de oro decide. Es lo que se ve en Premier Padel.
+    // juegosSet: 6 (normal) o 4 (set corto de ligas y torneos con prisa)
+    var MARC_FORMATOS = {
+      clasico:  { punt:'ventajas', juegosSet:6, tb:true, superTb:false, peloteo:300,
+                  label:'Clásico', desc:'Ventajas · sets a 6 · tie-break' },
+      oro:      { punt:'oro',      juegosSet:6, tb:true, superTb:true,  peloteo:300,
+                  label:'Punto de oro', desc:'Sin ventajas · sets a 6 · super tie-break' },
+      fip2026:  { punt:'star',     juegosSet:6, tb:true, superTb:true,  peloteo:180,
+                  label:'Premier Padel · FIP 2026', desc:'Star point (2 ventajas + punto de oro) · peloteo 3 min' },
+      corto:    { punt:'oro',      juegosSet:4, tb:true, superTb:true,  peloteo:300,
+                  label:'Set corto a 4', desc:'Punto de oro · sets a 4 · super tie-break' }
+    };
+    function _marcFmt() {
+      var f = marcadorEst.fmt;
+      return f || MARC_FORMATOS.clasico;
+    }
     var marcadorEst = {
       activo:false, equipos:['Nosotros','Ellos'],
       jugadores:['Jugador 1','Jugador 2','Jugador 3','Jugador 4'],
@@ -20737,6 +20895,8 @@
       puntos:[0,0], ventaja:-1, juegos:[0,0], sets:[],
       enTiebreak:false, tbPuntos:[0,0],
       tieBreakHabilitado:true, superTieBreakHabilitado:false, superTieBreakActivo:false,
+      fmt:null, ventajasJugadas:0,            // v0.266: formato y star point
+      descanso:null, medicoUsado:[false,false,false,false],   // v0.266: tiempos
       cronoStart:null,
       terminado:false, ganador:-1, historial:[]
     };
@@ -20825,12 +20985,39 @@
           '<div class="form-hint">Anota al instante aces, winners, dobles faltas, errores forzados y no forzados — para 1 o 2 jugadores de la misma pareja — y luego revisa estadísticas individuales y de pareja por set.</div>' +
         '</div>' +
         '<div class="form-grupo"><label class="form-label">⚙️ Formato del partido</label>' +
-          '<label class="marc-check-fila" style="margin-bottom:4px;"><input type="checkbox" id="marc-opt-tiebreak" checked><span>Con tie-break al 6-6</span></label>' +
-          '<label class="marc-check-fila"><input type="checkbox" id="marc-opt-supertb"><span>Super tie-break a 10 pts (al 1-1 en sets)</span></label>' +
+          '<div class="marc-fmt-grid">' +
+            Object.keys(MARC_FORMATOS).map(function(k){
+              var f = MARC_FORMATOS[k];
+              return '<button type="button" class="marc-fmt' + (k === marcFmtSel ? ' on' : '') + '" id="marc-fmt-' + k + '" ' +
+                'onclick="marcSetFormato(\'' + k + '\')">' +
+                '<span class="marc-fmt-t">' + f.label + '</span>' +
+                '<span class="marc-fmt-d">' + f.desc + '</span></button>';
+            }).join('') +
+          '</div>' +
+          '<label class="marc-check-fila" style="margin-bottom:4px;"><input type="checkbox" id="marc-opt-tiebreak" checked><span>Con tie-break al final del set</span></label>' +
+          '<label class="marc-check-fila" style="margin-bottom:4px;"><input type="checkbox" id="marc-opt-supertb"><span>Super tie-break a 10 pts (al 1-1 en sets)</span></label>' +
+          '<label class="marc-check-fila"><input type="checkbox" id="marc-opt-crono20"><span>Avisar de los 20 s entre puntos</span></label>' +
+          '<div class="form-hint">Los descansos del reglamento (90 s al cambiar de lado, 120 s entre sets, 20 s en el tie-break) y los 3 min de fisio van siempre: arrancan solos cuando toca.</div>' +
         '</div>' +
         '<button class="btn btn-verde" onclick="iniciarPartida()">🏆 Empezar partido</button></div>';
     }
 
+    // v0.266 — Preset de formato elegido en la pantalla de configuración.
+    var marcFmtSel = 'clasico';
+    function marcSetFormato(k) {
+      if (!MARC_FORMATOS[k]) return;
+      marcFmtSel = k;
+      Object.keys(MARC_FORMATOS).forEach(function(x){
+        var b = document.getElementById('marc-fmt-' + x);
+        if (b) b.classList.toggle('on', x === k);
+      });
+      // Las casillas siguen al preset, pero se pueden retocar después.
+      var f = MARC_FORMATOS[k];
+      var tb = document.getElementById('marc-opt-tiebreak');
+      var st = document.getElementById('marc-opt-supertb');
+      if (tb) tb.checked = f.tb;
+      if (st) st.checked = f.superTb;
+    }
     function marcSaqueSeleccionado(i) {
       for (var k=0; k<4; k++) document.getElementById('marc-saque-op-'+k).classList.toggle('activo', k===i);
       actualizarRivalOpciones(i < 2 ? 0 : 1);
@@ -20913,6 +21100,10 @@
       }
       var chkTb = document.getElementById('marc-opt-tiebreak');
       var chkStb = document.getElementById('marc-opt-supertb');
+      var chk20  = document.getElementById('marc-opt-crono20');
+      var fmtBase = MARC_FORMATOS[marcFmtSel] || MARC_FORMATOS.clasico;
+      var fmt = { punt:fmtBase.punt, juegosSet:fmtBase.juegosSet, preset:marcFmtSel,
+                  label:fmtBase.label, peloteo:fmtBase.peloteo };
       marcadorEst = {
         activo:true,
         equipos:[jugadores[0]+' / '+jugadores[1], jugadores[2]+' / '+jugadores[3]],
@@ -20925,11 +21116,94 @@
         tieBreakHabilitado: chkTb ? chkTb.checked : true,
         superTieBreakHabilitado: chkStb ? chkStb.checked : false,
         superTieBreakActivo: false,
+        fmt: fmt, ventajasJugadas: 0,
+        crono20: !!(chk20 && chk20.checked),
+        descanso: null, medicoUsado:[false,false,false,false],
         cronoStart: Date.now(),
         terminado:false, ganador:-1, historial:[]
       };
       _marcPersistir();
       renderizarMarcador();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // v0.266 — LOS TIEMPOS DEL REGLAMENTO (FEP / FIP)
+    // ══════════════════════════════════════════════════════════════
+    //   · 20 s  entre puntos.
+    //   · 90 s  al CAMBIAR DE LADO al final de un juego. Se cambia de lado
+    //           tras los juegos impares (1, 3, 5…), pero tras el PRIMER juego
+    //           de cada set se cambia sin descanso: el juego es continuo.
+    //   · 120 s al final de cada set.
+    //   · 20 s  en los cambios de campo del tie-break (cada 6 puntos).
+    //   · 3 min de atención médica, UNA sola vez por jugador y sin poder
+    //           cederla al compañero.
+    // El crono correcto lo elige la app sola: ya sabe si acaba de terminar un
+    // juego, si era el primero del set, si va tie-break o si se cerró un set.
+    var MARC_TIEMPOS = { juego:90, set:120, tb:20, punto:20, medico:180 };
+    var MARC_DESC_LBL = {
+      juego:  'Cambio de lado',
+      set:    'Descanso entre sets',
+      tb:     'Cambio en el tie-break',
+      punto:  'Entre puntos',
+      medico: 'Atención médica'
+    };
+    var _marcDescansoPuesto = false;   // ¿este punto ya ha abierto un descanso?
+
+    function _marcAbrirDescanso(tipo, segs, jugador) {
+      marcadorEst.descanso = {
+        tipo: tipo, segs: segs, fin: Date.now() + segs * 1000,
+        jugador: (jugador === undefined ? null : jugador), avisado: false
+      };
+      _marcDescansoPuesto = true;
+    }
+    function marcSaltarDescanso() {
+      marcadorEst.descanso = null;
+      _marcPersistir(); renderizarMarcador();
+    }
+    // Descanso que toca al acabar un JUEGO (no se llama si el set se cerró).
+    function _marcDescansoDeJuego() {
+      var j = marcadorEst.juegos, suma = j[0] + j[1];
+      // Al entrar en tie-break se cambia de lado, pero el juego es continuo.
+      if (marcadorEst.enTiebreak) return;
+      if (suma % 2 === 0) return;   // no toca cambio de lado
+      if (suma === 1) return;       // tras el primer juego del set, sin descanso
+      _marcAbrirDescanso('juego', MARC_TIEMPOS.juego);
+    }
+    // 3 minutos de fisio. Solo una vez por jugador y no se cede al compañero.
+    function marcFisio(idx) {
+      if (!marcadorEst.medicoUsado) marcadorEst.medicoUsado = [false,false,false,false];
+      if (marcadorEst.medicoUsado[idx]) {
+        alert('Ese jugador ya ha usado su atención médica. El reglamento da 3 minutos UNA vez por jugador, y no se puede ceder al compañero.');
+        return;
+      }
+      marcadorEst.medicoUsado[idx] = true;
+      _marcAbrirDescanso('medico', MARC_TIEMPOS.medico, idx);
+      _marcPersistir(); renderizarMarcador();
+    }
+    function _marcSegsRestantes() {
+      var d = marcadorEst.descanso;
+      if (!d) return null;
+      return Math.max(0, Math.round((d.fin - Date.now()) / 1000));
+    }
+    function _marcMMSS(segs) {
+      var m = Math.floor(segs / 60), sg = segs % 60;
+      return m + ':' + ('0' + sg).slice(-2);
+    }
+    // Barra de cuenta atrás, encima del tanteo.
+    function _marcDescansoHTML() {
+      var d = marcadorEst.descanso;
+      if (!d) return '';
+      var r = _marcSegsRestantes();
+      var lbl = MARC_DESC_LBL[d.tipo] || 'Descanso';
+      if (d.tipo === 'medico' && d.jugador !== null && marcadorEst.jugadores) {
+        lbl += ' · ' + marcadorEst.jugadores[d.jugador];
+      }
+      return '<div class="marc-desc-bar' + (r === 0 ? ' fin' : '') + (d.tipo === 'medico' ? ' medico' : '') + '">' +
+        '<div class="marc-desc-txt"><span class="marc-desc-lbl">' + _gEsc(lbl) + '</span>' +
+          '<span class="marc-desc-max">reglamento: ' + _marcMMSS(d.segs) + '</span></div>' +
+        '<div class="marc-desc-num" id="marc-desc-num">' + (r === 0 ? '¡Tiempo!' : _marcMMSS(r)) + '</div>' +
+        '<button type="button" class="marc-desc-x" onclick="marcSaltarDescanso()" aria-label="Cerrar">✕</button>' +
+      '</div>';
     }
 
     function infoSaqueActual() {
@@ -20973,6 +21247,19 @@
       var el = document.getElementById('marc-crono-display');
       if (!el) { clearInterval(marcCronoInterval); marcCronoInterval = null; return; }
       el.textContent = formatearCrono();
+      // v0.266 — La cuenta atrás del descanso, en el mismo latido de un segundo.
+      var d = marcadorEst.descanso;
+      if (!d) return;
+      var num = document.getElementById('marc-desc-num');
+      var r = _marcSegsRestantes();
+      if (num) num.textContent = (r === 0 ? '¡Tiempo!' : _marcMMSS(r));
+      if (r === 0 && !d.avisado) {
+        d.avisado = true;
+        // Vibración larga: en pista el móvil suele ir en el bolsillo.
+        if (navigator.vibrate) navigator.vibrate([220, 90, 220]);
+        var bar = num ? num.parentNode : null;
+        if (bar) bar.classList.add('fin');
+      }
     }
 
     function formatearCrono() {
@@ -21088,19 +21375,72 @@
       }
       var l0 = sGan[0]>sGan[1] || (sGan[0]===sGan[1] && (est.juegos[0]>est.juegos[1] || (est.juegos[0]===est.juegos[1] && (est.enTiebreak?est.tbPuntos[0]>est.tbPuntos[1]:est.puntos[0]>est.puntos[1]||est.ventaja===0))));
       var html='';
-      html+='<div class="marc-crono-bar"><span class="marc-crono-icon">⏱</span><span id="marc-crono-display">'+formatearCrono()+'</span></div>';
+      // ── v0.266 — PANTALLA DE PISTA ──────────────────────────────────
+      // Arriba, la barra de crono con el formato y el deshacer a mano; debajo
+      // la cuenta atrás del descanso cuando toca; luego el tanteo y los dos
+      // botones grandes. Todo lo demás (estadísticas, saque, fisio, acciones)
+      // vive en desplegables: con el móvil en la mano y un partido delante, lo
+      // que estorba es lo que no estás usando.
+      html+='<div class="marc-crono-bar">' +
+        '<span class="marc-crono-icon">⏱</span><span id="marc-crono-display">'+formatearCrono()+'</span>' +
+        '<span class="marc-fmt-chip">'+_gEsc((est.fmt&&est.fmt.label)||'Clásico')+'</span>' +
+        '<button type="button" class="marc-undo" onclick="deshacerPunto()"'+((!est.historial.length)?' disabled':'')+' aria-label="Deshacer">↩</button>' +
+      '</div>';
+      html+=_marcDescansoHTML();
       html+='<div class="marcador-score">';
       if(setsHistHTML) html+='<div class="marc-sets-hist">'+setsHistHTML+'</div>';
       if(badge) html+='<div class="'+badgeCls+'">'+badge+'</div>';
       html+='<div class="marcador-score-sets">'+est.equipos[0]+'&nbsp;<strong>'+sGan[0]+'–'+sGan[1]+'</strong>&nbsp;'+est.equipos[1]+'&ensp;<span style="opacity:.6;font-size:11px;">(sets)</span></div>';
       html+='<div class="marcador-score-juegos"><span class="marc-juegos-num">'+est.juegos[0]+'</span><span class="marc-juegos-sep">–</span><span class="marc-juegos-num">'+est.juegos[1]+'</span></div>';
       html+='<div class="marcador-score-pts"><div class="marc-pts-display"><div class="marc-pts-num'+(pts[0]==='AD'?' ad':'')+'">'+pts[0]+'</div><div class="marc-pts-label">'+est.equipos[0]+'</div></div><span class="marc-pts-sep">·</span><div class="marc-pts-display"><div class="marc-pts-num'+(pts[1]==='AD'?' ad':'')+'">'+pts[1]+'</div><div class="marc-pts-label">'+est.equipos[1]+'</div></div></div>';
-      html+=renderChipsJugadores();
       html+='</div>';
       html+='<div class="marcador-botones"><button class="btn-marcador equipo-a '+(l0?'ganando':'')+'" onclick="agregarPunto(0)"><span class="btn-marc-nombre">'+est.equipos[0]+'</span><span class="btn-marc-pts">+1</span><span class="btn-marc-hint">sumar punto</span></button><button class="btn-marcador equipo-b '+(!l0?'ganando':'')+'" onclick="agregarPunto(1)"><span class="btn-marc-nombre">'+est.equipos[1]+'</span><span class="btn-marc-pts">+1</span><span class="btn-marc-hint">sumar punto</span></button></div>';
-      html+=renderPanelEstadisticas();
-      html+='<div class="acciones"><button class="btn btn-sec" style="flex:1;" onclick="deshacerPunto()"'+((!est.historial.length)?' disabled':'')+'>↩ Deshacer</button><button class="btn btn-rojo btn-sm" onclick="confirmarAbandonar()">✕ Abandonar</button></div>';
+      // ── Desplegables ──
+      var stats = renderPanelEstadisticas();
+      if (stats) html += _marcDespHTML('stats', '📊', 'Estadísticas', stats);
+      html += _marcDespHTML('saque', '🎾', 'Saque y posiciones', renderChipsJugadores());
+      html += _marcDespHTML('tiempos', '🩺', 'Tiempos y fisio', _marcTiemposHTML());
+      html += _marcDespHTML('acciones', '⚙️', 'Acciones', 
+        '<div class="acciones"><button class="btn btn-sec" style="flex:1;" onclick="deshacerPunto()"'+((!est.historial.length)?' disabled':'')+'>↩ Deshacer punto</button>' +
+        '<button class="btn btn-rojo btn-sm" onclick="confirmarAbandonar()">✕ Abandonar</button></div>');
       return html;
+    }
+
+    // v0.266 — Desplegables de la pantalla de pista. Estado en memoria: al
+    // salir y volver arrancan cerrados, que es lo que interesa en pista.
+    var _marcDesp = { stats:false, saque:false, tiempos:false, acciones:false };
+    function marcDesp(k) { _marcDesp[k] = !_marcDesp[k]; renderizarMarcador(); }
+    function _marcDespHTML(k, ico, titulo, cuerpo) {
+      var ab = !!_marcDesp[k];
+      return '<div class="marc-desp' + (ab ? ' abierto' : '') + '">' +
+        '<button type="button" class="marc-desp-hdr" onclick="marcDesp(\'' + k + '\')">' +
+          '<span class="marc-desp-ico">' + ico + '</span>' +
+          '<span class="marc-desp-t">' + titulo + '</span>' +
+          '<span class="marc-desp-chev">›</span></button>' +
+        (ab ? '<div class="marc-desp-body">' + cuerpo + '</div>' : '') +
+      '</div>';
+    }
+    // Panel de tiempos: los descansos que se pueden lanzar a mano y el fisio.
+    function _marcTiemposHTML() {
+      var est = marcadorEst;
+      var h = '<div class="marc-tiempos-grid">';
+      h += '<button type="button" class="marc-t-btn" onclick="_marcAbrirDescanso(\'juego\',' + MARC_TIEMPOS.juego + ');_marcPersistir();renderizarMarcador();">90 s<span>cambio de lado</span></button>';
+      h += '<button type="button" class="marc-t-btn" onclick="_marcAbrirDescanso(\'set\',' + MARC_TIEMPOS.set + ');_marcPersistir();renderizarMarcador();">120 s<span>entre sets</span></button>';
+      h += '<button type="button" class="marc-t-btn" onclick="_marcAbrirDescanso(\'punto\',' + MARC_TIEMPOS.punto + ');_marcPersistir();renderizarMarcador();">20 s<span>entre puntos</span></button>';
+      h += '</div>';
+      h += '<div class="marc-t-sub">🩺 Atención médica · 3 min, una vez por jugador</div>';
+      h += '<div class="marc-fisio-grid">';
+      (est.jugadores || []).forEach(function(n, i){
+        var usado = est.medicoUsado && est.medicoUsado[i];
+        h += '<button type="button" class="marc-fisio' + (usado ? ' usado' : '') + '"' +
+          (usado ? ' disabled' : ' onclick="marcFisio(' + i + ')"') + '>' +
+          '<span class="marc-fisio-n">' + _gEsc(n) + '</span>' +
+          '<span class="marc-fisio-e">' + (usado ? 'ya usada' : '3 min') + '</span></button>';
+      });
+      h += '</div>';
+      h += '<div class="marc-t-nota">El reglamento da 3 minutos de atención UNA sola vez por jugador y no se puede ceder al compañero. ' +
+           'Puede volver a recibir tratamiento en los dos descansos siguientes, dentro del tiempo reglamentario.</div>';
+      return h;
     }
 
     function renderResultadoMarcador() {
@@ -21124,24 +21464,39 @@
     function agregarPunto(equipo) {
       if (marcadorEst.terminado) return;
       if (navigator.vibrate) navigator.vibrate(30);
-      marcadorEst.historial.push({ puntos:marcadorEst.puntos.slice(), ventaja:marcadorEst.ventaja, juegos:marcadorEst.juegos.slice(), sets:marcadorEst.sets.map(function(s){return s.slice();}), enTiebreak:marcadorEst.enTiebreak, tbPuntos:marcadorEst.tbPuntos.slice(), superTieBreakActivo:marcadorEst.superTieBreakActivo, terminado:marcadorEst.terminado, ganador:marcadorEst.ganador, numJuegoTotal:marcadorEst.numJuegoTotal, restadorManual:marcadorEst.restadorManual, ordenSaque:marcadorEst.ordenSaque.slice(), registroJuegos:marcadorEst.registroJuegos.map(function(r){return {servidorIdx:r.servidorIdx, equipoGanador:r.equipoGanador};}), estadisticas:marcadorEst.estadisticas.map(function(e){return {jugadorIdx:e.jugadorIdx, tipo:e.tipo, set:e.set, equipo:e.equipo};}) });
+      _marcDescansoPuesto = false;   // v0.266
+      marcadorEst.descanso = null;   // sumar un punto cierra el descanso anterior
+      marcadorEst.historial.push({ ventajasJugadas:marcadorEst.ventajasJugadas||0, puntos:marcadorEst.puntos.slice(), ventaja:marcadorEst.ventaja, juegos:marcadorEst.juegos.slice(), sets:marcadorEst.sets.map(function(s){return s.slice();}), enTiebreak:marcadorEst.enTiebreak, tbPuntos:marcadorEst.tbPuntos.slice(), superTieBreakActivo:marcadorEst.superTieBreakActivo, terminado:marcadorEst.terminado, ganador:marcadorEst.ganador, numJuegoTotal:marcadorEst.numJuegoTotal, restadorManual:marcadorEst.restadorManual, ordenSaque:marcadorEst.ordenSaque.slice(), registroJuegos:marcadorEst.registroJuegos.map(function(r){return {servidorIdx:r.servidorIdx, equipoGanador:r.equipoGanador};}), estadisticas:marcadorEst.estadisticas.map(function(e){return {jugadorIdx:e.jugadorIdx, tipo:e.tipo, set:e.set, equipo:e.equipo};}) });
       if (marcadorEst.enTiebreak) {
         marcadorEst.tbPuntos[equipo]++;
         var tb=marcadorEst.tbPuntos, mTb=Math.max(tb[0],tb[1]), nTb=Math.min(tb[0],tb[1]);
         var tbTarget = marcadorEst.superTieBreakActivo ? 10 : 7;
         if (mTb>=tbTarget && mTb-nTb>=2) { if (marcadorEst.superTieBreakActivo) ganarSuperTieBreak(equipo); else ganarJuego(equipo); }
+        // v0.266: en el tie-break se cambia de campo cada 6 puntos, con 20 s
+        else if ((tb[0]+tb[1]) % 6 === 0) _marcAbrirDescanso('tb', MARC_TIEMPOS.tb);
       } else {
         var a40=marcadorEst.puntos[0]===3&&marcadorEst.puntos[1]===3;
         if (a40||marcadorEst.ventaja!==-1) {
-          if (marcadorEst.ventaja===-1) marcadorEst.ventaja=equipo;
+          // v0.266 — ¿este 40-40 se resuelve a punto de oro?
+          //   · 'oro'  → siempre
+          //   · 'star' → solo cuando ya se han jugado (y perdido) DOS ventajas
+          //   · 'ventajas' → nunca
+          var _pn = _marcFmt().punt;
+          var _oro = (_pn === 'oro') || (_pn === 'star' && (marcadorEst.ventajasJugadas || 0) >= 2);
+          if (marcadorEst.ventaja===-1 && _oro) ganarJuego(equipo);          // punto de oro
+          else if (marcadorEst.ventaja===-1) marcadorEst.ventaja=equipo;
           else if (marcadorEst.ventaja===equipo) ganarJuego(equipo);
-          else marcadorEst.ventaja=-1;
+          else { marcadorEst.ventaja=-1; marcadorEst.ventajasJugadas=(marcadorEst.ventajasJugadas||0)+1; }
         } else {
           marcadorEst.puntos[equipo]++;
           if (marcadorEst.puntos[equipo]===4) ganarJuego(equipo);
           else if (marcadorEst.puntos[0]===3&&marcadorEst.puntos[1]===3) marcadorEst.ventaja=-1;
         }
       }
+      // v0.266: si nada ha abierto ya un descanso mayor (fin de juego o de set),
+      // arranca el crono de los 20 s entre puntos — si está activado.
+      if (!_marcDescansoPuesto && !marcadorEst.terminado && marcadorEst.crono20)
+        _marcAbrirDescanso('punto', MARC_TIEMPOS.punto);
       _marcPersistir();
       renderizarMarcador();
     }
@@ -21153,21 +21508,28 @@
         marcadorEst.numJuegoTotal++;
         marcadorEst.restadorManual = null;
       }
-      marcadorEst.juegos[equipo]++; marcadorEst.puntos=[0,0]; marcadorEst.ventaja=-1; marcadorEst.enTiebreak=false; marcadorEst.tbPuntos=[0,0];
+      marcadorEst.juegos[equipo]++; marcadorEst.puntos=[0,0]; marcadorEst.ventaja=-1;
+      marcadorEst.ventajasJugadas=0;   // v0.266: cada juego empieza de cero
+      marcadorEst.enTiebreak=false; marcadorEst.tbPuntos=[0,0];
       var j=marcadorEst.juegos, mJ=Math.max(j[0],j[1]), nJ=Math.min(j[0],j[1]);
-      var seGanaSet = (mJ>=6&&mJ-nJ>=2)||(marcadorEst.tieBreakHabilitado&&mJ===7&&nJ===6);
-      if (seGanaSet) ganarSet(equipo);
-      else if (j[0]===6&&j[1]===6 && marcadorEst.tieBreakHabilitado) marcadorEst.enTiebreak=true;
+      // v0.266: el set puede ser a 6 (normal) o a 4 (corto). El tie-break entra
+      // al empate en ese número y el set se cierra uno por encima.
+      var _nSet = _marcFmt().juegosSet || 6;
+      var seGanaSet = (mJ>=_nSet&&mJ-nJ>=2)||(marcadorEst.tieBreakHabilitado&&mJ===_nSet+1&&nJ===_nSet);
+      if (seGanaSet) { ganarSet(equipo); return; }
+      if (j[0]===_nSet&&j[1]===_nSet && marcadorEst.tieBreakHabilitado) marcadorEst.enTiebreak=true;
+      _marcDescansoDeJuego();   // v0.266: el crono del cambio de lado, si toca
     }
 
     function ganarSet(equipo) {
       marcadorEst.sets.push(marcadorEst.juegos.slice()); marcadorEst.juegos=[0,0];
       var s0=marcadorEst.sets.filter(function(s){return s[0]>s[1];}).length;
       var s1=marcadorEst.sets.filter(function(s){return s[1]>s[0];}).length;
-      if (s0===2||s1===2) { marcadorEst.terminado=true; marcadorEst.ganador=s0===2?0:1; }
-      else if (s0===1&&s1===1&&marcadorEst.superTieBreakHabilitado) {
+      if (s0===2||s1===2) { marcadorEst.terminado=true; marcadorEst.ganador=s0===2?0:1; return; }
+      if (s0===1&&s1===1&&marcadorEst.superTieBreakHabilitado) {
         marcadorEst.enTiebreak=true; marcadorEst.tbPuntos=[0,0]; marcadorEst.superTieBreakActivo=true;
       }
+      _marcAbrirDescanso('set', MARC_TIEMPOS.set);   // v0.266: 120 s entre sets
     }
 
     function ganarSuperTieBreak(equipo) {
@@ -21193,6 +21555,10 @@
       marcadorEst.terminado=snap.terminado; marcadorEst.ganador=snap.ganador;
       marcadorEst.numJuegoTotal=snap.numJuegoTotal; marcadorEst.restadorManual=snap.restadorManual; marcadorEst.registroJuegos=snap.registroJuegos;
       marcadorEst.estadisticas=snap.estadisticas;
+      // v0.266: el contador de ventajas del star point también retrocede, y el
+      // descanso que hubiera abierto ese punto se cierra.
+      marcadorEst.ventajasJugadas = snap.ventajasJugadas || 0;
+      marcadorEst.descanso = null;
       if (snap.superTieBreakActivo !== undefined) marcadorEst.superTieBreakActivo=snap.superTieBreakActivo;
       if (snap.ordenSaque) marcadorEst.ordenSaque=snap.ordenSaque;
       _marcPersistir();
@@ -21211,6 +21577,8 @@
         puntos:[0,0], ventaja:-1, juegos:[0,0], sets:[],
         enTiebreak:false, tbPuntos:[0,0],
         tieBreakHabilitado:true, superTieBreakHabilitado:false, superTieBreakActivo:false,
+        fmt:null, ventajasJugadas:0,
+        descanso:null, medicoUsado:[false,false,false,false],
         cronoStart:null,
         terminado:false, ganador:-1, historial:[]
       };
