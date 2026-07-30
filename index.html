@@ -39,6 +39,36 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.265.0 — La semana del curso, en tres zonas (2026-07)
+    (sin migraciones nuevas)
+    · EN EL NAVEGADOR cada semana del mes se reparte en tres: a la izquierda el
+      estado, S1 y el rango de días (como siempre); en el centro el 🛒 CARRO
+      con el NOMBRE de cada ejercicio; a la derecha el 🎯 ÁREA DE TRABAJO con
+      el NOMBRE DEL BLOQUE arriba y las sesiones debajo.
+    · DE DÓNDE VENÍA EL HUECO: desde la v0.242 los meses se abren de uno en
+      uno, así que la rejilla se queda en una sola columna y la tarjeta se
+      estiraba a todo el ancho de la pantalla con un agujero en medio. Ese
+      hueco lo llenan ahora los nombres.
+    · ANTES el carro solo decía «2 ejercicios» y había que abrir la semana para
+      saber cuáles. Y el bloque no se veía por ningún lado en esta vista.
+    · EN EL MÓVIL NO CAMBIA NADA: el reparto en tres solo entra a partir de
+      900 px. Por debajo la semana sigue apilada, que ahí no caben.
+    · Una semana vacía se queda con su «＋ planificar» y nada más, para que las
+      llenas destaquen.
+    · DE PASO: una semana con solo el BLOQUE marcado ya cuenta como planificada
+      (círculo lleno). Antes salía como vacía, con borde de puntos y «＋
+      planificar», aunque tuviera su área de trabajo elegida.
+
+  v0.264.0 — El apartado también se destaca (2026-07)
+    (sin migraciones nuevas)
+    · CON UN GOLPE ABIERTO en el carro, además de los bloques ahora se destaca
+      el APARTADO que los contiene: rojo más oscuro y letra en blanco. Con los
+      apartados plegados —que es como se entra— antes había que abrirlos uno a
+      uno para ver dónde estaba lo que encajaba; ahora salta a la vista.
+    · Se destacan solo los apartados que tienen algún bloque DE ESE GOLPE, no
+      los que apenas comparten zona de pista: si no, se pintaría la lista
+      entera y volveríamos a no decir nada.
+
   v0.263.0 — Solo el sombreado, en rojo claro (2026-07)
     (sin migraciones nuevas)
     · AL ABRIR UN GOLPE del carro sobraba media pantalla de explicaciones: el
@@ -6059,6 +6089,15 @@
     .ruta-dot.vacia { border:1.5px dashed var(--borde); }
     .ruta-badge { font-size:9.5px; font-weight:800; background:#cffafe; color:#0e7490; padding:1px 6px; border-radius:999px; }
     .ruta-chip { display:inline-block; font-size:11px; margin:5px 0 2px; padding:2px 8px; border-radius:999px; background:#eff6ff; color:#1e40af; }
+    /* v0.265 — La semana, en tres zonas (solo cuando hay sitio: ver el @media
+       de 900 px). Apiladas en el móvil, en fila en el navegador. */
+    .ruta-wk-z:empty { display:none; }
+    .ruta-wk-zlbl { font-size:9.5px; font-weight:800; letter-spacing:.04em; text-transform:uppercase;
+      margin:6px 0 3px; }
+    .ruta-wk-carro .ruta-wk-zlbl { color:#0e7490; }
+    .ruta-wk-area  .ruta-wk-zlbl { color:#3730a3; }
+    .ruta-wk-ej { display:inline-block; font-size:11.5px; line-height:1.35; padding:2px 8px;
+      border-radius:6px; margin:0 4px 4px 0; background:#ecfeff; color:#0e7490; border:1px solid #a5f3fc; }
     .ruta-ses { font-size:12.5px; color:var(--texto); line-height:1.3; margin-top:2px; }
     .ruta-ses.vacia { color:var(--gris); font-size:12px; }
     .ruta-leyenda { font-size:11px; color:var(--gris); margin-top:12px; padding-top:10px; border-top:1px solid var(--borde); }
@@ -6149,6 +6188,12 @@
        bloquea: se puede planificar lo que se quiera. */
     .ruta-area-row.rel      { background:#fee2e2; border-color:#fca5a5; }
     .ruta-area-row.rel-suave{ background:#fef4f4; }
+    /* v0.264: el apartado que contiene esos bloques, un punto más oscuro y con
+       la letra en blanco, para encontrarlo de un vistazo con todo plegado. */
+    .ruta-area-grupo.rel { background:#dc2626; color:#fff; }
+    .ruta-area-grupo.rel:hover { background:#b91c1c; color:#fff; }
+    /* la chapa del contador, legible sobre el rojo */
+    .ruta-area-grupo.rel .ruta-area-n { background:rgba(255,255,255,.9); color:#991b1b; }
     .ruta-trabajo-cols { display:flex; flex-direction:column; gap:14px; min-width:0; }
     .ruta-modal-vacio { text-align:center; color:var(--gris); font-size:13px; line-height:1.7; padding:22px 10px; }
     /* v0.207 — resumen de lo ya marcado en Mensual esta semana (chips con
@@ -6307,8 +6352,19 @@
     .ruta-carro-txt { display:flex; flex-direction:column; gap:1px; min-width:0; }
     .ruta-carro-txt b { font-size:12.5px; font-weight:600; color:var(--texto); line-height:1.3; }
     .ruta-carro-txt span { font-size:10.5px; color:var(--gris); }
-    .ruta-wk .ruta-carro-n { display:block; margin:2px 0 0; font-size:10.5px; font-weight:700;
-      color:#0e7490; background:none; padding:0; text-align:left; }
+    /* v0.265: con sitio de sobra, la semana se reparte en tres zonas y deja de
+       tener un agujero en medio. Por debajo de 900 px se queda apilada. */
+    @media (min-width: 900px) {
+      .ruta-wk { display:grid; grid-template-columns:112px minmax(0,1fr) minmax(0,1.15fr);
+        gap:14px; align-items:start; padding:9px 12px; }
+      .ruta-wk-top { align-items:center; }
+      .ruta-wk-rango { margin-left:0; }
+      .ruta-wk-zlbl { margin-top:0; }
+      .ruta-wk .ruta-chip { margin-top:0; }
+      /* En rejilla, una zona vacía NO se esconde: si desapareciera, la de al
+         lado se correría a su columna y el área acabaría en el centro. */
+      .ruta-wk-z:empty { display:block; }
+    }
     .ruta-panel-borrar { display:block; width:100%; margin-top:14px; font-family:inherit; font-size:12px; font-weight:700;
       color:#b91c1c; background:none; border:1px dashed #fca5a5; border-radius:10px; padding:8px; cursor:pointer; }
     /* v0.205 — MÓVIL: al tocar un bloque, sus sesiones se despliegan justo
@@ -7764,7 +7820,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.263.0';
+    var APP_VERSION = '0.265.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -16687,12 +16743,17 @@
       h += '<div class="ruta-trabajo-cols">';
       // v0.261 — Relación de cada bloque con los golpes abiertos en el carro.
       // v0.263: solo el sombreado, sin rótulos ni contadores. Bastaba con verlo.
+      // v0.264: el APARTADO que tiene bloques de ese golpe se destaca también,
+      // en rojo más oscuro y letras blancas — para localizarlo con todos
+      // plegados, sin abrirlos uno a uno.
       var golpesOn = _rutaCarroGolpes.slice();
-      var relacion = {};
+      var relacion = {}, apRel = {};
       if (golpesOn.length) {
         var mapEjRel = _ejsById();
         areas.forEach(function(a){
-          relacion[a.id] = _rutaRelacion(a, golpesOn, _rutaGolpesDeBloque(a, sesDe[a.id], mapEjRel));
+          var r = _rutaRelacion(a, golpesOn, _rutaGolpesDeBloque(a, sesDe[a.id], mapEjRel));
+          relacion[a.id] = r;
+          if (r === 2) apRel[a.apartado] = true;   // solo los que SON de ese golpe
         });
       }
       h += '<div class="ruta-modal-areas">';
@@ -16710,7 +16771,8 @@
           // el catálogo agrupado de un vistazo, sobre todo en el móvil. Solo
           // se abre solo el que tiene el bloque ya elegido.
           var abierto = (_rutaApAbierto[iAp] !== undefined) ? _rutaApAbierto[iAp] : !!tieneSel;
-          h += '<button type="button" class="ruta-area-grupo' + (abierto ? ' abierto' : '') + '" onclick="rutaApToggle(' + iAp + ',' + abierto + ')">' +
+          h += '<button type="button" class="ruta-area-grupo' + (abierto ? ' abierto' : '') +
+               (apRel[ap] ? ' rel' : '') + '" onclick="rutaApToggle(' + iAp + ',' + abierto + ')">' +
                '<span class="chev">›</span><span class="ruta-area-t">' + _gEsc(ap) + '</span>' +
                '<span class="ruta-area-n">' + (tieneSel ? '●' : porApartado[ap].length) + '</span></button>';
           if (!abierto) return;
@@ -16799,10 +16861,13 @@
     // Tarjeta compacta de una semana dentro de la columna de su mes.
     // v0.207: wd viene de _rutaSemanaDatos (derivado de compDias + rutaSes),
     // así que wd.areasSemana puede traer VARIAS áreas (una por día marcado).
-    function _rutaSemanaHTML(w, act, wd, areaN, sesN) {
+    function _rutaSemanaHTML(w, act, wd, areaN, sesN, ejN) {
       var trab = wd.trab, esAct = (w.idx === act);
       // v0.216: una semana con solo el carro puesto ya cuenta como planificada
-      var tieneAlgo = trab || wd.sesiones.length || wd.carro.length;
+      // v0.265: y una con solo el BLOQUE marcado, también. Antes salía como
+      // vacía (círculo de puntos y «＋ planificar») aunque tuviera su área
+      // elegida, que es trabajo hecho.
+      var tieneAlgo = trab || wd.sesiones.length || wd.carro.length || wd.areasSemana.length;
       var estado = trab ? 'done' : (esAct ? 'now' : (tieneAlgo ? 'plan' : 'vacia'));
       var rango = w.lun.getDate() + '–' + w.dom.getDate();
       var punto = estado === 'done'
@@ -16816,6 +16881,38 @@
         vistos[x.areaId] = true;
         areasChips += '<span class="ruta-chip">' + _gEsc(areaN[x.areaId] || 'Área') + '</span>';
       });
+      // ── v0.265 — LA SEMANA, EN TRES ZONAS ──────────────────────────────
+      // Desde la v0.242 los meses se abren de uno en uno, así que la rejilla
+      // se queda en una sola columna y la tarjeta se estiraba a todo el ancho
+      // del navegador con un agujero en medio. Ese hueco se llena ahora con lo
+      // que de verdad interesa: los NOMBRES.
+      //   · izquierda (fija): estado + S1 + rango, como siempre
+      //   · centro: el CARRO, cada ejercicio con su nombre (antes solo decía
+      //     «2 ejercicios», y había que abrir la semana para saber cuáles)
+      //   · derecha: el ÁREA DE TRABAJO, con el nombre del BLOQUE arriba y las
+      //     sesiones debajo
+      // El CSS solo reparte en tres a partir de 900 px: en el móvil sigue
+      // apilado como estaba, que ahí no caben.
+      var zCarro = '<div class="ruta-wk-z ruta-wk-carro">';
+      if (wd.carro.length) {
+        zCarro += '<div class="ruta-wk-zlbl">🛒 Carro</div>';
+        wd.carro.forEach(function(id){
+          zCarro += '<span class="ruta-wk-ej">' + _gEsc(ejN[id] || ('Ejercicio ' + id)) + '</span>';
+        });
+      } else if (!tieneAlgo) {
+        zCarro += '<div class="ruta-ses vacia">＋ planificar</div>';
+      }
+      zCarro += '</div>';
+
+      var zArea = '<div class="ruta-wk-z ruta-wk-area">';
+      if (areasChips || wd.sesiones.length) {
+        zArea += '<div class="ruta-wk-zlbl">🎯 Área de trabajo</div>' + areasChips;
+        zArea += wd.sesiones.length
+          ? wd.sesiones.map(function(id){ return '<div class="ruta-ses">' + _gEsc(sesN[id] || 'Sesión') + '</div>'; }).join('')
+          : '<div class="ruta-ses vacia">sin sesión</div>';
+      }
+      zArea += '</div>';
+
       // v0.211: la tarjeta lleva su curso, porque en el archivo conviven
       // semanas de varios cursos y el número de semana solo no basta.
       return '<div class="ruta-wk ' + estado + '" onclick="rutaAbrir(' + w.idx + ',\'' + cursoDeFecha(w.lunISO) + '\')">' +
@@ -16823,25 +16920,19 @@
           '<span class="ruta-wk-n">S' + (w.idx+1) + '</span>' +
           '<span class="ruta-wk-rango">' + rango + '</span>' +
           (esAct ? '<span class="ruta-badge">hoy</span>' : '') + '</div>' +
-        areasChips +
-        // v0.219: pueden ser varias sesiones, una debajo de otra
-        (wd.sesiones.length
-          ? wd.sesiones.map(function(id){ return '<div class="ruta-ses">' + _gEsc(sesN[id] || 'Sesión') + '</div>'; }).join('')
-          : '<div class="ruta-ses vacia">' + (tieneAlgo ? 'sin sesión' : '＋ planificar') + '</div>') +
-        // v0.216: el carro de la semana, de un vistazo
-        (wd.carro.length ? '<div class="ruta-carro-n">🛒 ' + wd.carro.length + ' ejercicio' + (wd.carro.length !== 1 ? 's' : '') + '</div>' : '') +
+        zCarro + zArea +
       '</div>';
     }
 
     // Columna de un mes (cabecera + sus semanas). v0.207: recibe el plan (p)
     // + idsNivel en vez del viejo blob por curso, para leer los datos
     // compartidos con Mensual.
-    function _rutaMesColHTML(mes, act, p, idsNivel, areaN, sesN) {
+    function _rutaMesColHTML(mes, act, p, idsNivel, areaN, sesN, ejN) {
       var hechasM = mes.sems.filter(function(w){ return _rutaSemanaDatos(p, w, idsNivel).trab; }).length;
       var h = '<div class="ruta-mes-col">';
       h += '<div class="ruta-mes-hdr"><span>' + _MESES_R[mes.m] + '</span>' +
            '<span class="ruta-mes-prog">' + hechasM + '/' + mes.sems.length + '</span></div>';
-      mes.sems.forEach(function(w){ h += _rutaSemanaHTML(w, act, _rutaSemanaDatos(p, w, idsNivel), areaN, sesN); });
+      mes.sems.forEach(function(w){ h += _rutaSemanaHTML(w, act, _rutaSemanaDatos(p, w, idsNivel), areaN, sesN, ejN); });
       h += '</div>';
       return h;
     }
@@ -16857,6 +16948,9 @@
       var areaN = {}; areas.forEach(function(a){ areaN[a.id] = a.t; });
       var ses   = leerClases();
       var sesN  = {}; ses.forEach(function(s){ sesN[s.id] = s.nombre || (s.fecha || 'Sesión'); });
+      // v0.265: nombres de los ejercicios, para que el carro de cada semana
+      // diga CUÁLES son y no solo cuántos.
+      var ejN = {}; leerEjercicios().forEach(function(e){ ejN[e.id] = e.nombre || ('Ejercicio ' + e.id); });
       var esHoy  = (curso === _cursoActual());
 
       // ── Selector de CURSO: permite adelantarse y planificar el que viene ──
@@ -16911,12 +17005,12 @@
         var mSel = mesesCurso.filter(function(m){ return m.key === mesSel; })[0];
         if (mSel) {
           h += '<div class="ruta-mes-cols">';
-          h += _rutaMesColHTML(mSel, act, p, idsNivel, areaN, sesN);
+          h += _rutaMesColHTML(mSel, act, p, idsNivel, areaN, sesN, ejN);
           h += '</div>';
         }
       }
 
-      h += _rutaArchivoHTML(p, idsNivel, areaN, sesN);
+      h += _rutaArchivoHTML(p, idsNivel, areaN, sesN, ejN);
       h += '<div class="ruta-leyenda">✓ trabajada · ◉ esta semana · ● planificada · ○ vacía</div>';
       return h;
     }
@@ -16968,7 +17062,7 @@
       return h;
     }
 
-    function _rutaArchivoHTML(p, idsNivel, areaN, sesN) {
+    function _rutaArchivoHTML(p, idsNivel, areaN, sesN, ejN) {
       // Cursos candidatos: los que tienen datos + el actual + el que se mira.
       var cursos = _rutaCursosConDatos(p);
       [_cursoActual(), _rutaCurso()].forEach(function(c){ if (cursos.indexOf(c) < 0) cursos.push(c); });
@@ -17020,7 +17114,7 @@
             '<span class="chev">›</span></div>';
           h += '<div class="plan-otros-body"><div class="ruta-mes-cols">';
           // act = -1: en el archivo nunca hay "semana de hoy" que resaltar.
-          mesesB.forEach(function(m){ h += _rutaMesColHTML(m, -1, p, idsNivel, areaN, sesN); });
+          mesesB.forEach(function(m){ h += _rutaMesColHTML(m, -1, p, idsNivel, areaN, sesN, ejN); });
           h += '</div></div></div>';
         });
         h += '</div></div>';
