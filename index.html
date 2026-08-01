@@ -39,6 +39,21 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.272.0 — El marcador de árbitro, en todos los partidos (2026-07)
+    (sin migraciones nuevas)
+    · EL REPARTO DE LOS ÁRBITROS DE SILLA pasa a ser el marcador de SIEMPRE, se
+      esté analizando jugadores o no: una fila por pareja, quién saca (●), los
+      sets ya jugados en pequeño, los juegos del set en curso y, a la derecha y
+      en grande, el punto.
+    · SE RETIRA EL TANTEO GIGANTE (los juegos a 72 px y el punto debajo). Decía
+      lo mismo ocupando tres veces más alto, y dejaba los botones de sumar
+      punto fuera de pantalla en cuanto había algo más abajo.
+    · El marcador hereda el acabado de la app: degradado marino con filo dorado,
+      y en dorado el punto de ventaja, el ● de quien saca y el rótulo de
+      IGUALES / VENTAJA / TIE-BREAK.
+    · Limpieza: fuera el CSS del tanteo antiguo (.marcador-score y compañía) y
+      las variables que solo servían para pintarlo.
+
   v0.271.0 — Deshacer, justo debajo de los dos botones (2026-07)
     (sin migraciones nuevas)
     · EL BOTÓN DE DESHACER pasa a ir pegado DEBAJO de los dos recuadros de
@@ -5543,24 +5558,9 @@
     /* ══════════════════════════════════════════
        MARCADOR
     ══════════════════════════════════════════ */
-    .marcador-score {
-      background:var(--verde); border-radius:20px;
-      padding:1.5rem 1.25rem; color:var(--blanco); text-align:center;
-    }
-    .marc-sets-hist { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; margin-bottom:0.75rem; }
-    .marc-set-score { font-size:13px; font-weight:700; background:rgba(255,255,255,0.15); border-radius:8px; padding:3px 10px; }
-    .marc-badge { display:inline-block; background:rgba(255,255,255,0.2); border-radius:20px; padding:4px 16px; font-size:12px; font-weight:700; letter-spacing:0.06em; margin-bottom:0.75rem; }
-    .marc-badge-ad { background:#f59e0b; color:#fff; }
-    .marcador-score-sets { font-size:13px; color:rgba(255,255,255,0.65); margin-bottom:0.5rem; }
-    .marcador-score-juegos { display:flex; justify-content:center; align-items:center; gap:1rem; margin-bottom:0.875rem; }
-    .marc-juegos-num { font-size:72px; font-weight:800; line-height:1; }
-    .marc-juegos-sep { font-size:36px; font-weight:300; color:rgba(255,255,255,0.35); }
-    .marcador-score-pts { display:flex; justify-content:center; align-items:center; gap:1.5rem; }
-    .marc-pts-display { text-align:center; }
-    .marc-pts-num { font-size:28px; font-weight:700; }
-    .marc-pts-num.ad { color:#fbbf24; font-size:32px; }
-    .marc-pts-label { font-size:10px; color:rgba(255,255,255,0.6); text-transform:uppercase; letter-spacing:0.08em; margin-top:4px; }
-    .marc-pts-sep { font-size:22px; color:rgba(255,255,255,0.3); }
+    /* v0.272: fuera el tanteo gigante (.marcador-score y compañía). Lo
+       sustituye el marcador de árbitro, que dice lo mismo en un tercio de
+       altura y con el punto donde tiene que estar. */
     /* ══ v0.266 — MARCADOR DE PISTA ══════════════════════════════════
        El móvil en la mano, un partido delante y poco tiempo para mirar: el
        tanteo y los dos botones mandan, y lo demás se recoge. */
@@ -5600,7 +5600,7 @@
        una fila por pareja, los sets ya jugados a la izquierda, los juegos del
        set en curso y, a la derecha y en grande, EL PUNTO. Ocupa un tercio de
        lo que ocupaba el tanteo gigante, y deja la pantalla para anotar. */
-    .marc-board { background:var(--verde); border-radius:14px; padding:8px 10px 9px; color:#fff; }
+    .marc-board { background:var(--verde); border-radius:14px; padding:9px 11px 10px; color:#fff; }
     .marc-board-fila { display:grid; align-items:center; gap:6px; padding:5px 2px; }
     .marc-board-fila.cab { padding:0 2px 3px; }
     .marc-board-fila + .marc-board-fila { border-top:1px solid rgba(255,255,255,.12); }
@@ -8027,10 +8027,9 @@
     .tarjeta-col:hover,.tarjeta-col.partido:hover{ box-shadow:0 8px 26px rgba(14,27,60,0.13); }
     .tarjeta-col .menu-icono.partido{ background:var(--navy-suave); }
     /* Marcador premium: degradado marino + filo dorado, equipos marino/dorado */
-    .marcador-score{ background:linear-gradient(155deg,#16264f,#0c1733);
+    .marc-board{ background:linear-gradient(155deg,#16264f,#0c1733);
       border:1px solid rgba(193,154,62,0.30); box-shadow:0 10px 30px rgba(14,27,60,0.18); }
-    .marc-badge-ad{ background:var(--dorado); }
-    .marc-pts-num.ad{ color:var(--dorado); }
+    .mb-p.ad, .mb-saque, .marc-board-badge, .marc-board-fila.saca .mb-nom{ color:var(--dorado); }
     .btn-marcador{ border-width:1.5px; box-shadow:0 2px 8px rgba(14,27,60,0.06); }
     .btn-marcador.equipo-a{ background:#eef1f8; border-color:#c3cde6; }
     .btn-marcador.equipo-a .btn-marc-pts,.btn-marcador.equipo-a .btn-marc-nombre{ color:var(--verde); }
@@ -8063,7 +8062,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.271.0';
+    var APP_VERSION = '0.272.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -21558,8 +21557,7 @@
       var est = marcadorEst;
       var sGan = [0,0];
       est.sets.forEach(function(s){ if(s[0]>s[1]) sGan[0]++; else sGan[1]++; });
-      var setsHistHTML = est.sets.map(function(s,i){ return '<span class="marc-set-score">S'+(i+1)+': '+s[0]+'-'+s[1]+'</span>'; }).join('');
-      var pts=['0','0'], badge='', badgeCls='marc-badge', labels=['0','15','30','40'];
+      var pts=['0','0'], badge='', labels=['0','15','30','40'];
       if (est.enTiebreak) {
         pts[0]=est.tbPuntos[0].toString(); pts[1]=est.tbPuntos[1].toString();
         badge = est.superTieBreakActivo ? 'SUPER TIE-BREAK · A 10' : 'TIEBREAK';
@@ -21567,7 +21565,7 @@
         var a40 = est.puntos[0]===3 && est.puntos[1]===3;
         if (a40 || est.ventaja!==-1) {
           if (est.ventaja===-1) { pts[0]='40'; pts[1]='40'; badge='IGUALES'; }
-          else { pts[est.ventaja]='AD'; pts[1-est.ventaja]='40'; badge='VENTAJA · '+est.equipos[est.ventaja]; badgeCls='marc-badge marc-badge-ad'; }
+          else { pts[est.ventaja]='AD'; pts[1-est.ventaja]='40'; badge='VENTAJA · '+est.equipos[est.ventaja]; }
         } else { pts[0]=labels[est.puntos[0]]; pts[1]=labels[est.puntos[1]]; }
       }
       var l0 = sGan[0]>sGan[1] || (sGan[0]===sGan[1] && (est.juegos[0]>est.juegos[1] || (est.juegos[0]===est.juegos[1] && (est.enTiebreak?est.tbPuntos[0]>est.tbPuntos[1]:est.puntos[0]>est.puntos[1]||est.ventaja===0))));
@@ -21585,14 +21583,13 @@
       '</div>';
       html+=_marcDescansoHTML();
 
-      // ── v0.270 — MODO ANÁLISIS: marcador de árbitro ──────────────────
-      // Cuando estás anotando winners y errores, el tanteo gigante estorba:
-      // ocupa la pantalla que necesitan los botones de anotar. Se cambia por
-      // el marcador que llevan los árbitros de silla —una fila por pareja,
-      // los sets pasados a la izquierda, los juegos del set en curso y, a la
-      // derecha y en grande, EL PUNTO, que es lo que cambia en cada bola.
-      var _modoAnalisis = !!(est.jugadoresAnalizados && est.jugadoresAnalizados.length);
-      if (_modoAnalisis) {
+      // ── v0.272 — MARCADOR DE ÁRBITRO, SIEMPRE ───────────────────────
+      // El reparto que llevan los árbitros de silla y las retransmisiones:
+      // una fila por pareja, los sets ya jugados a la izquierda, los juegos
+      // del set en curso y, a la derecha y en grande, EL PUNTO, que es lo
+      // único que cambia en cada bola. En v0.270 solo salía al analizar
+      // jugadores; ahora es el marcador de todos los partidos, se anote o no.
+      {
         var nSets = est.sets.length;
         var cols = '18px minmax(0,1fr)' + (nSets ? ' repeat(' + nSets + ', 22px)' : '') + ' 30px 62px';
         html += '<div class="marc-board">';
@@ -21613,14 +21610,6 @@
         });
         if (badge) html += '<div class="marc-board-badge">' + badge + '</div>';
         html += '</div>';
-      } else {
-      html+='<div class="marcador-score">';
-      if(setsHistHTML) html+='<div class="marc-sets-hist">'+setsHistHTML+'</div>';
-      if(badge) html+='<div class="'+badgeCls+'">'+badge+'</div>';
-      html+='<div class="marcador-score-sets">'+est.equipos[0]+'&nbsp;<strong>'+sGan[0]+'–'+sGan[1]+'</strong>&nbsp;'+est.equipos[1]+'&ensp;<span style="opacity:.6;font-size:11px;">(sets)</span></div>';
-      html+='<div class="marcador-score-juegos"><span class="marc-juegos-num">'+est.juegos[0]+'</span><span class="marc-juegos-sep">–</span><span class="marc-juegos-num">'+est.juegos[1]+'</span></div>';
-      html+='<div class="marcador-score-pts"><div class="marc-pts-display"><div class="marc-pts-num'+(pts[0]==='AD'?' ad':'')+'">'+pts[0]+'</div><div class="marc-pts-label">'+est.equipos[0]+'</div></div><span class="marc-pts-sep">·</span><div class="marc-pts-display"><div class="marc-pts-num'+(pts[1]==='AD'?' ad':'')+'">'+pts[1]+'</div><div class="marc-pts-label">'+est.equipos[1]+'</div></div></div>';
-      html+='</div>';
       }
       html+='<div class="marcador-botones"><button class="btn-marcador equipo-a '+(l0?'ganando':'')+'" onclick="agregarPunto(0)"><span class="btn-marc-nombre">'+est.equipos[0]+'</span><span class="btn-marc-pts">+1</span><span class="btn-marc-hint">sumar punto</span></button><button class="btn-marcador equipo-b '+(!l0?'ganando':'')+'" onclick="agregarPunto(1)"><span class="btn-marc-nombre">'+est.equipos[1]+'</span><span class="btn-marc-pts">+1</span><span class="btn-marc-hint">sumar punto</span></button></div>';
       // v0.270 — DESHACER, pegado debajo de los dos botones de sumar punto y a
