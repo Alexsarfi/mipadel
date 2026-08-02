@@ -39,6 +39,13 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.273.0 — En el carro, primero el golpe y luego el ejercicio (2026-07)
+    (sin migraciones nuevas)
+    · EN LA PLANIFICACIÓN DEL CURSO, dentro del carro, el GOLPE en rojo sube y
+      se pone justo debajo de la palabra «Carro»; los ejercicios pasan debajo.
+      Antes salía al revés (v0.267). El orden bueno es este: primero de qué va
+      la clase y después con qué se hace.
+
   v0.272.0 — El marcador de árbitro, en todos los partidos (2026-07)
     (sin migraciones nuevas)
     · EL REPARTO DE LOS ÁRBITROS DE SILLA pasa a ser el marcador de SIEMPRE, se
@@ -6338,7 +6345,7 @@
     /* v0.267 — El GOLPE que se trabaja en el carro, destacado en rojo. Va
        debajo de los ejercicios en la semana del curso, y es el mismo lenguaje
        visual que la etiqueta del mes de arriba. */
-    .ruta-wk-golpes { display:flex; flex-wrap:wrap; gap:4px; margin-top:3px; }
+    .ruta-wk-golpes { display:flex; flex-wrap:wrap; gap:4px; margin:0 0 5px; }
     .ruta-wk-golpe { display:inline-block; font-size:11px; font-weight:800; line-height:1.35;
       padding:3px 9px; border-radius:6px; background:#e03a3a; color:#fff; }
     .ruta-ses { font-size:12.5px; color:var(--texto); line-height:1.3; margin-top:2px; }
@@ -8062,7 +8069,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.272.0';
+    var APP_VERSION = '0.273.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -17138,13 +17145,10 @@
       var zCarro = '<div class="ruta-wk-z ruta-wk-carro">';
       if (wd.carro.length) {
         zCarro += '<div class="ruta-wk-zlbl">🛒 Carro</div>';
-        wd.carro.forEach(function(id){
-          zCarro += '<span class="ruta-wk-ej">' + _gEsc(ejN[id] || ('Ejercicio ' + id)) + '</span>';
-        });
-        // v0.267 — Debajo de los ejercicios, EL GOLPE que se trabaja (fondo,
-        // pared, volea, bandeja…), en rojo. Es el dato que se busca de un
-        // vistazo al repasar el curso: el nombre del ejercicio dice qué haces,
-        // el golpe dice de qué va la clase.
+        // v0.267/v0.273 — Justo debajo de «Carro», EL GOLPE que se trabaja
+        // (fondo, pared, volea, bandeja…), en rojo; los ejercicios van después.
+        // Ese es el orden en que se lee: primero de qué va la clase y luego con
+        // qué se hace. (En v0.267 salía al revés.)
         var _gv = {}, _gl = [];
         wd.carro.forEach(function(id){
           var k = ejG ? ejG[id] : '';
@@ -17158,6 +17162,10 @@
           _gl.forEach(function(t){ zCarro += '<span class="ruta-wk-golpe">' + _gEsc(t) + '</span>'; });
           zCarro += '</div>';
         }
+        // v0.273: los ejercicios, debajo del golpe (antes iban encima)
+        wd.carro.forEach(function(id){
+          zCarro += '<span class="ruta-wk-ej">' + _gEsc(ejN[id] || ('Ejercicio ' + id)) + '</span>';
+        });
       } else if (!tieneAlgo) {
         zCarro += '<div class="ruta-ses vacia">＋ planificar</div>';
       }
