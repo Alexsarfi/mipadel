@@ -39,6 +39,23 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.275.0 — La app deja de abrirse en el marcador (2026-07)
+    (sin migraciones nuevas)
+    · EL FALLO: al abrir la app —y en cada recarga— aterrizabas en el Marcador,
+      con el último partido, en vez de en Inicio.
+    · POR QUÉ: desde que existe el guardado del partido en curso (para que una
+      recarga a mitad de set no se lleve el tanteo), el arranque saltaba al
+      marcador con solo mirar `activo`. Un partido TERMINADO pero cuya acta no
+      llegaste a guardar sigue estando activo, así que se quedaba ahí para
+      siempre secuestrando el arranque. Guardar el acta sí lo limpiaba; salir
+      sin guardarla, no.
+    · AHORA hacen falta tres cosas para saltar al marcador: que esté activo,
+      que NO haya terminado, y que sea de hoy (menos de 12 h — ningún partido
+      dura eso; si es más viejo, son restos olvidados).
+    · NO SE BORRA NADA. El partido sigue donde estaba: entras en Marcador y ahí
+      lo tienes, con su «💾 Guardar acta» si terminó o su «✕ Abandonar» si
+      quedó a medias.
+
   v0.274.0 — El día, solo para consultar · y notas de clase (2026-07)
     ⚠️ MIGRACIÓN: migraciones/migracion_notas_dia.sql (ejecutar ANTES)
     · SE EDITA EN UN SOLO SITIO: abajo, en la sección de los meses del curso.
@@ -8137,7 +8154,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.274.0';
+    var APP_VERSION = '0.275.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -24934,7 +24951,21 @@
     actualizarInicio();
     _histInit();     // v0.154: base del historial (atrás no saca de la app)
     _initSupabase(); // arranca Supabase (redirige a login si hay credenciales)
-    if (marcadorEst.activo) irA('pantalla-marcador'); // volver al partido en curso
+    // ── v0.275 — Al abrir la app solo se salta al marcador si hay un partido
+    // DE VERDAD en juego. Antes bastaba con `activo`, y un partido terminado
+    // pero sin guardar el acta —o uno de hace días que quedó a medias— se
+    // quedaba ahí para siempre: cada arranque y cada recarga aterrizaban en el
+    // marcador en vez de en Inicio. Ahora hacen falta las tres cosas:
+    //   · que esté activo,
+    //   · que NO haya terminado (uno acabado espera dentro, sin secuestrar el
+    //     arranque; su acta se puede guardar cuando entres),
+    //   · y que sea de hoy (menos de 12 h). Ningún partido de pádel dura eso;
+    //     si es más viejo, son restos olvidados.
+    // El partido NO se borra en ningún caso: sigue donde estaba al entrar en
+    // Marcador, con su «Guardar acta» o su «Nuevo partido».
+    var _marcEnJuego = marcadorEst.activo && !marcadorEst.terminado &&
+      marcadorEst.cronoStart && (Date.now() - marcadorEst.cronoStart) < 12 * 3600 * 1000;
+    if (_marcEnJuego) irA('pantalla-marcador'); // volver al partido en curso
     // v0.134: sin Supabase (uso solo-local) no hay login que decida pantalla,
     // así que restauramos aquí la última vista. Con Supabase lo hace _fetchGrupo.
     else if (!_sbConfigurado()) _navRestaurarNormal();
