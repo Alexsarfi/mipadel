@@ -39,6 +39,36 @@
 
   HISTORIAL DE VERSIONES
 
+  v0.274.0 — El día, solo para consultar · y notas de clase (2026-07)
+    ⚠️ MIGRACIÓN: migraciones/migracion_notas_dia.sql (ejecutar ANTES)
+    · SE EDITA EN UN SOLO SITIO: abajo, en la sección de los meses del curso.
+      Arriba, tocar un día abre siempre su FICHA DE CONSULTA —también si está
+      vacío, y entonces te dice dónde se planifica—. Antes había dos caminos
+      para editar la misma clase y había que acordarse de cuál era cuál: un
+      día vacío abría el panel grande y uno marcado el resumen.
+    · A PANTALLA COMPLETA EN EL MÓVIL. La ficha del día era una hoja por abajo
+      y se quedaba en media pantalla con todo estrujado; es justo la que se
+      mira en pista. Ahora ocupa la pantalla entera, con la cabecera fija
+      arriba mientras bajas. En el ordenador sigue siendo ventana centrada.
+    · ⚙ Y 📝 EN LA CABECERA. El ⚙ sigue llevando al panel grande para un
+      retoque rápido. El 📝 es nuevo: NOTAS DE LA CLASE, para lo que se te
+      ocurre en pista —un juego que ha funcionado, un ajuste, algo que
+      repetir—. Se apunta en el momento y queda pegado a esa clase.
+      · Van por NIVEL + fecha, como el carro y las sesiones: la nota de
+        Competición no se mezcla con la de Iniciación aunque sea el mismo día.
+      · El día que tiene nota se marca en el mes (punto ámbar en el móvil,
+        etiqueta «Notas» en pantalla ancha).
+      · Privadas de cada entrenador: viajan en plan_dias_usuario.notas_dia.
+        Sin la migración el upsert reintenta sin la columna y la nota se queda
+        en el dispositivo donde se escribió, sin romper el resto del sync.
+    · EL CARRO, EN OTRO ORDEN: número · nombre · miniatura. La miniatura
+      delante empujaba el nombre y lo partía en dos líneas cortadas.
+    · LOS BLOQUES, UNO DEBAJO DE OTRO, cada uno con su apartado y cuántas
+      sesiones y ejercicios tiene. Al pulsar uno se abre una VENTANA con su
+      contenido (sesiones con miniatura y vídeos). Antes eran pestañas en
+      horizontal: con tres o cuatro no cabían y había que arrastrar de lado.
+      La ventana va por encima de la ficha del día; al cerrarla, vuelves.
+
   v0.273.0 — En el carro, primero el golpe y luego el ejercicio (2026-07)
     (sin migraciones nuevas)
     · EN LA PLANIFICACIÓN DEL CURSO, dentro del carro, el GOLPE en rojo sube y
@@ -6193,14 +6223,50 @@
     .comp-daytag.carro { background:#e03a3a; color:#fff; border:1px solid #d13232; font-weight:800; }
     .comp-daytag.area  { background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe; }
     .comp-diacol-dow { font-size:9.5px; font-weight:800; color:var(--gris); text-transform:uppercase; }
-    /* v0.243 — El día se abre en GLOBO. Hoja por abajo en el móvil (como el
-       resto de paneles) y ventana centrada y ancha en el ordenador, para que
-       el carro y el área de trabajo quepan en dos columnas de verdad. */
+    /* v0.243 — El día se abre en GLOBO.
+       v0.274 — En el MÓVIL, a pantalla completa: es la ficha que se mira en
+       pista, y como hoja por abajo se quedaba en media pantalla con el
+       contenido estrujado. En el ordenador sigue siendo ventana centrada. */
     .comp-dia-modal .comp-cal-picker { background:none; border:none; padding:0; margin:0; }
     .comp-dia-modal .comp-clase-cols { margin-top:0; }
+    #comp-dia-ov { align-items:stretch; }
+    .comp-dia-modal { max-width:none; max-height:none; min-height:100%;
+      border-radius:0; padding:14px 14px calc(18px + env(safe-area-inset-bottom)); }
+    .comp-dia-modal .ruta-modal-hdr { position:sticky; top:-14px; z-index:2;
+      background:var(--blanco); margin:-14px -14px 12px; padding:14px 14px 10px; }
     @media (min-width: 700px) {
-      .comp-dia-modal { max-width:860px; }
+      #comp-dia-ov { align-items:center; }
+      .comp-dia-modal { max-width:860px; max-height:86vh; min-height:0; border-radius:18px;
+        padding:18px 20px 20px; }
+      .comp-dia-modal .ruta-modal-hdr { position:static; margin:0 0 12px; padding:0 0 10px; }
     }
+    /* v0.274 — Bloques del día, uno debajo de otro (antes eran pestañas que
+       se salían de la pantalla en cuanto había tres). */
+    .comp-bloque-fila { display:flex; align-items:center; gap:10px; width:100%; box-sizing:border-box;
+      text-align:left; font-family:inherit; padding:11px 12px; margin-bottom:7px;
+      border:1.5px solid var(--borde); border-radius:12px; background:var(--blanco); cursor:pointer; }
+    .comp-bloque-fila:active { background:var(--arena); }
+    .cbf-txt { flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
+    .cbf-txt b { font-size:13.5px; font-weight:800; color:var(--texto); line-height:1.3; }
+    .cbf-ap { font-size:10.5px; font-weight:700; color:#3730a3; text-transform:uppercase; letter-spacing:.03em; }
+    .cbf-meta { font-size:11px; color:var(--gris); }
+    .cbf-chev { flex-shrink:0; font-size:18px; color:var(--gris); }
+    /* La ventana de un bloque va por encima del globo del día */
+    .comp-bloque-ov { z-index:10040; }
+    .comp-bloque-modal { max-width:620px; }
+    /* v0.274 — Notas de la clase */
+    .comp-nota-btn.hay { background:#fef3c7 !important; color:#92400e !important; }
+    .comp-nota { border:1.5px solid #fde68a; background:#fffbeb; border-radius:12px;
+      padding:10px 12px; margin-bottom:12px; cursor:pointer; }
+    .comp-nota.abierta { cursor:default; }
+    .comp-nota-hdr { font-size:10.5px; font-weight:800; color:#92400e; text-transform:uppercase;
+      letter-spacing:.04em; margin-bottom:5px; }
+    .comp-nota-txt { font-size:13px; color:var(--texto); line-height:1.55; white-space:pre-wrap; }
+    .comp-nota-ta { min-height:110px; resize:vertical; line-height:1.5; font-size:14px; }
+    .comp-nota-acts { display:flex; gap:8px; justify-content:flex-end; margin-top:8px; }
+    .comp-nota-acts .btn { width:auto; margin:0; }
+    .comp-daypto.nota { background:#f59e0b; }
+    .comp-daytag.nota { background:#fef3c7; color:#92400e; border:1px solid #fcd34d; }
     .comp-dow-cont { font-size:11.5px; font-weight:600; color:var(--gris); }
     .comp-circ-fila { display:flex; gap:8px; flex-wrap:wrap; }
     .comp-circ { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;
@@ -7948,6 +8014,8 @@
        se abre como ventana, con sitio de sobra para el carro y el área de
        trabajo. Fuera de .pantalla, como el resto de globos. -->
   <div id="comp-dia-ov" class="ruta-modal-ov" style="display:none" onclick="compDiaCerrar()"></div>
+  <!-- v0.274: ventana de un bloque, por encima del globo del día -->
+  <div id="comp-bloque-ov" class="ruta-modal-ov comp-bloque-ov" style="display:none" onclick="compBloqueCerrar()"></div>
 
   <!-- ══ CLASE PREPARADA DE UNA FRANJA (v0.224) ══════════
        Globo con el carro y el área de trabajo de esa franja y ese día, para
@@ -8069,7 +8137,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.273.0';
+    var APP_VERSION = '0.274.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -16497,12 +16565,16 @@
           (th1 ? '<img src="' + th1 + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="ruta-ses-noimg">🎾</span>') +
           (ver1 ? '<span class="ejcard-play">▶</span>' : '') + '</span>';
       }
+      // v0.274 — El orden es NÚMERO · NOMBRE · MINIATURA. En el móvil se lee
+      // de izquierda a derecha: cuál toca, qué es y —solo si hace falta— cómo
+      // era. La miniatura al principio empujaba el nombre y lo dejaba en dos
+      // líneas cortadas.
       return '<div class="ruta-carro-ficha">' +
         (num ? '<span class="ruta-carro-num">' + num + '</span>' : '') +
-        thumbsHTML +
         '<span class="ruta-carro-ficha-txt"><b>' + _gEsc(e.nombre || ('Ejercicio ' + e.id)) + '</b>' +
           (g ? '<span>' + _gEsc(g) + '</span>' : '') +
           (vids.length > 1 ? '<span class="ruta-carro-nvid">' + vids.length + ' vídeos</span>' : '') + '</span>' +
+        thumbsHTML +
         (quitar ? '<button type="button" onclick="' + quitar + '" aria-label="Quitar">✕</button>' : '') +
       '</div>';
     }
@@ -17406,30 +17478,14 @@
         mostrarPlanificacion();
         return;
       }
-      var p = leerPlan();
-      // v0.152: solo cuenta lo marcado del NIVEL activo para decidir si el
-      // día se abre en resumen (ya tiene contenido) o en selección.
-      var _ids = _compIdsNivel(p);
-      var yaMarcado = ((p.compDias && p.compDias[fechaISO]) || [])
-                        .some(function(id){ return _ids[id]; });
-      // v0.208 — En Competición, un día VACÍO se planifica con el mismo panel
-      // grande que las semanas de la ruta (área + sesión con miniaturas), no
-      // con la lista de casillas de siempre. Un día YA marcado sigue abriendo
-      // el resumen con vídeos (útil en pista); desde ahí, "cambiar selección"
-      // (⚙) también lleva al panel grande.
-      // v0.215: vale para CUALQUIER cuenta que llegue a Competición, no solo
-      // para las marcadas como entrenador nivel3. Antes, una cuenta sin ese rol
-      // se encontraba el cuadro de casillas al pinchar un día y el panel grande
-      // al pinchar una semana: dos formas distintas de hacer lo mismo.
-      if (COMP_NIVELES.indexOf(p.nivel) >= 0 && !yaMarcado) {   // v0.232: los tres niveles
-        rutaAbrirDia(fechaISO);
-        return;
-      }
+      // ── v0.274 — ARRIBA SOLO SE CONSULTA ────────────────────────────
+      // Había dos sitios para editar la misma clase (aquí arriba y abajo, en
+      // el curso) y eso obligaba a acordarse de cuál era cuál. La edición se
+      // queda SOLO abajo, en la sección de los meses. Tocar un día abre
+      // siempre su ficha de consulta —también si está vacío—, y desde ahí el
+      // ⚙ lleva al panel de edición para un retoque rápido.
       compDiaAbierta = fechaISO;
-      // v0.125: si el día ya tiene algo marcado, se abre directamente en
-      // modo RESUMEN (solo lo elegido + vídeos, poco ruido); si está
-      // vacío, se abre en modo SELECCIÓN (todo el catálogo) para elegir.
-      compDiaEditando = !yaMarcado;
+      compDiaEditando = false;   // v0.274: nunca se abre en modo edición
       mostrarPlanificacion();
     }
     // v0.125: "retroceder" desde el resumen para cambiar lo elegido.
@@ -17446,6 +17502,54 @@
       compDiaEditando = true;
       mostrarPlanificacion();
     }
+    // ══════════════════════════════════════════════════════════════
+    // v0.274 — NOTAS DE LA CLASE
+    // ══════════════════════════════════════════════════════════════
+    // Lo que se te ocurre EN PISTA: un juego que ha funcionado, un ajuste,
+    // algo que repetir o que no volver a hacer. Se apunta en el momento, en
+    // el mismo globo del día, y queda pegado a esa clase.
+    // Clave por NIVEL + fecha, como el carro y las sesiones: la nota de
+    // Competición no se mezcla con la de Iniciación aunque sea el mismo día.
+    // Privada de cada entrenador → viaja en plan_dias_usuario.notas_dia.
+    function _notaKey(fechaISO) { return _compNivel() + '|' + fechaISO; }
+    function _notaDe(fechaISO) {
+      var p = leerPlan();
+      return (p.notasDia && p.notasDia[_notaKey(fechaISO)]) || '';
+    }
+    function _notaHay(p, nivel, fechaISO) {
+      return !!(p.notasDia && p.notasDia[nivel + '|' + fechaISO]);
+    }
+    var _compNotaEdit = false;
+    function compNotaToggle() { _compNotaEdit = !_compNotaEdit; _compDiaOvPintar(); }
+    function compNotaGuardar(fechaISO) {
+      var ta = document.getElementById('comp-nota-ta');
+      var txt = ta ? ta.value.trim() : '';
+      var p = leerPlan();
+      if (!p.notasDia) p.notasDia = {};
+      if (txt) p.notasDia[_notaKey(fechaISO)] = txt;
+      else delete p.notasDia[_notaKey(fechaISO)];
+      _planGuardar(p);
+      _compNotaEdit = false;
+      mostrarPlanificacion();   // repinta el globo y el círculo del día
+    }
+    function _compNotaHTML(fechaISO) {
+      var txt = _notaDe(fechaISO);
+      if (_compNotaEdit) {
+        return '<div class="comp-nota abierta">' +
+          '<div class="comp-nota-hdr">📝 Notas de la clase</div>' +
+          '<textarea id="comp-nota-ta" class="form-input comp-nota-ta" ' +
+            'placeholder="Un juego que ha funcionado, un ajuste, algo que repetir…">' + _gEsc(txt) + '</textarea>' +
+          '<div class="comp-nota-acts">' +
+            '<button type="button" class="btn btn-sec btn-sm" onclick="compNotaToggle()">Cancelar</button>' +
+            '<button type="button" class="btn btn-verde btn-sm" onclick="compNotaGuardar(\'' + fechaISO + '\')">Guardar nota</button>' +
+          '</div></div>';
+      }
+      if (!txt) return '';
+      return '<div class="comp-nota" onclick="compNotaToggle()">' +
+        '<div class="comp-nota-hdr">📝 Notas de la clase</div>' +
+        '<div class="comp-nota-txt">' + _gEsc(txt) + '</div></div>';
+    }
+
     // ── v0.243 — EL DÍA, EN GLOBO ──────────────────────────────────
     // Se abre como ventana encima del mes en vez de desplegarse debajo de
     // los círculos: en el móvil aquello quedaba estrujado en la parte baja
@@ -17453,7 +17557,8 @@
     // mismo de siempre (carro + área de trabajo, o el selector de filas),
     // así que se sigue editando igual: ⚙ lleva al panel grande.
     function compDiaCerrar() {
-      compDiaAbierta = null; compDiaEditando = false;
+      compBloqueCerrar();
+      compDiaAbierta = null; compDiaEditando = false; _compNotaEdit = false;
       mostrarPlanificacion();
     }
     function _compDiaOvPintar() {
@@ -17472,10 +17577,79 @@
         '<div class="ruta-modal-sub">' + rango + '</div></div>' +
         '<div class="ruta-modal-hdr-acc">' +
           (compDiaEditando ? '' :
-            '<button class="plan-modal-x" onclick="compDiaEditar(\'' + f + '\')" title="Cambiar la clase de este día" aria-label="Editar">⚙</button>') +
+            '<button class="plan-modal-x" onclick="compDiaEditar(\'' + f + '\')" title="Cambiar la clase de este día" aria-label="Editar">⚙</button>' +
+            // v0.274: al lado, las notas de la clase
+            '<button class="plan-modal-x comp-nota-btn' + (_notaDe(f) ? ' hay' : '') + '" ' +
+              'onclick="compNotaToggle()" title="Notas de la clase" aria-label="Notas">📝</button>') +
           '<button class="plan-modal-x" onclick="compDiaCerrar()" aria-label="Cerrar">✕</button>' +
         '</div></div>';
+      if (!compDiaEditando) h += _compNotaHTML(f);
       h += compDiaEditando ? _compPickerHTML(p, f, true) : _compResumenHTML(p, f, true);
+      h += '</div>';
+      ov.innerHTML = h;
+      ov.style.display = 'flex';
+    }
+    // ── v0.274 — VENTANA DE UN BLOQUE ──────────────────────────────
+    // Se abre desde la ficha del día al pulsar un bloque: dentro van sus
+    // sesiones (con miniatura) y sus vídeos. Va POR ENCIMA del globo del día,
+    // que se queda detrás; al cerrarla se vuelve a la clase.
+    var compBloqueSel = null;
+    function compBloqueVer(fechaISO, filaId) { compBloqueSel = filaId; _compBloqueOvPintar(fechaISO); }
+    function compBloqueCerrar() {
+      compBloqueSel = null;
+      var ov = document.getElementById('comp-bloque-ov');
+      if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; }
+    }
+    function _compBloqueOvPintar(fechaISO) {
+      var ov = document.getElementById('comp-bloque-ov');
+      if (!ov) return;
+      if (!compBloqueSel) { ov.style.display = 'none'; ov.innerHTML = ''; return; }
+      var p = leerPlan();
+      var f = _compTodasFilas(p).filter(function(x){ return x.id === compBloqueSel; })[0];
+      if (!f) { compBloqueCerrar(); return; }
+      var nivDia = _compNivel();
+      var lunSem = _rutaSemanaLibre(fechaISO).lunISO;
+      var sesIds = _rutaSesArr(_rutaLeeDia(p.rutaSes, nivDia, fechaISO, lunSem));
+      var sesF = (_rutaSesPorArea(_compTodasFilas(p))[f.id] || [])
+                   .filter(function(c){ return sesIds.indexOf(c.id) >= 0; });
+
+      var h = '<div class="ruta-modal comp-bloque-modal" onclick="event.stopPropagation()">';
+      h += '<div class="ruta-modal-hdr">' +
+        '<div><div class="ruta-modal-tit">' + _gEsc(f.t) + '</div>' +
+        '<div class="ruta-modal-sub">' + _gEsc(f.apartado) + '</div></div>' +
+        '<button class="plan-modal-x" onclick="compBloqueCerrar()" aria-label="Cerrar">✕</button></div>';
+
+      sesF.forEach(function(c){
+        var th = _rutaSesThumb(c);
+        h += '<div class="ruta-ses-eleg clicable" onclick="verSesion(' + c.id + ',\'planif\')">' +
+          '<span class="ruta-ses-thumb">' + (th ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="ruta-ses-noimg">🎾</span>') + '</span>' +
+          '<span class="ruta-ses-nom">' + _gEsc(c.nombre || c.fecha || ('Sesión ' + c.id)) + '</span></div>';
+      });
+
+      var ejs = _planEjerciciosDeBloque(nivDia, { ejInc: f.ejInc || [] });
+      if (ejs.length) {
+        h += '<div class="comp-resumen-videos">';
+        ejs.forEach(function(e){ h += _compVideoCardHTML(e); });
+        h += '</div>';
+      } else if (!sesF.length) {
+        // Modelo antiguo: bloque con sesión enlazada a mano y sin ejercicios.
+        var sesLeg = _planSesionesDeBloque(nivDia, { sesInc: f.sesInc || [] });
+        if (sesLeg.length) {
+          sesLeg.forEach(function(c){
+            h += '<div class="plan-ses-mini' + (c.trabajada ? ' trabajada' : '') + '" onclick="verSesion(' + c.id + ',\'planif\')">' +
+              '<span class="plan-ses-mini-ic">' + (c.trabajada ? '✓' : '🎾') + '</span>' +
+              '<span class="plan-ses-mini-nom">' + nombreSesion(c) + '</span></div>';
+          });
+          var ejsSes = _compEjerciciosDeSesiones(sesLeg);
+          if (ejsSes.length) {
+            h += '<div class="comp-resumen-videos" style="margin-top:8px;">';
+            ejsSes.forEach(function(e){ h += _compVideoCardHTML(e); });
+            h += '</div>';
+          }
+        } else {
+          h += '<div class="plan-item-ses-vacio">Este bloque todavía no tiene ejercicios ni sesiones enlazadas.</div>';
+        }
+      }
       h += '</div>';
       ov.innerHTML = h;
       ov.style.display = 'flex';
@@ -17662,83 +17836,33 @@
       }
       var sesPorAreaD = _rutaSesPorArea(todas);
       var sesColocadasD = {};
+      // ── v0.274 — LOS BLOQUES, UNO DEBAJO DE OTRO ────────────────────
+      // Antes eran pestañas en horizontal: con tres o cuatro bloques no
+      // cabían y había que arrastrar de lado para verlos. Ahora se apilan,
+      // cada uno con su apartado y cuántas sesiones y vídeos tiene, y al
+      // pulsar uno se abre una VENTANA con su contenido. Así el día se lee
+      // entero de un vistazo y el detalle se pide cuando hace falta.
       if (!filas.length) {
-        h += '<div class="comp-picker-vacio">Nada marcado todavía.</div>';
+        h += '<div class="comp-picker-vacio">Nada planificado para este día.<br>' +
+             '<span class="ruta-panel-nota">Se planifica abajo, en el curso — o con el ⚙ de aquí arriba.</span></div>';
       } else {
-        // v0.148: si el día tiene VARIAS sesiones marcadas, se navegan en
-        // horizontal: una pestaña por sesión y solo se ven los vídeos de la
-        // que esté elegida (antes se apilaban todas, una debajo de otra).
-        var selId = compFilaSel;
-        if (!selId || !filas.some(function(f){ return f.id === selId; })) selId = filas[0].id;
-        if (filas.length > 1) {
-          h += '<div class="comp-fila-tabs">';
-          filas.forEach(function(f){
-            h += '<button type="button" class="comp-fila-tab' + (f.id === selId ? ' sel' : '') +
-              '" onclick="compFilaVer(\'' + f.id + '\')" title="' + _gEsc(f.apartado + ' · ' + f.t).replace(/"/g,'') + '">' +
-              _gEsc(f.t) + '</button>';
-          });
-          h += '</div>';
-        }
-        // Una sesión que cuelgue de CUALQUIER bloque marcado ya tiene su sitio
-        // (en la pestaña de ese bloque), aunque ahora no sea la abierta.
-        filas.forEach(function(f0){
-          (sesPorAreaD[f0.id] || []).forEach(function(c){ if (sesIds.indexOf(c.id) >= 0) sesColocadasD[c.id] = true; });
-        });
-        var idsDeSelD = (sesPorAreaD[selId] || []).map(function(c){ return c.id; });
-        sesIds.filter(function(id){ return idsDeSelD.indexOf(id) >= 0; })
-              .forEach(function(id){ h += _sesFichaDia(id); });
-        [filas.filter(function(f){ return f.id === selId; })[0]].forEach(function(f){
-          // v0.238: fuera el título en negrita «apartado · bloque»: es lo mismo
-          // que ya pone la pestaña que acabas de pulsar.
-          h += '<div class="comp-resumen-fila">';
-          var ejs = _planEjerciciosDeBloque(nivDia, { ejInc: f.ejInc || [] });
-          if (ejs.length) {
-            // v0.133: en el resumen del día las miniaturas van en UNA sola
-            // línea (nunca dos), repartiéndose el ancho — pensado para hasta
-            // 4 vídeos. Clase propia (no grid-ejercicios) para no afectar al
-            // resto de pantallas.
-            h += '<div class="comp-resumen-videos">';
-            ejs.forEach(function(e){ h += _compVideoCardHTML(e); });
-            h += '</div>';
-          } else {
-            // v0.130: mismo fallback que ya se aplicó en v0.127 al listado
-            // (Áreas de trabajo) y al detalle de la fila — aquí, en el
-            // resumen del día, faltaba: si no hay ejercicios (ejInc) pero
-            // SÍ hay una sesión del modelo antiguo (sesInc, sin migrar),
-            // se muestra esa sesión en vez de "Sin ejercicios enlazados".
-            var sesLeg = _planSesionesDeBloque(nivDia, { sesInc: f.sesInc || [] });
-            if (sesLeg.length) {
-              h += '<div class="plan-item-ses" style="border:1px solid var(--borde);border-radius:10px;">';
-              sesLeg.forEach(function(c){
-                h += '<div class="plan-ses-mini' + (c.trabajada ? ' trabajada' : '') + '" onclick="verSesion(' + c.id + ',\'planif\')" title="' + nombreSesion(c).replace(/"/g,'') + ' (sesión antigua, sin migrar a ejercicios)">' +
-                  '<span class="plan-ses-mini-ic">' + (c.trabajada ? '✓' : '🎾') + '</span>' +
-                  '<span class="plan-ses-mini-nom">' + nombreSesion(c) + '</span></div>';
-              });
-              h += '</div>';
-              // v0.131: debajo de la sesión antigua, completar la fila con
-              // las miniaturas de SUS ejercicios (los ejercicios que la
-              // sesión tiene dentro, ejercicioIds), con vídeo si lo tienen —
-              // así se ven y se tocan igual que en el modelo nuevo, sin
-              // tener que entrar a la sesión.
-              var ejsSes = _compEjerciciosDeSesiones(sesLeg);
-              if (ejsSes.length) {
-                h += '<div class="comp-resumen-videos" style="margin-top:8px;">';
-                ejsSes.forEach(function(e){ h += _compVideoCardHTML(e); });
-                h += '</div>';
-              }
-            } else {
-              h += '<div class="plan-item-ses-vacio">Sin ejercicios enlazados aún</div>';
-            }
-          }
-          h += '</div>';
+        filas.forEach(function(f){
+          var sesF = (sesPorAreaD[f.id] || []).filter(function(c){ return sesIds.indexOf(c.id) >= 0; });
+          sesF.forEach(function(c){ sesColocadasD[c.id] = true; });
+          var nEj = _planEjerciciosDeBloque(nivDia, { ejInc: f.ejInc || [] }).length;
+          var meta = [];
+          if (sesF.length) meta.push(sesF.length + (sesF.length === 1 ? ' sesión' : ' sesiones'));
+          if (nEj) meta.push(nEj + (nEj === 1 ? ' ejercicio' : ' ejercicios'));
+          h += '<button type="button" class="comp-bloque-fila" onclick="compBloqueVer(\'' + fechaISO + '\',\'' + f.id + '\')">' +
+            '<span class="cbf-txt"><b>' + _gEsc(f.t) + '</b>' +
+              '<span class="cbf-ap">' + _gEsc(f.apartado) + '</span>' +
+              (meta.length ? '<span class="cbf-meta">' + meta.join(' · ') + '</span>' : '') + '</span>' +
+            '<span class="cbf-chev">›</span></button>';
         });
       }
-      // Las que no cuelgan de ningún bloque marcado no se pierden: van al final.
+      // Las sesiones que no cuelgan de ningún bloque marcado no se pierden.
       var sesSueltasD = sesIds.filter(function(id){ return !sesColocadasD[id]; });
       if (sesSueltasD.length) {
-        // v0.254: fuera el rótulo «Otras sesiones de la semana». Era ruido y
-        // además engañaba: son sesiones de ESTE día que no cuelgan de ningún
-        // bloque marcado, no de la semana. Las fichas se quedan.
         sesSueltasD.forEach(function(id){ h += _sesFichaDia(id); });
       }
       h += '</div>';   // /comp-clase-area
@@ -18432,7 +18556,9 @@
               .filter(function(idA){ return idsNivel[idA]; })
               .map(function(idA){ return _areasN[idA]; })
               .filter(Boolean);
-            if (golpes.length || bloqsD.length) {
+            // v0.274: un día con nota lleva su 📝, aunque no tenga plan
+            var _hayNota = _notaHay(p, _nivM, fISO);
+            if (golpes.length || bloqsD.length || _hayNota) {
               // v0.241 — En el MÓVIL las columnas de semana son estrechas: ahí
               // solo van dos PUNTOS (azul = hay carro, morado = hay área) y los
               // nombres se leen al abrir el día. A partir de 760 px sí caben
@@ -18440,9 +18566,11 @@
               var titPuntos = [];
               if (golpes.length)  titPuntos.push('Carro: ' + golpes.join(', '));
               if (bloqsD.length)  titPuntos.push('Área de trabajo: ' + bloqsD.join(', '));
+              if (_hayNota) titPuntos.push('Con notas');
               tags = '<div class="comp-diacol-puntos" title="' + _gEsc(titPuntos.join(' · ')).replace(/"/g,'') + '">' +
                 (golpes.length ? '<span class="comp-daypto carro"></span>' : '') +
-                (bloqsD.length ? '<span class="comp-daypto area"></span>' : '') + '</div>';
+                (bloqsD.length ? '<span class="comp-daypto area"></span>' : '') +
+                (_hayNota ? '<span class="comp-daypto nota"></span>' : '') + '</div>';
               tags += '<div class="comp-diacol-tags">';
               if (golpes.length)
                 tags += '<span class="comp-daytag carro" title="Carro: ' + _gEsc(golpes.join(', ')).replace(/"/g,'') + '">' +
@@ -18451,6 +18579,7 @@
                 tags += '<span class="comp-daytag area" title="Área de trabajo: ' + _gEsc(t).replace(/"/g,'') + '">' +
                         _gEsc(t) + '</span>';
               });
+              if (_hayNota) tags += '<span class="comp-daytag nota" title="Este día tiene notas">Notas</span>';
               tags += '</div>';
             }
           }
