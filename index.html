@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.259.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.277.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,24 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.277.0 — El EN1 entra directo a Asistencia (2026-08)
+    (sin migraciones nuevas)
+    · AL ABRIR LA APP, el entrenador de nivel 1 aterriza en ASISTENCIA, con su
+      calendario y sus clases. Antes caía en Inicio, una pantalla donde todo lo
+      demás le está vetado: un rodeo de un toque en cada arranque.
+    · SU BOTÓN DE PERFIL, en la cabecera de Asistencia («👤 Perfil», al lado de
+      ⚙ Clases). Como ya no pasa por Inicio, que es donde lo tienen los demás,
+      necesitaba una puerta desde su propia pantalla. Solo se le muestra a él;
+      al resto no se les añade nada.
+    · AL GUARDAR LOS DATOS del perfil vuelve solo a Asistencia. Para los demás
+      no cambia: entraron desde Inicio y ahí siguen, porque en Perfil tienen
+      más cosas debajo (borrar datos de este dispositivo).
+    · El «‹ Inicio» de la cabecera de Perfil dice ahora «‹ Asistencia» cuando
+      quien lo mira es un EN1, que es a donde va de verdad.
+    · Ojo con el modo gestión: si el gestor está editando la asistencia de otro
+      entrenador, ese botón NO sale — el perfil que se editaría es el suyo, no
+      el del entrenador que está gestionando.
 
   v0.276.0 — El globo del día ya no se mete bajo la hora del iPhone (2026-07)
     (sin migraciones nuevas)
@@ -5015,6 +5033,12 @@
     /* Botón pequeño en la cabecera (⚙ Clases, v0.65) */
     .cab-mini-btn { position:absolute; top:2.05rem; right:1.5rem; background:rgba(255,255,255,0.12); border:none; color:rgba(255,255,255,0.92); font-size:13px; font-weight:700; font-family:'Outfit',sans-serif; cursor:pointer; padding:8px 13px; border-radius:12px; -webkit-tap-highlight-color:transparent; z-index:2; }
     .cab-mini-btn:active { background:rgba(255,255,255,0.28); transform:scale(0.97); }
+    /* v0.277: segundo botón en la misma cabecera (Perfil, junto a ⚙ Clases) */
+    .cab-mini-btn.cab-mini-2 { right:8.1rem; }
+    @media (max-width: 360px) {
+      .cab-mini-btn { padding:8px 10px; font-size:12px; }
+      .cab-mini-btn.cab-mini-2 { right:7rem; }
+    }
     /* Calendario mensual de Asistencia (v0.65) */
     .acal { background:var(--blanco); border:1.5px solid var(--borde); border-radius:13px; padding:10px 10px 8px; margin-bottom:0.9rem; }
     .acal-nav { display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:8px; }
@@ -7243,7 +7267,8 @@
   <!-- ══ PERFIL ═══════════════════════════════════ -->
   <div id="pantalla-ajustes" class="pantalla">
     <div class="cabecera">
-      <button class="btn-volver" onclick="irA('pantalla-inicio')">‹ Inicio</button>
+      <!-- v0.277: el EN1 vuelve a Asistencia; el resto, a Inicio -->
+      <button class="btn-volver" id="perf-volver-btn" onclick="perfVolver()">‹ Inicio</button>
       <div class="cab-titulo">Perfil</div>
       <div class="cab-sub">Tus datos para el PDF de asistencia</div>
     </div>
@@ -7863,6 +7888,8 @@
   <div id="pantalla-asistencia" class="pantalla">
     <div class="cabecera">
       <button class="btn-volver" id="asist-volver-btn" onclick="asistVolverHub()">‹ Inicio</button>
+      <!-- v0.277: el EN1 no pasa por Inicio, así que su acceso al perfil vive aquí -->
+      <button class="cab-mini-btn cab-mini-2" id="asist-perfil-btn" style="display:none" onclick="irA('pantalla-ajustes')">👤 Perfil</button>
       <button class="cab-mini-btn" onclick="irA('pantalla-asistencia-config')">⚙ Clases</button>
       <div class="cab-titulo">Asistencia</div>
       <div class="cab-sub" id="asist-sub">—</div>
@@ -8178,7 +8205,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.276.0';
+    var APP_VERSION = '0.277.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -8359,7 +8386,10 @@
             }
             irA('pantalla-gestor');
           } else if (_esEN1) {
-            irA('pantalla-inicio');
+            // v0.277 — El EN1 solo tiene Asistencia, así que entra directo ahí.
+            // Antes aterrizaba en Inicio, una pantalla en la que todo lo demás
+            // le está vetado: un rodeo de un toque en cada arranque.
+            irA('pantalla-asistencia');
           } else if (!_navRestaurarNormal() &&
                      document.getElementById('pantalla-inicio').classList.contains('activa')) {
             actualizarInicio();
@@ -9286,6 +9316,12 @@
       try { var d = _lzGet('padel-perfil'); return d ? JSON.parse(d) : {}; } catch(e) { return {}; }
     }
     function escribirPerfil(p) { _lzSet('padel-perfil', JSON.stringify(p)); }
+    // v0.277 — Vuelta desde Perfil: el EN1 no tiene Inicio al que volver.
+    function perfVolver() {
+      var en1 = false;
+      try { en1 = esEN1Cuenta() && !_gEditUid; } catch (e) {}
+      irA(en1 ? 'pantalla-asistencia' : 'pantalla-inicio');
+    }
     function guardarPerfil() {
       var p = leerPerfil();
       p.nombre    = document.getElementById('perf-nombre').value.trim();
@@ -9294,6 +9330,10 @@
       escribirPerfil(p);
       _subirPerfil();
       planToast('✓ Datos guardados');
+      // v0.277 — El EN1 vuelve solo a Asistencia, que es su pantalla de
+      // trabajo. Para el resto no se toca: entraron desde Inicio y ahí se
+      // quedan, que en Perfil tienen más cosas debajo (borrar datos locales).
+      try { if (esEN1Cuenta()) irA('pantalla-asistencia'); } catch (e) {}
     }
 
     function monitorEstado() {
@@ -9325,6 +9365,13 @@
       document.getElementById('perf-nombre').value    = p.nombre || '';
       document.getElementById('perf-apellidos').value = p.apellidos || '';
       document.getElementById('perf-club').value      = p.club || '';
+      // v0.277: el botón de atrás dice a dónde vuelve de verdad
+      var vb = document.getElementById('perf-volver-btn');
+      if (vb) {
+        var en1 = false;
+        try { en1 = esEN1Cuenta() && !_gEditUid; } catch (e) {}
+        vb.textContent = en1 ? '‹ Asistencia' : '‹ Inicio';
+      }
     }
 
     // ══════════════════════════════════════════
@@ -23179,6 +23226,15 @@
         clasesCursoAct.length + ' clase' + (clasesCursoAct.length !== 1 ? 's' : '') + ' configuradas';
       var volverBtn = document.getElementById('asist-volver-btn');
       if (volverBtn) volverBtn.textContent = _gEditUid ? '‹ Panel' : '‹ Inicio';
+      // v0.277 — El botón de Perfil solo para el EN1: es el único que no pasa
+      // por Inicio, que es donde lo tienen los demás. Y si está gestionando a
+      // otro entrenador, tampoco: ahí el perfil que se editaría es el propio.
+      var perfBtn = document.getElementById('asist-perfil-btn');
+      if (perfBtn) {
+        var _soloAsist = false;
+        try { _soloAsist = esEN1Cuenta() && !_gEditUid; } catch (e) {}
+        perfBtn.style.display = _soloAsist ? '' : 'none';
+      }
 
       // Agrupar clases por día de la semana
       var diasMap = {};
