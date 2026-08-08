@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.278.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.279.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,28 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.279.0 — Planificación: las semanas en horizontal (2026-08)
+    (sin migraciones nuevas)
+    · LA MISMA IDEA QUE EN ASISTENCIA. Al abrir un mes ya no caen encima sus
+      cuatro o cinco semanas apiladas: ahora hay una TIRA horizontal con S1,
+      S2, S3… y debajo SOLO la semana abierta, que así se ve entera y con sus
+      tres zonas sin apretar.
+    · CADA SEMANA DE LA TIRA lleva su punto de estado, el mismo de siempre:
+      ✓ trabajada · ◉ la semana en curso · ● con algo planificado · ○ vacía.
+      Y su rango de días debajo del número.
+    · FLECHAS ‹ › a los lados que pasan de semana y, al llegar al final del
+      mes, saltan al siguiente arrastrando la tira. Se apagan en la primera y
+      la última semana del curso.
+    · EL MES ENTERO, A UN TOQUE: la barra de arriba dice el mes y cuántas
+      semanas tiene trabajadas; al pulsarla se despliegan todas apiladas, como
+      hasta ahora. Se vuelve a pulsar y se recoge.
+    · AL ENTRAR se abre el mes en curso con su semana en curso. La v0.242 dejó
+      la pantalla sin ningún mes abierto justamente porque abrir uno soltaba
+      un muro de semanas; ya no pasa, así que se puede volver a entrar con lo
+      de hoy delante. Si te alejas, aparece «Ir a la semana en curso».
+    · Y al tocar un mes en la fila de arriba se abre su semana en curso si cae
+      dentro; si no, la primera del mes.
 
   v0.278.0 — Asistencia por días, con el mes a un toque (2026-08)
     (sin migraciones nuevas)
@@ -6515,6 +6537,37 @@
     .ruta-dot.vacia { border:1.5px dashed var(--borde); }
     .ruta-badge { font-size:9.5px; font-weight:800; background:#cffafe; color:#0e7490; padding:1px 6px; border-radius:999px; }
     .ruta-chip { display:inline-block; font-size:11px; margin:5px 0 2px; padding:2px 8px; border-radius:999px; background:#eff6ff; color:#1e40af; }
+    /* ══ v0.279 — LAS SEMANAS, EN HORIZONTAL (como en Asistencia) ══════
+       Barra del mes plegable, tira de semanas con su estado, y debajo solo
+       la semana abierta. */
+    .ruta-mesbar { display:flex; align-items:center; gap:9px; width:100%; box-sizing:border-box;
+      font-family:inherit; text-align:left; padding:9px 12px; margin:10px 0 8px;
+      border:1.5px solid var(--borde); border-radius:12px; background:var(--blanco); cursor:pointer; }
+    .ruta-mesbar-t { font-size:13px; font-weight:800; color:var(--texto); text-transform:capitalize; }
+    .ruta-mesbar-n { flex:1; min-width:0; font-size:11px; color:var(--gris);
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .ruta-mesbar-chev { flex-shrink:0; font-size:14px; color:var(--gris); transition:transform .15s; }
+    .ruta-mesbar.abierta .ruta-mesbar-chev { transform:rotate(180deg); }
+    .ruta-tira-wrap { display:flex; align-items:stretch; gap:6px; margin-bottom:9px; }
+    .ruta-tira-fl { flex-shrink:0; width:30px; border:1.5px solid var(--borde); border-radius:11px;
+      background:var(--blanco); color:var(--gris); font-size:15px; font-family:inherit; cursor:pointer; }
+    .ruta-tira-fl:active { background:var(--arena); }
+    .ruta-tira-fl:disabled { opacity:.35; cursor:default; }
+    .ruta-tira { flex:1; min-width:0; display:flex; gap:4px; }
+    .ruta-tira-s { flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:1px;
+      font-family:inherit; padding:6px 2px 5px; border:1.5px solid var(--borde); border-radius:11px;
+      background:var(--blanco); cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .ruta-tira-s.hoy { border-color:#0891b2; }
+    .ruta-tira-s.on { background:#0891b2; border-color:#0891b2; }
+    .rts-n { font-size:13px; font-weight:800; color:var(--texto); line-height:1.15; }
+    .rts-r { font-size:9.5px; color:var(--gris); }
+    .ruta-tira-s.on .rts-n, .ruta-tira-s.on .rts-r { color:#fff; }
+    .rts-m { display:flex; align-items:center; justify-content:center; height:9px; }
+    .ruta-tira-s.on .ruta-dot { box-shadow:0 0 0 1.5px rgba(255,255,255,.85); }
+    /* La semana abierta, sola: no necesita el marco de tarjeta apilada */
+    .ruta-sem-sola .ruta-wk { margin-bottom:0; }
+    .ruta-hoy-link { display:block; margin:8px auto 0; font-family:inherit; font-size:11.5px;
+      font-weight:700; color:#0e7490; background:none; border:none; cursor:pointer; padding:4px 10px; }
     /* v0.265 — La semana, en tres zonas (solo cuando hay sitio: ver el @media
        de 900 px). Apiladas en el móvil, en fila en el navegador. */
     .ruta-wk-z:empty { display:none; }
@@ -8256,7 +8309,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.278.0';
+    var APP_VERSION = '0.279.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -15855,11 +15908,12 @@
       if (_rutaMesSel !== null) {
         if (_rutaMesSel === '' || meses.some(function(m){ return m.key === _rutaMesSel; })) return _rutaMesSel;
       }
-      // v0.242: al entrar en un nivel NO se abre ningún mes. Antes se abría
-      // solo el de hoy y la pantalla arrancaba con un muro de semanas; ahora
-      // se ve la fila de meses limpia (con el de hoy sombreado) y se abre el
-      // que se quiera tocando.
-      return '';
+      // v0.242 abría la pantalla sin ningún mes: entonces abrir uno soltaba
+      // encima sus cinco semanas de golpe. v0.279 ya no hace eso —solo enseña
+      // UNA semana—, así que se puede volver a entrar con el mes en curso
+      // abierto, que es lo que se quiere ver al llegar.
+      var kHoy = _rutaMesHoyKey(meses);
+      return kHoy || (meses.length ? meses[0].key : '');
     }
     // v0.242 — Mes que se sombrea: el de HOY si está en el curso y, si no
     // (julio y agosto, o un curso ya cerrado), el ÚLTIMO anterior a hoy —
@@ -15873,10 +15927,51 @@
       var previos = meses.filter(function(x){ return (x.y * 12 + x.m) < ym; });
       return previos.length ? previos[previos.length - 1].key : '';
     }
+    // ══════════════════════════════════════════════════════════════
+    // v0.279 — LA SEMANA, COMO EN ASISTENCIA
+    // ══════════════════════════════════════════════════════════════
+    // Antes, al abrir un mes caían encima sus cuatro o cinco semanas apiladas.
+    // Ahora: una TIRA horizontal con las semanas del mes, flechas para pasar
+    // de una a otra (saltando de mes cuando toca) y debajo SOLO la semana
+    // elegida. El mes entero sigue estando, a un toque.
+    var _rutaSemSel  = null;    // idx de la semana abierta (global del curso)
+    var _rutaMesTodo = false;   // ¿el mes entero, apilado?
+    function rutaSemSel(idx) { _rutaSemSel = idx; mostrarPlanificacion(); }
+    function rutaMesTodo() { _rutaMesTodo = !_rutaMesTodo; mostrarPlanificacion(); }
+    // Semana anterior / siguiente dentro del curso. Al cambiar de mes, el mes
+    // seleccionado va detrás para que la tira enseñe las de ese mes.
+    function rutaSemNav(delta) {
+      var curso = _rutaCurso(), sems = _rutaSemanas(curso);
+      var i = (_rutaSemSel === null ? _rutaSemActual(curso) : _rutaSemSel) + delta;
+      if (i < 0 || i >= sems.length) return;
+      _rutaSemSel = i;
+      var w = sems[i];
+      _rutaMesSel = w.lun.getFullYear() + '-' + w.lun.getMonth();
+      mostrarPlanificacion();
+    }
+    function rutaSemHoy() {
+      var curso = _rutaCurso(), act = _rutaSemActual(curso);
+      if (act < 0) return;
+      _rutaSemSel = act;
+      var w = _rutaSemanas(curso)[act];
+      if (w) _rutaMesSel = w.lun.getFullYear() + '-' + w.lun.getMonth();
+      mostrarPlanificacion();
+    }
     function rutaMesSel(key) {
-      var meses = _rutaMeses(_rutaSemanas(_rutaCurso()));
-      var cerrando = (_rutaMesActivo(_rutaCurso(), meses) === key);
+      var curso = _rutaCurso(), sems = _rutaSemanas(curso);
+      var meses = _rutaMeses(sems);
+      var cerrando = (_rutaMesActivo(curso, meses) === key);
       _rutaMesSel = cerrando ? '' : key;
+      // v0.279: al abrir un mes se abre una semana suya — la de hoy si cae
+      // dentro, y si no la primera. Antes se desplegaban todas a la vez.
+      if (!cerrando) {
+        var m = meses.filter(function(x){ return x.key === key; })[0];
+        if (m && m.sems.length) {
+          var act = _rutaSemActual(curso);
+          var dentro = m.sems.some(function(w){ return w.idx === act; });
+          _rutaSemSel = dentro ? act : m.sems[0].idx;
+        }
+      }
       // v0.261: al ABRIR un mes del curso se pliega sola la caja de días de
       // arriba (no caben las dos a la vez, sobre todo en el móvil). Al
       // cerrarlo, la de arriba vuelve.
@@ -17481,14 +17576,64 @@
       });
       h += '</div>';
 
-      // ── Semanas del mes elegido. mesSel vacío = ninguno abierto (se cerró
-      //    al repincharlo): solo quedan los botones. ──
+      // ── v0.279 — Las semanas del mes elegido, EN HORIZONTAL ──────────
+      //    Una tira con S1, S2, S3… y debajo solo la semana abierta. El mes
+      //    entero (todas apiladas, como hasta v0.278) sigue a un toque.
+      //    mesSel vacío = ningún mes abierto: solo quedan los botones.
       if (mesSel) {
         var mSel = mesesCurso.filter(function(m){ return m.key === mesSel; })[0];
-        if (mSel) {
-          h += '<div class="ruta-mes-cols">';
-          h += _rutaMesColHTML(mSel, act, p, idsNivel, areaN, sesN, ejN, ejG);
-          h += '</div>';
+        if (mSel && mSel.sems.length) {
+          // La semana abierta tiene que ser de este mes; si no, la primera.
+          var semsM = mSel.sems;
+          var idxSel = _rutaSemSel;
+          if (idxSel === null || !semsM.some(function(w){ return w.idx === idxSel; })) {
+            var dentroAct = semsM.some(function(w){ return w.idx === act; });
+            idxSel = dentroAct ? act : semsM[0].idx;
+          }
+
+          // Barra: el mes y el atajo para verlo entero
+          var hechasSel = semsM.filter(function(w){ return _rutaSemanaDatos(p, w, idsNivel).trab; }).length;
+          h += '<button type="button" class="ruta-mesbar' + (_rutaMesTodo ? ' abierta' : '') +
+            '" onclick="rutaMesTodo()">' +
+            '<span class="ruta-mesbar-t">' + _MESES_R[mSel.m] + ' ' + mSel.y + '</span>' +
+            '<span class="ruta-mesbar-n">' + semsM.length + (semsM.length === 1 ? ' semana · ' : ' semanas · ') +
+              hechasSel + ' trabajada' + (hechasSel !== 1 ? 's' : '') + '</span>' +
+            '<span class="ruta-mesbar-chev">⌄</span></button>';
+
+          if (_rutaMesTodo) {
+            h += '<div class="ruta-mes-cols">';
+            h += _rutaMesColHTML(mSel, act, p, idsNivel, areaN, sesN, ejN, ejG);
+            h += '</div>';
+          } else {
+            // Tira de semanas, con su estado y flechas a los lados
+            h += '<div class="ruta-tira-wrap">';
+            h += '<button type="button" class="ruta-tira-fl" onclick="rutaSemNav(-1)"' +
+                 (idxSel <= 0 ? ' disabled' : '') + ' aria-label="Semana anterior">‹</button>';
+            h += '<div class="ruta-tira">';
+            semsM.forEach(function(w){
+              var wd = _rutaSemanaDatos(p, w, idsNivel);
+              var tieneAlgo = wd.trab || wd.sesiones.length || wd.carro.length || wd.areasSemana.length;
+              var est = wd.trab ? 'done' : (w.idx === act ? 'now' : (tieneAlgo ? 'plan' : 'vacia'));
+              h += '<button type="button" class="ruta-tira-s' + (w.idx === idxSel ? ' on' : '') +
+                (w.idx === act ? ' hoy' : '') + '" onclick="rutaSemSel(' + w.idx + ')">' +
+                '<span class="rts-n">S' + (w.idx + 1) + '</span>' +
+                '<span class="rts-r">' + w.lun.getDate() + '–' + w.dom.getDate() + '</span>' +
+                '<span class="rts-m"><span class="ruta-dot ' + est + '"></span></span></button>';
+            });
+            h += '</div>';
+            h += '<button type="button" class="ruta-tira-fl" onclick="rutaSemNav(1)"' +
+                 (idxSel >= sems.length - 1 ? ' disabled' : '') + ' aria-label="Semana siguiente">›</button>';
+            h += '</div>';
+
+            var wSel = sems[idxSel];
+            if (wSel) {
+              h += '<div class="ruta-sem-sola">';
+              h += _rutaSemanaHTML(wSel, act, _rutaSemanaDatos(p, wSel, idsNivel), areaN, sesN, ejN, ejG);
+              h += '</div>';
+            }
+            if (act >= 0 && idxSel !== act)
+              h += '<button type="button" class="ruta-hoy-link" onclick="rutaSemHoy()">Ir a la semana en curso</button>';
+          }
         }
       }
 
