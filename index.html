@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.280.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.281.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,17 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.281.0 — El mes abierto, también en filas (2026-08)
+    (sin migraciones nuevas)
+    · AL ABRIR EL MES ya no salen columnas: cada semana es una FILA con sus
+      días en horizontal, una debajo de otra. Se lee igual que la vista de una
+      sola semana, solo que con todas, y se acabó el scroll lateral cuando el
+      mes tiene cinco semanas.
+    · La semana en curso sigue sombreada dentro de la lista.
+    · Y AL CERRAR se vuelve a lo de siempre: solo la semana en curso —o la
+      siguiente si es fin de semana—. Hay un «Ver solo la semana en curso»
+      debajo, además del nombre del mes, para cerrarlo sin subir a buscarlo.
 
   v0.280.0 — Arriba, solo la semana en curso y en horizontal (2026-08)
     (sin migraciones nuevas)
@@ -6309,6 +6320,13 @@
        Los días de la semana en fila, que es como se lee («esta semana doy
        miércoles, jueves y viernes»). El mes entero sigue a un toque. */
     .comp-sem-una { padding:2px 2px 4px; }
+    /* v0.281: el mes abierto, una FILA por semana (antes, columnas) */
+    .comp-sem-filas { display:flex; flex-direction:column; gap:4px; }
+    .comp-sem-fila { padding:6px 6px 8px; border-radius:10px; }
+    .comp-sem-fila + .comp-sem-fila { border-top:1.5px solid var(--borde); border-radius:0 0 10px 10px; }
+    .comp-sem-fila.activa { background:var(--verde-suave); }
+    .comp-sem-fila.activa .comp-sem-titulo { color:var(--verde); }
+    .comp-sem-fila .comp-sem-titulo { text-align:left; margin-bottom:4px; }
     .comp-sem-dias.fila { flex-direction:row; align-items:flex-start;
       justify-content:center; gap:14px; flex-wrap:wrap; }
     .comp-sem-dias.fila .comp-diacol { width:auto; min-width:64px; max-width:150px; }
@@ -6331,21 +6349,9 @@
     button.comp-cal-lbl:hover { background:var(--arena); }
     .comp-mes-resumen { font-size:11.5px; color:var(--gris); text-align:center; padding:2px 0 2px; }
     .comp-mes-resumen b { color:var(--texto); }
-    /* v0.147: las SEMANAS van una al lado de otra (columnas), separadas por
-       una barra vertical. Dentro de cada semana, sus días apilados. */
-    /* v0.262 — Antes las columnas eran `flex:1 1 0` y se estiraban a lo ancho
-       de la pantalla: en el ordenador quedaban cuatro columnas separadas por
-       medio metro de vacío y la semana sombreada ocupaba un tercio de la
-       pantalla. Ahora cada columna mide lo que necesita, y el bloque entero se
-       centra (`width:fit-content` + `margin:0 auto`); si no caben, la fila
-       sigue haciendo scroll lateral. */
-    .comp-sem-cols { display:flex; align-items:flex-start; overflow-x:auto; padding-bottom:2px;
-      margin:0 auto 0.5rem; width:fit-content; max-width:100%; }
-    .comp-sem-col { flex:0 0 auto; width:76px; padding:6px 6px 8px; border-radius:10px; }
-    .comp-sem-col + .comp-sem-col { border-left:1.5px solid var(--borde); }
-    /* v0.150: semana en la que se está trabajando, sombreada entera */
-    .comp-sem-col.activa { background:var(--verde-suave); }
-    .comp-sem-col.activa .comp-sem-titulo { color:var(--verde); }
+    /* v0.281 — Se retira la vista por COLUMNAS (v0.147–v0.262): las semanas
+       iban una al lado de otra con los días apilados hacia abajo, y con cinco
+       semanas había que arrastrar de lado. Ahora todo va en filas. */
     .comp-sem-titulo { font-size:11px; font-weight:800; color:var(--gris); margin:0 0 6px; text-align:center; }
     .comp-sem-dias { display:flex; flex-direction:column; align-items:center; gap:8px; }
     .comp-diacol { display:flex; flex-direction:column; align-items:center; gap:3px; }
@@ -6442,11 +6448,9 @@
     @media (min-width: 760px) {
       .comp-diacol-puntos, .comp-puntos-clave { display:none; }
       .comp-diacol-tags   { display:flex; }
-      /* v0.262: con los nombres escritos, la columna necesita ancho y los días
-         necesitan aire entre ellos para no leerse como un solo bloque. */
-      .comp-sem-col  { width:168px; padding:6px 10px 10px; }
+      /* v0.262/v0.281: con los nombres escritos, cada día necesita ancho y
+         aire para no leerse como un solo bloque. */
       .comp-sem-dias { gap:16px; }
-      .comp-diacol   { width:100%; }
     }
     .comp-cal-picker { background:var(--arena); border:1.5px solid var(--borde); border-radius:11px; padding:0.6rem 0.85rem; margin-top:8px; }
     .comp-cal-picker-hdr { font-size:12px; font-weight:800; color:var(--texto); margin-bottom:0.4rem; }
@@ -8293,7 +8297,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.280.0';
+    var APP_VERSION = '0.281.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -18780,10 +18784,14 @@
         var semActiva = compDiaAbierta
           ? (fechas.indexOf(compDiaAbierta) >= 0)
           : (kL === lunHoyISO);
-        colsHTML += '<div class="comp-sem-col' + (semActiva ? ' activa' : '') + '">';
-        colsHTML += '<p class="comp-sem-titulo">S' + (i + 1) +
+        // v0.281: el mes abierto también va en FILAS — cada semana una,
+        // con sus días en horizontal. Antes eran columnas con los días
+        // apilados, que obligaba a leer en vertical y a hacer scroll
+        // lateral en cuanto el mes tenía cinco semanas.
+        colsHTML += '<div class="comp-sem-fila' + (semActiva ? ' activa' : '') + '">';
+        colsHTML += '<p class="comp-sem-titulo">Semana ' + (i + 1) +
           ' <span class="comp-dow-cont">' + marcadas + '/' + activas + '</span></p>';
-        colsHTML += '<div class="comp-sem-dias">' + circulos + '</div>';
+        colsHTML += '<div class="comp-sem-dias fila">' + circulos + '</div>';
         colsHTML += '</div>';
 
         // v0.280: guardamos aparte la semana que toca enseñar sola
@@ -18831,7 +18839,8 @@
       } else {
         // v0.243: el contenido del día ya no va aquí debajo — se abre en globo
         // (_compDiaOvPintar), que es lo que se pinta al final del repintado.
-        h += '<div class="comp-sem-cols">' + colsHTML + '</div>';
+        h += '<div class="comp-sem-filas">' + colsHTML + '</div>';
+        h += '<button type="button" class="comp-vermes" onclick="compMesPlegar()">Ver solo la semana en curso</button>';
         // v0.241: los puntos del móvil necesitan una clave; en pantalla ancha
         // sobra (los nombres van escritos) y el CSS la esconde.
         h += '<div class="comp-puntos-clave"><span><i class="comp-daypto carro"></i>carro</span>' +
