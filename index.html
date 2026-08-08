@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.277.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.278.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,29 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.278.0 — Asistencia por días, con el mes a un toque (2026-08)
+    (sin migraciones nuevas)
+    · MANDA EL DÍA. Debajo de la cabecera hay ahora una TIRA con los días de
+      la semana; tocas uno y abajo salen SOLO las clases de ese día. Antes se
+      pintaba la semana entera y había que bajar buscando la de hoy.
+    · CADA DÍA DE LA TIRA lleva su punto de estado, el mismo código de color
+      del calendario: verde listas pasadas, ámbar pendiente, gris sin clase,
+      azul próxima, y ✕ si el club cerró ese día. Así se ve dónde hay algo
+      antes de entrar, y no se cae en días vacíos.
+    · FLECHAS ‹ › A LOS LADOS para pasar de semana conservando el día de la
+      semana en el que estabas (del miércoles al miércoles siguiente). Si te
+      alejas, aparece un «Ir a hoy» debajo.
+    · AL ABRIR LA APP, HOY. Siempre.
+    · EL CALENDARIO DEL MES se pliega. En su sitio queda una barra con el mes
+      y cuántas clases tienes esta semana; se toca y se despliega entero, con
+      todos los detalles de siempre (estado por día, recuperaciones previstas,
+      sustituciones, días sin clase del club y su leyenda).
+    · Y AHORA SE PINCHA UN DÍA, no una semana: al tocar cualquier día del
+      calendario saltas a ese día, se arrastra su semana a la tira y el mes se
+      cierra solo. El día elegido queda con un aro verde.
+    · Si el día que miras no tiene clases, lo dice y avisa de cuántas hay en
+      el resto de la semana, para que sepas que no está todo vacío.
 
   v0.277.0 — El EN1 entra directo a Asistencia (2026-08)
     (sin migraciones nuevas)
@@ -5039,6 +5062,34 @@
       .cab-mini-btn { padding:8px 10px; font-size:12px; }
       .cab-mini-btn.cab-mini-2 { right:7rem; }
     }
+    /* ══ v0.278 — ASISTENCIA POR DÍAS ═══════════════════════════════
+       Barra del mes (plegable), tira de la semana y, debajo, solo el día. */
+    .asist-mesbar { display:flex; align-items:center; gap:9px; width:100%; box-sizing:border-box;
+      font-family:inherit; text-align:left; padding:9px 12px; margin-bottom:8px;
+      border:1.5px solid var(--borde); border-radius:12px; background:var(--blanco); cursor:pointer; }
+    .asist-mesbar-t { font-size:13px; font-weight:800; color:var(--texto); text-transform:capitalize; }
+    .asist-mesbar-n { flex:1; min-width:0; font-size:11px; color:var(--gris);
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .asist-mesbar-chev { flex-shrink:0; font-size:14px; color:var(--gris); transition:transform .15s; }
+    .asist-mesbar.abierta .asist-mesbar-chev { transform:rotate(180deg); }
+    .asist-tira-wrap { display:flex; align-items:stretch; gap:6px; margin-bottom:0.9rem; }
+    .asist-tira-fl { flex-shrink:0; width:30px; border:1.5px solid var(--borde); border-radius:11px;
+      background:var(--blanco); color:var(--gris); font-size:15px; font-family:inherit; cursor:pointer; }
+    .asist-tira-fl:active { background:var(--arena); }
+    .asist-tira { flex:1; min-width:0; display:flex; gap:4px; }
+    .asist-tira-d { flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:1px;
+      font-family:inherit; padding:6px 2px 5px; border:1.5px solid var(--borde); border-radius:11px;
+      background:var(--blanco); cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .asist-tira-d.hoy { border-color:var(--verde); }
+    .asist-tira-d.on { background:var(--verde); border-color:var(--verde); }
+    .atd-w { font-size:9px; font-weight:800; color:var(--gris); text-transform:uppercase; letter-spacing:.04em; }
+    .atd-n { font-size:15px; font-weight:800; color:var(--texto); line-height:1.15; }
+    .asist-tira-d.on .atd-w, .asist-tira-d.on .atd-n { color:#fff; }
+    .atd-m { display:flex; align-items:center; justify-content:center; height:9px; }
+    .asist-tira-d.on .acal-dot { box-shadow:0 0 0 1.5px rgba(255,255,255,.85); }
+    .asist-hoy-link { display:block; margin:-4px auto 0.8rem; font-family:inherit; font-size:11.5px;
+      font-weight:700; color:var(--verde); background:none; border:none; cursor:pointer; padding:4px 10px; }
+    .acal-cell.elegido .acal-num { box-shadow:0 0 0 2px var(--verde); }
     /* Calendario mensual de Asistencia (v0.65) */
     .acal { background:var(--blanco); border:1.5px solid var(--borde); border-radius:13px; padding:10px 10px 8px; margin-bottom:0.9rem; }
     .acal-nav { display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:8px; }
@@ -8205,7 +8256,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.277.0';
+    var APP_VERSION = '0.278.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -23207,7 +23258,44 @@
     var asistCalMesOff = 0;      // mes visto (offset desde hoy)
     var asistSemSel    = null;   // lunes ISO de la semana seleccionada
 
-    function asistCalMes(delta) { asistCalMesOff += delta; asistSemSel = null; mostrarAsistencia(); }
+    // ══════════════════════════════════════════════════════════════
+    // v0.278 — ASISTENCIA POR DÍAS
+    // ══════════════════════════════════════════════════════════════
+    // Manda el DÍA: arriba una tira con los días de la semana (con su punto
+    // de estado) y debajo solo las clases del día elegido. El calendario del
+    // mes se pliega y se abre cuando hace falta ver el conjunto; al tocar un
+    // día en él, se salta a ese día y a su semana.
+    var asistDiaSel     = null;    // fecha ISO del día abierto
+    var asistCalAbierto = false;   // ¿el calendario del mes, desplegado?
+    function _asistLunesDe(fISO) {
+      var d = new Date(+fISO.slice(0,4), +fISO.slice(5,7)-1, +fISO.slice(8,10));
+      var dow = d.getDay();
+      d.setDate(d.getDate() + ((dow === 0) ? -6 : 1 - dow));
+      return dateToISOLocal(d);
+    }
+    // Offset de mes (respecto al de hoy) al que pertenece una fecha
+    function _asistMesOffDe(fISO) {
+      var h = new Date();
+      return (+fISO.slice(0,4)) * 12 + (+fISO.slice(5,7) - 1)
+           - (h.getFullYear() * 12 + h.getMonth());
+    }
+    function asistCalMes(delta) { asistCalMesOff += delta; mostrarAsistencia(); }
+    function asistCalToggle() { asistCalAbierto = !asistCalAbierto; mostrarAsistencia(); }
+    // Ir a un día: arrastra consigo su semana y su mes. Desde el calendario
+    // se cierra al elegir, que es lo que se espera al pinchar un día.
+    function asistDia(fISO, cerrarCal) {
+      asistDiaSel    = fISO;
+      asistSemSel    = _asistLunesDe(fISO);
+      asistCalMesOff = _asistMesOffDe(fISO);
+      if (cerrarCal) asistCalAbierto = false;
+      mostrarAsistencia();
+    }
+    // Semana anterior / siguiente, conservando el día de la semana.
+    function asistSemNav(delta) {
+      var base = asistDiaSel || hoyLocal();
+      asistDia(addDiasISO(base, delta * 7), false);
+    }
+    function asistHoy() { asistDia(hoyLocal(), true); }
     function asistCalSelSemana(lun) { asistSemSel = lun; mostrarAsistencia(); }
 
     function mostrarAsistencia() {
@@ -23279,16 +23367,25 @@
       var lun0 = new Date(d1); lun0.setDate(1 + ((dow1 === 0) ? -6 : 1 - dow1));
       var finMes = new Date(y, m, 0);
 
-      // Semana seleccionada: la de hoy si toca el mes visto; si no, la 1ª
-      var lunesHoyISO = dateToISOLocal(getLunesDeSemana(0));
-      function _semanaTocaMes(lunISO) {
-        return lunISO.slice(0,7) === mesISO || addDiasISO(lunISO, 6).slice(0,7) === mesISO;
-      }
-      if (!asistSemSel || !_semanaTocaMes(asistSemSel)) {
-        asistSemSel = _semanaTocaMes(lunesHoyISO) ? lunesHoyISO : dateToISOLocal(lun0);
-      }
+      // ── v0.278 — El DÍA es lo primero. Al abrir la app, HOY.
+      if (!asistDiaSel) asistDiaSel = hoy;
+      asistSemSel = _asistLunesDe(asistDiaSel);
 
-      var cal = '<div class="acal">';
+      // ── Barra del mes: plegada, con lo que hay que saber de un vistazo ──
+      var nSemDia = 0;
+      [0,1,2,3,4,5,6].forEach(function(off){
+        var f = addDiasISO(asistSemSel, off);
+        var dw = new Date(+f.slice(0,4), +f.slice(5,7)-1, +f.slice(8,10)).getDay();
+        nSemDia += (diasMap[dw] || []).filter(function(c){ return _claseEnFecha(c, f); }).length;
+      });
+      var cal = '<button type="button" class="asist-mesbar' + (asistCalAbierto ? ' abierta' : '') +
+        '" onclick="asistCalToggle()">' +
+        '<span class="asist-mesbar-t">' + _gEsc(getMesLabelA(_asistMesOffDe(asistDiaSel))) + '</span>' +
+        '<span class="asist-mesbar-n">' + nSemDia + (nSemDia === 1 ? ' clase' : ' clases') + ' esta semana</span>' +
+        '<span class="asist-mesbar-chev">⌄</span></button>';
+
+      if (asistCalAbierto) {
+      cal += '<div class="acal">';
       cal += '<div class="acal-nav">' +
         '<button class="gestor-mes-btn" onclick="asistCalMes(-1)">‹</button>' +
         '<span class="gestor-mes-lbl">' + _gEsc(mesLabel) + '</span>' +
@@ -23300,15 +23397,17 @@
       var lun = new Date(lun0);
       while (lun <= finMes) {
         var lunISO = dateToISOLocal(lun);
-        cal += '<div class="acal-row' + (lunISO === asistSemSel ? ' sel' : '') + '" style="' + gridCols +
-               '" onclick="asistCalSelSemana(\'' + lunISO + '\')">';
+        cal += '<div class="acal-row' + (lunISO === asistSemSel ? ' sel' : '') + '" style="' + gridCols + '">';
         cols.forEach(function(d){
           var off = (d === 0) ? 6 : d - 1;
           var f = addDiasISO(lunISO, off);
           var fuera = f.slice(0,7) !== mesISO;
           var cerrado = _dscEsSinClase(f);   // día sin clase del club (festivo/cierre)
           var e = _estadoDia(f);
-          cal += '<div class="acal-cell' + (fuera ? ' fuera' : '') + (f === hoy ? ' hoy' : '') + (cerrado ? ' cerrado' : '') + '">' +
+          // v0.278: pinchar un día lleva a ese día (y arrastra su semana)
+          cal += '<div class="acal-cell' + (fuera ? ' fuera' : '') + (f === hoy ? ' hoy' : '') +
+            (cerrado ? ' cerrado' : '') + (f === asistDiaSel ? ' elegido' : '') +
+            '" onclick="asistDia(\'' + f + '\',true)">' +
             '<span class="acal-num">' + parseInt(f.slice(8,10),10) + '</span>' +
             '<span class="acal-marks">' +
               (cerrado ? '<span class="acal-cerr">✕</span>'
@@ -23329,9 +23428,38 @@
         '<span><span class="acal-cerr">✕</span> sin clase (club)</span>' +
       '</div>';
       cal += '</div>';
+      }   // /asistCalAbierto
+
+      // ── v0.278 — TIRA DE LA SEMANA ─────────────────────────────────
+      // Los días de la semana con su punto de estado (el mismo código de
+      // color del calendario), flechas para cambiar de semana y un atajo a
+      // hoy cuando te has ido lejos.
+      cal += '<div class="asist-tira-wrap">';
+      cal += '<button type="button" class="asist-tira-fl" onclick="asistSemNav(-1)" aria-label="Semana anterior">‹</button>';
+      cal += '<div class="asist-tira">';
+      cols.forEach(function(d){
+        var off = (d === 0) ? 6 : d - 1;
+        var f   = addDiasISO(asistSemSel, off);
+        var e   = _estadoDia(f);
+        var cerrado = _dscEsSinClase(f);
+        cal += '<button type="button" class="asist-tira-d' + (f === asistDiaSel ? ' on' : '') +
+          (f === hoy ? ' hoy' : '') + '" onclick="asistDia(\'' + f + '\',false)">' +
+          '<span class="atd-w">' + _GALLETRAS[d] + '</span>' +
+          '<span class="atd-n">' + parseInt(f.slice(8,10),10) + '</span>' +
+          '<span class="atd-m">' +
+            (cerrado ? '<span class="acal-cerr">✕</span>'
+                     : (e ? '<span class="acal-dot ' + e.st + '"></span>' : '')) +
+          '</span></button>';
+      });
+      cal += '</div>';
+      cal += '<button type="button" class="asist-tira-fl" onclick="asistSemNav(1)" aria-label="Semana siguiente">›</button>';
+      cal += '</div>';
+      if (asistDiaSel !== hoy)
+        cal += '<button type="button" class="asist-hoy-link" onclick="asistHoy()">Ir a hoy</button>';
+
       document.getElementById('asist-calendario').innerHTML = cal;
 
-      // ── Tarjetas de la SEMANA seleccionada ──
+      // ── v0.278 — Tarjetas del DÍA elegido (antes, toda la semana) ──
       var ordenDias = [1,2,3,4,5,6,0];
       var diasActivos = ordenDias.filter(function(d){ return !!diasMap[d]; });
 
@@ -23339,15 +23467,15 @@
       if (diasActivos.length === 0) {
         html = '<div class="vacio"><div class="vacio-icono">🗓️</div><p>Sin clases configuradas todavía.<br>Pulsa "⚙ Clases" arriba para añadir tu primera clase.</p></div>';
       } else {
-        diasActivos.forEach(function(dia) {
-          var fecha   = addDiasISO(asistSemSel, (dia === 0) ? 6 : dia - 1);
+        [asistDiaSel].forEach(function(fecha) {
+          var dia     = new Date(+fecha.slice(0,4), +fecha.slice(5,7)-1, +fecha.slice(8,10)).getDay();
           var esHoy   = fecha === hoy;
           var esPas   = fecha < hoy;
           var diasNom = DIAS_NOMBRES_A[dia];
 
           // v0.55: solo las clases del curso al que pertenece esa fecha.
           // v0.210: y solo las que ya existían ese día (fecha de alta).
-          var clasesCurso = diasMap[dia].filter(function(c){ return _claseEnFecha(c, fecha); });
+          var clasesCurso = (diasMap[dia] || []).filter(function(c){ return _claseEnFecha(c, fecha); });
           if (!clasesCurso.length) return;
 
           html += '<div class="asist-dia-card' + (esHoy ? ' es-hoy' : '') + '">';
@@ -23413,8 +23541,23 @@
           html += '</div>';
         });
         if (!html) {
-          html = '<div class="vacio"><div class="vacio-icono">🗓️</div><p>Sin clases esta semana: pertenece al curso ' +
-                 cursoDeFecha(asistSemSel) + '.<br>Añade sus clases desde "⚙ Clases".</p></div>';
+          // v0.278: el vacío es de UN día, no de la semana. Se dice cuál, y
+          // si hay clases en otros días de la semana se remite a la tira.
+          var _dowSel = new Date(+asistDiaSel.slice(0,4), +asistDiaSel.slice(5,7)-1, +asistDiaSel.slice(8,10)).getDay();
+          var _otros = 0;
+          [0,1,2,3,4,5,6].forEach(function(off){
+            var f = addDiasISO(asistSemSel, off);
+            if (f === asistDiaSel) return;
+            var dw = new Date(+f.slice(0,4), +f.slice(5,7)-1, +f.slice(8,10)).getDay();
+            _otros += (diasMap[dw] || []).filter(function(c){ return _claseEnFecha(c, f); }).length;
+          });
+          html = '<div class="vacio"><div class="vacio-icono">🗓️</div><p>' +
+            (_dscEsSinClase(asistDiaSel) ? 'Día sin clase marcado por el club.' :
+              'Sin clases el ' + DIAS_NOMBRES_A[_dowSel].toLowerCase() + ' ' + formatFechaDiaMes(asistDiaSel) + '.') +
+            (_otros ? '<br>Esta semana tienes ' + _otros + (_otros === 1 ? ' clase' : ' clases') +
+                      ' en otros días: tócalos arriba.'
+                    : '<br>Tampoco hay ninguna en el resto de la semana.') +
+            '</p></div>';
         }
       }
 
