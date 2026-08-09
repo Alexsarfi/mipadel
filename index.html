@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.282.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.283.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,20 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.283.0 — Crear clases tipo · y el día vacío lleva al repositorio (2026-08)
+    (sin migraciones nuevas)
+    · ⚙ EN LA CABECERA DE CLASES TIPO para crear una DESDE CERO, sin partir de
+      un día. Se monta con el mismo panel grande de planificar (carro | área de
+      trabajo) y se guarda con el ✓, que ahí pide el nombre.
+      Por dentro usa un día BORRADOR (1900-01-01) que no cae en ningún curso,
+      así que no aparece por ningún lado; se limpia al guardar y también al
+      cerrar sin guardar, para que no quede rastro.
+    · AL TOCAR UN DÍA VACÍO se abre directamente el repositorio para elegir
+      qué clase tipo poner — que es lo que vas a hacer casi siempre. La ficha
+      del día se queda detrás: al cerrar el selector sigues en ese día.
+      Si todavía no hay ninguna clase tipo de ese nivel, no se abre nada y el
+      día se comporta como hasta ahora.
 
   v0.282.0 — CLASES TIPO: guardar una clase y volver a usarla (2026-08)
     ⚠️ MIGRACIÓN: migraciones/migracion_clases_tipo.sql (ejecutar ANTES)
@@ -6394,6 +6408,9 @@
     .ct-hdr-t { font-size:14px; font-weight:800; color:var(--texto); }
     .ct-hdr-n { font-size:11.5px; color:var(--gris); }
     .ct-hdr-c { margin-left:auto; font-size:10.5px; color:var(--gris); }
+    .ct-nueva { flex-shrink:0; width:28px; height:28px; margin-left:2px; border-radius:50%; border:none;
+      background:var(--arena); color:var(--texto); font-size:14px; font-family:inherit; cursor:pointer; }
+    .ct-nueva:active { background:var(--borde); }
     .ct-barra { display:flex; gap:6px; margin-bottom:9px; }
     .ct-busca { flex:1; min-width:0; margin-bottom:0; font-size:13px; padding:0.5rem 0.7rem; }
     .ct-orden { flex:0 0 auto; width:auto; margin-bottom:0; font-size:12px; padding:0.5rem 0.6rem; }
@@ -8370,7 +8387,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.282.0';
+    var APP_VERSION = '0.283.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -16545,6 +16562,7 @@
     // al tocarlo), así que esto cierra el panel, refresca el tablero y avisa
     // con lo que queda montado — el gesto de «esta clase ya está».
     function rutaConfirmarClase() {
+      if (_rutaModalCT) { ctGuardarBorrador(); return; }   // v0.283
       var idx = _rutaModalIdx;
       var msg = 'Clase guardada';
       if (idx !== null) {
@@ -16561,6 +16579,9 @@
       planToast(msg);
     }
     function rutaCerrarModal() {
+      // v0.283: si se estaba montando una clase tipo y se cierra sin guardar,
+      // el borrador no se queda por ahí.
+      if (_rutaModalCT) { _rutaModalCT = false; _ctLimpiarBorrador(); }
       _rutaModalIdx = null; _rutaModalArea = null; _rutaEligeDia = null;
       _rutaModalCurso = null; _rutaModalFechaFija = null; _rutaModalSemLibre = null; _rutaModalNivelSel = null; _rutaModalDiaSel = null;
       var ov = document.getElementById('ruta-plan-ov');
@@ -17178,7 +17199,10 @@
       // título muestra ESE día (lo que el entrenador reconoce de un vistazo
       // en pista); si viene de Semanas, sigue siendo "Semana N".
       var tit, sub;
-      if (_rutaModalFechaFija) {
+      if (_rutaModalCT) {   // v0.283
+        tit = 'Nueva clase tipo';
+        sub = _gEsc(planNivelLabel(_compNivel())) + ' · monta el carro y el área de trabajo';
+      } else if (_rutaModalFechaFija) {
         var fd = _rutaModalFechaFija;
         var dow = new Date(+fd.slice(0,4), +fd.slice(5,7)-1, +fd.slice(8,10)).getDay();
         tit = DIAS_NOMBRES_A[dow] + ' ' + formatFechaDiaMes(fd);
@@ -17196,7 +17220,8 @@
         '<div class="ruta-modal-hdr-acc">' +
         // v0.239 — El ✓ confirma la clase: todo se guarda al momento, pero
         // hacía falta un gesto que diga «ya está» y te devuelva al tablero.
-        '<button class="plan-modal-x ruta-modal-ok" onclick="rutaConfirmarClase()" title="Guardar la clase y cerrar" aria-label="Guardar la clase y cerrar">✓</button>' +
+        '<button class="plan-modal-x ruta-modal-ok" onclick="rutaConfirmarClase()" title="' +
+          (_rutaModalCT ? 'Guardar la clase tipo' : 'Guardar la clase y cerrar') + '" aria-label="Guardar">✓</button>' +
         '<button class="plan-modal-x" onclick="rutaCerrarModal()" aria-label="Cerrar">✕</button></div></div>';
 
       // v0.229 — El carro y las sesiones son de un DÍA. Si la semana tiene
@@ -17589,11 +17614,14 @@
       h += '<div class="ct-hdr"><span class="ct-hdr-t">Clases tipo</span>' +
            '<span class="ct-hdr-n">' + _gEsc(planNivelLabel(_compNivel())) + '</span>' +
            '<span class="ct-hdr-c">' + _ctDeNivel(p, _compNivel()).length + ' guardada' +
-             (_ctDeNivel(p, _compNivel()).length !== 1 ? 's' : '') + '</span></div>';
+             (_ctDeNivel(p, _compNivel()).length !== 1 ? 's' : '') + '</span>' +
+           // v0.283: crear una desde cero, sin partir de un día
+           '<button type="button" class="ct-nueva" onclick="ctNueva()" ' +
+             'title="Crear una clase tipo desde cero" aria-label="Nueva clase tipo">⚙</button></div>';
 
       if (!_ctDeNivel(p, _compNivel()).length) {
         h += '<div class="comp-picker-vacio" style="padding:14px 10px;">Todavía no has guardado ninguna.<br>' +
-             '<span class="ruta-panel-nota">Prepara un día arriba y pulsa ↥ en su ficha: se guarda tal cual para volver a usarla.</span></div>';
+             '<span class="ruta-panel-nota">Prepara un día arriba y pulsa ↥ en su ficha, o créala aquí desde cero con la ⚙.</span></div>';
       } else {
         h += '<div class="ct-barra">' +
           '<input type="search" class="form-input ct-busca" placeholder="Buscar por nombre, golpe o bloque…" ' +
@@ -17792,6 +17820,14 @@
       compDiaAbierta = fechaISO;
       compDiaEditando = false;   // v0.274: nunca se abre en modo edición
       mostrarPlanificacion();
+      // v0.283 — Si el día está VACÍO y hay clases tipo de este nivel, se
+      // abre directamente el repositorio para elegir una: es lo que vas a
+      // hacer el 99% de las veces al tocar un día en blanco. La ficha se
+      // queda detrás, así que al cerrar el selector sigues en el día.
+      var _pV = leerPlan(), _nV = _compNivel();
+      if (!_ctDiaTieneAlgo(_pV, _nV, fechaISO) && _ctDeNivel(_pV, _nV).length) {
+        ctUsarAbrir(fechaISO);
+      }
     }
     // v0.125: "retroceder" desde el resumen para cambiar lo elegido.
     // v0.208/v0.215: en Competición esto abre el panel grande en vez del
@@ -17820,6 +17856,49 @@
     // Viven en el plan del grupo (son del club) y cada una lleva su nivel:
     // solo aparecen en la pantalla de planificación de ese nivel.
     var _ctBuscar = '', _ctOrden = 'usos', _ctAbierta = null;
+    // ── v0.283 — CREAR UNA CLASE TIPO DESDE CERO ────────────────────
+    // Se monta con el MISMO panel grande de planificar (carro | área de
+    // trabajo), pero apuntando a un día BORRADOR que no existe en ningún
+    // curso: 1900-01-01. Así no hay que duplicar toda esa pantalla, y como
+    // esa fecha no cae en ningún curso no aparece por ningún lado. El
+    // borrador se limpia al guardar y al cancelar, así que no queda rastro.
+    var _CT_BORRADOR = '1900-01-01';
+    var _rutaModalCT = false;   // ¿el panel está montando una clase tipo?
+    function _ctLimpiarBorrador() {
+      var p = leerPlan(), tocado = false;
+      COMP_NIVELES.forEach(function(n){
+        var k = n + '|' + _CT_BORRADOR;
+        if (p.rutaCarro && p.rutaCarro[k]) { delete p.rutaCarro[k]; tocado = true; }
+        if (p.rutaSes   && p.rutaSes[k])   { delete p.rutaSes[k];   tocado = true; }
+      });
+      if (p.compDias && p.compDias[_CT_BORRADOR]) { delete p.compDias[_CT_BORRADOR]; tocado = true; }
+      if (tocado) _planGuardar(p);
+    }
+    function ctNueva() {
+      _ctLimpiarBorrador();
+      _rutaModalCT = true;
+      rutaAbrirDia(_CT_BORRADOR);
+    }
+    // Guardar lo montado en el borrador como clase tipo.
+    function ctGuardarBorrador() {
+      var p = leerPlan(), nivel = _compNivel();
+      if (!_ctDiaTieneAlgo(p, nivel, _CT_BORRADOR)) {
+        alert('Todavía no has puesto nada: elige al menos un ejercicio de carro o un bloque.');
+        return;
+      }
+      var nombre = prompt('Nombre para esta clase tipo:', '');
+      if (nombre === null) return;
+      nombre = nombre.trim();
+      if (!nombre) return;
+      if (!p.clasesTipo) p.clasesTipo = [];
+      p.clasesTipo.push(_ctDesdeDia(p, nivel, _CT_BORRADOR, nombre));
+      _planGuardar(p);
+      _ctLimpiarBorrador();
+      _rutaModalCT = false;
+      rutaCerrarModal();
+      mostrarPlanificacion();
+      planToast('✓ Clase tipo creada');
+    }
     function ctBuscar(q) {
       _ctBuscar = q || '';
       // Se repinta solo la lista para no perder el foco del buscador
@@ -18377,7 +18456,7 @@
       // entero de un vistazo y el detalle se pide cuando hace falta.
       if (!filas.length) {
         h += '<div class="comp-picker-vacio">Nada planificado para este día.<br>' +
-             '<span class="ruta-panel-nota">Se planifica abajo, en el curso — o con el ⚙ de aquí arriba.</span></div>';
+             '<span class="ruta-panel-nota">Trae una clase tipo con ↧, o móntala a mano con el ⚙.</span></div>';
       } else {
         filas.forEach(function(f){
           var sesF = (sesPorAreaD[f.id] || []).filter(function(c){ return sesIds.indexOf(c.id) >= 0; });
