@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.281.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.282.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,42 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.282.0 — CLASES TIPO: guardar una clase y volver a usarla (2026-08)
+    ⚠️ MIGRACIÓN: migraciones/migracion_clases_tipo.sql (ejecutar ANTES)
+    · SE RETIRA LA FILA DE MESES y su tablero de semanas. Servía para
+      planificar el curso semana a semana y en la práctica no se usaba: se
+      planifica arriba, en los días. En su sitio va el repositorio de CLASES
+      TIPO. El 📦 archivo del curso y el análisis siguen debajo, intactos.
+    · UNA CLASE TIPO es la FOTO de un día ya preparado, guardada con nombre:
+      su carro, su área de trabajo y su nivel. Se guarda desde la ficha del
+      día con el botón ↥ (solo aparece si ese día tiene algo).
+    · SE APLICA con el botón ↧ de la ficha del día, eligiendo:
+        · a qué días — solo este, los de ese nivel de esta semana, o las
+          próximas 4 semanas (así se monta un ciclo en dos toques);
+        · y si REEMPLAZA lo que hubiera o se AÑADE a ello.
+      Al aplicar se COPIA, no se enlaza: si luego cambias la clase tipo, no se
+      reescriben las clases que ya diste con ella.
+    · LA LISTA VA PLEGADA: una línea por clase con su nombre, el golpe del
+      carro en rojo y cuántas veces la has usado. Se abre tocando el nombre —y
+      solo una a la vez, que con veinte volveríamos al muro de antes—. Dentro:
+      el contenido, la última vez que la usaste, renombrar y borrar.
+    · Buscador (por nombre, golpe o bloque) y orden: más usadas, recientes o
+      alfabético. Sin filtro de nivel: la pantalla ya es de un nivel.
+    · QUIÉN LAS VE. Son del club, como el catálogo: viajan en plan_grupo. Pero
+      cada una lleva su NIVEL y solo aparece en la planificación de ese nivel,
+      a la que el rol ya controla el paso — el EN2 no entra en Competición y
+      el EN1 no entra a ninguna. No hizo falta lógica de permisos nueva.
+    · LO QUE YA NO EXISTE SE DICE. Junto a los ids se guarda el NOMBRE de cada
+      ejercicio y sesión. Si mañana borras uno del catálogo, la clase tipo lo
+      enseña tachado con un «ya no existe» en vez de perderlo en silencio.
+    · FIX de la v0.274: las NOTAS DE CLASE nunca llegaron a sincronizarse. El
+      cambio que las subía a plan_dias_usuario.notas_dia se quedó sin aplicar
+      por un fallo al escribirlo, así que hasta ahora se guardaban solo en el
+      dispositivo donde se escribían. Ya viajan. (La migración de este archivo
+      incluye esa columna por si no la habías creado.)
+    · Limpieza: fuera rutaMesSel, _rutaMesActivo y _rutaMesHoyKey, que ya no
+      llamaba nadie, y el CSS de la fila de meses.
 
   v0.281.0 — El mes abierto, también en filas (2026-08)
     (sin migraciones nuevas)
@@ -6349,6 +6385,59 @@
     button.comp-cal-lbl:hover { background:var(--arena); }
     .comp-mes-resumen { font-size:11.5px; color:var(--gris); text-align:center; padding:2px 0 2px; }
     .comp-mes-resumen b { color:var(--texto); }
+    /* ══ v0.282 — CLASES TIPO ═══════════════════════════════════════
+       Lista plegada: una línea por clase, se abre al tocar el nombre. */
+    .ct-caja { border:1.5px solid var(--borde); border-radius:14px; background:var(--blanco);
+      padding:10px 11px 11px; margin-top:12px; }
+    .ct-hdr { display:flex; align-items:baseline; gap:7px; padding-bottom:9px; margin-bottom:9px;
+      border-bottom:1px solid var(--borde); }
+    .ct-hdr-t { font-size:14px; font-weight:800; color:var(--texto); }
+    .ct-hdr-n { font-size:11.5px; color:var(--gris); }
+    .ct-hdr-c { margin-left:auto; font-size:10.5px; color:var(--gris); }
+    .ct-barra { display:flex; gap:6px; margin-bottom:9px; }
+    .ct-busca { flex:1; min-width:0; margin-bottom:0; font-size:13px; padding:0.5rem 0.7rem; }
+    .ct-orden { flex:0 0 auto; width:auto; margin-bottom:0; font-size:12px; padding:0.5rem 0.6rem; }
+    .ct-fila { display:flex; align-items:center; gap:8px; width:100%; box-sizing:border-box;
+      font-family:inherit; text-align:left; padding:9px 10px; margin-bottom:5px;
+      border:1.5px solid var(--borde); border-radius:10px; background:var(--blanco); cursor:pointer; }
+    .ct-fila.ab { border-color:#0891b2; border-radius:10px 10px 0 0; margin-bottom:0; }
+    .ct-nom { flex:1; min-width:0; font-size:12.5px; font-weight:700; color:var(--texto);
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .ct-gol { flex-shrink:0; font-size:10px; font-weight:800; padding:2px 7px; border-radius:6px;
+      background:#e03a3a; color:#fff; }
+    .ct-uso { flex-shrink:0; font-size:10.5px; color:var(--gris); }
+    .ct-det { border:1.5px solid #0891b2; border-top:none; border-radius:0 0 10px 10px;
+      padding:2px 10px 10px; margin-bottom:5px; background:var(--blanco); }
+    .ct-det .ruta-wk-ej.borrado, .ct-det .ruta-ses.borrado { background:var(--arena); color:var(--gris);
+      border-color:var(--borde); text-decoration:line-through; }
+    .ct-aviso { font-size:10.5px; color:#993c1d; margin:3px 0 2px; }
+    .ct-fecha { font-size:10.5px; color:var(--gris); margin-top:8px; }
+    .ct-acts { display:flex; gap:6px; margin-top:8px; }
+    .ct-acts .btn { width:auto; flex:1; margin:0; }
+    .comp-ct-btn { background:#dcfce7 !important; color:#15803d !important; font-size:15px !important; }
+    /* Ventana de aplicar */
+    .ct-usar-modal { max-width:520px; }
+    .ct-usar-lista { max-height:34vh; overflow-y:auto; }
+    .ct-usar-op { display:flex; align-items:center; gap:8px; width:100%; box-sizing:border-box;
+      font-family:inherit; text-align:left; font-size:12.5px; padding:9px 10px; margin-bottom:5px;
+      border:1.5px solid var(--borde); border-radius:10px; background:var(--blanco); cursor:pointer; }
+    .ct-usar-op.on { border-color:#0891b2; background:#ecfeff; }
+    .ct-usar-n { flex:1; min-width:0; font-weight:700; color:var(--texto);
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .ct-usar-op.on .ct-usar-n { color:#0e7490; }
+    .ct-usar-u { flex-shrink:0; font-size:10.5px; color:var(--gris); }
+    .ct-alc { display:flex; align-items:center; gap:9px; width:100%; box-sizing:border-box;
+      font-family:inherit; text-align:left; font-size:12.5px; padding:9px 10px; margin-bottom:5px;
+      border:1.5px solid var(--borde); border-radius:10px; background:var(--blanco); cursor:pointer;
+      color:var(--texto); }
+    .ct-alc.on { border-color:#0891b2; background:#ecfeff; }
+    .ct-rad { flex-shrink:0; width:13px; height:13px; border-radius:50%; border:1.5px solid var(--gris); }
+    .ct-alc.on .ct-rad { border-color:#0891b2; background:#0891b2; box-shadow:inset 0 0 0 2.5px #fff; }
+    .ct-modo { display:flex; gap:6px; margin:9px 0 4px; }
+    .ct-modo-b { flex:1; font-family:inherit; font-size:12px; font-weight:700; padding:7px 4px;
+      border:1.5px solid var(--borde); border-radius:10px; background:var(--blanco);
+      color:var(--texto); cursor:pointer; }
+    .ct-modo-b.on { border-color:#0891b2; background:#ecfeff; color:#0e7490; }
     /* v0.281 — Se retira la vista por COLUMNAS (v0.147–v0.262): las semanas
        iban una al lado de otra con los días apilados hacia abajo, y con cinco
        semanas había que arrastrar de lado. Ahora todo va en filas. */
@@ -6509,25 +6598,7 @@
     .ruta-curso-lbl { flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
       font-size:13.5px; font-weight:800; color:var(--texto); }
     /* Fila de trimestres — siempre uno al lado de otro */
-    /* v0.230 — fila de meses del curso (sep → jun) */
-    .ruta-mes-row { display:grid; grid-template-columns:repeat(5,1fr); gap:5px; margin-bottom:12px; }
-    .ruta-mesbtn { display:flex; flex-direction:column; align-items:center; gap:1px; padding:7px 4px;
-      border:1.5px solid var(--borde); border-radius:10px; background:var(--blanco);
-      font-family:inherit; cursor:pointer; }
-    .ruta-mesbtn:hover { border-color:#0891b2; }
-    .ruta-mesbtn.on { border-color:#0891b2; background:#ecfeff; }
-    /* v0.242: el mes en curso (o el último anterior, en julio y agosto) va
-       sombreado, no solo con el borde: es el ancla de "estamos aquí". */
-    .ruta-mesbtn.hoy { border-width:2px; border-color:var(--verde); background:var(--verde-suave); }
-    .ruta-mesbtn.hoy .ruta-mesbtn-lbl { color:var(--verde); }
-    .ruta-mesbtn.hoy.pasado { opacity:1; }
-    .ruta-mesbtn.hoy.on { border-color:#0891b2; background:#ecfeff; }
-    .ruta-mesbtn.hoy.on .ruta-mesbtn-lbl { color:#0e7490; }
-    .ruta-mesbtn.pasado { opacity:.62; }
-    .ruta-mesbtn-lbl { font-size:11.5px; font-weight:800; color:var(--texto); text-transform:capitalize; }
-    .ruta-mesbtn-prog { font-size:9.5px; font-weight:700; color:var(--gris); }
-    .ruta-mesbtn.on .ruta-mesbtn-lbl, .ruta-mesbtn.on .ruta-mesbtn-prog { color:#0e7490; }
-    @media (min-width:700px){ .ruta-mes-row { grid-template-columns:repeat(10,1fr); } }
+    /* v0.282: se retira el CSS de la fila de meses — ya no existe esa vista. */
     /* Meses en columnas paralelas */
     .ruta-mes-cols { display:grid; grid-template-columns:1fr; gap:12px; align-items:start; }
     .ruta-mes-col { background:var(--blanco); border:1px solid var(--borde); border-radius:14px; padding:10px; }
@@ -8176,6 +8247,8 @@
   <div id="comp-dia-ov" class="ruta-modal-ov" style="display:none" onclick="compDiaCerrar()"></div>
   <!-- v0.274: ventana de un bloque, por encima del globo del día -->
   <div id="comp-bloque-ov" class="ruta-modal-ov comp-bloque-ov" style="display:none" onclick="compBloqueCerrar()"></div>
+  <!-- v0.282: elegir y aplicar una clase tipo, por encima de la ficha del día -->
+  <div id="ct-usar-ov" class="ruta-modal-ov comp-bloque-ov" style="display:none" onclick="ctUsarCerrar()"></div>
 
   <!-- ══ CLASE PREPARADA DE UNA FRANJA (v0.224) ══════════
        Globo con el carro y el área de trabajo de esa franja y ese día, para
@@ -8297,7 +8370,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.281.0';
+    var APP_VERSION = '0.282.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -8696,6 +8769,8 @@
           pLocal.bibEstrategias  = planServ.bib_estrategias != null ? planServ.bib_estrategias : pLocal.bibEstrategias;
           // v0.210: calendario de competiciones del grupo (manda el servidor)
           if (planServ.torneos != null) pLocal.torneos = planServ.torneos || [];
+          // v0.282: clases tipo del club
+          if (planServ.clases_tipo != null) pLocal.clasesTipo = planServ.clases_tipo || [];
           // compDias NO se lee del plan de grupo (v0.132): es privado por
           // entrenador y se resuelve más abajo con plan_dias_usuario.
           escribirPlan(pLocal, true);
@@ -8722,6 +8797,7 @@
             // se conserva lo que hubiera en local.
             if (diasServ.ruta_ses   != null) pD.rutaSes   = diasServ.ruta_ses   || {};
             if (diasServ.ruta_carro != null) pD.rutaCarro = diasServ.ruta_carro || {};   // v0.216
+            if (diasServ.notas_dia  != null) pD.notasDia  = diasServ.notas_dia  || {};   // v0.274/v0.282
             escribirPlan(pD, true);
           } else {
             // Primera vez para esta cuenta: si hay marcado local previo
@@ -9005,6 +9081,11 @@
         // v0.210: el calendario de competiciones SÍ es del grupo — un torneo
         // es del club, lo ve igual todo el equipo técnico.
         torneos:         p.torneos || [],
+        // v0.282: las CLASES TIPO también son del club — una clase que le
+        // funciona a uno le sirve al resto del equipo técnico. Quién las ve
+        // lo decide el nivel: cada una lleva el suyo y solo aparece en la
+        // pantalla de ese nivel, a la que el rol ya controla el paso.
+        clases_tipo:     p.clasesTipo || [],
         updated_by:      uid,
         updated_at:      new Date().toISOString()
       };
@@ -9017,8 +9098,9 @@
             // ejecutar), se reintenta sin ella. Así el calendario de
             // competiciones se queda en local pero el resto del plan sigue
             // sincronizando como siempre.
-            if (row.torneos === undefined) return;
-            var sinT = {}; for (var k in row) if (k !== 'torneos') sinT[k] = row[k];
+            // v0.282: y lo mismo con clases_tipo — se reintenta sin las dos
+            // columnas nuevas para no llevarse por delante el resto del plan.
+            var sinT = {}; for (var k in row) if (k !== 'torneos' && k !== 'clases_tipo') sinT[k] = row[k];
             _sb.from('plan_grupo').upsert(sinT, { onConflict: 'scope_id' })
               .then(function(r2){ if (r2.error) console.warn('bg sync plan (2º intento)', r2.error); });
           });
@@ -9041,11 +9123,15 @@
       // entrenador. Antes se quedaba solo en el dispositivo donde se planificó,
       // así que lo planificado en el ordenador no se veía en la pista.
       // v0.216: y el carro de cada semana (p.rutaCarro), en la misma fila.
+      // v0.282 FIX: las notas de cada clase (v0.274) tenían que viajar aquí y
+      // se quedaron fuera — el cambio no llegó a aplicarse. Hasta ahora se
+      // guardaban solo en el dispositivo donde se escribían.
       var row = {
         user_id:    base.user_id,
         comp_dias:  base.comp_dias,
         ruta_ses:   p.rutaSes || {},
         ruta_carro: p.rutaCarro || {},
+        notas_dia:  p.notasDia || {},
         updated_at: base.updated_at
       };
       setTimeout(function() {
@@ -15894,40 +15980,7 @@
     // v0.230 — MES elegido en el tablero ('2025-9'); null = el de hoy; '' = ninguno.
     // Sustituye a los cuatro bloques de trimestre: se ven los diez meses del
     // curso y se entra directo al que toque.
-    var _rutaMesSel = null;
-    function _rutaMesActivo(curso, meses) {
-      if (_rutaMesSel !== null) {
-        if (_rutaMesSel === '' || meses.some(function(m){ return m.key === _rutaMesSel; })) return _rutaMesSel;
-      }
-      // v0.242: al entrar en un nivel NO se abre ningún mes. Antes se abría
-      // solo el de hoy y la pantalla arrancaba con un muro de semanas; ahora
-      // se ve la fila de meses limpia (con el de hoy sombreado) y se abre el
-      // que se quiera tocando.
-      return '';
-    }
-    // v0.242 — Mes que se sombrea: el de HOY si está en el curso y, si no
-    // (julio y agosto, o un curso ya cerrado), el ÚLTIMO anterior a hoy —
-    // junio en el caso de julio. Si el curso entero está por venir no se
-    // sombrea ninguno: todavía no hay un "estamos aquí".
-    function _rutaMesHoyKey(meses) {
-      if (!meses.length) return '';
-      var h = hoyLocal(), ym = (+h.slice(0,4)) * 12 + (+h.slice(5,7) - 1);
-      var deHoy = meses.filter(function(x){ return (x.y * 12 + x.m) === ym; })[0];
-      if (deHoy) return deHoy.key;
-      var previos = meses.filter(function(x){ return (x.y * 12 + x.m) < ym; });
-      return previos.length ? previos[previos.length - 1].key : '';
-    }
-    function rutaMesSel(key) {
-      var meses = _rutaMeses(_rutaSemanas(_rutaCurso()));
-      var cerrando = (_rutaMesActivo(_rutaCurso(), meses) === key);
-      _rutaMesSel = cerrando ? '' : key;
-      // v0.261: al ABRIR un mes del curso se pliega sola la caja de días de
-      // arriba (no caben las dos a la vez, sobre todo en el móvil). Al
-      // cerrarlo, la de arriba vuelve.
-      _compMesTodo = false;   // v0.280: al abrir un mes abajo, arriba solo la semana
-      rutaCerrarModal();
-      mostrarPlanificacion();
-    }
+    var _rutaMesSel = null;   // v0.282: sin uso desde que se retiraron los meses
     var _rutaArchivoOpen = false;
     // v0.205 — CURSO que se está mirando en la ruta. null = el de hoy. Permite
     // adelantarse y planificar el curso que viene (26-27, 27-28…).
@@ -17497,44 +17550,113 @@
         '<span>📂 Estás editando el curso <b>' + curso + '</b>, que ya está cerrado. Se ven todos sus meses, también los pasados.</span>' +
         '<button type="button" onclick="rutaCerrarCursoAbierto()">Volver al curso actual</button></div>';
 
-      // ── v0.230 — Fila de MESES del curso (sep → jun), en vez de los cuatro
-      //    trimestres. Se señala el mes en el que estamos y se entra directo
-      //    a él: un clic menos y se ve de un vistazo dónde está cada cosa.
-      //    Salen TODOS los meses, también los ya pasados, para poder repasar y
-      //    corregir lo dado sin bajar al archivo.
-      // v0.237: antes de pintar, lo adelantado que ya tenga día de clase
-      // aterriza en la primera clase de su semana.
+      // v0.237: lo adelantado que ya tenga día de clase aterriza en la
+      // primera clase de su semana. Sigue haciendo falta: aplicar una clase
+      // tipo a una semana sin franjas la guarda en su lunes, y cuando el
+      // gestor configure los días hay que moverla al primero de verdad.
       if (_rutaAterrizarMes(p, _compNivel(), sems)) p = leerPlan();
-      var mesesCurso = _rutaMeses(sems);
-      var mesSel = _rutaMesActivo(curso, mesesCurso);
-      var mesHoy = _rutaMesHoyKey(mesesCurso);   // v0.242
-      h += '<div class="ruta-mes-row">';
-      mesesCurso.forEach(function(m){
-        var semsM = m.sems;
-        var hechasM = semsM.filter(function(w){ return _rutaSemanaDatos(p, w, idsNivel).trab; }).length;
-        // v0.242: en julio no hay ninguna semana "de hoy" (act = -1) y no se
-        // sombreaba nada. Ahora manda _rutaMesHoyKey, que cae al último mes
-        // anterior cuando el de hoy no existe en el curso.
-        var esAct = (m.key === mesHoy);
-        var pasado = _rutaMesPasado(m.y, m.m);
-        h += '<button type="button" class="ruta-mesbtn' + (mesSel === m.key ? ' on' : '') +
-          (esAct ? ' hoy' : '') + (pasado ? ' pasado' : '') + '" onclick="rutaMesSel(\'' + m.key + '\')">' +
-          '<span class="ruta-mesbtn-lbl">' + _MESES_R[m.m].slice(0,3) + '</span>' +
-          '<span class="ruta-mesbtn-prog">' + hechasM + '/' + semsM.length + '</span>' +
-        '</button>';
-      });
-      h += '</div>';
 
-      // ── Semanas del mes elegido. mesSel vacío = ninguno abierto (se cerró
-      //    al repincharlo): solo quedan los botones. ──
-      if (mesSel) {
-        var mSel = mesesCurso.filter(function(m){ return m.key === mesSel; })[0];
-        if (mSel) {
-          h += '<div class="ruta-mes-cols">';
-          h += _rutaMesColHTML(mSel, act, p, idsNivel, areaN, sesN, ejN, ejG);
-          h += '</div>';
-        }
+      // ══════════════════════════════════════════════════════════
+      // v0.282 — CLASES TIPO, donde estaban los meses
+      // ══════════════════════════════════════════════════════════
+      // La fila de meses y su tablero de semanas se retiran: eran para
+      // planificar el curso semana a semana y en la práctica no se usaban
+      // —se planifica arriba, en los días—. En su sitio va el repositorio
+      // de clases tipo: se guarda una clase que ha funcionado y se vuelve a
+      // usar cuando toca, en un día, en toda la semana o durante un mes.
+      // El archivo del curso y el análisis se quedan debajo, como estaban.
+      var cts = _ctDeNivel(p, _compNivel());
+      var q = (_ctBuscar || '').trim().toLowerCase();
+      if (q) {
+        var mapEjB = _ejsById();
+        cts = cts.filter(function(c){
+          var txt = c.nombre + ' ' +
+            (c.carro || []).map(function(id){
+              var e = mapEjB[id];
+              return (e ? (e.nombre || '') + ' ' + (ejFaceta(e, 'golpe') || '') : (c.carroNom && c.carroNom[id]) || '');
+            }).join(' ') + ' ' +
+            (c.bloques || []).map(function(id){ return areaN[id] || ''; }).join(' ');
+          return txt.toLowerCase().indexOf(q) >= 0;
+        });
       }
+      cts = cts.slice().sort(function(a, b){
+        if (_ctOrden === 'nombre')   return String(a.nombre).localeCompare(String(b.nombre));
+        if (_ctOrden === 'reciente') return String(b.ultimoUso || b.creada || '').localeCompare(String(a.ultimoUso || a.creada || ''));
+        return (b.usos || 0) - (a.usos || 0);
+      });
+
+      h += '<div class="ct-caja">';
+      h += '<div class="ct-hdr"><span class="ct-hdr-t">Clases tipo</span>' +
+           '<span class="ct-hdr-n">' + _gEsc(planNivelLabel(_compNivel())) + '</span>' +
+           '<span class="ct-hdr-c">' + _ctDeNivel(p, _compNivel()).length + ' guardada' +
+             (_ctDeNivel(p, _compNivel()).length !== 1 ? 's' : '') + '</span></div>';
+
+      if (!_ctDeNivel(p, _compNivel()).length) {
+        h += '<div class="comp-picker-vacio" style="padding:14px 10px;">Todavía no has guardado ninguna.<br>' +
+             '<span class="ruta-panel-nota">Prepara un día arriba y pulsa ↥ en su ficha: se guarda tal cual para volver a usarla.</span></div>';
+      } else {
+        h += '<div class="ct-barra">' +
+          '<input type="search" class="form-input ct-busca" placeholder="Buscar por nombre, golpe o bloque…" ' +
+            'value="' + _gEsc(_ctBuscar) + '" oninput="ctBuscar(this.value)">' +
+          '<select class="form-select ct-orden" onchange="ctOrden(this.value)">' +
+            '<option value="usos"' +     (_ctOrden === 'usos' ? ' selected' : '') + '>Más usadas</option>' +
+            '<option value="reciente"' + (_ctOrden === 'reciente' ? ' selected' : '') + '>Recientes</option>' +
+            '<option value="nombre"' +   (_ctOrden === 'nombre' ? ' selected' : '') + '>Por nombre</option>' +
+          '</select></div>';
+        if (!cts.length) {
+          h += '<div class="comp-picker-vacio">Ninguna con ese texto.</div>';
+        }
+        var mapEjL = _ejsById(), todasSL = leerClases();
+        cts.forEach(function(c){
+          var ab = (_ctAbierta === c.id);
+          // Golpe del carro, para reconocerla sin abrirla
+          var gv = {}, gl = [];
+          (c.carro || []).forEach(function(id){
+            var e = mapEjL[id]; if (!e) return;
+            var k = ejFaceta(e, 'golpe'); if (!k || gv[k]) return;
+            gv[k] = true; gl.push(GOLPE_LABEL[k] || k);
+          });
+          h += '<button type="button" class="ct-fila' + (ab ? ' ab' : '') + '" onclick="ctAbrir(\'' + c.id + '\')">' +
+            '<span class="ruta-parte-chev' + (ab ? ' abierto' : '') + '">›</span>' +
+            '<span class="ct-nom">' + _gEsc(c.nombre) + '</span>' +
+            (gl.length ? '<span class="ct-gol">' + _gEsc(gl[0]) + '</span>' : '') +
+            '<span class="ct-uso">' + (c.usos || 0) + '×</span></button>';
+          if (!ab) return;
+
+          h += '<div class="ct-det">';
+          h += '<div class="ruta-wk-zlbl" style="color:#0e7490;">🛒 Carro</div>';
+          if (!(c.carro || []).length) h += '<span class="ruta-panel-nota">Sin ejercicios.</span>';
+          (c.carro || []).forEach(function(id){
+            var e = mapEjL[id];
+            if (e) h += '<span class="ruta-wk-ej">' + _gEsc(e.nombre || ('Ejercicio ' + id)) + '</span>';
+            else   h += '<span class="ruta-wk-ej borrado">' + _gEsc((c.carroNom && c.carroNom[id]) || ('Ejercicio ' + id)) + '</span>';
+          });
+          var faltanEj = (c.carro || []).filter(function(id){ return !mapEjL[id]; }).length;
+          if (faltanEj) h += '<div class="ct-aviso">' + (faltanEj === 1 ? 'Ese ejercicio ya no existe' : 'Esos ' + faltanEj + ' ejercicios ya no existen') + ' — se borraron del catálogo</div>';
+
+          h += '<div class="ruta-wk-zlbl" style="color:#3730a3;margin-top:7px;">🎯 Área de trabajo</div>';
+          (c.bloques || []).forEach(function(id){
+            h += '<span class="ruta-chip">' + _gEsc(areaN[id] || 'Bloque') + '</span>';
+          });
+          var faltanSes = 0;
+          (c.sesiones || []).forEach(function(id){
+            var x = todasSL.filter(function(t){ return t.id === id; })[0];
+            if (x) h += '<div class="ruta-ses">' + _gEsc(x.nombre || x.fecha || ('Sesión ' + id)) + '</div>';
+            else { faltanSes++; h += '<div class="ruta-ses borrado">' + _gEsc((c.sesNom && c.sesNom[id]) || ('Sesión ' + id)) + '</div>'; }
+          });
+          if (!(c.bloques || []).length && !(c.sesiones || []).length)
+            h += '<span class="ruta-panel-nota">Sin bloque ni sesión.</span>';
+          if (faltanSes) h += '<div class="ct-aviso">' + (faltanSes === 1 ? 'Esa sesión ya no existe' : 'Esas ' + faltanSes + ' sesiones ya no existen') + '</div>';
+
+          if (c.ultimoUso) h += '<div class="ct-fecha">Última vez: ' + formatFechaDiaMes(c.ultimoUso) + '</div>';
+          h += '<div class="ct-acts">' +
+            '<button type="button" class="btn btn-sec btn-sm" onclick="event.stopPropagation();ctRenombrar(\'' + c.id + '\')">Renombrar</button>' +
+            '<button type="button" class="btn btn-sec btn-sm" onclick="event.stopPropagation();ctBorrar(\'' + c.id + '\')">Borrar</button>' +
+            '</div>';
+          h += '</div>';
+        });
+      }
+      h += '</div>';
 
       h += _rutaArchivoHTML(p, idsNivel, areaN, sesN, ejN, ejG);
       h += '<div class="ruta-leyenda">✓ trabajada · ◉ esta semana · ● planificada · ○ vacía</div>';
@@ -17686,6 +17808,135 @@
       mostrarPlanificacion();
     }
     // ══════════════════════════════════════════════════════════════
+    // v0.282 — CLASES TIPO
+    // ══════════════════════════════════════════════════════════════
+    // Una clase tipo es la FOTO de un día ya preparado, guardada con nombre
+    // para volver a usarla: su carro, su área de trabajo y su nivel. No es un
+    // enlace: al aplicarla se COPIA. Si luego la editas, no se reescriben las
+    // clases que ya diste con ella — eso sería tocar el historial.
+    // Se guardan los NOMBRES junto a los ids: si mañana borras un ejercicio
+    // del catálogo, la clase tipo puede seguir diciendo cuál era en vez de
+    // perderlo en silencio.
+    // Viven en el plan del grupo (son del club) y cada una lleva su nivel:
+    // solo aparecen en la pantalla de planificación de ese nivel.
+    var _ctBuscar = '', _ctOrden = 'usos', _ctAbierta = null;
+    function ctBuscar(q) {
+      _ctBuscar = q || '';
+      // Se repinta solo la lista para no perder el foco del buscador
+      mostrarPlanificacion();
+      var el = document.querySelector('.ct-busca');
+      if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+    }
+    function ctOrden(v) { _ctOrden = v; mostrarPlanificacion(); }
+    // Solo una abierta a la vez: con veinte, lo contrario vuelve a ser un muro
+    function ctAbrir(id) { _ctAbierta = (_ctAbierta === id) ? null : id; mostrarPlanificacion(); }
+    function ctRenombrar(id) {
+      var p = leerPlan();
+      var c = _ctLista(p).filter(function(x){ return x.id === id; })[0];
+      if (!c) return;
+      var n = prompt('Nombre de la clase tipo:', c.nombre);
+      if (n === null) return;
+      n = n.trim();
+      if (!n) return;
+      c.nombre = n; _planGuardar(p); mostrarPlanificacion();
+    }
+    function ctBorrar(id) {
+      var p = leerPlan();
+      var c = _ctLista(p).filter(function(x){ return x.id === id; })[0];
+      if (!c) return;
+      if (!confirm('¿Borrar la clase tipo «' + c.nombre + '»?\n\nLo ya planificado con ella en los días NO se toca.')) return;
+      p.clasesTipo = _ctLista(p).filter(function(x){ return x.id !== id; });
+      if (_ctAbierta === id) _ctAbierta = null;
+      _planGuardar(p); mostrarPlanificacion();
+    }
+    function _ctLista(p) { return (p && p.clasesTipo) || []; }
+    function _ctDeNivel(p, nivel) {
+      return _ctLista(p).filter(function(c){ return c.nivel === nivel; });
+    }
+    // Guarda lo que hay planificado un día como clase tipo.
+    function _ctDesdeDia(p, nivel, fechaISO, nombre) {
+      var lun     = _rutaSemanaLibre(fechaISO).lunISO;
+      var carro   = (_rutaLeeDia(p.rutaCarro, nivel, fechaISO, lun) || []).slice();
+      var ses     = _rutaSesArr(_rutaLeeDia(p.rutaSes, nivel, fechaISO, lun)).slice();
+      var idsNiv  = _compIdsNivel(p);
+      var bloques = ((p.compDias && p.compDias[fechaISO]) || []).filter(function(id){ return idsNiv[id]; });
+      // Nombres de respaldo, para poder avisar de lo que ya no exista
+      var mapEj = _ejsById(), carroNom = {};
+      carro.forEach(function(id){ if (mapEj[id]) carroNom[id] = mapEj[id].nombre || ('Ejercicio ' + id); });
+      var todasS = leerClases(), sesNom = {};
+      ses.forEach(function(id){
+        var c = todasS.filter(function(x){ return x.id === id; })[0];
+        if (c) sesNom[id] = c.nombre || c.fecha || ('Sesión ' + id);
+      });
+      return {
+        id: 'ct' + Date.now() + Math.random().toString(36).slice(2,6),
+        nivel: nivel, nombre: nombre,
+        carro: carro, carroNom: carroNom,
+        bloques: bloques, sesiones: ses, sesNom: sesNom,
+        usos: 0, ultimoUso: '', creada: hoyLocal()
+      };
+    }
+    // ¿Tiene el día algo que valga la pena guardar?
+    function _ctDiaTieneAlgo(p, nivel, fechaISO) {
+      var ct = _ctDesdeDia(p, nivel, fechaISO, '');
+      return !!(ct.carro.length || ct.sesiones.length || ct.bloques.length);
+    }
+    // Los días de clase de ESE nivel en la semana de una fecha. Si la semana
+    // no tiene ninguno configurado, la propia fecha (igual que al planificar).
+    function _ctDiasSemana(nivel, fechaISO) {
+      var w = _rutaSemanaLibre(fechaISO);
+      var dias = _rutaDiasDeNivel(w, nivel).map(function(d){ return d.fecha; });
+      return dias.length ? dias : [fechaISO];
+    }
+    // Aplica una clase tipo a UN día. modo: 'rep' reemplaza · 'add' suma.
+    function _ctAplicarDia(p, ct, fechaISO, modo) {
+      var w = _rutaSemanaLibre(fechaISO);
+      var nivel = ct.nivel;
+      // Carro y sesiones
+      var carroPrev = modo === 'add' ? (_rutaLeeDia(p.rutaCarro, nivel, fechaISO, w.lunISO) || []) : [];
+      var sesPrev   = modo === 'add' ? _rutaSesArr(_rutaLeeDia(p.rutaSes, nivel, fechaISO, w.lunISO)) : [];
+      var carro = carroPrev.slice();
+      ct.carro.forEach(function(id){ if (carro.indexOf(id) < 0) carro.push(id); });
+      var ses = sesPrev.slice();
+      ct.sesiones.forEach(function(id){ if (ses.indexOf(id) < 0) ses.push(id); });
+      _rutaEscribeDia(p.rutaCarro, nivel, fechaISO, carro.length ? carro : null, w);
+      _rutaEscribeDia(p.rutaSes,   nivel, fechaISO, ses.length   ? ses   : null, w);
+      // Bloques marcados: se respetan los de OTROS niveles pase lo que pase
+      if (!p.compDias) p.compDias = {};
+      var idsNiv = _compIdsNivel(p);
+      var prev   = (p.compDias[fechaISO] || []);
+      var otros  = prev.filter(function(id){ return !idsNiv[id]; });
+      var mios   = modo === 'add' ? prev.filter(function(id){ return idsNiv[id]; }) : [];
+      ct.bloques.forEach(function(id){ if (mios.indexOf(id) < 0) mios.push(id); });
+      var todo = otros.concat(mios);
+      if (todo.length) p.compDias[fechaISO] = todo; else delete p.compDias[fechaISO];
+    }
+    // Aplica según el alcance elegido y apunta el uso.
+    //   'dia'    → solo esa fecha
+    //   'semana' → los días de ese nivel en su semana
+    //   'nsem'   → lo mismo, durante las próximas N semanas (esta incluida)
+    function ctAplicar(ctId, fechaISO, alcance, modo, nSem) {
+      var p = leerPlan();
+      var ct = _ctLista(p).filter(function(x){ return x.id === ctId; })[0];
+      if (!ct) return 0;
+      var fechas = [];
+      if (alcance === 'dia') fechas = [fechaISO];
+      else if (alcance === 'semana') fechas = _ctDiasSemana(ct.nivel, fechaISO);
+      else {
+        for (var k = 0; k < (nSem || 4); k++) {
+          fechas = fechas.concat(_ctDiasSemana(ct.nivel, addDiasISO(fechaISO, k * 7)));
+        }
+      }
+      var vistos = {};
+      fechas = fechas.filter(function(f){ if (vistos[f]) return false; vistos[f] = true; return true; });
+      fechas.forEach(function(f){ _ctAplicarDia(p, ct, f, modo); });
+      ct.usos = (ct.usos || 0) + 1;
+      ct.ultimoUso = hoyLocal();
+      _planGuardar(p);
+      return fechas.length;
+    }
+
+    // ══════════════════════════════════════════════════════════════
     // v0.274 — NOTAS DE LA CLASE
     // ══════════════════════════════════════════════════════════════
     // Lo que se te ocurre EN PISTA: un juego que ha funcionado, un ajuste,
@@ -17733,6 +17984,98 @@
         '<div class="comp-nota-txt">' + _gEsc(txt) + '</div></div>';
     }
 
+    // v0.282 — Guardar el día abierto como clase tipo.
+    function ctGuardarDia(fechaISO) {
+      var p = leerPlan(), nivel = _compNivel();
+      if (!_ctDiaTieneAlgo(p, nivel, fechaISO)) {
+        alert('Este día no tiene nada planificado todavía.');
+        return;
+      }
+      var sug = '';
+      var idsNiv = _compIdsNivel(p);
+      var bloq = ((p.compDias && p.compDias[fechaISO]) || []).filter(function(id){ return idsNiv[id]; })[0];
+      if (bloq) {
+        var f0 = _compTodasFilas(p).filter(function(x){ return x.id === bloq; })[0];
+        if (f0) sug = f0.t;
+      }
+      var nombre = prompt('Nombre para esta clase tipo:', sug);
+      if (nombre === null) return;
+      nombre = nombre.trim();
+      if (!nombre) return;
+      if (!p.clasesTipo) p.clasesTipo = [];
+      p.clasesTipo.push(_ctDesdeDia(p, nivel, fechaISO, nombre));
+      _planGuardar(p);
+      mostrarPlanificacion();
+      planToast('✓ Guardada como clase tipo');
+    }
+    // ── Ventana para aplicarla: alcance y si reemplaza o suma ──
+    var _ctUsarFecha = null, _ctUsarSel = null, _ctUsarAlc = 'dia', _ctUsarModo = 'rep';
+    function ctUsarAbrir(fechaISO) {
+      _ctUsarFecha = fechaISO; _ctUsarSel = null; _ctUsarAlc = 'dia'; _ctUsarModo = 'rep';
+      _ctUsarPintar();
+    }
+    function ctUsarCerrar() {
+      _ctUsarFecha = null;
+      var ov = document.getElementById('ct-usar-ov');
+      if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; }
+    }
+    function ctUsarSel(id) { _ctUsarSel = id; _ctUsarPintar(); }
+    function ctUsarAlc(a) { _ctUsarAlc = a; _ctUsarPintar(); }
+    function ctUsarModo(m) { _ctUsarModo = m; _ctUsarPintar(); }
+    function ctUsarConfirmar() {
+      if (!_ctUsarSel || !_ctUsarFecha) return;
+      var n = ctAplicar(_ctUsarSel, _ctUsarFecha, _ctUsarAlc, _ctUsarModo, 4);
+      ctUsarCerrar();
+      mostrarPlanificacion();
+      planToast('✓ Aplicada a ' + n + (n === 1 ? ' día' : ' días'));
+    }
+    function _ctUsarPintar() {
+      var ov = document.getElementById('ct-usar-ov');
+      if (!ov) return;
+      if (!_ctUsarFecha) { ov.style.display = 'none'; ov.innerHTML = ''; return; }
+      var p = leerPlan(), nivel = _compNivel();
+      var lista = _ctDeNivel(p, nivel).slice().sort(function(a,b){ return (b.usos||0) - (a.usos||0); });
+      if (!_ctUsarSel && lista.length) _ctUsarSel = lista[0].id;
+      var sel = lista.filter(function(x){ return x.id === _ctUsarSel; })[0];
+
+      var h = '<div class="ruta-modal ct-usar-modal" onclick="event.stopPropagation()">';
+      h += '<div class="ruta-modal-hdr"><div>' +
+        '<div class="ruta-modal-tit">Usar una clase tipo</div>' +
+        '<div class="ruta-modal-sub">' + formatFechaDiaMes(_ctUsarFecha) + ' · ' + _gEsc(planNivelLabel(nivel)) + '</div></div>' +
+        '<button class="plan-modal-x" onclick="ctUsarCerrar()" aria-label="Cerrar">✕</button></div>';
+
+      h += '<div class="ct-usar-lista">';
+      lista.forEach(function(c){
+        h += '<button type="button" class="ct-usar-op' + (c.id === _ctUsarSel ? ' on' : '') +
+          '" onclick="ctUsarSel(\'' + c.id + '\')">' +
+          '<span class="ct-usar-n">' + _gEsc(c.nombre) + '</span>' +
+          '<span class="ct-usar-u">' + (c.usos || 0) + '×</span></button>';
+      });
+      h += '</div>';
+
+      if (sel) {
+        var nD = _ctDiasSemana(nivel, _ctUsarFecha).length;
+        h += '<div class="ruta-panel-paso" style="margin-top:10px;">¿A qué días?</div>';
+        [['dia', 'Solo el ' + formatFechaDiaMes(_ctUsarFecha)],
+         ['semana', 'Los ' + nD + (nD === 1 ? ' día' : ' días') + ' de este nivel esta semana'],
+         ['nsem', 'Las próximas 4 semanas']].forEach(function(o){
+          h += '<button type="button" class="ct-alc' + (_ctUsarAlc === o[0] ? ' on' : '') +
+            '" onclick="ctUsarAlc(\'' + o[0] + '\')"><span class="ct-rad"></span>' + o[1] + '</button>';
+        });
+        h += '<div class="ct-modo">' +
+          '<button type="button" class="ct-modo-b' + (_ctUsarModo === 'rep' ? ' on' : '') + '" onclick="ctUsarModo(\'rep\')">Reemplazar</button>' +
+          '<button type="button" class="ct-modo-b' + (_ctUsarModo === 'add' ? ' on' : '') + '" onclick="ctUsarModo(\'add\')">Añadir a lo que hay</button>' +
+        '</div>';
+        h += '<div class="acciones"><button class="btn btn-sec" style="flex:1;" onclick="ctUsarCerrar()">Cancelar</button>' +
+             '<button class="btn btn-verde" style="flex:1;" onclick="ctUsarConfirmar()">Aplicar</button></div>';
+      } else {
+        h += '<div class="comp-picker-vacio">Todavía no has guardado ninguna clase tipo de este nivel.</div>';
+      }
+      h += '</div>';
+      ov.innerHTML = h;
+      ov.style.display = 'flex';
+    }
+
     // ── v0.243 — EL DÍA, EN GLOBO ──────────────────────────────────
     // Se abre como ventana encima del mes en vez de desplegarse debajo de
     // los círculos: en el móvil aquello quedaba estrujado en la parte baja
@@ -17740,7 +18083,7 @@
     // mismo de siempre (carro + área de trabajo, o el selector de filas),
     // así que se sigue editando igual: ⚙ lleva al panel grande.
     function compDiaCerrar() {
-      compBloqueCerrar();
+      compBloqueCerrar(); ctUsarCerrar();
       compDiaAbierta = null; compDiaEditando = false; _compNotaEdit = false;
       mostrarPlanificacion();
     }
@@ -17763,7 +18106,14 @@
             '<button class="plan-modal-x" onclick="compDiaEditar(\'' + f + '\')" title="Cambiar la clase de este día" aria-label="Editar">⚙</button>' +
             // v0.274: al lado, las notas de la clase
             '<button class="plan-modal-x comp-nota-btn' + (_notaDe(f) ? ' hay' : '') + '" ' +
-              'onclick="compNotaToggle()" title="Notas de la clase" aria-label="Notas">📝</button>') +
+              'onclick="compNotaToggle()" title="Notas de la clase" aria-label="Notas">📝</button>' +
+            // v0.282 — Clases tipo: guardar lo de hoy · traer una guardada
+            (_ctDiaTieneAlgo(p, _compNivel(), f)
+              ? '<button class="plan-modal-x comp-ct-btn" onclick="ctGuardarDia(\'' + f + '\')" ' +
+                'title="Guardar esta clase para reutilizarla" aria-label="Guardar como clase tipo">↥</button>' : '') +
+            (_ctDeNivel(p, _compNivel()).length
+              ? '<button class="plan-modal-x comp-ct-btn" onclick="ctUsarAbrir(\'' + f + '\')" ' +
+                'title="Traer una clase tipo guardada" aria-label="Usar una clase tipo">↧</button>' : '')) +
           '<button class="plan-modal-x" onclick="compDiaCerrar()" aria-label="Cerrar">✕</button>' +
         '</div></div>';
       if (!compDiaEditando) h += _compNotaHTML(f);
