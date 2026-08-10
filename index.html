@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.288.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.291.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,52 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.291.0 — El ＋ compone la clase tipo de verdad (2026-08)
+    (sin migraciones nuevas)
+    · VARIAS SESIONES. El paso 1 deja de ser excluyente: se marcan y desmarcan
+      las que quieras del bloque. Una clase real suele encadenar dos, y hasta
+      ahora solo cabía una.
+    · NOMBRE EDITABLE. Paso 3, con el nombre ya propuesto escrito dentro (la
+      primera sesión elegida, o el bloque si es solo carro). Se puede cambiar
+      antes de guardar; mientras no lo toques, sigue al que elijas.
+    · LÁPIZ PARA EDITAR. Desde la ficha de una clase tipo, «✏️ Editar» reabre
+      el compositor con todo cargado y guarda ENCIMA: mismo id, mismos usos,
+      misma fecha de creación. Antes, equivocarse de ejercicio obligaba a
+      borrar la clase y rehacerla. Sustituye al botón «Renombrar».
+    · El paso 2 (carro) ya no espera a que haya sesión: está siempre.
+    · Lo que NO cambia a propósito: desde el día la clase tipo se USA, no se
+      edita. Ahí se sigue trayendo con ↧ y quitando con 🗑️.
+
+  v0.290.0 — Se puede crear una clase tipo sin sesión (2026-08)
+    (sin migraciones nuevas)
+    · EL FALLO: en unos bloques el ＋ dejaba crear y en otros no. El asistente
+      exigía elegir una sesión en el paso 1, y los bloques SIN sesiones
+      enlazadas no tenían nada que elegir, así que el paso 2 —el carro— no
+      llegaba a aparecer y no había forma de guardar nada.
+    · LA SESIÓN PASA A SER OPCIONAL, que es lo suyo: una clase tipo puede ser
+      solo carro. Si el bloque no tiene sesiones, se entra directo al carro y
+      la clase toma el nombre del BLOQUE. Si las tiene, se añade una opción
+      «Sin sesión · solo carro» al final de la lista.
+    · Con sesión sigue llamándose como la sesión. En los dos casos se puede
+      renombrar después, y ahora lo dice debajo del nombre propuesto.
+    · Y no se guarda nada vacío: sin sesión y sin ningún ejercicio, avisa.
+
+  v0.289.0 — Bloques plegables y ficha de la clase con miniaturas (2026-08)
+    (sin migraciones nuevas)
+    · LOS BLOQUES TAMBIÉN SE PLIEGAN dentro de cada área. Tocas el nombre y se
+      abren enseñando sus clases tipo; vuelves a tocarlo y se cierran. Con un
+      apartado de seis bloques y varias clases en cada uno, verlo todo abierto
+      era otra vez un muro.
+    · EL ＋ SE SEPARA. Crear una clase tipo de ese bloque pasa a su propio
+      botón a la derecha, para que tocar el bloque signifique una sola cosa:
+      abrirlo. Antes el mismo gesto abría el asistente de crear.
+    · LA CLASE TIPO SE ABRE EN SU PROPIA VENTANA, y CON MINIATURAS: la de la
+      sesión y la de cada ejercicio del carro, numerados y con su ▶ para ver
+      el vídeo sin salir. Antes se desplegaba dentro de la lista, donde no
+      cabía nada y no había forma de recordar cómo era la clase.
+      Dentro están también renombrar y borrar, y lo que ya no exista sale
+      tachado con su aviso, como en el resto de la app.
 
   v0.288.0 — Quitar la clase de un día (2026-08)
     (sin migraciones nuevas)
@@ -6576,17 +6622,26 @@
       color:var(--gris); background:var(--blanco); border-radius:999px; padding:1px 7px; }
     .ctc-area-n.con { color:#3730a3; background:#e0e7ff; }
     .ctc-area-body { padding:8px 9px 9px; }
-    /* Bloque: se toca para crear una clase tipo de ahí */
-    .ctc-bl { display:flex; align-items:center; gap:8px; width:100%; box-sizing:border-box;
-      font-family:inherit; text-align:left; padding:8px 10px; margin:6px 0 4px;
-      border:1.5px dashed var(--borde); border-radius:10px; background:var(--blanco); cursor:pointer; }
+    /* v0.289 — El bloque se pliega (toca el nombre) y el ＋ crea una nueva */
+    .ctc-bl-fila { display:flex; align-items:stretch; gap:5px; margin:6px 0 4px; }
+    .ctc-bl { flex:1; min-width:0; display:flex; align-items:center; gap:8px; box-sizing:border-box;
+      font-family:inherit; text-align:left; padding:8px 10px;
+      border:1.5px solid var(--borde); border-radius:10px; background:var(--blanco); cursor:pointer; }
+    .ctc-bl.ab { border-color:#c7d2fe; background:#f5f7ff; }
     .ctc-bl:active { background:var(--arena); }
     .ctc-bl-t { flex:1; min-width:0; font-size:12px; font-weight:800; color:#3730a3;
       overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .ctc-bl-n { flex-shrink:0; min-width:20px; text-align:center; font-size:10px; font-weight:800;
       color:var(--gris); background:var(--arena); border-radius:999px; padding:1px 6px; }
     .ctc-bl-n.con { color:#0e7490; background:#ecfeff; }
-    .ctc-bl-mas { flex-shrink:0; font-size:15px; color:#3730a3; }
+    .ctc-bl-mas { flex-shrink:0; width:34px; font-family:inherit; font-size:16px; color:#3730a3;
+      border:1.5px dashed #c7d2fe; border-radius:10px; background:var(--blanco); cursor:pointer; }
+    .ctc-bl-mas:active { background:#eef2ff; }
+    /* La ficha de una clase tipo */
+    .ct-ficha-modal { max-width:560px; }
+    .ct-ficha-modal .ruta-ses-eleg.borrado { opacity:.6; text-decoration:line-through; }
+    .ct-ficha-modal .ruta-carro-ficha.borrado { opacity:.6; }
+    .ct-chev { flex-shrink:0; font-size:15px; color:var(--gris); }
     /* Crear desde un bloque: sesión + carro */
     .ct-crear-modal { max-width:560px; }
     .ctcr-ses { display:flex; align-items:center; gap:9px; width:100%; box-sizing:border-box;
@@ -6691,6 +6746,11 @@
     .cbf-chev { flex-shrink:0; font-size:18px; color:var(--gris); }
     /* La ventana de un bloque va por encima del globo del día */
     .comp-bloque-ov { z-index:10040; }
+    /* v0.291: el compositor se abre DESDE la ficha, así que va por delante */
+    #ct-crear-ov { z-index:10045; }
+    .ctcr-nom-in { width:100%; box-sizing:border-box; padding:10px 12px; font-size:15px;
+      border:2px solid #cbd5e1; border-radius:10px; background:#fff; color:#0f172a; }
+    .ctcr-nom-in:focus { outline:none; border-color:#4f46e5; }
     .comp-bloque-modal { max-width:620px; }
     /* v0.274 — Notas de la clase */
     .comp-nota-btn.hay { background:#fef3c7 !important; color:#92400e !important; }
@@ -8455,6 +8515,8 @@
   <div id="ct-bloque-ov" class="ruta-modal-ov comp-bloque-ov" style="display:none" onclick="ctBloqueCerrar()"></div>
   <!-- v0.287: crear una clase tipo desde un bloque (sesión + carro) -->
   <div id="ct-crear-ov" class="ruta-modal-ov comp-bloque-ov" style="display:none" onclick="ctCrearCerrar()"></div>
+  <!-- v0.289: la ficha de una clase tipo, con miniaturas -->
+  <div id="ct-ficha-ov" class="ruta-modal-ov comp-bloque-ov" style="display:none" onclick="ctFichaCerrar()"></div>
 
   <!-- ══ CLASE PREPARADA DE UNA FRANJA (v0.224) ══════════
        Globo con el carro y el área de trabajo de esa franja y ese día, para
@@ -8576,7 +8638,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.288.0';
+    var APP_VERSION = '0.291.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -17873,45 +17935,32 @@
           }
           filasCT.forEach(function(it){
             var suyas = _ctDeBloque(p, nivelCT, it.id);
-            h += '<button type="button" class="ctc-bl" onclick="ctCrearAbrir(\'' + it.id + '\')" ' +
-                 'title="Crear una clase tipo de este bloque">' +
-              '<span class="ctc-bl-t">' + _gEsc(it.t) + '</span>' +
-              '<span class="ctc-bl-n' + (suyas.length ? ' con' : '') + '">' + suyas.length + '</span>' +
-              '<span class="ctc-bl-mas">＋</span></button>';
+            var abBl  = !!_ctBlAbierto[it.id];
+            // v0.289: el bloque también se pliega. Tocarlo abre sus clases
+            // tipo; el ＋ de la derecha crea una nueva de ese bloque.
+            h += '<div class="ctc-bl-fila">' +
+              '<button type="button" class="ctc-bl' + (abBl ? ' ab' : '') + '" onclick="ctBlToggle(\'' + it.id + '\')">' +
+                '<span class="ruta-parte-chev' + (abBl ? ' abierto' : '') + '">›</span>' +
+                '<span class="ctc-bl-t">' + _gEsc(it.t) + '</span>' +
+                '<span class="ctc-bl-n' + (suyas.length ? ' con' : '') + '">' + suyas.length + '</span></button>' +
+              '<button type="button" class="ctc-bl-mas" onclick="ctCrearAbrir(\'' + it.id + '\')" ' +
+                'title="Crear una clase tipo de este bloque" aria-label="Nueva">＋</button></div>';
+            if (!abBl) return;
+            if (!suyas.length) {
+              h += '<div class="ruta-panel-nota" style="padding:2px 4px 8px;">Sin clases tipo. Pulsa ＋ para crear una con las sesiones de este bloque.</div>';
+            }
             suyas.forEach(function(c){
-              var ab = (_ctAbierta === c.id);
               var gv = {}, gl = [];
               (c.carro || []).forEach(function(id){
                 var e = mapEjCT[id]; if (!e) return;
                 var kg = ejFaceta(e, 'golpe'); if (!kg || gv[kg]) return;
                 gv[kg] = true; gl.push(GOLPE_LABEL[kg] || kg);
               });
-              h += '<button type="button" class="ct-fila' + (ab ? ' ab' : '') + '" onclick="ctAbrir(\'' + c.id + '\')">' +
-                '<span class="ruta-parte-chev' + (ab ? ' abierto' : '') + '">›</span>' +
+              h += '<button type="button" class="ct-fila" onclick="ctFichaAbrir(\'' + c.id + '\')">' +
                 '<span class="ct-nom">' + _gEsc(c.nombre) + '</span>' +
                 gl.map(function(t){ return '<span class="ct-gol">' + _gEsc(t) + '</span>'; }).join('') +
-                '<span class="ct-uso">' + (c.usos || 0) + '×</span></button>';
-              if (!ab) return;
-              h += '<div class="ct-det">';
-              (c.sesiones || []).forEach(function(id){
-                var x = todasSCT.filter(function(t){ return t.id === id; })[0];
-                h += '<div class="ruta-ses' + (x ? '' : ' borrado') + '">' +
-                     _gEsc(x ? (x.nombre || x.fecha || ('Sesión ' + id)) : ((c.sesNom && c.sesNom[id]) || ('Sesión ' + id))) + '</div>';
-              });
-              h += '<div class="ruta-wk-zlbl" style="color:#0e7490;margin-top:7px;">🛒 Carro</div>';
-              if (!(c.carro || []).length) h += '<span class="ruta-panel-nota">Sin ejercicios.</span>';
-              (c.carro || []).forEach(function(id){
-                var e = mapEjCT[id];
-                h += '<span class="ruta-wk-ej' + (e ? '' : ' borrado') + '">' +
-                     _gEsc(e ? (e.nombre || ('Ejercicio ' + id)) : ((c.carroNom && c.carroNom[id]) || ('Ejercicio ' + id))) + '</span>';
-              });
-              var faltanE = (c.carro || []).filter(function(id){ return !mapEjCT[id]; }).length;
-              if (faltanE) h += '<div class="ct-aviso">' + (faltanE === 1 ? 'Ese ejercicio ya no existe' : 'Esos ' + faltanE + ' ejercicios ya no existen') + '</div>';
-              if (c.ultimoUso) h += '<div class="ct-fecha">Última vez: ' + formatFechaDiaMes(c.ultimoUso) + '</div>';
-              h += '<div class="ct-acts">' +
-                '<button type="button" class="btn btn-sec btn-sm" onclick="event.stopPropagation();ctRenombrar(\'' + c.id + '\')">Renombrar</button>' +
-                '<button type="button" class="btn btn-sec btn-sm" onclick="event.stopPropagation();ctBorrar(\'' + c.id + '\')">Borrar</button>' +
-                '</div></div>';
+                '<span class="ct-uso">' + (c.usos || 0) + '×</span>' +
+                '<span class="ct-chev">›</span></button>';
             });
           });
           h += '</div>';
@@ -18091,7 +18140,78 @@
     // solo aparecen en la pantalla de planificación de ese nivel.
     var _ctAbierta = null;   // v0.286: sin buscador ni orden — mandan área y bloque
     var _ctApAbierto = {};   // v0.287: qué áreas están desplegadas
+    var _ctBlAbierto = {};   // v0.289: y qué bloques dentro de ellas
     function ctApToggle(key) { _ctApAbierto[key] = !_ctApAbierto[key]; mostrarPlanificacion(); }
+    function ctBlToggle(id) { _ctBlAbierto[id] = !_ctBlAbierto[id]; mostrarPlanificacion(); }
+
+    // ── v0.289 — LA FICHA DE UNA CLASE TIPO ─────────────────────────
+    // Se abre al tocarla en el repositorio. En vez de desplegarse en la lista
+    // —donde no cabía nada— sale en su propia ventana y CON MINIATURAS: las
+    // de la sesión y las de cada ejercicio del carro, con su ▶ para ver el
+    // vídeo. Es la forma de recordar cómo era la clase antes de usarla.
+    var _ctFicha = null;
+    function ctFichaAbrir(id) { _ctFicha = id; _ctFichaPintar(); }
+    function ctFichaCerrar() {
+      _ctFicha = null;
+      var ov = document.getElementById('ct-ficha-ov');
+      if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; }
+    }
+    function _ctFichaPintar() {
+      var ov = document.getElementById('ct-ficha-ov');
+      if (!ov) return;
+      if (!_ctFicha) { ov.style.display = 'none'; ov.innerHTML = ''; return; }
+      var p = leerPlan();
+      var c = _ctLista(p).filter(function(x){ return x.id === _ctFicha; })[0];
+      if (!c) { ctFichaCerrar(); return; }
+      var mapEj = _ejsById(), todasS = leerClases();
+      var bloqNom = (c.bloques || []).map(function(id){
+        var f = _compTodasFilas(p).filter(function(x){ return x.id === id; })[0];
+        return f ? f.t : null;
+      }).filter(Boolean);
+
+      var h = '<div class="ruta-modal ct-ficha-modal" onclick="event.stopPropagation()">';
+      h += '<div class="ruta-modal-hdr"><div>' +
+        '<div class="ruta-modal-tit">' + _gEsc(c.nombre) + '</div>' +
+        '<div class="ruta-modal-sub">' + (bloqNom.length ? _gEsc(bloqNom.join(' · ')) + ' · ' : '') +
+          'usada ' + (c.usos || 0) + '×' +
+          (c.ultimoUso ? ' · última el ' + formatFechaDiaMes(c.ultimoUso) : '') + '</div></div>' +
+        '<button class="plan-modal-x" onclick="ctFichaCerrar()" aria-label="Cerrar">✕</button></div>';
+
+      // ── Área de trabajo: la sesión, con su miniatura ──
+      h += '<div class="ruta-wk-zlbl" style="color:#3730a3;">🎯 Área de trabajo</div>';
+      bloqNom.forEach(function(t){ h += '<span class="ruta-chip">' + _gEsc(t) + '</span>'; });
+      (c.sesiones || []).forEach(function(id){
+        var x = todasS.filter(function(t){ return t.id === id; })[0];
+        var th = x ? _rutaSesThumb(x) : null;
+        h += '<div class="ruta-ses-eleg' + (x ? ' clicable' : ' borrado') + '"' +
+          (x ? ' onclick="verSesion(' + x.id + ',\'planif\')"' : '') + '>' +
+          '<span class="ruta-ses-thumb">' + (th ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="ruta-ses-noimg">🎾</span>') + '</span>' +
+          '<span class="ruta-ses-nom">' + _gEsc(x ? (x.nombre || x.fecha || ('Sesión ' + id)) : ((c.sesNom && c.sesNom[id]) || ('Sesión ' + id))) + '</span></div>';
+      });
+      if ((c.sesiones || []).some(function(id){ return !todasS.some(function(t){ return t.id === id; }); }))
+        h += '<div class="ct-aviso">Alguna sesión ya no existe — se borró del catálogo</div>';
+
+      // ── Carro: cada ejercicio con su miniatura y su ▶ ──
+      h += '<div class="ruta-wk-zlbl" style="color:#0e7490;margin-top:11px;">🛒 Carro</div>';
+      if (!(c.carro || []).length) h += '<div class="ruta-panel-nota">Sin ejercicios de carro.</div>';
+      var faltanE = 0;
+      (c.carro || []).forEach(function(id, i){
+        var e = mapEj[id];
+        if (e) { h += _rutaCarroFichaHTML(e, '', i + 1); return; }
+        faltanE++;
+        h += '<div class="ruta-carro-ficha borrado"><span class="ruta-carro-num">' + (i + 1) + '</span>' +
+             '<span class="ruta-carro-ficha-txt"><b>' + _gEsc((c.carroNom && c.carroNom[id]) || ('Ejercicio ' + id)) + '</b>' +
+             '<span>ya no existe</span></span></div>';
+      });
+      if (faltanE) h += '<div class="ct-aviso">' + (faltanE === 1 ? 'Ese ejercicio ya no existe' : 'Esos ' + faltanE + ' ejercicios ya no existen') + ' — se borraron del catálogo</div>';
+
+      h += '<div class="ct-acts" style="margin-top:14px;">' +
+        '<button type="button" class="btn btn-sec btn-sm" onclick="ctEditarAbrir(\'' + c.id + '\')">✏️ Editar</button>' +
+        '<button type="button" class="btn btn-sec btn-sm" onclick="ctBorrar(\'' + c.id + '\')">Borrar</button>' +
+        '</div>';
+      h += '</div>';
+      _ovPintarConScroll(ov, h);
+    }
 
     // v0.288 — Quitar del día lo que se trajo. Es el arreglo de equivocarse
     // de día al pinchar: vacía SOLO ese día y solo de este nivel, y no toca
@@ -18114,43 +18234,109 @@
       planToast('✓ Día vaciado');
     }
 
-    // ── v0.287 — CREAR UNA CLASE TIPO DESDE UN BLOQUE ───────────────
-    // El camino corto, y el que se usará casi siempre: tocas un bloque, sale
-    // lo que hay dentro (sus sesiones), eliges una, marcas los ejercicios de
-    // carro y ya está. La clase se llama COMO LA SESIÓN, así que no hay que
-    // inventar nombres ni escribir nada.
-    var _ctcBloque = null, _ctcSes = null, _ctcCarro = [], _ctcGolpe = null;
+    // ── COMPONER UNA CLASE TIPO (v0.287 · reescrito en v0.291) ──────
+    // El ＋ de un bloque abre el compositor: eliges las sesiones que quieras
+    // de ese bloque (ninguna, una o varias — una clase real suele encadenar
+    // dos), marcas los ejercicios de carro y le pones nombre. El mismo
+    // compositor sirve para RETOCAR una clase ya creada: se abre con todo
+    // cargado y guarda encima en vez de duplicarla.
+    var _ctcBloque = null, _ctcSes = [], _ctcCarro = [], _ctcGolpe = null;
+    var _ctcNom = '', _ctcNomTocado = false, _ctcEdit = null;
+
     function ctCrearAbrir(bloqueId) {
-      _ctcBloque = bloqueId; _ctcSes = null; _ctcCarro = []; _ctcGolpe = null;
+      _ctcBloque = bloqueId; _ctcSes = []; _ctcCarro = []; _ctcGolpe = null;
+      _ctcNom = ''; _ctcNomTocado = false; _ctcEdit = null;
+      _ctCrearPintar();
+    }
+    // v0.291 — el lápiz de la ficha: mismo compositor, con lo suyo dentro.
+    function ctEditarAbrir(id) {
+      var c = _ctLista(leerPlan()).filter(function(x){ return x.id === id; })[0];
+      if (!c) return;
+      _ctcEdit   = id;
+      _ctcBloque = (c.bloques || [])[0] || null;
+      _ctcSes    = (c.sesiones || []).slice();
+      _ctcCarro  = (c.carro || []).slice();
+      _ctcNom    = c.nombre || '';
+      _ctcNomTocado = true;      // el nombre es suyo: no se lo pisamos
+      _ctcGolpe  = null;
+      if (!_ctcBloque) { alert('Esta clase tipo no está en ningún bloque.'); return; }
       _ctCrearPintar();
     }
     function ctCrearCerrar() {
-      _ctcBloque = null;
+      _ctcBloque = null; _ctcEdit = null;
       var ov = document.getElementById('ct-crear-ov');
       if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; }
     }
-    function ctCrearSes(id) { _ctcSes = id; _ctCrearPintar(); }
+    // v0.291: las sesiones se marcan y se desmarcan, ya no son excluyentes
+    function ctCrearSes(id) {
+      var i = _ctcSes.indexOf(id);
+      if (i >= 0) _ctcSes.splice(i, 1); else _ctcSes.push(id);
+      _ctCrearPintar();
+    }
     function ctCrearGolpe(k) { _ctcGolpe = (_ctcGolpe === k) ? null : k; _ctCrearPintar(); }
     function ctCrearEj(id) {
       var i = _ctcCarro.indexOf(id);
       if (i >= 0) _ctcCarro.splice(i, 1); else _ctcCarro.push(id);
       _ctCrearPintar();
     }
+    // El nombre NO repinta al teclear: perdería el foco a cada letra.
+    function ctCrearNom(v) { _ctcNom = v; _ctcNomTocado = true; }
+
+    // Nombre que se propone solo: la primera sesión elegida, o el bloque si
+    // la clase es solo de carro. Deja de proponerse en cuanto Alex escribe.
+    function _ctcNomAuto() {
+      if (_ctcSes.length) {
+        var x = leerClases().filter(function(c){ return c.id === _ctcSes[0]; })[0];
+        if (x) {
+          var n = x.nombre || x.fecha || ('Sesión ' + x.id);
+          return _ctcSes.length > 1 ? (n + ' +' + (_ctcSes.length - 1)) : n;
+        }
+      }
+      var f = _compTodasFilas(leerPlan()).filter(function(x){ return x.id === _ctcBloque; })[0];
+      return (f && f.t) || 'Clase tipo';
+    }
+
     function ctCrearGuardar() {
-      if (!_ctcBloque || !_ctcSes) return;
+      if (!_ctcBloque) return;
       var p = leerPlan(), nivel = _compNivel();
-      var ses = leerClases().filter(function(c){ return c.id === _ctcSes; })[0];
-      if (!ses) return;
-      var mapEj = _ejsById(), carroNom = {};
+      if (!_ctcSes.length && !_ctcCarro.length) {
+        alert('Elige al menos una sesión o un ejercicio de carro.'); return;
+      }
+      var nombre = (_ctcNomTocado ? _ctcNom : _ctcNomAuto()).trim() || _ctcNomAuto();
+      var mapEj = _ejsById(), todasS = leerClases();
+      var carroNom = {};
       _ctcCarro.forEach(function(id){ if (mapEj[id]) carroNom[id] = mapEj[id].nombre || ('Ejercicio ' + id); });
-      var sesNom = {}; sesNom[ses.id] = ses.nombre || ses.fecha || ('Sesión ' + ses.id);
+      var sesNom = {};
+      _ctcSes.forEach(function(id){
+        var x = todasS.filter(function(c){ return c.id === id; })[0];
+        if (x) sesNom[id] = x.nombre || x.fecha || ('Sesión ' + id);
+      });
       if (!p.clasesTipo) p.clasesTipo = [];
+
+      if (_ctcEdit) {
+        // Editar: se conserva el id, los usos y la fecha de creación, para no
+        // perder el histórico ni romper nada de lo ya aplicado a los días.
+        var c = _ctLista(p).filter(function(x){ return x.id === _ctcEdit; })[0];
+        if (!c) { ctCrearCerrar(); return; }
+        c.nombre = nombre;
+        c.carro = _ctcCarro.slice(); c.carroNom = carroNom;
+        c.sesiones = _ctcSes.slice(); c.sesNom = sesNom;
+        c.bloques = [_ctcBloque];
+        _planGuardar(p);
+        var vuelveA = _ctcEdit;
+        ctCrearCerrar();
+        mostrarPlanificacion();
+        if (_ctFicha === vuelveA) _ctFichaPintar();   // la ficha, ya actualizada
+        planToast('✓ Clase tipo guardada');
+        return;
+      }
+
       p.clasesTipo.push({
         id: 'ct' + Date.now() + Math.random().toString(36).slice(2,6),
         nivel: nivel,
-        nombre: sesNom[ses.id],          // se llama como la sesión elegida
+        nombre: nombre,
         carro: _ctcCarro.slice(), carroNom: carroNom,
-        bloques: [_ctcBloque], sesiones: [ses.id], sesNom: sesNom,
+        bloques: [_ctcBloque], sesiones: _ctcSes.slice(), sesNom: sesNom,
         usos: 0, ultimoUso: '', creada: hoyLocal()
       });
       _planGuardar(p);
@@ -18158,71 +18344,81 @@
       mostrarPlanificacion();
       planToast('✓ Clase tipo creada');
     }
+
     function _ctCrearPintar() {
       var ov = document.getElementById('ct-crear-ov');
       if (!ov) return;
       if (!_ctcBloque) { ov.style.display = 'none'; ov.innerHTML = ''; return; }
-      var p = leerPlan(), nivel = _compNivel();
+      var p = leerPlan();
       var fila = _compTodasFilas(p).filter(function(x){ return x.id === _ctcBloque; })[0];
       if (!fila) { ctCrearCerrar(); return; }
       var sesiones = _rutaSesPorArea(_compTodasFilas(p))[_ctcBloque] || [];
 
       var h = '<div class="ruta-modal ct-crear-modal" onclick="event.stopPropagation()">';
       h += '<div class="ruta-modal-hdr"><div>' +
-        '<div class="ruta-modal-tit">Nueva clase tipo</div>' +
+        '<div class="ruta-modal-tit">' + (_ctcEdit ? 'Editar clase tipo' : 'Nueva clase tipo') + '</div>' +
         '<div class="ruta-modal-sub">' + _gEsc(fila.apartado) + ' · ' + _gEsc(fila.t) + '</div></div>' +
         '<button class="plan-modal-x" onclick="ctCrearCerrar()" aria-label="Cerrar">✕</button></div>';
 
-      // ── Paso 1 · la sesión ──
-      h += '<div class="ruta-panel-paso">1 · ¿Qué sesión?</div>';
+      // ── Paso 1 · las sesiones (varias, y opcionales) ────────────────
+      h += '<div class="ruta-panel-paso">1 · Sesiones del bloque' +
+           '<span class="ruta-panel-nota"> · opcional' +
+           (_ctcSes.length ? ' · ' + _ctcSes.length + ' elegida' + (_ctcSes.length !== 1 ? 's' : '') : '') +
+           '</span></div>';
       if (!sesiones.length) {
-        h += '<div class="comp-picker-vacio">Este bloque no tiene ninguna sesión enlazada todavía.<br>' +
-             '<span class="ruta-panel-nota">Se enlazan desde Área de trabajo, o con apartado + bloque en la ficha de la sesión.</span></div>';
+        h += '<div class="ruta-panel-nota" style="padding:2px 2px 8px;">Este bloque no tiene sesiones enlazadas. ' +
+             'Puedes seguir: la clase será solo de carro.</div>';
       }
       sesiones.forEach(function(c){
-        var th = _rutaSesThumb(c);
-        h += '<button type="button" class="ctcr-ses' + (_ctcSes === c.id ? ' on' : '') +
+        var th = _rutaSesThumb(c), on = _ctcSes.indexOf(c.id) >= 0;
+        h += '<button type="button" class="ctcr-ses' + (on ? ' on' : '') +
           '" onclick="ctCrearSes(' + c.id + ')">' +
+          '<span class="ruta-carro-check">' + (on ? '✓' : '') + '</span>' +
           '<span class="ruta-ses-thumb">' + (th ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="ruta-ses-noimg">🎾</span>') + '</span>' +
           '<span class="ctcr-ses-n">' + _gEsc(c.nombre || c.fecha || ('Sesión ' + c.id)) + '</span></button>';
       });
 
-      // ── Paso 2 · el carro ──
-      if (_ctcSes) {
-        h += '<div class="ruta-panel-paso" style="margin-top:12px;">2 · ¿Qué se lanza de carro?' +
-             '<span class="ruta-panel-nota"> · ' + _ctcCarro.length + ' elegido' + (_ctcCarro.length !== 1 ? 's' : '') + '</span></div>';
-        var ejs = leerEjercicios().filter(_esDeCarro).sort(function(a, b){
-          return String(a.nombre || '').localeCompare(String(b.nombre || ''));
-        });
-        var grupos = _rutaCarroPorGolpe(ejs);
-        h += '<div class="ruta-carro-golpes">';
-        grupos.forEach(function(g){
-          h += '<button type="button" class="ruta-carro-g' + (_ctcGolpe === g.key ? ' on' : '') +
-            '" onclick="ctCrearGolpe(\'' + g.key + '\')">' + _gEsc(g.label) + ' <b>' + g.ejs.length + '</b></button>';
-        });
-        h += '</div>';
-        if (_ctcGolpe) {
-          var gSel = grupos.filter(function(g){ return g.key === _ctcGolpe; })[0];
-          if (gSel) {
-            h += '<div class="ruta-carro-lista">';
-            gSel.ejs.forEach(function(e){
-              var on = _ctcCarro.indexOf(e.id) >= 0;
-              var th = _rutaEjThumb(e);
-              h += '<button type="button" class="ruta-carro-it' + (on ? ' on' : '') + '" onclick="ctCrearEj(' + e.id + ')">' +
-                '<span class="ruta-carro-check">' + (on ? '✓' : '') + '</span>' +
-                '<span class="ruta-carro-thumb">' + (th ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="ruta-ses-noimg">🎾</span>') + '</span>' +
-                '<span class="ruta-carro-txt"><b>' + _gEsc(e.nombre || ('Ejercicio ' + e.id)) + '</b></span></button>';
-            });
-            h += '</div>';
-          }
-        } else {
-          h += '<div class="ruta-panel-nota">Elige un golpe para ver sus ejercicios. Puedes coger de varios.</div>';
+      // ── Paso 2 · el carro ───────────────────────────────────────────
+      h += '<div class="ruta-panel-paso" style="margin-top:12px;">2 · ¿Qué se lanza de carro?' +
+           '<span class="ruta-panel-nota"> · ' + _ctcCarro.length + ' elegido' + (_ctcCarro.length !== 1 ? 's' : '') + '</span></div>';
+      var ejs = leerEjercicios().filter(_esDeCarro).sort(function(a, b){
+        return String(a.nombre || '').localeCompare(String(b.nombre || ''));
+      });
+      var grupos = _rutaCarroPorGolpe(ejs);
+      h += '<div class="ruta-carro-golpes">';
+      grupos.forEach(function(g){
+        h += '<button type="button" class="ruta-carro-g' + (_ctcGolpe === g.key ? ' on' : '') +
+          '" onclick="ctCrearGolpe(\'' + g.key + '\')">' + _gEsc(g.label) + ' <b>' + g.ejs.length + '</b></button>';
+      });
+      h += '</div>';
+      if (_ctcGolpe) {
+        var gSel = grupos.filter(function(g){ return g.key === _ctcGolpe; })[0];
+        if (gSel) {
+          h += '<div class="ruta-carro-lista">';
+          gSel.ejs.forEach(function(e){
+            var on = _ctcCarro.indexOf(e.id) >= 0;
+            var th = _rutaEjThumb(e);
+            h += '<button type="button" class="ruta-carro-it' + (on ? ' on' : '') + '" onclick="ctCrearEj(' + e.id + ')">' +
+              '<span class="ruta-carro-check">' + (on ? '✓' : '') + '</span>' +
+              '<span class="ruta-carro-thumb">' + (th ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="ruta-ses-noimg">🎾</span>') + '</span>' +
+              '<span class="ruta-carro-txt"><b>' + _gEsc(e.nombre || ('Ejercicio ' + e.id)) + '</b></span></button>';
+          });
+          h += '</div>';
         }
-        var nomSes = (leerClases().filter(function(c){ return c.id === _ctcSes; })[0] || {}).nombre || 'la sesión';
-        h += '<div class="ctcr-nom">Se llamará <b>' + _gEsc(nomSes) + '</b></div>';
-        h += '<div class="acciones"><button class="btn btn-sec" style="flex:1;" onclick="ctCrearCerrar()">Cancelar</button>' +
-             '<button class="btn btn-verde" style="flex:1;" onclick="ctCrearGuardar()">Guardar clase tipo</button></div>';
+      } else {
+        h += '<div class="ruta-panel-nota">Elige un golpe para ver sus ejercicios. Puedes coger de varios.</div>';
       }
+
+      // ── Paso 3 · el nombre, escrito por él ──────────────────────────
+      h += '<div class="ruta-panel-paso" style="margin-top:12px;">3 · Nombre</div>';
+      h += '<input type="text" class="ctcr-nom-in" id="ctc-nom" maxlength="60" ' +
+           'value="' + _gEsc(_ctcNomTocado ? _ctcNom : _ctcNomAuto()) + '" ' +
+           'oninput="ctCrearNom(this.value)" onclick="event.stopPropagation()" ' +
+           'placeholder="Cómo quieres llamarla">';
+
+      h += '<div class="acciones"><button class="btn btn-sec" style="flex:1;" onclick="ctCrearCerrar()">Cancelar</button>' +
+           '<button class="btn btn-verde" style="flex:1;" onclick="ctCrearGuardar()">' +
+           (_ctcEdit ? 'Guardar cambios' : 'Guardar clase tipo') + '</button></div>';
       h += '</div>';
       _ovPintarConScroll(ov, h);
     }
@@ -18236,7 +18432,9 @@
       if (n === null) return;
       n = n.trim();
       if (!n) return;
-      c.nombre = n; _planGuardar(p); mostrarPlanificacion();
+      c.nombre = n; _planGuardar(p);
+      mostrarPlanificacion();
+      if (_ctFicha === id) _ctFichaPintar();   // v0.289: refresca la ficha abierta
     }
     // ── v0.285 — LAS CLASES TIPO DE UN BLOQUE ───────────────────────
     // Se abre al pulsar un bloque del área de trabajo (en modo normal). Es la
@@ -18380,6 +18578,7 @@
       if (!confirm('¿Borrar la clase tipo «' + c.nombre + '»?\n\nLo ya planificado con ella en los días NO se toca.')) return;
       p.clasesTipo = _ctLista(p).filter(function(x){ return x.id !== id; });
       if (_ctAbierta === id) _ctAbierta = null;
+      if (_ctFicha === id) ctFichaCerrar();   // v0.289
       _planGuardar(p); mostrarPlanificacion();
     }
     function _ctLista(p) { return (p && p.clasesTipo) || []; }
