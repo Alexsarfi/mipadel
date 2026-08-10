@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.294.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.295.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,27 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.295.0 — FIX: había DOS sistemas de notas · ahora uno solo (2026-08)
+    (sin migraciones nuevas — y la de la v0.294 queda ANULADA)
+    · LA v0.294 SE EQUIVOCÓ. Metió un segundo almacén de notas en
+      asistencia_registros (por clase + fecha) sin ver que las notas de clase
+      YA existían desde la v0.274 en p.notasDia (por NIVEL + fecha). Efecto:
+      lo que se escribía en la vista de asistencia no encendía el punto ámbar
+      del día en Planificación ni entraba en la bandeja de «clases con
+      notas» con su ✓ Hecho (v0.285). Dos cuadros, dos sitios, ninguno
+      hablando con el otro.
+    · AHORA HAY UNO SOLO. El cuadro de notas de la vista de asistencia
+      escribe en p.notasDia, usando el NIVEL de esa franja. Con eso:
+        · se enciende el punto del día en el mes de Planificación,
+        · la nota sale en la bandeja de arriba con su ✓ Hecho,
+        · y vaciar el cuadro la retira, como en el otro camino.
+    · Se retira el campo `notas` de asistencia_registros y de
+      sustituto_registros del mapeo de subida y de las tres lecturas.
+      migracion_notas_clase.sql queda ANULADA (si ya se ejecutó, deja una
+      columna vacía sin efecto; el propio archivo explica cómo quitarla).
+    · La migración que SÍ hace falta para las notas sigue siendo la de la
+      v0.274: migracion_notas_dia.sql.
 
   v0.294.0 — La clase, sin comerse la muesca · y notas de la clase (2026-08)
     ⚠️ REQUIERE MIGRACIÓN: migraciones/migracion_notas_clase.sql
@@ -8757,7 +8778,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.294.0';
+    var APP_VERSION = '0.295.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -9119,7 +9140,6 @@
           recupClase:!!r.recup_clase,
           recupHora:r.recup_hora||'',
           recupDe:r.recup_de||'',              // v0.142: fecha de la clase anulada que salda
-          notas:r.notas||'',                   // v0.294: notas de mejora de esa clase
           _ownerUid:r.user_id                  // v0.182
         }; });
 
@@ -9387,9 +9407,8 @@
         sin_clase_recup:!!r.sinClaseRecup,  // v0.137: anulada pero pendiente de recuperar
         recup_clase:!!r.recupClase,   // v0.82: sesión de recuperación de clase
         recup_hora:r.recupHora||null, // v0.98: hora elegida para la recuperación
-        recup_de:r.recupDe||null,     // v0.142: clase anulada que salda esta recuperación
-        notas:r.notas||null           // v0.294: notas de mejora de esa clase
-      }; }
+        recup_de:r.recupDe||null      // v0.142: clase anulada que salda esta recuperación
+      }; }   // v0.295: sin `notas` — las notas viven en plan.notasDia
     };
 
     // Upsert en background de una tabla completa
@@ -9772,8 +9791,7 @@
                presentes:x.presentes||[], ausentes:x.ausentes||[], justificadas:x.justificadas||[],
                recups:x.recups||[], sin_clase:!!x.sinClase, sin_clase_recup:!!x.sinClaseRecup,
                recup_clase:!!x.recupClase,
-               recup_hora:x.recupHora||null, recup_de:x.recupDe||null,
-               notas:x.notas||null };   // v0.294
+               recup_hora:x.recupHora||null, recup_de:x.recupDe||null };
     }
     function _gEditUpsert(tabla, filas) {
       if (!_sb || !_gEditUid || !filas.length) return;
@@ -9855,7 +9873,7 @@
                    impartidaPor:r.impartida_por || null,
                    sinClase:!!r.sin_clase, sinClaseRecup:!!r.sin_clase_recup,
                    recupClase:!!r.recup_clase, recupHora:r.recup_hora||'',
-                   recupDe:r.recup_de||'', notas:r.notas||'' };   // v0.294
+                   recupDe:r.recup_de||'' };
         });
       }
       var d = _lzGet('padel-asistencia-reg'); return d ? JSON.parse(d) : [];
@@ -24569,13 +24587,18 @@
       _ovPintarConScroll(ov, h);   // v0.284
     }
 
-    // ── v0.294 · Notas de clase ────────────────────────────────────────
-    // Viven en el registro de asistencia de ese clase+fecha (`notas`), que es
-    // la granularidad correcta: una nota por clase dada, no por franja.
+    // ── v0.295 · Notas de clase — UN SOLO SITIO ────────────────────────
+    // FIX de la v0.294: se había creado un segundo almacén de notas en
+    // asistencia_registros, en paralelo al que ya existía desde la v0.274
+    // (p.notasDia, por NIVEL + fecha). Resultado: lo escrito aquí no
+    // encendía el punto del día en Planificación ni entraba en la bandeja
+    // de «clases con notas» con su ✓ Hecho.
+    // Ahora este cuadro escribe en notasDia, que es el almacén bueno.
     function _asistNotaDe(claseId, fecha) {
-      var r = leerAsistRegistros().filter(function(x){
-        return x.claseId === claseId && x.fecha === fecha; })[0];
-      return (r && r.notas) ? String(r.notas) : '';
+      var clase = (leerAsistConfig().clases || []).filter(function(c){ return c.id === claseId; })[0];
+      var niv = (clase && clase.nivel) || 'competicion';
+      var p = leerPlan();
+      return (p.notasDia && p.notasDia[niv + '|' + fecha]) || '';
     }
     function _asistNotaCambio() {
       var e = document.getElementById('asist-notas-estado');
@@ -24584,23 +24607,19 @@
     function asistGuardarNota(claseId, fecha) {
       var ta = document.getElementById('asist-notas-txt');
       if (!ta) return;
+      var clase = (leerAsistConfig().clases || []).filter(function(c){ return c.id === claseId; })[0];
+      var niv = (clase && clase.nivel) || 'competicion';
       var txt = ta.value.trim();
-      var regs = leerAsistRegistros(), idx = -1;
-      regs.forEach(function(r, i){ if (r.claseId === claseId && r.fecha === fecha) idx = i; });
-      if (idx >= 0) {
-        regs[idx].notas = txt;
-        escribirAsistRegistros(regs, false, [regs[idx]]);
-      } else {
-        // Aún no hay registro de ese día (no se ha pasado lista): se crea uno
-        // vacío solo para colgar la nota.
-        var nid = regs.length ? Math.max.apply(null, regs.map(function(r){ return r.id || 0; })) + 1 : 1;
-        var nuevo = { id:nid, claseId:claseId, fecha:fecha, presentes:[], ausentes:[],
-                      justificadas:[], recups:[], impartidaPor:null, sinClase:false, notas:txt };
-        regs.push(nuevo);
-        escribirAsistRegistros(regs, false, [nuevo]);
-      }
+      var p = leerPlan();
+      if (!p.notasDia) p.notasDia = {};
+      var k = niv + '|' + fecha;
+      if (txt) p.notasDia[k] = txt; else delete p.notasDia[k];   // vaciarla la retira
+      _planGuardar(p);
       var e = document.getElementById('asist-notas-estado');
-      if (e) { e.textContent = '✓ guardada'; e.className = 'asist-notas-estado ok'; }
+      if (e) {
+        e.textContent = txt ? '✓ guardada · verás el punto en Planificación' : '✓ nota retirada';
+        e.className = 'asist-notas-estado ok';
+      }
     }
 
     // Suma n días a una fecha ISO
