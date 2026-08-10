@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.293.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.294.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,26 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.294.0 — La clase, sin comerse la muesca · y notas de la clase (2026-08)
+    ⚠️ REQUIERE MIGRACIÓN: migraciones/migracion_notas_clase.sql
+    · ARREGLADO EL RECORTE EN IPHONE: la vista de la clase a pantalla completa
+      empezaba debajo de la barra de estado y se comía la cabecera. Ahora el
+      padding de arriba suma env(safe-area-inset-top). El <meta viewport> ya
+      traía viewport-fit=cover, solo faltaba respetarlo.
+    · NOTAS DE LA CLASE, y solo aquí. Al final de la vista que se abre con
+      «Plan» hay un cuadro de notas: qué ha funcionado, qué corregir, quién
+      necesita insistir en algo. Es la pantalla que tienes delante en pista,
+      así que es donde tiene sentido escribirlas — no en otro sitio.
+    · SE GUARDAN POR CLASE + FECHA, dentro del registro de asistencia de ese
+      día (campo `notas`). Esa es la granularidad correcta: una nota por
+      clase dada, no por franja ni por semana. Si ese día todavía no se ha
+      pasado lista, se crea el registro vacío solo para colgar la nota.
+    · El textarea avisa con «sin guardar» al escribir y «✓ guardada» al
+      pulsar el botón, para que no te quedes con la duda.
+    · Viaja a Supabase en la columna nueva `notas` de asistencia_registros
+      (y de sustituto_registros, para que no falle el upsert cuando la clase
+      la cubre otro entrenador).
 
   v0.293.0 — Asistencia: la franja pasa a tarjeta y el plan, a pantalla completa (2026-08)
     (sin migraciones nuevas)
@@ -6378,9 +6398,11 @@
     /* v0.293 — En el MÓVIL la clase se abre a PANTALLA COMPLETA, no como
        hoja a media altura: es lo que se mira en pista y hay que verlo grande.
        Y todo dentro sube de tamaño, que es de lo que se trata. */
+    /* v0.294: el padding de arriba respeta la muesca / barra de estado del
+       iPhone. Sin esto la cabecera de la clase quedaba debajo del reloj. */
     .asist-clase-modal { background:var(--blanco); width:100%; max-width:520px; height:100dvh;
       max-height:100dvh; overflow-y:auto; border-radius:0;
-      padding:14px 14px calc(20px + env(safe-area-inset-bottom));
+      padding:calc(14px + env(safe-area-inset-top)) 14px calc(20px + env(safe-area-inset-bottom));
       box-shadow:none; animation:gpSheetUp .18s ease-out; }
     @media (max-width:699px){
       .asist-clase-ov { align-items:stretch; background:rgba(0,0,0,.86); }
@@ -6399,6 +6421,20 @@
         padding:18px 20px 20px; box-shadow:0 -8px 30px rgba(0,0,0,.3); }
     }
     .asist-franja-pill { background:var(--lila-suave); color:var(--lila); font-size:11px; font-weight:700; border-radius:7px; padding:4px 9px; flex-shrink:0; white-space:nowrap; }
+    /* v0.294 — Notas de la clase, dentro de la vista de pista */
+    .asist-notas { margin-top:14px; border:1.5px solid var(--borde); border-radius:13px;
+      padding:11px 12px 12px; background:var(--arena); }
+    .asist-notas-hdr { display:flex; align-items:center; gap:7px; font-size:13px; color:var(--gris);
+      margin-bottom:8px; }
+    .asist-notas-hdr b { font-size:14.5px; color:var(--texto); }
+    .asist-notas-estado { margin-left:auto; font-size:11px; font-weight:700; }
+    .asist-notas-estado.pend { color:var(--ambar-texto); }
+    .asist-notas-estado.ok   { color:#166534; }
+    .asist-notas-txt { width:100%; box-sizing:border-box; border:1.5px solid var(--borde);
+      border-radius:10px; padding:10px 11px; font-size:15px; font-family:inherit; line-height:1.5;
+      background:var(--blanco); color:var(--texto); resize:vertical; outline:none; }
+    .asist-notas-txt:focus { border-color:var(--lila-claro); }
+    .asist-notas-btn { margin-top:9px; width:100%; }
     /* ── v0.293 — Franja de asistencia como TARJETA con banda de nivel ── */
     .asist-clase-banda { display:flex; align-items:center; gap:8px; padding:5px 12px;
       background:var(--verde-suave); }
@@ -8721,7 +8757,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.293.0';
+    var APP_VERSION = '0.294.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -9083,6 +9119,7 @@
           recupClase:!!r.recup_clase,
           recupHora:r.recup_hora||'',
           recupDe:r.recup_de||'',              // v0.142: fecha de la clase anulada que salda
+          notas:r.notas||'',                   // v0.294: notas de mejora de esa clase
           _ownerUid:r.user_id                  // v0.182
         }; });
 
@@ -9350,7 +9387,8 @@
         sin_clase_recup:!!r.sinClaseRecup,  // v0.137: anulada pero pendiente de recuperar
         recup_clase:!!r.recupClase,   // v0.82: sesión de recuperación de clase
         recup_hora:r.recupHora||null, // v0.98: hora elegida para la recuperación
-        recup_de:r.recupDe||null      // v0.142: clase anulada que salda esta recuperación
+        recup_de:r.recupDe||null,     // v0.142: clase anulada que salda esta recuperación
+        notas:r.notas||null           // v0.294: notas de mejora de esa clase
       }; }
     };
 
@@ -9734,7 +9772,8 @@
                presentes:x.presentes||[], ausentes:x.ausentes||[], justificadas:x.justificadas||[],
                recups:x.recups||[], sin_clase:!!x.sinClase, sin_clase_recup:!!x.sinClaseRecup,
                recup_clase:!!x.recupClase,
-               recup_hora:x.recupHora||null, recup_de:x.recupDe||null };
+               recup_hora:x.recupHora||null, recup_de:x.recupDe||null,
+               notas:x.notas||null };   // v0.294
     }
     function _gEditUpsert(tabla, filas) {
       if (!_sb || !_gEditUid || !filas.length) return;
@@ -9816,7 +9855,7 @@
                    impartidaPor:r.impartida_por || null,
                    sinClase:!!r.sin_clase, sinClaseRecup:!!r.sin_clase_recup,
                    recupClase:!!r.recup_clase, recupHora:r.recup_hora||'',
-                   recupDe:r.recup_de||'' };
+                   recupDe:r.recup_de||'', notas:r.notas||'' };   // v0.294
         });
       }
       var d = _lzGet('padel-asistencia-reg'); return d ? JSON.parse(d) : [];
@@ -24510,10 +24549,58 @@
       h += '</div>';
       h += '</div>';
 
+      // ── v0.294 — NOTAS DE LA CLASE. Aquí y en ningún otro sitio: es la
+      //    pantalla que se abre en pista, con la clase delante. Se guardan
+      //    por clase + fecha, en el registro de asistencia de ese día.
+      var _notaAct = _asistNotaDe(claseId, fechaISO);
+      h += '<div class="asist-notas">';
+      h += '<div class="asist-notas-hdr">📝 <b>Notas de la clase</b>' +
+           '<span id="asist-notas-estado" class="asist-notas-estado"></span></div>';
+      h += '<textarea id="asist-notas-txt" class="asist-notas-txt" rows="4" ' +
+           'placeholder="Qué ha funcionado, qué corregir, quién necesita insistir en algo…" ' +
+           'oninput="_asistNotaCambio()">' + _gEsc(_notaAct) + '</textarea>';
+      h += '<button type="button" class="btn btn-verde asist-notas-btn" ' +
+           'onclick="asistGuardarNota(' + claseId + ',\'' + fechaISO + '\')">💾 Guardar nota</button>';
+      h += '</div>';
+
       // v0.225: sin botón de editar — la planificación se toca en su sitio
       // (Planificación → el nivel → el día), no desde la vista de pista.
       h += '</div>';
       _ovPintarConScroll(ov, h);   // v0.284
+    }
+
+    // ── v0.294 · Notas de clase ────────────────────────────────────────
+    // Viven en el registro de asistencia de ese clase+fecha (`notas`), que es
+    // la granularidad correcta: una nota por clase dada, no por franja.
+    function _asistNotaDe(claseId, fecha) {
+      var r = leerAsistRegistros().filter(function(x){
+        return x.claseId === claseId && x.fecha === fecha; })[0];
+      return (r && r.notas) ? String(r.notas) : '';
+    }
+    function _asistNotaCambio() {
+      var e = document.getElementById('asist-notas-estado');
+      if (e) { e.textContent = 'sin guardar'; e.className = 'asist-notas-estado pend'; }
+    }
+    function asistGuardarNota(claseId, fecha) {
+      var ta = document.getElementById('asist-notas-txt');
+      if (!ta) return;
+      var txt = ta.value.trim();
+      var regs = leerAsistRegistros(), idx = -1;
+      regs.forEach(function(r, i){ if (r.claseId === claseId && r.fecha === fecha) idx = i; });
+      if (idx >= 0) {
+        regs[idx].notas = txt;
+        escribirAsistRegistros(regs, false, [regs[idx]]);
+      } else {
+        // Aún no hay registro de ese día (no se ha pasado lista): se crea uno
+        // vacío solo para colgar la nota.
+        var nid = regs.length ? Math.max.apply(null, regs.map(function(r){ return r.id || 0; })) + 1 : 1;
+        var nuevo = { id:nid, claseId:claseId, fecha:fecha, presentes:[], ausentes:[],
+                      justificadas:[], recups:[], impartidaPor:null, sinClase:false, notas:txt };
+        regs.push(nuevo);
+        escribirAsistRegistros(regs, false, [nuevo]);
+      }
+      var e = document.getElementById('asist-notas-estado');
+      if (e) { e.textContent = '✓ guardada'; e.className = 'asist-notas-estado ok'; }
     }
 
     // Suma n días a una fecha ISO
