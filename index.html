@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.295.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.297.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,40 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.297.0 — Apuntar en pista lo que se ha improvisado (2026-08)
+    (sin migraciones nuevas)
+    · EL CASO REAL: no da tiempo a planificar, se improvisa en pista y lo
+      trabajado se perdía. La franja se quedaba en «Sin plan» y en casa no
+      había de dónde tirar.
+    · AHORA, EN LA VISTA DE LA CLASE (botón «Plan» de la franja) hay una
+      sección «🎯 Lo que has trabajado»: se elige el apartado en una fila
+      horizontal y debajo salen sus bloques, cada uno tocable. Dos toques y
+      queda registrado, aunque ese bloque todavía no tenga ningún ejercicio
+      dentro — que es justo el caso de la improvisación.
+    · Lo ya marcado sale como chips con su ✕ para quitarlo.
+    · ESCRIBE EN EL MISMO SITIO QUE PLANIFICACIÓN (p.compDias), así que lo
+      apuntado en pista aparece luego en el plan igual que si lo hubieras
+      marcado desde casa, y el día cuenta como trabajado.
+    · Al cerrar la ventana se repinta la lista de asistencia de detrás: el
+      botón de la franja pasa de «Sin plan» a «Plan» sin recargar.
+    · Con esto y las notas, el flujo queda cerrado: en pista marcas el bloque
+      y escribes la nota; en casa el día sale con su tic rojo y en la bandeja
+      de «clases con notas», y desde ahí creas los ejercicios que faltaban.
+
+  v0.296.0 — El aviso de nota se clava en el círculo del día (2026-08)
+    (sin migraciones nuevas)
+    · EL PUNTO ÁMBAR de «este día tiene notas» iba suelto DEBAJO del círculo,
+      en la misma fila que los puntos de carro y área. Tres puntos de colores
+      seguidos y ninguno destacaba sobre los otros.
+    · AHORA ES UN TIC ROJO clavado en el borde de arriba del círculo del día
+      (nueva clase `connota` + ::after). Sobresale 4 px, lleva un aro blanco
+      de 1,5 px y por eso se lee igual de bien sobre un círculo vacío, uno
+      marcado en azul, el de hoy o el que está abierto.
+    · Si un día SOLO tiene nota (sin carro ni área) ya no se pinta la fila de
+      puntos: quedaría vacía debajo del círculo.
+    · El title del día lo dice también en palabras («tiene notas»), y en
+      pantalla ancha sigue saliendo la etiqueta «Notas» con su detalle.
 
   v0.295.0 — FIX: había DOS sistemas de notas · ahora uno solo (2026-08)
     (sin migraciones nuevas — y la de la v0.294 queda ANULADA)
@@ -6442,6 +6476,24 @@
         padding:18px 20px 20px; box-shadow:0 -8px 30px rgba(0,0,0,.3); }
     }
     .asist-franja-pill { background:var(--lila-suave); color:var(--lila); font-size:11px; font-weight:700; border-radius:7px; padding:4px 9px; flex-shrink:0; white-space:nowrap; }
+    /* v0.297 — Marcar en pista el bloque trabajado */
+    .asist-marcar { margin-top:14px; border:1.5px solid var(--borde); border-radius:13px;
+      padding:11px 12px 12px; background:var(--blanco); }
+    .asist-marcar-chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:9px; }
+    .asist-marcar-chip { display:inline-flex; align-items:center; gap:5px; font-size:12.5px;
+      font-weight:700; background:#ecfeff; color:#0e7490; border:1.5px solid #a5f3fc;
+      border-radius:20px; padding:4px 6px 4px 11px; }
+    .asist-marcar-chip button { border:none; background:none; color:#0e7490; font-size:13px;
+      cursor:pointer; padding:0 3px; opacity:.7; font-family:inherit; }
+    .asist-marcar-chip button:hover { opacity:1; }
+    .asist-marcar-btn { width:100%; margin-top:2px; }
+    .asist-marcar-aps { margin:11px 0 9px; }
+    .asist-marcar-bloques { display:flex; flex-direction:column; gap:6px; }
+    .asist-marcar-bq { text-align:left; font-family:inherit; font-size:14px; font-weight:600;
+      color:var(--texto); background:var(--arena); border:1.5px solid var(--borde);
+      border-radius:10px; padding:10px 12px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .asist-marcar-bq:active { transform:scale(0.99); }
+    .asist-marcar-bq.on { background:#ecfeff; border-color:#0891b2; color:#0e7490; }
     /* v0.294 — Notas de la clase, dentro de la vista de pista */
     .asist-notas { margin-top:14px; border:1.5px solid var(--borde); border-radius:13px;
       padding:11px 12px 12px; background:var(--arena); }
@@ -6908,13 +6960,19 @@
     .comp-nota-ta { min-height:110px; resize:vertical; line-height:1.5; font-size:14px; }
     .comp-nota-acts { display:flex; gap:8px; justify-content:flex-end; margin-top:8px; }
     .comp-nota-acts .btn { width:auto; margin:0; }
-    .comp-daypto.nota { background:#f59e0b; }
+    /* v0.296: retirada — la nota se marca con el tic rojo del círculo */
     .comp-daytag.nota { background:#fef3c7; color:#92400e; border:1px solid #fcd34d; }
     .comp-dow-cont { font-size:11.5px; font-weight:600; color:var(--gris); }
     .comp-circ-fila { display:flex; gap:8px; flex-wrap:wrap; }
     .comp-circ { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;
       font-size:12.5px; font-weight:700; color:var(--azul); border:2px solid var(--azul); background:#fff;
-      cursor:pointer; -webkit-tap-highlight-color:transparent; }
+      cursor:pointer; -webkit-tap-highlight-color:transparent; position:relative; }
+    /* v0.296 — Día CON NOTA: tic rojo clavado en el borde de arriba del
+       círculo, en vez del punto ámbar que iba suelto debajo. Se ve encima de
+       cualquier fondo (marcada, hoy, abierta) porque va sobre el borde. */
+    .comp-circ.connota::after { content:''; position:absolute; top:-4px; left:50%;
+      transform:translateX(-50%); width:4px; height:9px; border-radius:2px;
+      background:#dc2626; box-shadow:0 0 0 1.5px #fff; }
     .comp-circ.marcada { background:var(--azul); color:#fff; }
     .comp-circ.festivo { border:1.5px dashed var(--borde); color:var(--gris); opacity:0.55; text-decoration:line-through; cursor:default; }
     /* v0.147: día sin clase marcado por el CLUB (gestor) — mismo lenguaje
@@ -8778,7 +8836,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.295.0';
+    var APP_VERSION = '0.297.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -19963,15 +20021,20 @@
           var marcada = !bloq && nFilas > 0;
           var numDia  = parseInt(fISO.slice(8,10), 10);
           var dowF    = new Date(+fISO.slice(0,4), +fISO.slice(5,7)-1, +fISO.slice(8,10)).getDay();
+          // v0.296: el aviso de nota se clava en el propio círculo
+          var _notaDia = _notaHay(p, _nivM, fISO);
           var cls = 'comp-circ' + (dsc ? ' dsc' : (festivo ? ' festivo' : '')) +
-                    (marcada ? ' marcada' : '') + (fISO === hoyISO ? ' hoy' : '') +
+                    (marcada ? ' marcada' : '') + (_notaDia ? ' connota' : '') +
+                    (fISO === hoyISO ? ' hoy' : '') +
                     // v0.148: el día que se está viendo queda resaltado
                     (fISO === compDiaAbierta ? ' abierta' : '');
           var onclick = bloq ? '' : (' onclick="compDiaAbrir(\'' + fISO + '\')"');
           var titulo  = dsc ? ' title="Sin clase — lo marcó el club"'
                       : (festivo ? ' title="Sin clase este día"'
-                      : (marcada ? ' title="' + nFilas + ' fila(s) marcada(s) — toca para ver el resumen"'
-                                 : ' title="Toca para marcar lo trabajado"'));
+                      : (marcada ? ' title="' + nFilas + ' fila(s) marcada(s) — toca para ver el resumen' +
+                                   (_notaDia ? ' · tiene notas' : '') + '"'
+                                 : ' title="' + (_notaDia ? 'Tiene notas — ' : '') +
+                                   'Toca para marcar lo trabajado"'));
           // v0.240 — Debajo del círculo, lo que toca ese día: el GOLPE que se
           // trabaja en el carro (primera parte) y debajo el ÁREA DE TRABAJO
           // (segunda parte). Así la vista de la semana se lee de un vistazo
@@ -19991,7 +20054,8 @@
               .map(function(idA){ return _areasN[idA]; })
               .filter(Boolean);
             // v0.274: un día con nota lleva su 📝, aunque no tenga plan
-            var _hayNota = _notaHay(p, _nivM, fISO);
+            // v0.296: ya calculado arriba para el tic del círculo
+            var _hayNota = _notaDia;
             if (golpes.length || bloqsD.length || _hayNota) {
               // v0.241 — En el MÓVIL las columnas de semana son estrechas: ahí
               // solo van dos PUNTOS (azul = hay carro, morado = hay área) y los
@@ -20001,10 +20065,14 @@
               if (golpes.length)  titPuntos.push('Carro: ' + golpes.join(', '));
               if (bloqsD.length)  titPuntos.push('Área de trabajo: ' + bloqsD.join(', '));
               if (_hayNota) titPuntos.push('Con notas');
-              tags = '<div class="comp-diacol-puntos" title="' + _gEsc(titPuntos.join(' · ')).replace(/"/g,'') + '">' +
-                (golpes.length ? '<span class="comp-daypto carro"></span>' : '') +
-                (bloqsD.length ? '<span class="comp-daypto area"></span>' : '') +
-                (_hayNota ? '<span class="comp-daypto nota"></span>' : '') + '</div>';
+              // v0.296: el punto ámbar de nota se retira — ahora es el tic rojo
+              // sobre el círculo. Y si el día SOLO tiene nota, no se pinta la
+              // fila de puntos: quedaría vacía.
+              tags = (golpes.length || bloqsD.length)
+                ? '<div class="comp-diacol-puntos" title="' + _gEsc(titPuntos.join(' · ')).replace(/"/g,'') + '">' +
+                  (golpes.length ? '<span class="comp-daypto carro"></span>' : '') +
+                  (bloqsD.length ? '<span class="comp-daypto area"></span>' : '') + '</div>'
+                : '';
               tags += '<div class="comp-diacol-tags">';
               if (golpes.length)
                 tags += '<span class="comp-daytag carro" title="Carro: ' + _gEsc(golpes.join(', ')).replace(/"/g,'') + '">' +
@@ -24437,8 +24505,15 @@
     function asistClaseFila(id) { _asistClaseFila = id; _asistClaseRender(); }
     function asistCerrarClase() {
       _asistClaseVista = null; _asistClaseFila = null;
+      _asistMarcarOn = false; _asistMarcarAp = null;   // v0.297: se cierra el selector
       var ov = document.getElementById('asist-clase-ov');
       if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; }
+      // v0.297: si se ha marcado algo en pista, la lista de detrás tiene que
+      // enterarse — el botón pasa de «Sin plan» a «Plan».
+      try {
+        var pa = document.getElementById('pantalla-asistencia');
+        if (pa && pa.classList.contains('activa')) mostrarAsistencia();
+      } catch (e) {}
     }
     // v0.225 — Abrir una sesión desde el globo: se recuerda a qué globo hay
     // que volver, para que el botón de atrás no acabe en Plan.
@@ -24567,6 +24642,48 @@
       h += '</div>';
       h += '</div>';
 
+      // ── v0.297 — MARCAR EN PISTA LO QUE SE HA TRABAJADO ────────────────
+      //    Si no ha dado tiempo a planificar, se improvisa y luego se apunta
+      //    aquí mismo: el bloque que se ha trabajado de verdad, aunque ese
+      //    bloque todavía no tenga ejercicios dentro. Queda el registro y en
+      //    casa se completa con calma.
+      h += '<div class="asist-marcar">';
+      h += '<div class="asist-notas-hdr">🎯 <b>Lo que has trabajado</b></div>';
+      if (marcadas.length) {
+        h += '<div class="asist-marcar-chips">';
+        marcadas.forEach(function(id){
+          h += '<span class="asist-marcar-chip">' + _gEsc(areaN[id] || 'Bloque') +
+               '<button type="button" aria-label="Quitar" onclick="asistMarcarArea(' + claseId +
+               ',\'' + fechaISO + '\',\'' + String(id).replace(/'/g,"\\'") + '\')">✕</button></span>';
+        });
+        h += '</div>';
+      } else {
+        h += '<div class="ruta-panel-nota">Nada marcado todavía en esta clase.</div>';
+      }
+      h += '<button type="button" class="btn btn-sec asist-marcar-btn" onclick="asistMarcarToggle()">' +
+           (_asistMarcarOn ? '▲ Cerrar' : '＋ Marcar un bloque') + '</button>';
+      if (_asistMarcarOn) {
+        var porAp = {};
+        areasFila.forEach(function(a){ (porAp[a.apartado] = porAp[a.apartado] || []).push(a); });
+        var aps = Object.keys(porAp);
+        var apAbierto = (_asistMarcarAp && aps.indexOf(_asistMarcarAp) >= 0) ? _asistMarcarAp : aps[0];
+        h += '<div class="filtros asist-marcar-aps">';
+        aps.forEach(function(ap){
+          h += '<div class="fpill' + (ap === apAbierto ? ' activo' : '') +
+               '" onclick="asistMarcarAp(\'' + ap.replace(/'/g,"\\'") + '\')">' + _gEsc(ap) + '</div>';
+        });
+        h += '</div><div class="asist-marcar-bloques">';
+        (porAp[apAbierto] || []).forEach(function(a){
+          var yaEsta = marcadas.indexOf(a.id) >= 0;
+          h += '<button type="button" class="asist-marcar-bq' + (yaEsta ? ' on' : '') +
+               '" onclick="asistMarcarArea(' + claseId + ',\'' + fechaISO + '\',\'' +
+               String(a.id).replace(/'/g,"\\'") + '\')">' +
+               (yaEsta ? '✓ ' : '') + _gEsc(a.t) + '</button>';
+        });
+        h += '</div>';
+      }
+      h += '</div>';
+
       // ── v0.294 — NOTAS DE LA CLASE. Aquí y en ningún otro sitio: es la
       //    pantalla que se abre en pista, con la clase delante. Se guardan
       //    por clase + fecha, en el registro de asistencia de ese día.
@@ -24585,6 +24702,25 @@
       // (Planificación → el nivel → el día), no desde la vista de pista.
       h += '</div>';
       _ovPintarConScroll(ov, h);   // v0.284
+    }
+
+    // ── v0.297 · Marcar en pista lo trabajado ──────────────────────────
+    // Escribe en el MISMO sitio que Planificación (p.compDias), así que lo
+    // que apuntes en pista aparece luego en el plan como si lo hubieras
+    // marcado desde casa — y el día se cuenta como trabajado.
+    var _asistMarcarOn = false;   // ¿está abierto el selector?
+    var _asistMarcarAp = null;    // apartado abierto dentro del selector
+    function asistMarcarToggle() { _asistMarcarOn = !_asistMarcarOn; _asistClaseRender(); }
+    function asistMarcarAp(ap)   { _asistMarcarAp = ap; _asistClaseRender(); }
+    function asistMarcarArea(claseId, fecha, filaId) {
+      var p = leerPlan();
+      if (!p.compDias) p.compDias = {};
+      var arr = (p.compDias[fecha] || []).slice();
+      var i = arr.indexOf(filaId);
+      if (i >= 0) arr.splice(i, 1); else arr.push(filaId);
+      if (arr.length) p.compDias[fecha] = arr; else delete p.compDias[fecha];
+      _planGuardar(p);
+      _asistClaseRender();   // se repinta ESTA vista, no Planificación
     }
 
     // ── v0.295 · Notas de clase — UN SOLO SITIO ────────────────────────
