@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.291.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.293.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,51 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.293.0 — Asistencia: la franja pasa a tarjeta y el plan, a pantalla completa (2026-08)
+    (sin migraciones nuevas)
+    · LA FRANJA ERA UNA FILA con cinco cosas peleando por el mismo renglón:
+      píldora de hora, nombre, nº de alumnos, badge(s) de estado y un botón
+      con el nivel. En el móvil no se leía.
+    · AHORA ES UNA TARJETA: banda de color con el NIVEL arriba y UN solo
+      estado a su derecha; debajo, la HORA en grande y monoespaciada (que es
+      lo que se busca) y los alumnos en pequeño. Cada nivel tiene su color:
+      Iniciación azul · Avanzado ámbar · Competición terracota · Equipo
+      verde · Individual gris.
+    · UN SOLO ESTADO PRINCIPAL. Antes podían apilarse tres badges (recup +
+      sustituto + resultado). Las recuperaciones bajan a la línea de alumnos
+      («4 alumnos · 1 recuperación»).
+    · FUERA EL ✓ de «✓ 6/8»: la proporción y el verde ya lo dicen.
+    · EL BOTÓN DEL PLAN ya no repite el nivel (lo dice la banda): pone «Plan»
+      o «Sin plan».
+    · LO QUE NO ES DE HOY, APAGADO DE VERDAD (opacidad 55%): futuras y días
+      sin clase. La clase pendiente de hoy lleva borde ámbar de 2 px.
+    · Y AL PULSAR «PLAN», EN EL MÓVIL LA CLASE SE ABRE A PANTALLA COMPLETA,
+      no como hoja a media altura: alto 100dvh, fondo casi opaco y todo el
+      contenido más grande dentro (cabecera, títulos de las dos partes,
+      nombres de ejercicio, miniaturas a 82 px y la ✕ a 42 px). En el
+      ordenador sigue siendo la ventana centrada de siempre.
+
+  v0.292.0 — Nuevo campo `parte:` — carro o área, dicho y no adivinado (2026-08)
+    (sin migraciones nuevas: viaja en `facetas`, jsonb ya existente)
+    · EL PROBLEMA: la app deducía del `formato:` si un ejercicio era de carro,
+      y ese campo responde a otra pregunta. `1+A` significa «un jugador y un
+      alimentador», y eso vale igual para «el entrenador lanza 30 bolas
+      seguidas» (carro) que para «el entrenador pone una bola y se resuelve
+      la situación» (área). El formato dice QUIÉN alimenta; lo que separa las
+      dos partes de la clase es si la bola SE REPONE o SE JUEGA.
+    · CAMPO NUEVO EN EL VAULT: `parte:` con tres valores — carro · area ·
+      ambas. Manual a propósito: solo el entrenador que dirige el ejercicio
+      sabe cómo lo lanza. `ambas` para los que valen para las dos cosas.
+    · _esDeCarro() mira ahora `parte` primero. Si el ejercicio no lo tiene
+      puesto, cae a la regla anterior (descartar formatos entre jugadores y
+      condicionante competitivo), para no esconder nada sin avisar.
+    · sync_padel.py lee `parte:` y lo mete en `facetas`, validando que sea uno
+      de los tres valores.
+    · Aplicado a los 104 ejercicios del vault: 69 carro · 35 área. Se
+      clasificaron por señales objetivas (formato entre jugadores,
+      condicionante competitivo, dosis por puntos vs por series) y los 16 sin
+      ninguna señal se decidieron leyendo su descripción uno a uno.
 
   v0.291.0 — El ＋ compone la clase tipo de verdad (2026-08)
     (sin migraciones nuevas)
@@ -6306,7 +6351,11 @@
     .asist-hoy-badge { font-size:10px; font-weight:700; background:var(--lila); color:var(--blanco); border-radius:12px; padding:2px 8px; margin-left:auto; }
 
     /* Clase row en día card */
-    .asist-clase-row { display:flex; align-items:center; gap:10px; padding:0.7rem 0.875rem; background:var(--arena); border-radius:11px; margin-bottom:6px; cursor:pointer; transition:all 0.15s; border:1.5px solid transparent; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; }
+    /* v0.293: de fila a TARJETA — banda de nivel arriba, datos debajo */
+    .asist-clase-row { display:flex; flex-direction:column; padding:0; overflow:hidden;
+      background:var(--blanco); border-radius:12px; margin-bottom:8px; transition:all 0.15s;
+      border:1.5px solid var(--borde); -webkit-tap-highlight-color:transparent;
+      user-select:none; -webkit-user-select:none; }
     .asist-clase-row:last-child { margin-bottom:0; }
     .asist-clase-row:hover { border-color:var(--lila-claro); transform:translateY(-1px); box-shadow:0 4px 12px rgba(124,58,237,0.10); }
     .asist-clase-row:active { transform:translateY(0); }
@@ -6326,14 +6375,48 @@
     /* Globo con la clase preparada (sin salir de Asistencia) */
     .asist-clase-ov { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:10020; display:flex;
       align-items:flex-end; justify-content:center; }
-    .asist-clase-modal { background:var(--blanco); width:100%; max-width:520px; max-height:88vh; overflow-y:auto;
-      border-radius:18px 18px 0 0; padding:16px 14px calc(16px + env(safe-area-inset-bottom));
-      box-shadow:0 -8px 30px rgba(0,0,0,.3); animation:gpSheetUp .18s ease-out; }
+    /* v0.293 — En el MÓVIL la clase se abre a PANTALLA COMPLETA, no como
+       hoja a media altura: es lo que se mira en pista y hay que verlo grande.
+       Y todo dentro sube de tamaño, que es de lo que se trata. */
+    .asist-clase-modal { background:var(--blanco); width:100%; max-width:520px; height:100dvh;
+      max-height:100dvh; overflow-y:auto; border-radius:0;
+      padding:14px 14px calc(20px + env(safe-area-inset-bottom));
+      box-shadow:none; animation:gpSheetUp .18s ease-out; }
+    @media (max-width:699px){
+      .asist-clase-ov { align-items:stretch; background:rgba(0,0,0,.86); }
+      .asist-clase-modal .ruta-modal-tit { font-size:20px; }
+      .asist-clase-modal .ruta-modal-sub { font-size:13px; }
+      .asist-clase-modal .ruta-parte-hdr { font-size:14px; padding:10px 12px; }
+      .asist-clase-modal .ruta-parte-hdr b { font-size:15.5px; }
+      .asist-clase-modal .ruta-carro-ficha-txt b { font-size:14px; }
+      .asist-clase-modal .ruta-carro-ficha .ruta-carro-thumb { width:82px; }
+      .asist-clase-modal .ruta-ses-eleg { padding:10px 11px; font-size:14px; }
+      .asist-clase-modal .plan-modal-x { width:42px; height:42px; font-size:20px; }
+    }
     @media (min-width:700px){
       .asist-clase-ov { align-items:center; padding:24px; }
-      .asist-clase-modal { max-width:900px; max-height:86vh; border-radius:18px; padding:18px 20px 20px; }
+      .asist-clase-modal { max-width:900px; height:auto; max-height:86vh; border-radius:18px;
+        padding:18px 20px 20px; box-shadow:0 -8px 30px rgba(0,0,0,.3); }
     }
     .asist-franja-pill { background:var(--lila-suave); color:var(--lila); font-size:11px; font-weight:700; border-radius:7px; padding:4px 9px; flex-shrink:0; white-space:nowrap; }
+    /* ── v0.293 — Franja de asistencia como TARJETA con banda de nivel ── */
+    .asist-clase-banda { display:flex; align-items:center; gap:8px; padding:5px 12px;
+      background:var(--verde-suave); }
+    .asist-clase-niv { font-size:11.5px; font-weight:700; color:var(--verde); }
+    .asist-clase-banda > span:last-child { margin-left:auto; }
+    .asist-clase-banda.nv-iniciacion  { background:#e6f1fb; } .asist-clase-banda.nv-iniciacion  .asist-clase-niv { color:#0c447c; }
+    .asist-clase-banda.nv-avanzado    { background:#faeeda; } .asist-clase-banda.nv-avanzado    .asist-clase-niv { color:#854f0b; }
+    .asist-clase-banda.nv-competicion { background:#faece7; } .asist-clase-banda.nv-competicion .asist-clase-niv { color:#993c1d; }
+    .asist-clase-banda.nv-equipo      { background:#eaf3de; } .asist-clase-banda.nv-equipo      .asist-clase-niv { color:#3b6d11; }
+    .asist-clase-banda.nv-individual  { background:#f1efe8; } .asist-clase-banda.nv-individual  .asist-clase-niv { color:#5f5e5a; }
+    .asist-clase-cuerpo { display:flex; align-items:center; gap:11px; padding:10px 12px; }
+    .asist-clase-datos { flex:1; min-width:0; cursor:pointer; }
+    .asist-clase-hora { font-family:ui-monospace,Menlo,monospace; font-size:16px; font-weight:700;
+      color:var(--texto); line-height:1.15; letter-spacing:-0.01em; }
+    /* Lo que no es de hoy, apagado de verdad */
+    .asist-clase-row.apagada { opacity:.55; }
+    .asist-clase-row.apagada:hover { opacity:.8; }
+    .asist-clase-row.hoy { border-color:#f59e0b; border-width:2px; }
     .asist-clase-row-info { flex:1; min-width:0; }
     .asist-clase-row-nombre { font-size:13px; font-weight:600; color:var(--texto); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .asist-clase-row-alumnos { font-size:11px; color:var(--gris); margin-top:1px; }
@@ -8638,7 +8721,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.291.0';
+    var APP_VERSION = '0.293.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -17192,7 +17275,15 @@
     // Lo que no tiene formato puesto se deja pasar: preferimos que sobre a que
     // desaparezca material sin avisar.
     var FORMATO_JUGADORES = ['2v2','3j','4j','2v0','rotación-capitán','rotacion-capitan','todos-con-todos'];
+    // v0.257 — Ahora manda el campo `parte:` del vault, que dice de verdad si
+    // el ejercicio es de cesta o de juego. Solo tú sabes cómo lo lanzas, y
+    // `formato` no lo distinguía: un 1+A puede ser alimentación continua
+    // (carro) o una bola puesta en juego que se desarrolla (área).
+    // Si el ejercicio no lo tiene puesto, se cae a la regla vieja.
     function _esDeCarro(e) {
+      var p = String(ejFaceta(e, 'parte') || '').trim().toLowerCase();
+      if (p === 'carro' || p === 'ambas') return true;
+      if (p === 'area') return false;
       var f = String(ejFaceta(e, 'formato') || '').trim().toLowerCase();
       if (FORMATO_JUGADORES.indexOf(f) >= 0) return false;
       var cond = ejFaceta(e, 'condicionantes') || [];
@@ -24672,7 +24763,8 @@
             if (reg && reg.sinClase) {
               badge = '<span class="asist-badge-sinclase">🚫 Sin clase</span>';
             } else if (_regPasada(reg)) {
-              badge = '<span class="asist-badge-hecha">✓ ' + reg.presentes.length + '/' + numAl + '</span>';
+              // v0.293: sin ✓ — la proporción y el verde ya lo dicen
+              badge = '<span class="asist-badge-hecha">' + reg.presentes.length + '/' + numAl + '</span>';
             } else if (esHoy) {
               badge = '<span class="asist-badge-pendiente">Pendiente</span>';
             } else if (esPas) {
@@ -24681,9 +24773,8 @@
               badge = '<span class="asist-badge-futura">Próxima</span>';
             }
             // Recuperaciones previstas ese día (v0.60)
-            if (reg && !reg.sinClase && !_regPasada(reg) && (reg.recups||[]).length) {
-              badge = '<span class="asist-badge-pendiente">↩ ' + reg.recups.length + ' recup</span>' + badge;
-            }
+            // v0.293: las recuperaciones bajan a la línea de alumnos, para
+            // dejar UN solo estado principal en la banda.
             // v0.66.1: la clase la da (o la dio) un sustituto → fila
             // sombreada en ámbar y badge con su nombre, también para
             // que lo vea el entrenador titular en su propio panel
@@ -24695,26 +24786,37 @@
 
             var nombre = clase.nombre || (diasNom + ' · ' + (clase.franja||''));
 
-            html += '<div class="asist-clase-row' + sustCls + '">';
-            html += '<div class="asist-clase-row-main" onclick="asistAbrirLista(' + clase.id + ',\'' + fecha + '\')">';
-            html += '<span class="asist-franja-pill">' + (clase.franja||'—') + '</span>';
-            html += '<div class="asist-clase-row-info">';
-            html += '<div class="asist-clase-row-nombre">' + _gEsc(nombre) + '</div>';
-            html += '<div class="asist-clase-row-alumnos">' + numAl + ' alumno' + (numAl!==1?'s':'') + '</div>';
-            html += '</div>' + badge + '</div>';
+            // ── v0.293 — Tarjeta con banda de nivel arriba y el estado a la
+            //    derecha de esa banda. Debajo, la hora en grande (que es lo
+            //    que se busca) y los alumnos en pequeño.
+            var apagada = (!esHoy && !esPas) || (reg && reg.sinClase);
+            html += '<div class="asist-clase-row' + sustCls + (apagada ? ' apagada' : '') +
+                    (esHoy && !_regPasada(reg) && !(reg && reg.sinClase) ? ' hoy' : '') + '">';
+            html += '<div class="asist-clase-banda nv-' + (clase.nivel || 'otro') + '">' +
+                      '<span class="asist-clase-niv">' + (clase.nivel ? _nivNombre(clase.nivel) : 'Sin nivel') + '</span>' +
+                      badge + '</div>';
+            // El cuerpo es la fila de abajo: datos (que abren la lista) y, a
+            // su derecha, el botón del plan.
+            html += '<div class="asist-clase-cuerpo">';
+            html += '<div class="asist-clase-datos" onclick="asistAbrirLista(' + clase.id + ',\'' + fecha + '\')">' +
+                      '<div class="asist-clase-hora">' + _gEsc(clase.franja || '—') + '</div>' +
+                      '<div class="asist-clase-row-alumnos">' + numAl + ' alumno' + (numAl!==1?'s':'') +
+                      ((reg && !reg.sinClase && (reg.recups||[]).length)
+                        ? ' · ' + reg.recups.length + ' recuperación' + (reg.recups.length!==1?'es':'') : '') +
+                      '</div></div>';
             // v0.224: si la franja tiene nivel, botón cuadrado con la clase
             // planificada de ese nivel para ese día (carro + área de trabajo).
             if (clase.nivel) {
               var _pl = _claseTienePlan(clase.nivel, fecha);
-              // v0.225: el botón lleva el NOMBRE del nivel debajo del icono,
-              // para saber de qué clase es sin abrir nada.
+              // v0.293: el botón ya no repite el nivel — eso lo dice la banda
+              // de arriba. Solo «Plan» / «Sin plan».
               html += '<button type="button" class="asist-plan-btn' + (_pl ? ' con' : '') +
                 '" onclick="asistVerClase(' + clase.id + ',\'' + fecha + '\')"' +
                 ' title="' + (_pl ? 'Ver la clase preparada' : 'Sin planificar todavía') + '">' +
-                '<span class="asist-plan-ico">' + _nivIcono(clase.nivel) + '</span>' +
-                '<span class="asist-plan-niv">' + _nivNombre(clase.nivel) + '</span></button>';
+                '<span class="asist-plan-ico">' + (_pl ? '📋' : '📄') + '</span>' +
+                '<span class="asist-plan-niv">' + (_pl ? 'Plan' : 'Sin plan') + '</span></button>';
             }
-            html += '</div>';
+            html += '</div></div>';
           });
 
           html += '</div>';
