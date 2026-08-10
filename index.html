@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.297.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.298.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,25 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.298.0 — Un ＋ en cada parte, con su árbol plegable (2026-08)
+    (sin migraciones nuevas)
+    · FUERA la sección «Lo que has trabajado» que puso la v0.297 al final de
+      la vista. Iba suelta, salía siempre —también en días ya planificados,
+      donde no pinta nada— y estaba lejos de la parte a la que se refiere.
+    · AHORA CADA PARTE TIENE SU ＋ EN LA CABECERA, dentro de su recuadro:
+        · 🛒 Carro → ＋ abre un ÁRBOL: zona de pista (Desde el fondo ·
+          Aéreos · En la red · Saque) → golpe, con su contador → los
+          ejercicios de ese golpe. Se toca uno y entra en el carro del día.
+        · 🎯 Área de trabajo → ＋ abre otro ÁRBOL: apartado → sus bloques.
+          Se toca uno y queda marcado, aunque el bloque esté vacío.
+      Los dos se pliegan: al entrar solo se ven los nodos de primer nivel, y
+      se despliega el que interesa. El ＋ pasa a × para cerrarlo.
+    · Lo ya elegido se ve con ✓ y en cian, así que el mismo árbol sirve para
+      añadir y para quitar.
+    · Escriben donde escribe Planificación (p.rutaCarro con la clave
+      nivel|fecha, y p.compDias), verificado end-to-end.
+    · Los árboles se cierran solos al salir de la clase.
 
   v0.297.0 — Apuntar en pista lo que se ha improvisado (2026-08)
     (sin migraciones nuevas)
@@ -6476,24 +6495,30 @@
         padding:18px 20px 20px; box-shadow:0 -8px 30px rgba(0,0,0,.3); }
     }
     .asist-franja-pill { background:var(--lila-suave); color:var(--lila); font-size:11px; font-weight:700; border-radius:7px; padding:4px 9px; flex-shrink:0; white-space:nowrap; }
-    /* v0.297 — Marcar en pista el bloque trabajado */
-    .asist-marcar { margin-top:14px; border:1.5px solid var(--borde); border-radius:13px;
-      padding:11px 12px 12px; background:var(--blanco); }
-    .asist-marcar-chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:9px; }
-    .asist-marcar-chip { display:inline-flex; align-items:center; gap:5px; font-size:12.5px;
-      font-weight:700; background:#ecfeff; color:#0e7490; border:1.5px solid #a5f3fc;
-      border-radius:20px; padding:4px 6px 4px 11px; }
-    .asist-marcar-chip button { border:none; background:none; color:#0e7490; font-size:13px;
-      cursor:pointer; padding:0 3px; opacity:.7; font-family:inherit; }
-    .asist-marcar-chip button:hover { opacity:1; }
-    .asist-marcar-btn { width:100%; margin-top:2px; }
-    .asist-marcar-aps { margin:11px 0 9px; }
-    .asist-marcar-bloques { display:flex; flex-direction:column; gap:6px; }
-    .asist-marcar-bq { text-align:left; font-family:inherit; font-size:14px; font-weight:600;
-      color:var(--texto); background:var(--arena); border:1.5px solid var(--borde);
-      border-radius:10px; padding:10px 12px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
-    .asist-marcar-bq:active { transform:scale(0.99); }
-    .asist-marcar-bq.on { background:#ecfeff; border-color:#0891b2; color:#0e7490; }
+    /* v0.298 — El ＋ de cada parte y su árbol plegable */
+    .asist-mas { flex-shrink:0; margin-left:6px; width:26px; height:26px; border-radius:8px;
+      border:1.5px solid currentColor; background:rgba(255,255,255,.55); color:inherit;
+      font-size:14px; font-weight:800; line-height:1; cursor:pointer; font-family:inherit;
+      display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent; }
+    .asist-mas:active { transform:scale(0.94); }
+    .asist-arbol { margin:9px 0 4px; display:flex; flex-direction:column; gap:4px;
+      max-height:46vh; overflow-y:auto; }
+    .asist-arbol-zona { font-size:9.5px; font-weight:800; color:var(--gris); text-transform:uppercase;
+      letter-spacing:.08em; margin:7px 2px 1px; }
+    .asist-arbol-n1 { display:flex; align-items:center; gap:7px; text-align:left; width:100%;
+      font-family:inherit; font-size:14px; font-weight:700; color:var(--texto);
+      background:var(--arena); border:1.5px solid var(--borde); border-radius:10px;
+      padding:9px 11px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .asist-arbol-n1.on { background:#ecfeff; border-color:#0891b2; color:#0e7490; }
+    .asist-arbol-n1 b { margin-left:auto; font-size:11px; font-weight:800; color:var(--gris);
+      background:var(--blanco); padding:1px 7px; border-radius:20px; }
+    .asist-arbol-chev { font-size:11px; opacity:.7; }
+    .asist-arbol-n2 { text-align:left; width:100%; font-family:inherit; font-size:13.5px;
+      font-weight:600; color:var(--texto); background:var(--blanco);
+      border:1.5px solid var(--borde); border-radius:9px; padding:9px 11px 9px 26px;
+      cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .asist-arbol-n2:active { transform:scale(0.99); }
+    .asist-arbol-n2.on { background:#ecfeff; border-color:#0891b2; color:#0e7490; font-weight:700; }
     /* v0.294 — Notas de la clase, dentro de la vista de pista */
     .asist-notas { margin-top:14px; border:1.5px solid var(--borde); border-radius:13px;
       padding:11px 12px 12px; background:var(--arena); }
@@ -8836,7 +8861,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.297.0';
+    var APP_VERSION = '0.298.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -24505,7 +24530,9 @@
     function asistClaseFila(id) { _asistClaseFila = id; _asistClaseRender(); }
     function asistCerrarClase() {
       _asistClaseVista = null; _asistClaseFila = null;
-      _asistMarcarOn = false; _asistMarcarAp = null;   // v0.297: se cierra el selector
+      // v0.298: se cierran los dos ＋ y sus árboles
+      _asistAddCarro = false; _asistAddArea = false;
+      _asistCarroG = null; _asistMarcarAp = null;
       var ov = document.getElementById('asist-clase-ov');
       if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; }
       // v0.297: si se ha marcado algo en pista, la lista de detrás tiene que
@@ -24553,8 +24580,13 @@
       h += '<div class="comp-clase-cols">';
       // 🛒 Carro
       h += '<div class="comp-clase-parte comp-clase-carro">';
+      // v0.298: ＋ para añadir ejercicios de carro aquí mismo, en pista
       h += '<div class="ruta-parte-hdr">🛒 <b>Carro</b><span>primera parte</span>' +
-           '<span class="ruta-area-n">' + (carroIds.length || '—') + '</span></div>';
+           '<span class="ruta-area-n">' + (carroIds.length || '—') + '</span>' +
+           '<button type="button" class="asist-mas" onclick="asistAddCarroToggle()" ' +
+           'title="Añadir ejercicios de carro" aria-label="Añadir">' +
+           (_asistAddCarro ? '×' : '＋') + '</button></div>';
+      if (_asistAddCarro) h += _asistCarroPickerHTML(fechaISO, niv, carroIds, lun);
       if (!carroIds.length) {
         h += '<div class="comp-picker-vacio">Sin ejercicios de carro.</div>';
       } else {
@@ -24564,7 +24596,12 @@
       h += '</div>';
       // 🎯 Área de trabajo
       h += '<div class="comp-clase-parte comp-clase-area">';
-      h += '<div class="ruta-parte-hdr">🎯 <b>Área de trabajo</b><span>segunda parte</span></div>';
+      // v0.298: ＋ para marcar el bloque trabajado, en árbol plegable
+      h += '<div class="ruta-parte-hdr">🎯 <b>Área de trabajo</b><span>segunda parte</span>' +
+           '<button type="button" class="asist-mas" onclick="asistAddAreaToggle()" ' +
+           'title="Marcar el bloque trabajado" aria-label="Marcar">' +
+           (_asistAddArea ? '×' : '＋') + '</button></div>';
+      if (_asistAddArea) h += _asistAreaPickerHTML(fechaISO, areasFila, marcadas);
       // v0.226 — Si el día tiene VARIAS áreas marcadas se navegan con
       // pestañas, y de cada una se ven sus ejercicios (con vídeo). Antes solo
       // salían los nombres como etiquetas y no había forma de entrar en ellas.
@@ -24642,48 +24679,6 @@
       h += '</div>';
       h += '</div>';
 
-      // ── v0.297 — MARCAR EN PISTA LO QUE SE HA TRABAJADO ────────────────
-      //    Si no ha dado tiempo a planificar, se improvisa y luego se apunta
-      //    aquí mismo: el bloque que se ha trabajado de verdad, aunque ese
-      //    bloque todavía no tenga ejercicios dentro. Queda el registro y en
-      //    casa se completa con calma.
-      h += '<div class="asist-marcar">';
-      h += '<div class="asist-notas-hdr">🎯 <b>Lo que has trabajado</b></div>';
-      if (marcadas.length) {
-        h += '<div class="asist-marcar-chips">';
-        marcadas.forEach(function(id){
-          h += '<span class="asist-marcar-chip">' + _gEsc(areaN[id] || 'Bloque') +
-               '<button type="button" aria-label="Quitar" onclick="asistMarcarArea(' + claseId +
-               ',\'' + fechaISO + '\',\'' + String(id).replace(/'/g,"\\'") + '\')">✕</button></span>';
-        });
-        h += '</div>';
-      } else {
-        h += '<div class="ruta-panel-nota">Nada marcado todavía en esta clase.</div>';
-      }
-      h += '<button type="button" class="btn btn-sec asist-marcar-btn" onclick="asistMarcarToggle()">' +
-           (_asistMarcarOn ? '▲ Cerrar' : '＋ Marcar un bloque') + '</button>';
-      if (_asistMarcarOn) {
-        var porAp = {};
-        areasFila.forEach(function(a){ (porAp[a.apartado] = porAp[a.apartado] || []).push(a); });
-        var aps = Object.keys(porAp);
-        var apAbierto = (_asistMarcarAp && aps.indexOf(_asistMarcarAp) >= 0) ? _asistMarcarAp : aps[0];
-        h += '<div class="filtros asist-marcar-aps">';
-        aps.forEach(function(ap){
-          h += '<div class="fpill' + (ap === apAbierto ? ' activo' : '') +
-               '" onclick="asistMarcarAp(\'' + ap.replace(/'/g,"\\'") + '\')">' + _gEsc(ap) + '</div>';
-        });
-        h += '</div><div class="asist-marcar-bloques">';
-        (porAp[apAbierto] || []).forEach(function(a){
-          var yaEsta = marcadas.indexOf(a.id) >= 0;
-          h += '<button type="button" class="asist-marcar-bq' + (yaEsta ? ' on' : '') +
-               '" onclick="asistMarcarArea(' + claseId + ',\'' + fechaISO + '\',\'' +
-               String(a.id).replace(/'/g,"\\'") + '\')">' +
-               (yaEsta ? '✓ ' : '') + _gEsc(a.t) + '</button>';
-        });
-        h += '</div>';
-      }
-      h += '</div>';
-
       // ── v0.294 — NOTAS DE LA CLASE. Aquí y en ningún otro sitio: es la
       //    pantalla que se abre en pista, con la clase delante. Se guardan
       //    por clase + fecha, en el registro de asistencia de ese día.
@@ -24704,15 +24699,84 @@
       _ovPintarConScroll(ov, h);   // v0.284
     }
 
-    // ── v0.297 · Marcar en pista lo trabajado ──────────────────────────
-    // Escribe en el MISMO sitio que Planificación (p.compDias), así que lo
-    // que apuntes en pista aparece luego en el plan como si lo hubieras
-    // marcado desde casa — y el día se cuenta como trabajado.
-    var _asistMarcarOn = false;   // ¿está abierto el selector?
-    var _asistMarcarAp = null;    // apartado abierto dentro del selector
-    function asistMarcarToggle() { _asistMarcarOn = !_asistMarcarOn; _asistClaseRender(); }
-    function asistMarcarAp(ap)   { _asistMarcarAp = ap; _asistClaseRender(); }
-    function asistMarcarArea(claseId, fecha, filaId) {
+    // ── v0.298 · Editar la clase desde pista ───────────────────────────
+    // Cada parte tiene su ＋ en la cabecera: el del carro añade ejercicios,
+    // el del área marca el bloque trabajado. Los dos escriben en el MISMO
+    // sitio que Planificación (p.rutaCarro / p.compDias), así que lo apuntado
+    // en pista aparece luego en el plan como si se hubiera hecho desde casa.
+    var _asistAddCarro = false;   // ＋ del carro abierto
+    var _asistAddArea  = false;   // ＋ del área abierto
+    var _asistCarroG   = null;    // golpe desplegado en el árbol del carro
+    var _asistMarcarAp = null;    // apartado desplegado en el árbol del área
+    function asistAddCarroToggle() { _asistAddCarro = !_asistAddCarro; _asistClaseRender(); }
+    function asistAddAreaToggle()  { _asistAddArea  = !_asistAddArea;  _asistClaseRender(); }
+    function asistCarroG(k)  { _asistCarroG   = (_asistCarroG === k) ? null : k; _asistClaseRender(); }
+    function asistMarcarAp(ap){ _asistMarcarAp = (_asistMarcarAp === ap) ? null : ap; _asistClaseRender(); }
+
+    // ÁRBOL del carro: zona de pista → golpe → ejercicios de ese golpe.
+    function _asistCarroPickerHTML(fecha, niv, carroIds, lun) {
+      var ejs = leerEjercicios().filter(_esDeCarro);
+      var por = {};
+      ejs.forEach(function(e){ var g = ejGolpe(e) || '_'; (por[g] = por[g] || []).push(e); });
+      var h = '<div class="asist-arbol">';
+      GOLPE_ZONAS.forEach(function(z) {
+        var ks = z.keys.filter(function(k){ return por[k] && por[k].length; });
+        if (!ks.length) return;
+        h += '<div class="asist-arbol-zona">' + _gEsc(z.label) + '</div>';
+        ks.forEach(function(k) {
+          var abierto = _asistCarroG === k;
+          h += '<button type="button" class="asist-arbol-n1' + (abierto ? ' on' : '') +
+               '" onclick="asistCarroG(\'' + k + '\')">' +
+               '<span class="asist-arbol-chev">' + (abierto ? '▾' : '▸') + '</span>' +
+               _gEsc(GOLPE_LABEL[k] || k) + '<b>' + por[k].length + '</b></button>';
+          if (!abierto) return;
+          por[k].slice().sort(_ejOrdenGolpe).forEach(function(e) {
+            var ya = carroIds.indexOf(e.id) >= 0;
+            h += '<button type="button" class="asist-arbol-n2' + (ya ? ' on' : '') +
+                 '" onclick="asistCarroToggleEj(\'' + fecha + '\',\'' + niv + '\',' + e.id +
+                 ',\'' + lun + '\')">' + (ya ? '✓ ' : '') + _gEsc(e.nombre || ('Ejercicio ' + e.id)) +
+                 '</button>';
+          });
+        });
+      });
+      h += '</div>';
+      return h;
+    }
+    function asistCarroToggleEj(fecha, niv, ejId, lun) {
+      var p = leerPlan();
+      if (!p.rutaCarro) p.rutaCarro = {};
+      var arr = (_rutaLeeDia(p.rutaCarro, niv, fecha, lun) || []).slice();
+      var i = arr.indexOf(ejId);
+      if (i >= 0) arr.splice(i, 1); else arr.push(ejId);
+      _rutaEscribeDia(p.rutaCarro, niv, fecha, arr, null);
+      _planGuardar(p);
+      _asistClaseRender();
+    }
+
+    // ÁRBOL del área: apartado → bloques.
+    function _asistAreaPickerHTML(fecha, areasFila, marcadas) {
+      var porAp = {};
+      areasFila.forEach(function(a){ (porAp[a.apartado] = porAp[a.apartado] || []).push(a); });
+      var h = '<div class="asist-arbol">';
+      Object.keys(porAp).forEach(function(ap) {
+        var abierto = _asistMarcarAp === ap;
+        var nMarc = porAp[ap].filter(function(a){ return marcadas.indexOf(a.id) >= 0; }).length;
+        h += '<button type="button" class="asist-arbol-n1' + (abierto ? ' on' : '') +
+             '" onclick="asistMarcarAp(\'' + ap.replace(/'/g, "\\'") + '\')">' +
+             '<span class="asist-arbol-chev">' + (abierto ? '▾' : '▸') + '</span>' +
+             _gEsc(ap) + '<b>' + (nMarc ? '✓' + nMarc : porAp[ap].length) + '</b></button>';
+        if (!abierto) return;
+        porAp[ap].forEach(function(a) {
+          var ya = marcadas.indexOf(a.id) >= 0;
+          h += '<button type="button" class="asist-arbol-n2' + (ya ? ' on' : '') +
+               '" onclick="asistMarcarArea(\'' + fecha + '\',\'' + String(a.id).replace(/'/g, "\\'") +
+               '\')">' + (ya ? '✓ ' : '') + _gEsc(a.t) + '</button>';
+        });
+      });
+      h += '</div>';
+      return h;
+    }
+    function asistMarcarArea(fecha, filaId) {
       var p = leerPlan();
       if (!p.compDias) p.compDias = {};
       var arr = (p.compDias[fecha] || []).slice();
