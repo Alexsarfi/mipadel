@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.286.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.288.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,38 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.288.0 — Quitar la clase de un día (2026-08)
+    (sin migraciones nuevas)
+    · BOTÓN «🗑️ Quitar esta clase del día» al final de la ficha, cuando el día
+      tiene algo. Es el arreglo de equivocarse de día al traer una clase tipo:
+      vacía ese día y ya.
+    · Vacía SOLO ese día y solo de ESE nivel: no toca lo planificado en otros
+      días, ni los bloques marcados de otros niveles en esa misma fecha, ni la
+      clase tipo del repositorio, que sigue guardada. Lo dice el aviso antes de
+      hacerlo.
+
+  v0.287.0 — Áreas plegables y crear una clase tipo en dos toques (2026-08)
+    (sin migraciones nuevas)
+    · EN EL MÓVIL, los bloques del catálogo ya no despliegan debajo sus
+      sesiones: con seis bloques por apartado la pantalla se hacía
+      interminable. Queda el número a la derecha y las sesiones se ven al
+      entrar al bloque. En pantalla ancha sí caben, así que ahí no cambia nada.
+    · Y ESE NÚMERO vuelve a contar SESIONES, que es lo que hay dentro. En la
+      v0.285 contaba clases tipo, pero desde la v0.286 pulsar ahí lleva a las
+      sesiones y no correspondía. Las veces trabajadas siguen en el title.
+    · LAS CLASES TIPO, POR ÁREAS PLEGABLES. Cada área es una caja con su
+      cabecera sombreada que se abre y se cierra. Salen TODAS, tengan o no
+      clases tipo guardadas: así se ve el catálogo entero y dónde falta
+      material. Dentro, sus bloques con cuántas guardan, y bajo cada uno sus
+      clases con el golpe de carro.
+    · CREAR UNA CLASE TIPO EN DOS TOQUES: se pulsa un BLOQUE y sale lo que hay
+      dentro. Eliges la sesión, marcas los ejercicios de carro (por golpe, y
+      puedes coger de varios) y listo. La clase SE LLAMA COMO LA SESIÓN, así
+      que no hay que inventar nombres ni escribir nada. La ⚙ de arriba sigue
+      estando para montar una desde cero.
+    · AL ELEGIR DESDE UN DÍA, TODO PLEGADO. El selector abre con las áreas
+      cerradas y se baja por donde toca, en vez de soltar la lista entera.
 
   v0.286.0 — Cada cosa en su sitio: catálogo arriba, clases tipo abajo (2026-08)
     (sin migraciones nuevas)
@@ -6531,10 +6563,40 @@
     .ct-nueva { flex-shrink:0; width:28px; height:28px; margin-left:2px; border-radius:50%; border:none;
       background:var(--arena); color:var(--texto); font-size:14px; font-family:inherit; cursor:pointer; }
     .ct-nueva:active { background:var(--borde); }
-    /* v0.286: clasificadas por apartado y bloque, como el catálogo */
-    .ctc-ap { font-size:10.5px; font-weight:800; color:var(--gris); text-transform:uppercase;
-      letter-spacing:.05em; margin:12px 2px 5px; padding-bottom:4px; border-bottom:1px solid var(--borde); }
-    .ctc-bl { font-size:11.5px; font-weight:800; color:#3730a3; margin:7px 2px 4px; }
+    /* v0.287 — Cada ÁREA, su caja plegable con cabecera sombreada */
+    .ctc-area { border:1.5px solid var(--borde); border-radius:12px; margin-bottom:7px; overflow:hidden; }
+    .ctc-area.abierta { border-color:#c7d2fe; }
+    .ctc-area-hdr { display:flex; align-items:center; gap:8px; width:100%; box-sizing:border-box;
+      font-family:inherit; text-align:left; padding:10px 11px; border:none; background:var(--arena); cursor:pointer; }
+    .ctc-area.abierta .ctc-area-hdr { background:#eef2ff; }
+    .ctc-area-t { flex:1; min-width:0; font-size:12.5px; font-weight:800; color:var(--texto);
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .ctc-area.abierta .ctc-area-t { color:#3730a3; }
+    .ctc-area-n { flex-shrink:0; min-width:22px; text-align:center; font-size:10.5px; font-weight:800;
+      color:var(--gris); background:var(--blanco); border-radius:999px; padding:1px 7px; }
+    .ctc-area-n.con { color:#3730a3; background:#e0e7ff; }
+    .ctc-area-body { padding:8px 9px 9px; }
+    /* Bloque: se toca para crear una clase tipo de ahí */
+    .ctc-bl { display:flex; align-items:center; gap:8px; width:100%; box-sizing:border-box;
+      font-family:inherit; text-align:left; padding:8px 10px; margin:6px 0 4px;
+      border:1.5px dashed var(--borde); border-radius:10px; background:var(--blanco); cursor:pointer; }
+    .ctc-bl:active { background:var(--arena); }
+    .ctc-bl-t { flex:1; min-width:0; font-size:12px; font-weight:800; color:#3730a3;
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .ctc-bl-n { flex-shrink:0; min-width:20px; text-align:center; font-size:10px; font-weight:800;
+      color:var(--gris); background:var(--arena); border-radius:999px; padding:1px 6px; }
+    .ctc-bl-n.con { color:#0e7490; background:#ecfeff; }
+    .ctc-bl-mas { flex-shrink:0; font-size:15px; color:#3730a3; }
+    /* Crear desde un bloque: sesión + carro */
+    .ct-crear-modal { max-width:560px; }
+    .ctcr-ses { display:flex; align-items:center; gap:9px; width:100%; box-sizing:border-box;
+      font-family:inherit; text-align:left; padding:7px 9px; margin-bottom:5px;
+      border:1.5px solid var(--borde); border-radius:10px; background:var(--blanco); cursor:pointer; }
+    .ctcr-ses.on { border-color:#0891b2; background:#ecfeff; }
+    .ctcr-ses-n { flex:1; min-width:0; font-size:12.5px; font-weight:700; color:var(--texto); }
+    .ctcr-ses.on .ctcr-ses-n { color:#0e7490; }
+    .ctcr-nom { font-size:12px; color:var(--gris); text-align:center; margin:10px 0 2px; }
+    .ctcr-nom b { color:var(--texto); }
     .ct-barra { display:flex; gap:6px; margin-bottom:9px; }
     .ct-fila { display:flex; align-items:center; gap:8px; width:100%; box-sizing:border-box;
       font-family:inherit; text-align:left; padding:9px 10px; margin-bottom:5px;
@@ -6632,6 +6694,11 @@
     .comp-bloque-modal { max-width:620px; }
     /* v0.274 — Notas de la clase */
     .comp-nota-btn.hay { background:#fef3c7 !important; color:#92400e !important; }
+    /* v0.288 — Vaciar el día (te equivocaste al pinchar) */
+    .comp-quitar-dia { display:block; width:100%; margin-top:14px; font-family:inherit; font-size:12px;
+      font-weight:700; color:#991b1b; background:var(--blanco); border:1.5px solid #fca5a5;
+      border-radius:11px; padding:0.65rem; cursor:pointer; }
+    .comp-quitar-dia:active { background:#fef2f2; }
     .comp-nota { border:1.5px solid #fde68a; background:#fffbeb; border-radius:12px;
       padding:10px 12px; margin-bottom:12px; cursor:pointer; }
     .comp-nota.abierta { cursor:default; }
@@ -7204,6 +7271,13 @@
     .plan-ses-mini-nom { flex:1; min-width:0; font-size:12.5px; font-weight:600; color:var(--texto); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .plan-ses-mini.trabajada .plan-ses-mini-nom { color:var(--verde); }
     .plan-item-ses-vacio { font-size:11px; color:var(--gris); font-style:italic; padding:7px 12px; border-top:1px dashed var(--borde); }
+    /* v0.287 — En el MÓVIL, las sesiones enlazadas no se despliegan bajo cada
+       bloque: con seis bloques por apartado la pantalla se hacía interminable.
+       Queda el número a la derecha, y las sesiones se ven al entrar al bloque.
+       En pantalla ancha sí caben, así que ahí no cambia nada. */
+    @media (max-width: 699px) {
+      .plan-item-ses, .plan-item-ses-vacio { display:none; }
+    }
     /* Ordenador: bloque estrecho a la izquierda, sesiones en rejilla a la derecha */
     @media (min-width:560px) {
       .plan-item { flex-direction:row; align-items:flex-start; }
@@ -8379,6 +8453,8 @@
   <div id="ct-usar-ov" class="ruta-modal-ov comp-bloque-ov" style="display:none" onclick="ctUsarCerrar()"></div>
   <!-- v0.285: las clases tipo de un bloque del área de trabajo -->
   <div id="ct-bloque-ov" class="ruta-modal-ov comp-bloque-ov" style="display:none" onclick="ctBloqueCerrar()"></div>
+  <!-- v0.287: crear una clase tipo desde un bloque (sesión + carro) -->
+  <div id="ct-crear-ov" class="ruta-modal-ov comp-bloque-ov" style="display:none" onclick="ctCrearCerrar()"></div>
 
   <!-- ══ CLASE PREPARADA DE UNA FRANJA (v0.224) ══════════
        Globo con el carro y el área de trabajo de esa franja y ese día, para
@@ -8500,7 +8576,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.286.0';
+    var APP_VERSION = '0.288.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -15857,15 +15933,16 @@
       h2 += '<div class="plan-item-top"><span class="plan-item-titulo">' + it.t + '</span><span class="plan-item-flecha">⚙</span></div>';
       h2 += '</div>'; // chips/foco (intención · zona · golpe) ahora solo dentro del apartado
       if (conDias) {
-        // v0.285 — El número de la derecha pasa a contar las CLASES TIPO de
-        // este bloque, que es lo que vas a encontrar al pulsarlo. Antes decía
-        // las veces trabajadas, un dato que no correspondía con lo que se
-        // abría; sigue estando, pero dentro, junto a las clases tipo.
-        var nCT = _ctDeBloque(leerPlan(), nivel, it.id).length;
-        var titCT = nCT ? (nCT + ' clase' + (nCT !== 1 ? 's' : '') + ' tipo guardada' + (nCT !== 1 ? 's' : '') +
-                           (veces ? ' · trabajado ' + veces + '×' : ''))
-                        : 'Sin clases tipo todavía' + (veces ? ' · trabajado ' + veces + '×' : '');
-        h2 += '<div class="plan-item-contador' + (nCT ? ' con' : '') + '" title="' + titCT + '">' + nCT + '</div>';
+        // v0.287 — El número cuenta lo que vas a encontrar al pulsar: las
+        // SESIONES del bloque. En la v0.285 contaba clases tipo, pero desde la
+        // v0.286 pulsar aquí lleva a las sesiones, así que no correspondía.
+        // Las veces trabajadas siguen en el title, que es donde no estorban.
+        var nSesB = (nivel === 'competicion')
+          ? _planEjerciciosDeBloque(nivel, it).length || _planSesionesDeBloque(nivel, it).length
+          : _planSesionesDeBloque(nivel, it).length;
+        var titSes = (nSesB ? nSesB + (nSesB !== 1 ? ' sesiones' : ' sesión') : 'Sin sesiones enlazadas') +
+                     (veces ? ' · trabajado ' + veces + '× este curso' : '');
+        h2 += '<div class="plan-item-contador' + (nSesB ? ' con' : '') + '" title="' + titSes + '">' + nSesB + '</div>';
       }
       h2 += '</div>'; // .plan-item-row
 
@@ -17757,12 +17834,14 @@
       // usar cuando toca, en un día, en toda la semana o durante un mes.
       // El archivo del curso y el análisis se quedan debajo, como estaban.
       // ══════════════════════════════════════════════════════════
-      // v0.286 — CLASES TIPO, CLASIFICADAS COMO EL ÁREA DE TRABAJO
+      // v0.287 — CLASES TIPO, POR ÁREAS PLEGABLES
       // ══════════════════════════════════════════════════════════
-      // Fuera el buscador y el orden por «más usadas / recientes / nombre»:
-      // aquí no se busca a ciegas, se baja por donde ya sabes —apartado →
-      // bloque— y cada clase enseña su golpe o golpes de carro. El mismo
-      // orden mental que el catálogo, así que no hay dos formas de moverse.
+      // Cada ÁREA es una caja con su cabecera sombreada que se pliega. Salen
+      // TODAS, tengan o no clases tipo: el catálogo entero está siempre a la
+      // vista y se sabe dónde falta material. Dentro, sus bloques con el
+      // número de clases tipo que guardan, y debajo cada clase con su golpe.
+      // Tocar un BLOQUE crea una clase tipo de ahí mismo: eliges sesión y
+      // carro, y se llama como la sesión.
       var nivelCT  = _compNivel();
       var totalCT  = _ctDeNivel(p, nivelCT).length;
       var etapasCT = (PLAN_ETAPAS[nivelCT] || []).filter(function(et){ return et.tipo !== 'ciclo'; });
@@ -17777,19 +17856,29 @@
            '<button type="button" class="ct-nueva" onclick="ctNueva()" ' +
              'title="Crear una clase tipo desde cero" aria-label="Nueva clase tipo">⚙</button></div>';
 
-      if (!totalCT) {
-        h += '<div class="comp-picker-vacio" style="padding:14px 10px;">Todavía no has guardado ninguna.<br>' +
-             '<span class="ruta-panel-nota">Créala con la ⚙: montas el carro y el área de trabajo y le pones nombre.</span></div>';
-      } else {
-        etapasCT.forEach(function(et){
-          var filasCT = (contCT[et.key] || []).filter(function(it){
-            return _ctDeBloque(p, nivelCT, it.id).length;
-          });
-          if (!filasCT.length) return;
-          h += '<div class="ctc-ap">' + _gEsc(et.nombre) + '</div>';
+      etapasCT.forEach(function(et){
+        var filasCT = contCT[et.key] || [];
+        var nEt = 0;
+        filasCT.forEach(function(it){ nEt += _ctDeBloque(p, nivelCT, it.id).length; });
+        var abEt = !!_ctApAbierto[et.key];
+        h += '<div class="ctc-area' + (abEt ? ' abierta' : '') + '">';
+        h += '<button type="button" class="ctc-area-hdr" onclick="ctApToggle(\'' + et.key + '\')">' +
+          '<span class="ruta-parte-chev' + (abEt ? ' abierto' : '') + '">›</span>' +
+          '<span class="ctc-area-t">' + _gEsc(et.nombre) + '</span>' +
+          '<span class="ctc-area-n' + (nEt ? ' con' : '') + '">' + nEt + '</span></button>';
+        if (abEt) {
+          h += '<div class="ctc-area-body">';
+          if (!filasCT.length) {
+            h += '<div class="ruta-panel-nota" style="padding:6px 2px;">Este apartado no tiene bloques todavía.</div>';
+          }
           filasCT.forEach(function(it){
-            h += '<div class="ctc-bl">' + _gEsc(it.t) + '</div>';
-            _ctDeBloque(p, nivelCT, it.id).forEach(function(c){
+            var suyas = _ctDeBloque(p, nivelCT, it.id);
+            h += '<button type="button" class="ctc-bl" onclick="ctCrearAbrir(\'' + it.id + '\')" ' +
+                 'title="Crear una clase tipo de este bloque">' +
+              '<span class="ctc-bl-t">' + _gEsc(it.t) + '</span>' +
+              '<span class="ctc-bl-n' + (suyas.length ? ' con' : '') + '">' + suyas.length + '</span>' +
+              '<span class="ctc-bl-mas">＋</span></button>';
+            suyas.forEach(function(c){
               var ab = (_ctAbierta === c.id);
               var gv = {}, gl = [];
               (c.carro || []).forEach(function(id){
@@ -17803,17 +17892,12 @@
                 gl.map(function(t){ return '<span class="ct-gol">' + _gEsc(t) + '</span>'; }).join('') +
                 '<span class="ct-uso">' + (c.usos || 0) + '×</span></button>';
               if (!ab) return;
-
               h += '<div class="ct-det">';
               (c.sesiones || []).forEach(function(id){
                 var x = todasSCT.filter(function(t){ return t.id === id; })[0];
                 h += '<div class="ruta-ses' + (x ? '' : ' borrado') + '">' +
                      _gEsc(x ? (x.nombre || x.fecha || ('Sesión ' + id)) : ((c.sesNom && c.sesNom[id]) || ('Sesión ' + id))) + '</div>';
               });
-              var faltanS = (c.sesiones || []).filter(function(id){
-                return !todasSCT.some(function(t){ return t.id === id; }); }).length;
-              if (faltanS) h += '<div class="ct-aviso">' + (faltanS === 1 ? 'Esa sesión ya no existe' : 'Esas ' + faltanS + ' sesiones ya no existen') + '</div>';
-
               h += '<div class="ruta-wk-zlbl" style="color:#0e7490;margin-top:7px;">🛒 Carro</div>';
               if (!(c.carro || []).length) h += '<span class="ruta-panel-nota">Sin ejercicios.</span>';
               (c.carro || []).forEach(function(id){
@@ -17822,8 +17906,7 @@
                      _gEsc(e ? (e.nombre || ('Ejercicio ' + id)) : ((c.carroNom && c.carroNom[id]) || ('Ejercicio ' + id))) + '</span>';
               });
               var faltanE = (c.carro || []).filter(function(id){ return !mapEjCT[id]; }).length;
-              if (faltanE) h += '<div class="ct-aviso">' + (faltanE === 1 ? 'Ese ejercicio ya no existe' : 'Esos ' + faltanE + ' ejercicios ya no existen') + ' — se borraron del catálogo</div>';
-
+              if (faltanE) h += '<div class="ct-aviso">' + (faltanE === 1 ? 'Ese ejercicio ya no existe' : 'Esos ' + faltanE + ' ejercicios ya no existen') + '</div>';
               if (c.ultimoUso) h += '<div class="ct-fecha">Última vez: ' + formatFechaDiaMes(c.ultimoUso) + '</div>';
               h += '<div class="ct-acts">' +
                 '<button type="button" class="btn btn-sec btn-sm" onclick="event.stopPropagation();ctRenombrar(\'' + c.id + '\')">Renombrar</button>' +
@@ -17831,8 +17914,10 @@
                 '</div></div>';
             });
           });
-        });
-      }
+          h += '</div>';
+        }
+        h += '</div>';
+      });
       h += '</div>';
 
       h += _rutaArchivoHTML(p, idsNivel, areaN, sesN, ejN, ejG);
@@ -18005,6 +18090,142 @@
     // Viven en el plan del grupo (son del club) y cada una lleva su nivel:
     // solo aparecen en la pantalla de planificación de ese nivel.
     var _ctAbierta = null;   // v0.286: sin buscador ni orden — mandan área y bloque
+    var _ctApAbierto = {};   // v0.287: qué áreas están desplegadas
+    function ctApToggle(key) { _ctApAbierto[key] = !_ctApAbierto[key]; mostrarPlanificacion(); }
+
+    // v0.288 — Quitar del día lo que se trajo. Es el arreglo de equivocarse
+    // de día al pinchar: vacía SOLO ese día y solo de este nivel, y no toca
+    // la clase tipo del repositorio ni lo planificado en otros días.
+    function ctQuitarDia(fechaISO) {
+      var p = leerPlan(), nivel = _compNivel();
+      if (!_ctDiaTieneAlgo(p, nivel, fechaISO)) return;
+      if (!confirm('¿Quitar la clase del ' + formatFechaDiaMes(fechaISO) + '?\n\n' +
+                   'Se vacía solo ese día. La clase tipo sigue guardada en el repositorio.')) return;
+      var w = _rutaSemanaLibre(fechaISO);
+      _rutaEscribeDia(p.rutaCarro, nivel, fechaISO, null, w);
+      _rutaEscribeDia(p.rutaSes,   nivel, fechaISO, null, w);
+      var idsNiv = _compIdsNivel(p);
+      var resto = ((p.compDias && p.compDias[fechaISO]) || []).filter(function(id){ return !idsNiv[id]; });
+      if (p.compDias) {
+        if (resto.length) p.compDias[fechaISO] = resto; else delete p.compDias[fechaISO];
+      }
+      _planGuardar(p);
+      mostrarPlanificacion();
+      planToast('✓ Día vaciado');
+    }
+
+    // ── v0.287 — CREAR UNA CLASE TIPO DESDE UN BLOQUE ───────────────
+    // El camino corto, y el que se usará casi siempre: tocas un bloque, sale
+    // lo que hay dentro (sus sesiones), eliges una, marcas los ejercicios de
+    // carro y ya está. La clase se llama COMO LA SESIÓN, así que no hay que
+    // inventar nombres ni escribir nada.
+    var _ctcBloque = null, _ctcSes = null, _ctcCarro = [], _ctcGolpe = null;
+    function ctCrearAbrir(bloqueId) {
+      _ctcBloque = bloqueId; _ctcSes = null; _ctcCarro = []; _ctcGolpe = null;
+      _ctCrearPintar();
+    }
+    function ctCrearCerrar() {
+      _ctcBloque = null;
+      var ov = document.getElementById('ct-crear-ov');
+      if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; }
+    }
+    function ctCrearSes(id) { _ctcSes = id; _ctCrearPintar(); }
+    function ctCrearGolpe(k) { _ctcGolpe = (_ctcGolpe === k) ? null : k; _ctCrearPintar(); }
+    function ctCrearEj(id) {
+      var i = _ctcCarro.indexOf(id);
+      if (i >= 0) _ctcCarro.splice(i, 1); else _ctcCarro.push(id);
+      _ctCrearPintar();
+    }
+    function ctCrearGuardar() {
+      if (!_ctcBloque || !_ctcSes) return;
+      var p = leerPlan(), nivel = _compNivel();
+      var ses = leerClases().filter(function(c){ return c.id === _ctcSes; })[0];
+      if (!ses) return;
+      var mapEj = _ejsById(), carroNom = {};
+      _ctcCarro.forEach(function(id){ if (mapEj[id]) carroNom[id] = mapEj[id].nombre || ('Ejercicio ' + id); });
+      var sesNom = {}; sesNom[ses.id] = ses.nombre || ses.fecha || ('Sesión ' + ses.id);
+      if (!p.clasesTipo) p.clasesTipo = [];
+      p.clasesTipo.push({
+        id: 'ct' + Date.now() + Math.random().toString(36).slice(2,6),
+        nivel: nivel,
+        nombre: sesNom[ses.id],          // se llama como la sesión elegida
+        carro: _ctcCarro.slice(), carroNom: carroNom,
+        bloques: [_ctcBloque], sesiones: [ses.id], sesNom: sesNom,
+        usos: 0, ultimoUso: '', creada: hoyLocal()
+      });
+      _planGuardar(p);
+      ctCrearCerrar();
+      mostrarPlanificacion();
+      planToast('✓ Clase tipo creada');
+    }
+    function _ctCrearPintar() {
+      var ov = document.getElementById('ct-crear-ov');
+      if (!ov) return;
+      if (!_ctcBloque) { ov.style.display = 'none'; ov.innerHTML = ''; return; }
+      var p = leerPlan(), nivel = _compNivel();
+      var fila = _compTodasFilas(p).filter(function(x){ return x.id === _ctcBloque; })[0];
+      if (!fila) { ctCrearCerrar(); return; }
+      var sesiones = _rutaSesPorArea(_compTodasFilas(p))[_ctcBloque] || [];
+
+      var h = '<div class="ruta-modal ct-crear-modal" onclick="event.stopPropagation()">';
+      h += '<div class="ruta-modal-hdr"><div>' +
+        '<div class="ruta-modal-tit">Nueva clase tipo</div>' +
+        '<div class="ruta-modal-sub">' + _gEsc(fila.apartado) + ' · ' + _gEsc(fila.t) + '</div></div>' +
+        '<button class="plan-modal-x" onclick="ctCrearCerrar()" aria-label="Cerrar">✕</button></div>';
+
+      // ── Paso 1 · la sesión ──
+      h += '<div class="ruta-panel-paso">1 · ¿Qué sesión?</div>';
+      if (!sesiones.length) {
+        h += '<div class="comp-picker-vacio">Este bloque no tiene ninguna sesión enlazada todavía.<br>' +
+             '<span class="ruta-panel-nota">Se enlazan desde Área de trabajo, o con apartado + bloque en la ficha de la sesión.</span></div>';
+      }
+      sesiones.forEach(function(c){
+        var th = _rutaSesThumb(c);
+        h += '<button type="button" class="ctcr-ses' + (_ctcSes === c.id ? ' on' : '') +
+          '" onclick="ctCrearSes(' + c.id + ')">' +
+          '<span class="ruta-ses-thumb">' + (th ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="ruta-ses-noimg">🎾</span>') + '</span>' +
+          '<span class="ctcr-ses-n">' + _gEsc(c.nombre || c.fecha || ('Sesión ' + c.id)) + '</span></button>';
+      });
+
+      // ── Paso 2 · el carro ──
+      if (_ctcSes) {
+        h += '<div class="ruta-panel-paso" style="margin-top:12px;">2 · ¿Qué se lanza de carro?' +
+             '<span class="ruta-panel-nota"> · ' + _ctcCarro.length + ' elegido' + (_ctcCarro.length !== 1 ? 's' : '') + '</span></div>';
+        var ejs = leerEjercicios().filter(_esDeCarro).sort(function(a, b){
+          return String(a.nombre || '').localeCompare(String(b.nombre || ''));
+        });
+        var grupos = _rutaCarroPorGolpe(ejs);
+        h += '<div class="ruta-carro-golpes">';
+        grupos.forEach(function(g){
+          h += '<button type="button" class="ruta-carro-g' + (_ctcGolpe === g.key ? ' on' : '') +
+            '" onclick="ctCrearGolpe(\'' + g.key + '\')">' + _gEsc(g.label) + ' <b>' + g.ejs.length + '</b></button>';
+        });
+        h += '</div>';
+        if (_ctcGolpe) {
+          var gSel = grupos.filter(function(g){ return g.key === _ctcGolpe; })[0];
+          if (gSel) {
+            h += '<div class="ruta-carro-lista">';
+            gSel.ejs.forEach(function(e){
+              var on = _ctcCarro.indexOf(e.id) >= 0;
+              var th = _rutaEjThumb(e);
+              h += '<button type="button" class="ruta-carro-it' + (on ? ' on' : '') + '" onclick="ctCrearEj(' + e.id + ')">' +
+                '<span class="ruta-carro-check">' + (on ? '✓' : '') + '</span>' +
+                '<span class="ruta-carro-thumb">' + (th ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="ruta-ses-noimg">🎾</span>') + '</span>' +
+                '<span class="ruta-carro-txt"><b>' + _gEsc(e.nombre || ('Ejercicio ' + e.id)) + '</b></span></button>';
+            });
+            h += '</div>';
+          }
+        } else {
+          h += '<div class="ruta-panel-nota">Elige un golpe para ver sus ejercicios. Puedes coger de varios.</div>';
+        }
+        var nomSes = (leerClases().filter(function(c){ return c.id === _ctcSes; })[0] || {}).nombre || 'la sesión';
+        h += '<div class="ctcr-nom">Se llamará <b>' + _gEsc(nomSes) + '</b></div>';
+        h += '<div class="acciones"><button class="btn btn-sec" style="flex:1;" onclick="ctCrearCerrar()">Cancelar</button>' +
+             '<button class="btn btn-verde" style="flex:1;" onclick="ctCrearGuardar()">Guardar clase tipo</button></div>';
+      }
+      h += '</div>';
+      _ovPintarConScroll(ov, h);
+    }
     // Solo una abierta a la vez: con veinte, lo contrario vuelve a ser un muro
     function ctAbrir(id) { _ctAbierta = (_ctAbierta === id) ? null : id; mostrarPlanificacion(); }
     function ctRenombrar(id) {
@@ -18339,7 +18560,9 @@
     }
     // ── Ventana para aplicarla: alcance y si reemplaza o suma ──
     var _ctUsarFecha = null;   // v0.285: el resto lo decide el árbol
-    function ctUsarAbrir(fechaISO) { _ctUsarFecha = fechaISO; _ctUsarPintar(); }
+    var _ctUsarAp = {};   // v0.287: apartados desplegados en el selector del día
+    function ctUsarAbrir(fechaISO) { _ctUsarFecha = fechaISO; _ctUsarAp = {}; _ctUsarPintar(); }
+    function ctUsarApToggle(key) { _ctUsarAp[key] = !_ctUsarAp[key]; _ctUsarPintar(); }
     function ctUsarCerrar() {
       _ctUsarFecha = null;
       var ov = document.getElementById('ct-usar-ov');
@@ -18369,22 +18592,32 @@
         h += '<div class="comp-picker-vacio">Todavía no has guardado ninguna clase tipo de este nivel.<br>' +
              '<span class="ruta-panel-nota">Se crean abajo, en Áreas de trabajo, con la ⚙ del repositorio.</span></div>';
       } else {
+        // v0.287: al abrir desde un día, TODO plegado. Se baja por donde toca.
         etapas.forEach(function(et){
           var filas = cont[et.key] || [];
           if (!filas.length) return;
           var nEt = 0;
           filas.forEach(function(it){ nEt += _ctDeBloque(p, nivel, it.id).length; });
-          h += '<div class="ctu-ap">' + _gEsc(et.nombre) +
-               '<span class="ctu-ap-n">' + nEt + '</span></div>';
-          filas.forEach(function(it){
-            var n = _ctDeBloque(p, nivel, it.id).length;
-            h += '<button type="button" class="ctu-bl' + (n ? '' : ' vacio') + '"' +
-              (n ? ' onclick="ctBloqueAbrir(\'' + nivel + '\',\'' + it.id + '\',\'' +
-                   String(it.t).replace(/'/g, "\\'") + '\',\'' + _ctUsarFecha + '\')"' : ' disabled') + '>' +
-              '<span class="ctu-bl-t">' + _gEsc(it.t) + '</span>' +
-              '<span class="ctu-bl-n">' + n + '</span>' +
-              (n ? '<span class="ctu-bl-c">›</span>' : '') + '</button>';
-          });
+          var abEt = !!_ctUsarAp[et.key];
+          h += '<div class="ctc-area' + (abEt ? ' abierta' : '') + '">';
+          h += '<button type="button" class="ctc-area-hdr" onclick="ctUsarApToggle(\'' + et.key + '\')">' +
+            '<span class="ruta-parte-chev' + (abEt ? ' abierto' : '') + '">›</span>' +
+            '<span class="ctc-area-t">' + _gEsc(et.nombre) + '</span>' +
+            '<span class="ctc-area-n' + (nEt ? ' con' : '') + '">' + nEt + '</span></button>';
+          if (abEt) {
+            h += '<div class="ctc-area-body">';
+            filas.forEach(function(it){
+              var n = _ctDeBloque(p, nivel, it.id).length;
+              h += '<button type="button" class="ctu-bl' + (n ? '' : ' vacio') + '"' +
+                (n ? ' onclick="ctBloqueAbrir(\'' + nivel + '\',\'' + it.id + '\',\'' +
+                     String(it.t).replace(/'/g, "\\'") + '\',\'' + _ctUsarFecha + '\')"' : ' disabled') + '>' +
+                '<span class="ctu-bl-t">' + _gEsc(it.t) + '</span>' +
+                '<span class="ctu-bl-n">' + n + '</span>' +
+                (n ? '<span class="ctu-bl-c">›</span>' : '') + '</button>';
+            });
+            h += '</div>';
+          }
+          h += '</div>';
         });
       }
       h += '</div>';
@@ -18716,6 +18949,12 @@
       h += '</div>';
 
       h += '</div>';   // /comp-clase-cols
+      // v0.288: si el día tiene algo, se puede vaciar — por si te equivocaste
+      // de día al traer la clase. No toca el repositorio.
+      if (carroIds.length || sesIds.length || filas.length) {
+        h += '<button type="button" class="comp-quitar-dia" onclick="ctQuitarDia(\'' + fechaISO + '\')">' +
+             '🗑️ Quitar esta clase del día</button>';
+      }
       h += '</div>';
       return h;
     }
