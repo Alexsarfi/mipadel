@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.284.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.285.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,35 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.285.0 — El árbol de áreas, única forma de moverse (2026-08)
+    (sin migraciones nuevas)
+    · FUERA LA BARRA ‹ CURSO ›. Desde que no hay tablero de meses no llevaba a
+      ningún sitio. El curso sigue existiendo por dentro —las franjas lo llevan
+      y decide qué clases se ven cada día—, solo desaparece de la pantalla.
+    · EL CONTADOR DE CADA BLOQUE pasa a ser el número de CLASES TIPO, que es lo
+      que vas a encontrar al pulsarlo. Antes decía las veces trabajadas y no
+      correspondía con lo que se abría; ese dato no se pierde: sale dentro,
+      junto a las clases tipo («trabajado 13× este curso»).
+    · PULSAR UN BLOQUE tiene ahora dos significados según el modo, apoyándose
+      en el «Editar plan» que ya existía: en modo normal enseña sus CLASES TIPO
+      —lo que se hace el 99% de las veces— y con «Editar plan» puesto abre el
+      catálogo de siempre para añadir y quitar ejercicios.
+    · CADA CLASE TIPO enseña ahí sus golpes de carro (pueden ser varios, según
+      cómo la montaras), sus sesiones y sus ejercicios.
+    · EL MISMO ÁRBOL EN PLANIFICACIÓN, debajo: apartados → bloques → clases
+      tipo, igual que el botón «Área» de la barra de abajo. Se planifica desde
+      el mismo sitio en el que se busca.
+    · Y AL TRAER UNA CLASE A UN DÍA se navega por ese mismo árbol, no por una
+      lista suelta. Fuera el «¿a qué días?»: se trae al día que has tocado y
+      punto. Si ese día ya tenía clase, se avisa antes de pisarla.
+    · LA FICHA DEL DÍA ES DE SOLO LECTURA. Se retiran el ⚙ y el ↥: de ahí ya no
+      se edita ni se sube nada, solo se BAJA una clase tipo (↧) y se apuntan
+      notas (📝). Un día vacío lleva directo al árbol.
+    · LAS NOTAS DE PISTA YA NO SE PIERDEN. Al entrar en Planificación salen
+      arriba del todo las clases con notas de ese nivel, de la más reciente a
+      la más antigua: cada una abre su día y el ✓ la da por hecha. Es la salida
+      de lo que se te ocurre dando clase, para retomarlo luego en el ordenador.
 
   v0.284.0 — Primero el área · y el panel deja de saltar arriba (2026-08)
     (sin migraciones nuevas)
@@ -6422,6 +6451,25 @@
     .comp-mes-resumen b { color:var(--texto); }
     /* ══ v0.282 — CLASES TIPO ═══════════════════════════════════════
        Lista plegada: una línea por clase, se abre al tocar el nombre. */
+    /* v0.285 — El árbol de áreas, dentro de Planificación */
+    .ct-arbol-tit { font-size:14px; font-weight:800; color:var(--texto); margin:16px 0 1px; }
+    .ct-arbol-sub { font-size:11.5px; color:var(--gris); margin-bottom:9px; }
+    /* v0.285 — Notas apuntadas en pista, esperando a que las apliques */
+    .notas-pend { border:1.5px solid #fde68a; background:#fffbeb; border-radius:13px;
+      padding:9px 11px 10px; margin-bottom:12px; }
+    .notas-pend-hdr { font-size:11px; font-weight:800; color:#92400e; text-transform:uppercase;
+      letter-spacing:.04em; margin-bottom:7px; }
+    .notas-pend-it { display:flex; align-items:stretch; gap:6px; margin-bottom:5px; }
+    .notas-pend-it:last-child { margin-bottom:0; }
+    .npi-ir { flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; text-align:left;
+      font-family:inherit; padding:7px 9px; border:1px solid #fde68a; border-radius:9px;
+      background:var(--blanco); cursor:pointer; }
+    .npi-f { font-size:10px; font-weight:800; color:#92400e; text-transform:uppercase; letter-spacing:.03em; }
+    .npi-t { font-size:12px; color:var(--texto); line-height:1.4;
+      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .npi-ok { flex-shrink:0; width:34px; border:1px solid #fde68a; border-radius:9px;
+      background:var(--blanco); color:#15803d; font-size:15px; font-family:inherit; cursor:pointer; }
+    .npi-ok:active { background:#dcfce7; }
     .ct-caja { border:1.5px solid var(--borde); border-radius:14px; background:var(--blanco);
       padding:10px 11px 11px; margin-top:12px; }
     .ct-hdr { display:flex; align-items:baseline; gap:7px; padding-bottom:9px; margin-bottom:9px;
@@ -6429,6 +6477,31 @@
     .ct-hdr-t { font-size:14px; font-weight:800; color:var(--texto); }
     .ct-hdr-n { font-size:11.5px; color:var(--gris); }
     .ct-hdr-c { margin-left:auto; font-size:10.5px; color:var(--gris); }
+    /* v0.285 — El árbol dentro del selector del día */
+    .ctu-ap { font-size:10.5px; font-weight:800; color:var(--gris); text-transform:uppercase;
+      letter-spacing:.04em; margin:11px 2px 5px; display:flex; align-items:center; gap:7px; }
+    .ctu-ap-n { margin-left:auto; font-size:10px; font-weight:800; color:#1e40af;
+      background:#eff6ff; border-radius:999px; padding:1px 7px; }
+    .ctu-bl { display:flex; align-items:center; gap:8px; width:100%; box-sizing:border-box;
+      font-family:inherit; text-align:left; padding:9px 11px; margin-bottom:5px;
+      border:1.5px solid var(--borde); border-radius:10px; background:var(--blanco); cursor:pointer; }
+    .ctu-bl.vacio { opacity:.45; cursor:default; }
+    .ctu-bl-t { flex:1; min-width:0; font-size:12.5px; font-weight:700; color:var(--texto);
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .ctu-bl-n { flex-shrink:0; min-width:20px; text-align:center; font-size:10.5px; font-weight:800;
+      color:#0e7490; background:#ecfeff; border-radius:999px; padding:1px 6px; }
+    .ctu-bl.vacio .ctu-bl-n { color:var(--gris); background:var(--arena); }
+    .ctu-bl-c { flex-shrink:0; font-size:16px; color:var(--gris); }
+    /* v0.285 — Las clases tipo de un bloque */
+    .ct-bloque-modal { max-width:560px; }
+    .ctb-card { border:1.5px solid var(--borde); border-radius:12px; padding:10px 11px; margin-bottom:8px; }
+    .ctb-top { display:flex; align-items:baseline; gap:8px; margin-bottom:5px; }
+    .ctb-n { flex:1; min-width:0; font-size:13.5px; font-weight:800; color:var(--texto); }
+    .ctb-u { flex-shrink:0; font-size:10.5px; color:var(--gris); }
+    .ctb-golpes { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:5px; }
+    .ctb-card .ruta-ses.borrado, .ctb-card .ruta-wk-ej.borrado { background:var(--arena); color:var(--gris);
+      border-color:var(--borde); text-decoration:line-through; }
+    .ctb-traer { width:100%; margin:8px 0 0; }
     .ct-nueva { flex-shrink:0; width:28px; height:28px; margin-left:2px; border-radius:50%; border:none;
       background:var(--arena); color:var(--texto); font-size:14px; font-family:inherit; cursor:pointer; }
     .ct-nueva:active { background:var(--borde); }
@@ -6464,18 +6537,7 @@
       overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .ct-usar-op.on .ct-usar-n { color:#0e7490; }
     .ct-usar-u { flex-shrink:0; font-size:10.5px; color:var(--gris); }
-    .ct-alc { display:flex; align-items:center; gap:9px; width:100%; box-sizing:border-box;
-      font-family:inherit; text-align:left; font-size:12.5px; padding:9px 10px; margin-bottom:5px;
-      border:1.5px solid var(--borde); border-radius:10px; background:var(--blanco); cursor:pointer;
-      color:var(--texto); }
-    .ct-alc.on { border-color:#0891b2; background:#ecfeff; }
-    .ct-rad { flex-shrink:0; width:13px; height:13px; border-radius:50%; border:1.5px solid var(--gris); }
-    .ct-alc.on .ct-rad { border-color:#0891b2; background:#0891b2; box-shadow:inset 0 0 0 2.5px #fff; }
-    .ct-modo { display:flex; gap:6px; margin:9px 0 4px; }
-    .ct-modo-b { flex:1; font-family:inherit; font-size:12px; font-weight:700; padding:7px 4px;
-      border:1.5px solid var(--borde); border-radius:10px; background:var(--blanco);
-      color:var(--texto); cursor:pointer; }
-    .ct-modo-b.on { border-color:#0891b2; background:#ecfeff; color:#0e7490; }
+    /* v0.285: se retiran el «¿a qué días?» y el reemplazar/añadir del selector */
     /* v0.281 — Se retira la vista por COLUMNAS (v0.147–v0.262): las semanas
        iban una al lado de otra con los días apilados hacia abajo, y con cinco
        semanas había que arrastrar de lado. Ahora todo va en filas. */
@@ -8287,6 +8349,8 @@
   <div id="comp-bloque-ov" class="ruta-modal-ov comp-bloque-ov" style="display:none" onclick="compBloqueCerrar()"></div>
   <!-- v0.282: elegir y aplicar una clase tipo, por encima de la ficha del día -->
   <div id="ct-usar-ov" class="ruta-modal-ov comp-bloque-ov" style="display:none" onclick="ctUsarCerrar()"></div>
+  <!-- v0.285: las clases tipo de un bloque del área de trabajo -->
+  <div id="ct-bloque-ov" class="ruta-modal-ov comp-bloque-ov" style="display:none" onclick="ctBloqueCerrar()"></div>
 
   <!-- ══ CLASE PREPARADA DE UNA FRANJA (v0.224) ══════════
        Globo con el carro y el área de trabajo de esa franja y ese día, para
@@ -8408,7 +8472,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.284.0';
+    var APP_VERSION = '0.285.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -15481,6 +15545,15 @@
       var p = leerPlan(); var arr = planContenido(p)[nivel][mes] || [];
       var it = arr.filter(function(x){ return x.id === id; })[0];
       if (!it) return;
+      // ── v0.285 — Un gesto, dos significados según el modo ────────────
+      // En modo normal, pulsar un bloque enseña sus CLASES TIPO: es lo que se
+      // hace el 99% de las veces (buscar qué poner). El catálogo —añadir y
+      // quitar ejercicios— se abre solo con «Editar plan» puesto, que ya
+      // existía. Cero conceptos nuevos y el mismo gesto no hace dos cosas.
+      if (!planEditMode && COMP_NIVELES.indexOf(nivel) >= 0) {
+        ctBloqueAbrir(nivel, id, it.t);
+        return;
+      }
       var esComp   = (nivel === 'competicion');
       var tipo     = esComp ? 'int' : 'g';
       var valor    = esComp ? it.int : it.g;
@@ -15762,8 +15835,15 @@
       h2 += '<div class="plan-item-top"><span class="plan-item-titulo">' + it.t + '</span><span class="plan-item-flecha">⚙</span></div>';
       h2 += '</div>'; // chips/foco (intención · zona · golpe) ahora solo dentro del apartado
       if (conDias) {
-        var titVeces = veces ? ('Trabajada ' + veces + ' vez' + (veces > 1 ? 'es' : '') + ' este curso') : 'Sin trabajar este curso todavía';
-        h2 += '<div class="plan-item-contador' + (veces ? ' con' : '') + '" title="' + titVeces + '">' + veces + '×</div>';
+        // v0.285 — El número de la derecha pasa a contar las CLASES TIPO de
+        // este bloque, que es lo que vas a encontrar al pulsarlo. Antes decía
+        // las veces trabajadas, un dato que no correspondía con lo que se
+        // abría; sigue estando, pero dentro, junto a las clases tipo.
+        var nCT = _ctDeBloque(leerPlan(), nivel, it.id).length;
+        var titCT = nCT ? (nCT + ' clase' + (nCT !== 1 ? 's' : '') + ' tipo guardada' + (nCT !== 1 ? 's' : '') +
+                           (veces ? ' · trabajado ' + veces + '×' : ''))
+                        : 'Sin clases tipo todavía' + (veces ? ' · trabajado ' + veces + '×' : '');
+        h2 += '<div class="plan-item-contador' + (nCT ? ' con' : '') + '" title="' + titCT + '">' + nCT + '</div>';
       }
       h2 += '</div>'; // .plan-item-row
 
@@ -17597,15 +17677,39 @@
       });
       var esHoy  = (curso === _cursoActual());
 
-      // ── Selector de CURSO: permite adelantarse y planificar el que viene ──
-      var h = '<div class="ruta-curso-nav">' +
-        '<button type="button" onclick="rutaCursoNav(-1)" title="Curso anterior">‹</button>' +
-        '<div class="ruta-curso-lbl">Curso ' + curso +
-          (esHoy ? ' <span class="ruta-badge">actual</span>'
-                 : ' <button type="button" class="ruta-chip-x" onclick="rutaCursoHoy()">ir al actual</button>') +
-        '</div>' +
-        '<button type="button" onclick="rutaCursoNav(1)" title="Curso siguiente">›</button>' +
-      '</div>';
+      // v0.285: se retira la barra ‹ curso ›. Desde que no hay tablero de
+      // meses no llevaba a ningún sitio. El curso sigue existiendo por
+      // dentro (las franjas lo llevan y decide qué clases se ven cada día),
+      // solo desaparece de la pantalla.
+      var h = '';
+      // ── v0.285 — LO QUE APUNTASTE EN PISTA, A LA VISTA ──────────────
+      // Desde que la ficha del día es de solo lectura, el 📝 es la única
+      // salida de lo que se te ocurre dando clase. Para que no se quede ahí
+      // enterrado, las notas de este nivel salen arriba del todo al entrar en
+      // Planificación —que es donde te sientas a retocar—, ordenadas de más
+      // reciente a más antigua. Cada una abre su día; «Hecho» la retira.
+      var notasPend = [];
+      var _pfxN = _compNivel() + '|';
+      Object.keys(p.notasDia || {}).forEach(function(k){
+        if (k.indexOf(_pfxN) !== 0) return;
+        notasPend.push({ fecha: k.slice(_pfxN.length), txt: p.notasDia[k] });
+      });
+      notasPend.sort(function(a, b){ return b.fecha.localeCompare(a.fecha); });
+      if (notasPend.length) {
+        h += '<div class="notas-pend">';
+        h += '<div class="notas-pend-hdr">📝 ' + notasPend.length +
+             (notasPend.length === 1 ? ' clase con notas' : ' clases con notas') + '</div>';
+        notasPend.forEach(function(n){
+          h += '<div class="notas-pend-it">' +
+            '<button type="button" class="npi-ir" onclick="compDiaAbrir(\'' + n.fecha + '\')">' +
+              '<span class="npi-f">' + formatFechaDiaMes(n.fecha) + '</span>' +
+              '<span class="npi-t">' + _gEsc(n.txt) + '</span></button>' +
+            '<button type="button" class="npi-ok" onclick="notaHecha(\'' + n.fecha + '\')" ' +
+              'title="Ya lo he aplicado" aria-label="Hecho">✓</button></div>';
+        });
+        h += '</div>';
+      }
+
       // v0.221: fuera la barra de «N / 40 semanas trabajadas». No decía nada
       // útil para planificar y solo metía ruido en la cabecera.
       // v0.211: aviso cuando se está trabajando sobre un curso ya cerrado
@@ -17897,6 +18001,98 @@
     // Viven en el plan del grupo (son del club) y cada una lleva su nivel:
     // solo aparecen en la pantalla de planificación de ese nivel.
     var _ctBuscar = '', _ctOrden = 'usos', _ctAbierta = null;
+    // ── v0.285 — LAS CLASES TIPO DE UN BLOQUE ───────────────────────
+    // Se abre al pulsar un bloque del área de trabajo (en modo normal). Es la
+    // misma ventana desde los dos sitios: la pantalla de Área de trabajo y el
+    // pie de Planificación. Si se llega desde un día (ctBloqueDia), cada clase
+    // se puede traer a ese día de un toque.
+    var _ctBloqueSel = null, _ctBloqueNiv = '', _ctBloqueTit = '', _ctBloqueDia = null;
+    function ctBloqueAbrir(nivel, bloqueId, titulo, fechaISO) {
+      _ctBloqueNiv = nivel; _ctBloqueSel = bloqueId; _ctBloqueTit = titulo || '';
+      _ctBloqueDia = fechaISO || null;
+      _ctBloquePintar();
+    }
+    function ctBloqueCerrar() {
+      _ctBloqueSel = null; _ctBloqueDia = null;
+      var ov = document.getElementById('ct-bloque-ov');
+      if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; }
+    }
+    // Al cerrar desde un día, se vuelve al árbol para poder seguir mirando.
+    function ctBloqueAtras() {
+      var f = _ctBloqueDia;
+      ctBloqueCerrar();
+      if (f) { _ctUsarFecha = f; _ctUsarPintar(); }
+    }
+    function ctBloqueTraer(ctId) {
+      if (!_ctBloqueDia) return;
+      // v0.285: si el día ya tenía algo puesto, se avisa antes de pisarlo
+      if (_ctDiaTieneAlgo(leerPlan(), _ctBloqueNiv, _ctBloqueDia) &&
+          !confirm('Este día ya tiene una clase puesta.\n\n¿La reemplazo por esta?')) return;
+      ctAplicar(ctId, _ctBloqueDia, 'dia', 'rep', 1);
+      var f = _ctBloqueDia;
+      ctBloqueCerrar();
+      compDiaAbierta = f; compDiaEditando = false;
+      mostrarPlanificacion();
+      planToast('✓ Clase traída al día');
+    }
+    function _ctBloquePintar() {
+      var ov = document.getElementById('ct-bloque-ov');
+      if (!ov) return;
+      if (!_ctBloqueSel) { ov.style.display = 'none'; ov.innerHTML = ''; return; }
+      var p = leerPlan();
+      var lista = _ctDeBloque(p, _ctBloqueNiv, _ctBloqueSel)
+                    .slice().sort(function(a, b){ return (b.usos || 0) - (a.usos || 0); });
+      var veces = (_compContadorTrabajo(p, _cursoActual())[_ctBloqueSel] || 0);
+      var mapEj = _ejsById(), todasS = leerClases();
+
+      var h = '<div class="ruta-modal ct-bloque-modal" onclick="event.stopPropagation()">';
+      h += '<div class="ruta-modal-hdr"><div>' +
+        '<div class="ruta-modal-tit">' + _gEsc(_ctBloqueTit) + '</div>' +
+        '<div class="ruta-modal-sub">' + lista.length + (lista.length === 1 ? ' clase tipo' : ' clases tipo') +
+          (veces ? ' · trabajado ' + veces + '× este curso' : '') +
+          (_ctBloqueDia ? ' · para el ' + formatFechaDiaMes(_ctBloqueDia) : '') + '</div></div>' +
+        '<button class="plan-modal-x" onclick="' + (_ctBloqueDia ? 'ctBloqueAtras()' : 'ctBloqueCerrar()') +
+          '" aria-label="' + (_ctBloqueDia ? 'Volver' : 'Cerrar') + '">' + (_ctBloqueDia ? '‹' : '✕') + '</button></div>';
+
+      if (!lista.length) {
+        h += '<div class="comp-picker-vacio">Este bloque todavía no tiene ninguna clase tipo.<br>' +
+             '<span class="ruta-panel-nota">Se crean con la ⚙ del repositorio, montando el carro y el área.</span></div>';
+      }
+      lista.forEach(function(c){
+        // Los golpes del carro de esa clase tipo: pueden ser varios
+        var gv = {}, gl = [];
+        (c.carro || []).forEach(function(id){
+          var e = mapEj[id]; if (!e) return;
+          var k = ejFaceta(e, 'golpe'); if (!k || gv[k]) return;
+          gv[k] = true; gl.push(GOLPE_LABEL[k] || k);
+        });
+        h += '<div class="ctb-card">';
+        h += '<div class="ctb-top"><span class="ctb-n">' + _gEsc(c.nombre) + '</span>' +
+             '<span class="ctb-u">' + (c.usos || 0) + '×</span></div>';
+        if (gl.length) {
+          h += '<div class="ctb-golpes">';
+          gl.forEach(function(t){ h += '<span class="ruta-wk-golpe">' + _gEsc(t) + '</span>'; });
+          h += '</div>';
+        }
+        (c.sesiones || []).forEach(function(id){
+          var x = todasS.filter(function(t){ return t.id === id; })[0];
+          h += '<div class="ruta-ses' + (x ? '' : ' borrado') + '">' +
+               _gEsc(x ? (x.nombre || x.fecha || ('Sesión ' + id)) : ((c.sesNom && c.sesNom[id]) || ('Sesión ' + id))) + '</div>';
+        });
+        (c.carro || []).forEach(function(id){
+          var e = mapEj[id];
+          h += '<span class="ruta-wk-ej' + (e ? '' : ' borrado') + '">' +
+               _gEsc(e ? (e.nombre || ('Ejercicio ' + id)) : ((c.carroNom && c.carroNom[id]) || ('Ejercicio ' + id))) + '</span>';
+        });
+        if (_ctBloqueDia) {
+          h += '<button type="button" class="btn btn-verde btn-sm ctb-traer" onclick="ctBloqueTraer(\'' + c.id + '\')">↧ Traer a este día</button>';
+        }
+        h += '</div>';
+      });
+      h += '</div>';
+      _ovPintarConScroll(ov, h);
+    }
+
     // ── v0.283 — CREAR UNA CLASE TIPO DESDE CERO ────────────────────
     // Se monta con el MISMO panel grande de planificar (carro | área de
     // trabajo), pero apuntando a un día BORRADOR que no existe en ningún
@@ -17970,6 +18166,12 @@
       _planGuardar(p); mostrarPlanificacion();
     }
     function _ctLista(p) { return (p && p.clasesTipo) || []; }
+    // v0.285 — Las clases tipo que cuelgan de un bloque concreto del área.
+    function _ctDeBloque(p, nivel, bloqueId) {
+      return _ctDeNivel(p, nivel).filter(function(c){
+        return (c.bloques || []).indexOf(bloqueId) >= 0;
+      });
+    }
     function _ctDeNivel(p, nivel) {
       return _ctLista(p).filter(function(c){ return c.nivel === nivel; });
     }
@@ -18073,6 +18275,17 @@
     function _notaHay(p, nivel, fechaISO) {
       return !!(p.notasDia && p.notasDia[nivel + '|' + fechaISO]);
     }
+    // v0.285: dar por resuelta una nota (ya la has aplicado en el ordenador)
+    function notaHecha(fechaISO) {
+      var p = leerPlan();
+      var k = _compNivel() + '|' + fechaISO;
+      if (!p.notasDia || !p.notasDia[k]) return;
+      if (!confirm('¿Dar por hecha la nota del ' + formatFechaDiaMes(fechaISO) + '?\n\n' +
+                   p.notasDia[k] + '\n\nSe borra: ya no la volverás a ver aquí.')) return;
+      delete p.notasDia[k];
+      _planGuardar(p);
+      mostrarPlanificacion();
+    }
     var _compNotaEdit = false;
     function compNotaToggle() { _compNotaEdit = !_compNotaEdit; _compDiaOvPintar(); }
     function compNotaGuardar(fechaISO) {
@@ -18129,71 +18342,59 @@
       planToast('✓ Guardada como clase tipo');
     }
     // ── Ventana para aplicarla: alcance y si reemplaza o suma ──
-    var _ctUsarFecha = null, _ctUsarSel = null, _ctUsarAlc = 'dia', _ctUsarModo = 'rep';
-    function ctUsarAbrir(fechaISO) {
-      _ctUsarFecha = fechaISO; _ctUsarSel = null; _ctUsarAlc = 'dia'; _ctUsarModo = 'rep';
-      _ctUsarPintar();
-    }
+    var _ctUsarFecha = null;   // v0.285: el resto lo decide el árbol
+    function ctUsarAbrir(fechaISO) { _ctUsarFecha = fechaISO; _ctUsarPintar(); }
     function ctUsarCerrar() {
       _ctUsarFecha = null;
       var ov = document.getElementById('ct-usar-ov');
       if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; }
-    }
-    function ctUsarSel(id) { _ctUsarSel = id; _ctUsarPintar(); }
-    function ctUsarAlc(a) { _ctUsarAlc = a; _ctUsarPintar(); }
-    function ctUsarModo(m) { _ctUsarModo = m; _ctUsarPintar(); }
-    function ctUsarConfirmar() {
-      if (!_ctUsarSel || !_ctUsarFecha) return;
-      var n = ctAplicar(_ctUsarSel, _ctUsarFecha, _ctUsarAlc, _ctUsarModo, 4);
-      ctUsarCerrar();
-      mostrarPlanificacion();
-      planToast('✓ Aplicada a ' + n + (n === 1 ? ' día' : ' días'));
     }
     function _ctUsarPintar() {
       var ov = document.getElementById('ct-usar-ov');
       if (!ov) return;
       if (!_ctUsarFecha) { ov.style.display = 'none'; ov.innerHTML = ''; return; }
       var p = leerPlan(), nivel = _compNivel();
-      var lista = _ctDeNivel(p, nivel).slice().sort(function(a,b){ return (b.usos||0) - (a.usos||0); });
-      if (!_ctUsarSel && lista.length) _ctUsarSel = lista[0].id;
-      var sel = lista.filter(function(x){ return x.id === _ctUsarSel; })[0];
+
+      // ── v0.285 — Se elige NAVEGANDO por las áreas de trabajo ─────────
+      // Antes era una lista plana de clases tipo. Ahora es el mismo árbol de
+      // siempre —apartado → bloque— y al tocar un bloque salen sus clases
+      // tipo, con un botón para traerla al día. Un solo camino en toda la app.
+      var etapas = PLAN_ETAPAS[nivel] || [];
+      var cont   = planContenido(p)[nivel] || {};
+      var total  = _ctDeNivel(p, nivel).length;
 
       var h = '<div class="ruta-modal ct-usar-modal" onclick="event.stopPropagation()">';
       h += '<div class="ruta-modal-hdr"><div>' +
-        '<div class="ruta-modal-tit">Usar una clase tipo</div>' +
+        '<div class="ruta-modal-tit">¿Qué clase pongo?</div>' +
         '<div class="ruta-modal-sub">' + formatFechaDiaMes(_ctUsarFecha) + ' · ' + _gEsc(planNivelLabel(nivel)) + '</div></div>' +
         '<button class="plan-modal-x" onclick="ctUsarCerrar()" aria-label="Cerrar">✕</button></div>';
 
-      h += '<div class="ct-usar-lista">';
-      lista.forEach(function(c){
-        h += '<button type="button" class="ct-usar-op' + (c.id === _ctUsarSel ? ' on' : '') +
-          '" onclick="ctUsarSel(\'' + c.id + '\')">' +
-          '<span class="ct-usar-n">' + _gEsc(c.nombre) + '</span>' +
-          '<span class="ct-usar-u">' + (c.usos || 0) + '×</span></button>';
-      });
-      h += '</div>';
-
-      if (sel) {
-        var nD = _ctDiasSemana(nivel, _ctUsarFecha).length;
-        h += '<div class="ruta-panel-paso" style="margin-top:10px;">¿A qué días?</div>';
-        [['dia', 'Solo el ' + formatFechaDiaMes(_ctUsarFecha)],
-         ['semana', 'Los ' + nD + (nD === 1 ? ' día' : ' días') + ' de este nivel esta semana'],
-         ['nsem', 'Las próximas 4 semanas']].forEach(function(o){
-          h += '<button type="button" class="ct-alc' + (_ctUsarAlc === o[0] ? ' on' : '') +
-            '" onclick="ctUsarAlc(\'' + o[0] + '\')"><span class="ct-rad"></span>' + o[1] + '</button>';
-        });
-        h += '<div class="ct-modo">' +
-          '<button type="button" class="ct-modo-b' + (_ctUsarModo === 'rep' ? ' on' : '') + '" onclick="ctUsarModo(\'rep\')">Reemplazar</button>' +
-          '<button type="button" class="ct-modo-b' + (_ctUsarModo === 'add' ? ' on' : '') + '" onclick="ctUsarModo(\'add\')">Añadir a lo que hay</button>' +
-        '</div>';
-        h += '<div class="acciones"><button class="btn btn-sec" style="flex:1;" onclick="ctUsarCerrar()">Cancelar</button>' +
-             '<button class="btn btn-verde" style="flex:1;" onclick="ctUsarConfirmar()">Aplicar</button></div>';
+      if (!total) {
+        h += '<div class="comp-picker-vacio">Todavía no has guardado ninguna clase tipo de este nivel.<br>' +
+             '<span class="ruta-panel-nota">Se crean abajo, en Áreas de trabajo, con la ⚙ del repositorio.</span></div>';
       } else {
-        h += '<div class="comp-picker-vacio">Todavía no has guardado ninguna clase tipo de este nivel.</div>';
+        etapas.forEach(function(et){
+          var filas = cont[et.key] || [];
+          if (!filas.length) return;
+          var nEt = 0;
+          filas.forEach(function(it){ nEt += _ctDeBloque(p, nivel, it.id).length; });
+          h += '<div class="ctu-ap">' + _gEsc(et.nombre) +
+               '<span class="ctu-ap-n">' + nEt + '</span></div>';
+          filas.forEach(function(it){
+            var n = _ctDeBloque(p, nivel, it.id).length;
+            h += '<button type="button" class="ctu-bl' + (n ? '' : ' vacio') + '"' +
+              (n ? ' onclick="ctBloqueAbrir(\'' + nivel + '\',\'' + it.id + '\',\'' +
+                   String(it.t).replace(/'/g, "\\'") + '\',\'' + _ctUsarFecha + '\')"' : ' disabled') + '>' +
+              '<span class="ctu-bl-t">' + _gEsc(it.t) + '</span>' +
+              '<span class="ctu-bl-n">' + n + '</span>' +
+              (n ? '<span class="ctu-bl-c">›</span>' : '') + '</button>';
+          });
+        });
       }
       h += '</div>';
-      _ovPintarConScroll(ov, h);   // v0.284
+      _ovPintarConScroll(ov, h);
     }
+
 
     // ── v0.243 — EL DÍA, EN GLOBO ──────────────────────────────────
     // Se abre como ventana encima del mes en vez de desplegarse debajo de
@@ -18202,7 +18403,7 @@
     // mismo de siempre (carro + área de trabajo, o el selector de filas),
     // así que se sigue editando igual: ⚙ lleva al panel grande.
     function compDiaCerrar() {
-      compBloqueCerrar(); ctUsarCerrar();
+      compBloqueCerrar(); ctUsarCerrar(); ctBloqueCerrar();
       compDiaAbierta = null; compDiaEditando = false; _compNotaEdit = false;
       mostrarPlanificacion();
     }
@@ -18221,18 +18422,15 @@
         '<div><div class="ruta-modal-tit">' + DIAS_NOMBRES_A[dow] + ' ' + formatFechaDiaMes(f) + '</div>' +
         '<div class="ruta-modal-sub">' + rango + '</div></div>' +
         '<div class="ruta-modal-hdr-acc">' +
+          // v0.285: FUERA el ⚙. De la ficha del día ya no se edita nada: aquí
+          // solo se BAJA una clase tipo y se apuntan notas. Lo que se improvisa
+          // en pista va al 📝 y se retoma luego en el ordenador.
           (compDiaEditando ? '' :
-            '<button class="plan-modal-x" onclick="compDiaEditar(\'' + f + '\')" title="Cambiar la clase de este día" aria-label="Editar">⚙</button>' +
-            // v0.274: al lado, las notas de la clase
             '<button class="plan-modal-x comp-nota-btn' + (_notaDe(f) ? ' hay' : '') + '" ' +
               'onclick="compNotaToggle()" title="Notas de la clase" aria-label="Notas">📝</button>' +
-            // v0.282 — Clases tipo: guardar lo de hoy · traer una guardada
-            (_ctDiaTieneAlgo(p, _compNivel(), f)
-              ? '<button class="plan-modal-x comp-ct-btn" onclick="ctGuardarDia(\'' + f + '\')" ' +
-                'title="Guardar esta clase para reutilizarla" aria-label="Guardar como clase tipo">↥</button>' : '') +
-            (_ctDeNivel(p, _compNivel()).length
-              ? '<button class="plan-modal-x comp-ct-btn" onclick="ctUsarAbrir(\'' + f + '\')" ' +
-                'title="Traer una clase tipo guardada" aria-label="Usar una clase tipo">↧</button>' : '')) +
+            // v0.282/v0.285 — Solo se BAJA: traer una clase tipo guardada
+            '<button class="plan-modal-x comp-ct-btn" onclick="ctUsarAbrir(\'' + f + '\')" ' +
+              'title="Traer una clase tipo" aria-label="Traer una clase tipo">↧</button>') +
           '<button class="plan-modal-x" onclick="compDiaCerrar()" aria-label="Cerrar">✕</button>' +
         '</div></div>';
       if (!compDiaEditando) h += _compNotaHTML(f);
@@ -19467,7 +19665,16 @@
         // v0.211: el calendario de competiciones se ha mudado a Inicio.
         // v0.233: el catálogo (Áreas de trabajo) ya no va aquí — vive en su
         // propia pantalla, la de la barra de abajo.
-        if (!edit) h += _compListaMesHTML(p) + _rutaHTML();
+        if (!edit) {
+          h += _compListaMesHTML(p) + _rutaHTML();
+          // ── v0.285 — El ÁRBOL DE ÁREAS, también aquí ────────────────
+          // Es el mismo componente que abre el botón «Área» de la barra de
+          // abajo: apartados → bloques → clases tipo. Se planifica desde el
+          // mismo sitio en el que se busca, y no hay dos formas de moverse.
+          h += '<div class="ct-arbol-tit">Áreas de trabajo</div>';
+          h += '<div class="ct-arbol-sub">Toca un bloque para ver sus clases tipo</div>';
+          etapas.forEach(function(et, idx){ h += _planEtapaCardHTML(p, nivel, et, { ico:(idx + 1) }); });
+        }
       } else {
         // v0.232: no lo alcanza ningún nivel (los tres son COMP_NIVELES). Se
         // deja el catálogo por si algún día se añade un nivel sin ruta.
