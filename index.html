@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.283.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.284.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,27 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.284.0 — Primero el área · y el panel deja de saltar arriba (2026-08)
+    (sin migraciones nuevas)
+    · AL LEER, PRIMERO EL ÁREA DE TRABAJO y después el carro: en la ficha del
+      día, en la tarjeta de semana del curso y en el repositorio de clases
+      tipo. Al abrir un día lo que se busca es QUÉ se trabaja hoy; con qué
+      ejercicio se empieza se mira ya con la cesta en la mano.
+    · AL MONTAR NO CAMBIA: el panel de planificación sigue con «1 · Carro» y
+      «2 · Área de trabajo», que es el orden real de la clase. Y todas las
+      cabeceras conservan su «primera parte» / «segunda parte», así que la
+      cronología no se pierde en ningún sitio.
+    · EN EL REPOSITORIO manda el bloque, que es lo que identifica una clase
+      («presión en la red»); el carro es el medio. En la línea plegada se
+      queda el golpe en rojo, que ahí sí añade algo que el nombre no dice.
+    · ARREGLADO: el panel saltaba arriba del todo cada vez que tocabas algo.
+      Cada toque —abrir un apartado, elegir un bloque, plegar el carro— rehace
+      su HTML entero, y al sustituirlo el navegador devolvía el scroll a cero:
+      bajabas hasta las áreas de trabajo, abrías una y volvías a aparecer
+      arriba, con lo que había que bajar otra vez. Ahora se anota dónde estaba
+      cada zona desplazable y se vuelve ahí después de pintar. Igual en la
+      ficha del día.
 
   v0.283.0 — Crear clases tipo · y el día vacío lleva al repositorio (2026-08)
     (sin migraciones nuevas)
@@ -6916,7 +6937,7 @@
     /* v0.265: con sitio de sobra, la semana se reparte en tres zonas y deja de
        tener un agujero en medio. Por debajo de 900 px se queda apilada. */
     @media (min-width: 900px) {
-      .ruta-wk { display:grid; grid-template-columns:112px minmax(0,1fr) minmax(0,1.15fr);
+      .ruta-wk { display:grid; grid-template-columns:112px minmax(0,1.15fr) minmax(0,1fr);
         gap:14px; align-items:start; padding:9px 12px; }
       .ruta-wk-top { align-items:center; }
       .ruta-wk-rango { margin-left:0; }
@@ -8387,7 +8408,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.283.0';
+    var APP_VERSION = '0.284.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -17163,6 +17184,26 @@
             (s.fecha ? ' · ' + formatFechaDiaMes(s.fecha) : '') + '</span>' +
         '</span></button>';
     }
+    // ── v0.284 — PINTAR SIN PERDER EL SITIO ────────────────────────
+    // Cada toque dentro de un panel (abrir un apartado, elegir un bloque,
+    // plegar el carro…) rehace su HTML entero. Al sustituirlo, el navegador
+    // devuelve el scroll a cero: bajabas hasta las áreas de trabajo, abrías
+    // una y aparecías otra vez arriba, teniendo que bajar de nuevo. Aquí se
+    // anota dónde estaba cada zona desplazable y se vuelve ahí al terminar.
+    var _OV_SCROLL = ['.ruta-modal', '.ruta-modal-areas', '.ruta-modal-ses', '.ct-usar-lista'];
+    function _ovPintarConScroll(ov, h) {
+      var prev = _OV_SCROLL.map(function(sel){
+        var el = ov.querySelector(sel);
+        return el ? el.scrollTop : 0;
+      });
+      ov.innerHTML = h;
+      ov.style.display = 'flex';
+      _OV_SCROLL.forEach(function(sel, i){
+        if (!prev[i]) return;
+        var el = ov.querySelector(sel);
+        if (el) el.scrollTop = prev[i];
+      });
+    }
     function _rutaModalRender() {
       var ov = document.getElementById('ruta-plan-ov');
       if (!ov) return;
@@ -17319,7 +17360,7 @@
         h += '</div></div>';   // /trabajo /cols
         if (wd.sesiones.length) h += '<button type="button" class="ruta-panel-borrar" onclick="rutaBorrarSemana(' + idx + ')">🗑️ Quitar las sesiones de esta clase</button>';
         h += '</div>';
-        ov.innerHTML = h; ov.style.display = 'flex';
+        _ovPintarConScroll(ov, h);
         return;
       }
       h += '<div class="ruta-trabajo-cols">';
@@ -17433,8 +17474,7 @@
       if (wd.sesiones.length) h += '<button type="button" class="ruta-panel-borrar" onclick="rutaBorrarSemana(' + idx + ')">🗑️ Quitar las sesiones de esta clase</button>';
       h += '</div>';         // /ruta-modal
 
-      ov.innerHTML = h;
-      ov.style.display = 'flex';
+      _ovPintarConScroll(ov, h);
       // v0.261: el panel se repinta entero al abrir un golpe; se vuelve a
       // aplicar el filtro escrito para no perderlo.
       if (_rutaCarroQ) rutaCarroFiltrar(_rutaCarroQ);
@@ -17520,7 +17560,7 @@
           '<span class="ruta-wk-n">S' + (w.idx+1) + '</span>' +
           '<span class="ruta-wk-rango">' + rango + '</span>' +
           (esAct ? '<span class="ruta-badge">hoy</span>' : '') + '</div>' +
-        zCarro + zArea +
+        zArea + zCarro +   // v0.284: primero qué se trabaja, luego con qué
       '</div>';
     }
 
@@ -17652,17 +17692,8 @@
           if (!ab) return;
 
           h += '<div class="ct-det">';
-          h += '<div class="ruta-wk-zlbl" style="color:#0e7490;">🛒 Carro</div>';
-          if (!(c.carro || []).length) h += '<span class="ruta-panel-nota">Sin ejercicios.</span>';
-          (c.carro || []).forEach(function(id){
-            var e = mapEjL[id];
-            if (e) h += '<span class="ruta-wk-ej">' + _gEsc(e.nombre || ('Ejercicio ' + id)) + '</span>';
-            else   h += '<span class="ruta-wk-ej borrado">' + _gEsc((c.carroNom && c.carroNom[id]) || ('Ejercicio ' + id)) + '</span>';
-          });
-          var faltanEj = (c.carro || []).filter(function(id){ return !mapEjL[id]; }).length;
-          if (faltanEj) h += '<div class="ct-aviso">' + (faltanEj === 1 ? 'Ese ejercicio ya no existe' : 'Esos ' + faltanEj + ' ejercicios ya no existen') + ' — se borraron del catálogo</div>';
-
-          h += '<div class="ruta-wk-zlbl" style="color:#3730a3;margin-top:7px;">🎯 Área de trabajo</div>';
+          // v0.284: en el repositorio identifica el BLOQUE, no el carro
+          h += '<div class="ruta-wk-zlbl" style="color:#3730a3;">🎯 Área de trabajo</div>';
           (c.bloques || []).forEach(function(id){
             h += '<span class="ruta-chip">' + _gEsc(areaN[id] || 'Bloque') + '</span>';
           });
@@ -17675,6 +17706,16 @@
           if (!(c.bloques || []).length && !(c.sesiones || []).length)
             h += '<span class="ruta-panel-nota">Sin bloque ni sesión.</span>';
           if (faltanSes) h += '<div class="ct-aviso">' + (faltanSes === 1 ? 'Esa sesión ya no existe' : 'Esas ' + faltanSes + ' sesiones ya no existen') + '</div>';
+
+          h += '<div class="ruta-wk-zlbl" style="color:#0e7490;margin-top:7px;">🛒 Carro</div>';
+          if (!(c.carro || []).length) h += '<span class="ruta-panel-nota">Sin ejercicios.</span>';
+          (c.carro || []).forEach(function(id){
+            var e = mapEjL[id];
+            if (e) h += '<span class="ruta-wk-ej">' + _gEsc(e.nombre || ('Ejercicio ' + id)) + '</span>';
+            else   h += '<span class="ruta-wk-ej borrado">' + _gEsc((c.carroNom && c.carroNom[id]) || ('Ejercicio ' + id)) + '</span>';
+          });
+          var faltanEj = (c.carro || []).filter(function(id){ return !mapEjL[id]; }).length;
+          if (faltanEj) h += '<div class="ct-aviso">' + (faltanEj === 1 ? 'Ese ejercicio ya no existe' : 'Esos ' + faltanEj + ' ejercicios ya no existen') + ' — se borraron del catálogo</div>';
 
           if (c.ultimoUso) h += '<div class="ct-fecha">Última vez: ' + formatFechaDiaMes(c.ultimoUso) + '</div>';
           h += '<div class="ct-acts">' +
@@ -18151,8 +18192,7 @@
         h += '<div class="comp-picker-vacio">Todavía no has guardado ninguna clase tipo de este nivel.</div>';
       }
       h += '</div>';
-      ov.innerHTML = h;
-      ov.style.display = 'flex';
+      _ovPintarConScroll(ov, h);   // v0.284
     }
 
     // ── v0.243 — EL DÍA, EN GLOBO ──────────────────────────────────
@@ -18198,8 +18238,7 @@
       if (!compDiaEditando) h += _compNotaHTML(f);
       h += compDiaEditando ? _compPickerHTML(p, f, true) : _compResumenHTML(p, f, true);
       h += '</div>';
-      ov.innerHTML = h;
-      ov.style.display = 'flex';
+      _ovPintarConScroll(ov, h);   // v0.284
     }
     // ── v0.274 — VENTANA DE UN BLOQUE ──────────────────────────────
     // Se abre desde la ficha del día al pulsar un bloque: dentro van sus
@@ -18263,8 +18302,7 @@
         }
       }
       h += '</div>';
-      ov.innerHTML = h;
-      ov.style.display = 'flex';
+      _ovPintarConScroll(ov, h);   // v0.284
     }
     // v0.148: cambiar de sesión dentro del resumen del día
     function compFilaVer(filaId) {
@@ -18412,27 +18450,12 @@
       var sesIds   = _rutaSesArr(_rutaLeeDia(p.rutaSes, nivDia, fechaISO, lunSem));
       h += '<div class="comp-clase-cols">';
 
-      // COLUMNA 1 · Carro
-      h += '<div class="comp-clase-parte comp-clase-carro">';
-      h += '<div class="ruta-parte-hdr">🛒 <b>Carro</b><span>primera parte</span>' +
-           '<span class="ruta-area-n">' + (carroIds.length || '—') + '</span></div>';
-      if (!carroIds.length) {
-        h += '<div class="comp-picker-vacio">Sin ejercicios de carro esta semana.</div>';
-      } else {
-        var mapEjC = _ejsById();
-        h += '<div class="comp-carro-grid">';
-        carroIds.forEach(function(id, i){
-          var e = mapEjC[id];
-          if (!e) return;
-          // Misma tarjeta con golpe y miniatura que en el panel de planificar,
-          // v0.254 numerada: en pista se lanza en este orden.
-          h += _rutaCarroFichaHTML(e, '', i + 1);
-        });
-        h += '</div>';
-      }
-      h += '</div>';
-
-      // COLUMNA 2 · Área de trabajo
+      // ── v0.284 — Primero el ÁREA DE TRABAJO y después el carro ──
+      // Al LEER un día lo primero que se busca es QUÉ se trabaja hoy; con
+      // qué ejercicio se empieza se mira ya con la cesta en la mano. En la
+      // clase el carro sigue yendo antes, y por eso cada cabecera conserva
+      // su «primera parte» / «segunda parte».
+      // ÁREA DE TRABAJO
       h += '<div class="comp-clase-parte comp-clase-area">';
       h += '<div class="ruta-parte-hdr">🎯 <b>Área de trabajo</b><span>segunda parte</span></div>';
       // v0.238 — Cada sesión va DEBAJO de la pestaña de su bloque (igual que
@@ -18478,6 +18501,26 @@
         sesSueltasD.forEach(function(id){ h += _sesFichaDia(id); });
       }
       h += '</div>';   // /comp-clase-area
+      // CARRO
+      h += '<div class="comp-clase-parte comp-clase-carro">';
+      h += '<div class="ruta-parte-hdr">🛒 <b>Carro</b><span>primera parte</span>' +
+           '<span class="ruta-area-n">' + (carroIds.length || '—') + '</span></div>';
+      if (!carroIds.length) {
+        h += '<div class="comp-picker-vacio">Sin ejercicios de carro esta semana.</div>';
+      } else {
+        var mapEjC = _ejsById();
+        h += '<div class="comp-carro-grid">';
+        carroIds.forEach(function(id, i){
+          var e = mapEjC[id];
+          if (!e) return;
+          // Misma tarjeta con golpe y miniatura que en el panel de planificar,
+          // v0.254 numerada: en pista se lanza en este orden.
+          h += _rutaCarroFichaHTML(e, '', i + 1);
+        });
+        h += '</div>';
+      }
+      h += '</div>';
+
       h += '</div>';   // /comp-clase-cols
       h += '</div>';
       return h;
@@ -18920,8 +18963,7 @@
       }
 
       h += '</div>';
-      ov.innerHTML = h;
-      ov.style.display = 'flex';
+      _ovPintarConScroll(ov, h);   // v0.284
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -19062,8 +19104,7 @@
       // nombre del evento, así que la fila de seis colores solo hacía ruido.
 
       h += '</div>';   // /ruta-modal
-      ov.innerHTML = h;
-      ov.style.display = 'flex';
+      _ovPintarConScroll(ov, h);   // v0.284: el calendario tampoco salta arriba
     }
 
     function _compListaMesHTML(p) {
@@ -23742,8 +23783,7 @@
       // v0.225: sin botón de editar — la planificación se toca en su sitio
       // (Planificación → el nivel → el día), no desde la vista de pista.
       h += '</div>';
-      ov.innerHTML = h;
-      ov.style.display = 'flex';
+      _ovPintarConScroll(ov, h);   // v0.284
     }
 
     // Suma n días a una fecha ISO
