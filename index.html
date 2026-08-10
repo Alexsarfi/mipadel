@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.285.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.286.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,30 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.286.0 — Cada cosa en su sitio: catálogo arriba, clases tipo abajo (2026-08)
+    (sin migraciones nuevas)
+    · LAS CLASES TIPO, CLASIFICADAS COMO EL CATÁLOGO. En Planificación el
+      recuadro pasa a estar ordenado por APARTADO → BLOQUE, y cada clase enseña
+      su golpe o golpes de carro. Fuera el buscador y el orden por «más usadas
+      / recientes / nombre»: aquí no se busca a ciegas, se baja por donde ya
+      sabes. Solo salen los bloques que tienen alguna, para no llenarlo de
+      cabeceras vacías.
+    · Y NO SE REPITE EL ÁRBOL. En la v0.285 metí también el catálogo debajo de
+      Planificación; sobraba, porque el recuadro ya viene clasificado por área.
+      El catálogo se explora desde el botón «Área» de la barra de abajo.
+    · EL BOTÓN «ÁREA» VA DIRECTO. Se retira el acordeón «Áreas de trabajo» que
+      había dentro: la pantalla ya se llama así en su cabecera, y repetirlo
+      encima plegado obligaba a dos toques para llegar a lo que se venía a ver.
+      Ahora las áreas salen a la primera; los apartados siguen abriéndose uno
+      a uno.
+    · Y AHÍ, PULSAR UN BLOQUE vuelve a llevar a SUS SESIONES, en su propia
+      página, como siempre — y al retroceder el apartado sigue abierto, porque
+      ese estado se guarda en el plan. Lo de la v0.285 (abrir las clases tipo
+      desde el catálogo) se retira: las clases tipo se buscan en Planificación,
+      que es donde se planifica.
+    · Al traer una clase a un día se sigue navegando por apartado → bloque, sin
+      cambios.
 
   v0.285.0 — El árbol de áreas, única forma de moverse (2026-08)
     (sin migraciones nuevas)
@@ -6452,8 +6476,10 @@
     /* ══ v0.282 — CLASES TIPO ═══════════════════════════════════════
        Lista plegada: una línea por clase, se abre al tocar el nombre. */
     /* v0.285 — El árbol de áreas, dentro de Planificación */
-    .ct-arbol-tit { font-size:14px; font-weight:800; color:var(--texto); margin:16px 0 1px; }
-    .ct-arbol-sub { font-size:11.5px; color:var(--gris); margin-bottom:9px; }
+    /* v0.286: el bloque de áreas ya no es un acordeón, así que no lleva
+       cabecera propia ni margen de caja. */
+    .plan-otros.plan-otros-plano { border:none; background:none; padding:0; }
+    .plan-otros.plan-otros-plano > .plan-otros-body { padding:0; }
     /* v0.285 — Notas apuntadas en pista, esperando a que las apliques */
     .notas-pend { border:1.5px solid #fde68a; background:#fffbeb; border-radius:13px;
       padding:9px 11px 10px; margin-bottom:12px; }
@@ -6505,9 +6531,11 @@
     .ct-nueva { flex-shrink:0; width:28px; height:28px; margin-left:2px; border-radius:50%; border:none;
       background:var(--arena); color:var(--texto); font-size:14px; font-family:inherit; cursor:pointer; }
     .ct-nueva:active { background:var(--borde); }
+    /* v0.286: clasificadas por apartado y bloque, como el catálogo */
+    .ctc-ap { font-size:10.5px; font-weight:800; color:var(--gris); text-transform:uppercase;
+      letter-spacing:.05em; margin:12px 2px 5px; padding-bottom:4px; border-bottom:1px solid var(--borde); }
+    .ctc-bl { font-size:11.5px; font-weight:800; color:#3730a3; margin:7px 2px 4px; }
     .ct-barra { display:flex; gap:6px; margin-bottom:9px; }
-    .ct-busca { flex:1; min-width:0; margin-bottom:0; font-size:13px; padding:0.5rem 0.7rem; }
-    .ct-orden { flex:0 0 auto; width:auto; margin-bottom:0; font-size:12px; padding:0.5rem 0.6rem; }
     .ct-fila { display:flex; align-items:center; gap:8px; width:100%; box-sizing:border-box;
       font-family:inherit; text-align:left; padding:9px 10px; margin-bottom:5px;
       border:1.5px solid var(--borde); border-radius:10px; background:var(--blanco); cursor:pointer; }
@@ -8472,7 +8500,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.285.0';
+    var APP_VERSION = '0.286.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -15545,15 +15573,9 @@
       var p = leerPlan(); var arr = planContenido(p)[nivel][mes] || [];
       var it = arr.filter(function(x){ return x.id === id; })[0];
       if (!it) return;
-      // ── v0.285 — Un gesto, dos significados según el modo ────────────
-      // En modo normal, pulsar un bloque enseña sus CLASES TIPO: es lo que se
-      // hace el 99% de las veces (buscar qué poner). El catálogo —añadir y
-      // quitar ejercicios— se abre solo con «Editar plan» puesto, que ya
-      // existía. Cero conceptos nuevos y el mismo gesto no hace dos cosas.
-      if (!planEditMode && COMP_NIVELES.indexOf(nivel) >= 0) {
-        ctBloqueAbrir(nivel, id, it.t);
-        return;
-      }
+      // v0.286: pulsar un bloque lleva a SUS SESIONES, en su propia página
+      // (y al volver, el apartado sigue abierto). Las clases tipo no se
+      // buscan aquí: viven en Planificación, ya clasificadas por área.
       var esComp   = (nivel === 'competicion');
       var tipo     = esComp ? 'int' : 'g';
       var valor    = esComp ? it.int : it.g;
@@ -17734,99 +17756,81 @@
       // de clases tipo: se guarda una clase que ha funcionado y se vuelve a
       // usar cuando toca, en un día, en toda la semana o durante un mes.
       // El archivo del curso y el análisis se quedan debajo, como estaban.
-      var cts = _ctDeNivel(p, _compNivel());
-      var q = (_ctBuscar || '').trim().toLowerCase();
-      if (q) {
-        var mapEjB = _ejsById();
-        cts = cts.filter(function(c){
-          var txt = c.nombre + ' ' +
-            (c.carro || []).map(function(id){
-              var e = mapEjB[id];
-              return (e ? (e.nombre || '') + ' ' + (ejFaceta(e, 'golpe') || '') : (c.carroNom && c.carroNom[id]) || '');
-            }).join(' ') + ' ' +
-            (c.bloques || []).map(function(id){ return areaN[id] || ''; }).join(' ');
-          return txt.toLowerCase().indexOf(q) >= 0;
-        });
-      }
-      cts = cts.slice().sort(function(a, b){
-        if (_ctOrden === 'nombre')   return String(a.nombre).localeCompare(String(b.nombre));
-        if (_ctOrden === 'reciente') return String(b.ultimoUso || b.creada || '').localeCompare(String(a.ultimoUso || a.creada || ''));
-        return (b.usos || 0) - (a.usos || 0);
-      });
+      // ══════════════════════════════════════════════════════════
+      // v0.286 — CLASES TIPO, CLASIFICADAS COMO EL ÁREA DE TRABAJO
+      // ══════════════════════════════════════════════════════════
+      // Fuera el buscador y el orden por «más usadas / recientes / nombre»:
+      // aquí no se busca a ciegas, se baja por donde ya sabes —apartado →
+      // bloque— y cada clase enseña su golpe o golpes de carro. El mismo
+      // orden mental que el catálogo, así que no hay dos formas de moverse.
+      var nivelCT  = _compNivel();
+      var totalCT  = _ctDeNivel(p, nivelCT).length;
+      var etapasCT = (PLAN_ETAPAS[nivelCT] || []).filter(function(et){ return et.tipo !== 'ciclo'; });
+      var contCT   = planContenido(p)[nivelCT] || {};
+      var mapEjCT  = _ejsById();
+      var todasSCT = leerClases();
 
       h += '<div class="ct-caja">';
       h += '<div class="ct-hdr"><span class="ct-hdr-t">Clases tipo</span>' +
-           '<span class="ct-hdr-n">' + _gEsc(planNivelLabel(_compNivel())) + '</span>' +
-           '<span class="ct-hdr-c">' + _ctDeNivel(p, _compNivel()).length + ' guardada' +
-             (_ctDeNivel(p, _compNivel()).length !== 1 ? 's' : '') + '</span>' +
-           // v0.283: crear una desde cero, sin partir de un día
+           '<span class="ct-hdr-n">' + _gEsc(planNivelLabel(nivelCT)) + '</span>' +
+           '<span class="ct-hdr-c">' + totalCT + ' guardada' + (totalCT !== 1 ? 's' : '') + '</span>' +
            '<button type="button" class="ct-nueva" onclick="ctNueva()" ' +
              'title="Crear una clase tipo desde cero" aria-label="Nueva clase tipo">⚙</button></div>';
 
-      if (!_ctDeNivel(p, _compNivel()).length) {
+      if (!totalCT) {
         h += '<div class="comp-picker-vacio" style="padding:14px 10px;">Todavía no has guardado ninguna.<br>' +
-             '<span class="ruta-panel-nota">Prepara un día arriba y pulsa ↥ en su ficha, o créala aquí desde cero con la ⚙.</span></div>';
+             '<span class="ruta-panel-nota">Créala con la ⚙: montas el carro y el área de trabajo y le pones nombre.</span></div>';
       } else {
-        h += '<div class="ct-barra">' +
-          '<input type="search" class="form-input ct-busca" placeholder="Buscar por nombre, golpe o bloque…" ' +
-            'value="' + _gEsc(_ctBuscar) + '" oninput="ctBuscar(this.value)">' +
-          '<select class="form-select ct-orden" onchange="ctOrden(this.value)">' +
-            '<option value="usos"' +     (_ctOrden === 'usos' ? ' selected' : '') + '>Más usadas</option>' +
-            '<option value="reciente"' + (_ctOrden === 'reciente' ? ' selected' : '') + '>Recientes</option>' +
-            '<option value="nombre"' +   (_ctOrden === 'nombre' ? ' selected' : '') + '>Por nombre</option>' +
-          '</select></div>';
-        if (!cts.length) {
-          h += '<div class="comp-picker-vacio">Ninguna con ese texto.</div>';
-        }
-        var mapEjL = _ejsById(), todasSL = leerClases();
-        cts.forEach(function(c){
-          var ab = (_ctAbierta === c.id);
-          // Golpe del carro, para reconocerla sin abrirla
-          var gv = {}, gl = [];
-          (c.carro || []).forEach(function(id){
-            var e = mapEjL[id]; if (!e) return;
-            var k = ejFaceta(e, 'golpe'); if (!k || gv[k]) return;
-            gv[k] = true; gl.push(GOLPE_LABEL[k] || k);
+        etapasCT.forEach(function(et){
+          var filasCT = (contCT[et.key] || []).filter(function(it){
+            return _ctDeBloque(p, nivelCT, it.id).length;
           });
-          h += '<button type="button" class="ct-fila' + (ab ? ' ab' : '') + '" onclick="ctAbrir(\'' + c.id + '\')">' +
-            '<span class="ruta-parte-chev' + (ab ? ' abierto' : '') + '">›</span>' +
-            '<span class="ct-nom">' + _gEsc(c.nombre) + '</span>' +
-            (gl.length ? '<span class="ct-gol">' + _gEsc(gl[0]) + '</span>' : '') +
-            '<span class="ct-uso">' + (c.usos || 0) + '×</span></button>';
-          if (!ab) return;
+          if (!filasCT.length) return;
+          h += '<div class="ctc-ap">' + _gEsc(et.nombre) + '</div>';
+          filasCT.forEach(function(it){
+            h += '<div class="ctc-bl">' + _gEsc(it.t) + '</div>';
+            _ctDeBloque(p, nivelCT, it.id).forEach(function(c){
+              var ab = (_ctAbierta === c.id);
+              var gv = {}, gl = [];
+              (c.carro || []).forEach(function(id){
+                var e = mapEjCT[id]; if (!e) return;
+                var kg = ejFaceta(e, 'golpe'); if (!kg || gv[kg]) return;
+                gv[kg] = true; gl.push(GOLPE_LABEL[kg] || kg);
+              });
+              h += '<button type="button" class="ct-fila' + (ab ? ' ab' : '') + '" onclick="ctAbrir(\'' + c.id + '\')">' +
+                '<span class="ruta-parte-chev' + (ab ? ' abierto' : '') + '">›</span>' +
+                '<span class="ct-nom">' + _gEsc(c.nombre) + '</span>' +
+                gl.map(function(t){ return '<span class="ct-gol">' + _gEsc(t) + '</span>'; }).join('') +
+                '<span class="ct-uso">' + (c.usos || 0) + '×</span></button>';
+              if (!ab) return;
 
-          h += '<div class="ct-det">';
-          // v0.284: en el repositorio identifica el BLOQUE, no el carro
-          h += '<div class="ruta-wk-zlbl" style="color:#3730a3;">🎯 Área de trabajo</div>';
-          (c.bloques || []).forEach(function(id){
-            h += '<span class="ruta-chip">' + _gEsc(areaN[id] || 'Bloque') + '</span>';
-          });
-          var faltanSes = 0;
-          (c.sesiones || []).forEach(function(id){
-            var x = todasSL.filter(function(t){ return t.id === id; })[0];
-            if (x) h += '<div class="ruta-ses">' + _gEsc(x.nombre || x.fecha || ('Sesión ' + id)) + '</div>';
-            else { faltanSes++; h += '<div class="ruta-ses borrado">' + _gEsc((c.sesNom && c.sesNom[id]) || ('Sesión ' + id)) + '</div>'; }
-          });
-          if (!(c.bloques || []).length && !(c.sesiones || []).length)
-            h += '<span class="ruta-panel-nota">Sin bloque ni sesión.</span>';
-          if (faltanSes) h += '<div class="ct-aviso">' + (faltanSes === 1 ? 'Esa sesión ya no existe' : 'Esas ' + faltanSes + ' sesiones ya no existen') + '</div>';
+              h += '<div class="ct-det">';
+              (c.sesiones || []).forEach(function(id){
+                var x = todasSCT.filter(function(t){ return t.id === id; })[0];
+                h += '<div class="ruta-ses' + (x ? '' : ' borrado') + '">' +
+                     _gEsc(x ? (x.nombre || x.fecha || ('Sesión ' + id)) : ((c.sesNom && c.sesNom[id]) || ('Sesión ' + id))) + '</div>';
+              });
+              var faltanS = (c.sesiones || []).filter(function(id){
+                return !todasSCT.some(function(t){ return t.id === id; }); }).length;
+              if (faltanS) h += '<div class="ct-aviso">' + (faltanS === 1 ? 'Esa sesión ya no existe' : 'Esas ' + faltanS + ' sesiones ya no existen') + '</div>';
 
-          h += '<div class="ruta-wk-zlbl" style="color:#0e7490;margin-top:7px;">🛒 Carro</div>';
-          if (!(c.carro || []).length) h += '<span class="ruta-panel-nota">Sin ejercicios.</span>';
-          (c.carro || []).forEach(function(id){
-            var e = mapEjL[id];
-            if (e) h += '<span class="ruta-wk-ej">' + _gEsc(e.nombre || ('Ejercicio ' + id)) + '</span>';
-            else   h += '<span class="ruta-wk-ej borrado">' + _gEsc((c.carroNom && c.carroNom[id]) || ('Ejercicio ' + id)) + '</span>';
-          });
-          var faltanEj = (c.carro || []).filter(function(id){ return !mapEjL[id]; }).length;
-          if (faltanEj) h += '<div class="ct-aviso">' + (faltanEj === 1 ? 'Ese ejercicio ya no existe' : 'Esos ' + faltanEj + ' ejercicios ya no existen') + ' — se borraron del catálogo</div>';
+              h += '<div class="ruta-wk-zlbl" style="color:#0e7490;margin-top:7px;">🛒 Carro</div>';
+              if (!(c.carro || []).length) h += '<span class="ruta-panel-nota">Sin ejercicios.</span>';
+              (c.carro || []).forEach(function(id){
+                var e = mapEjCT[id];
+                h += '<span class="ruta-wk-ej' + (e ? '' : ' borrado') + '">' +
+                     _gEsc(e ? (e.nombre || ('Ejercicio ' + id)) : ((c.carroNom && c.carroNom[id]) || ('Ejercicio ' + id))) + '</span>';
+              });
+              var faltanE = (c.carro || []).filter(function(id){ return !mapEjCT[id]; }).length;
+              if (faltanE) h += '<div class="ct-aviso">' + (faltanE === 1 ? 'Ese ejercicio ya no existe' : 'Esos ' + faltanE + ' ejercicios ya no existen') + ' — se borraron del catálogo</div>';
 
-          if (c.ultimoUso) h += '<div class="ct-fecha">Última vez: ' + formatFechaDiaMes(c.ultimoUso) + '</div>';
-          h += '<div class="ct-acts">' +
-            '<button type="button" class="btn btn-sec btn-sm" onclick="event.stopPropagation();ctRenombrar(\'' + c.id + '\')">Renombrar</button>' +
-            '<button type="button" class="btn btn-sec btn-sm" onclick="event.stopPropagation();ctBorrar(\'' + c.id + '\')">Borrar</button>' +
-            '</div>';
-          h += '</div>';
+              if (c.ultimoUso) h += '<div class="ct-fecha">Última vez: ' + formatFechaDiaMes(c.ultimoUso) + '</div>';
+              h += '<div class="ct-acts">' +
+                '<button type="button" class="btn btn-sec btn-sm" onclick="event.stopPropagation();ctRenombrar(\'' + c.id + '\')">Renombrar</button>' +
+                '<button type="button" class="btn btn-sec btn-sm" onclick="event.stopPropagation();ctBorrar(\'' + c.id + '\')">Borrar</button>' +
+                '</div></div>';
+            });
+          });
         });
       }
       h += '</div>';
@@ -18000,7 +18004,19 @@
     // perderlo en silencio.
     // Viven en el plan del grupo (son del club) y cada una lleva su nivel:
     // solo aparecen en la pantalla de planificación de ese nivel.
-    var _ctBuscar = '', _ctOrden = 'usos', _ctAbierta = null;
+    var _ctAbierta = null;   // v0.286: sin buscador ni orden — mandan área y bloque
+    // Solo una abierta a la vez: con veinte, lo contrario vuelve a ser un muro
+    function ctAbrir(id) { _ctAbierta = (_ctAbierta === id) ? null : id; mostrarPlanificacion(); }
+    function ctRenombrar(id) {
+      var p = leerPlan();
+      var c = _ctLista(p).filter(function(x){ return x.id === id; })[0];
+      if (!c) return;
+      var n = prompt('Nombre de la clase tipo:', c.nombre);
+      if (n === null) return;
+      n = n.trim();
+      if (!n) return;
+      c.nombre = n; _planGuardar(p); mostrarPlanificacion();
+    }
     // ── v0.285 — LAS CLASES TIPO DE UN BLOQUE ───────────────────────
     // Se abre al pulsar un bloque del área de trabajo (en modo normal). Es la
     // misma ventana desde los dos sitios: la pantalla de Área de trabajo y el
@@ -18135,26 +18151,6 @@
       rutaCerrarModal();
       mostrarPlanificacion();
       planToast('✓ Clase tipo creada');
-    }
-    function ctBuscar(q) {
-      _ctBuscar = q || '';
-      // Se repinta solo la lista para no perder el foco del buscador
-      mostrarPlanificacion();
-      var el = document.querySelector('.ct-busca');
-      if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
-    }
-    function ctOrden(v) { _ctOrden = v; mostrarPlanificacion(); }
-    // Solo una abierta a la vez: con veinte, lo contrario vuelve a ser un muro
-    function ctAbrir(id) { _ctAbierta = (_ctAbierta === id) ? null : id; mostrarPlanificacion(); }
-    function ctRenombrar(id) {
-      var p = leerPlan();
-      var c = _ctLista(p).filter(function(x){ return x.id === id; })[0];
-      if (!c) return;
-      var n = prompt('Nombre de la clase tipo:', c.nombre);
-      if (n === null) return;
-      n = n.trim();
-      if (!n) return;
-      c.nombre = n; _planGuardar(p); mostrarPlanificacion();
     }
     function ctBorrar(id) {
       var p = leerPlan();
@@ -19565,10 +19561,12 @@
       var edit   = planEditMode;
       function _planEtapaCard(et, o) { return _planEtapaCardHTML(p, nivel, et, o); }
 
+        // v0.286: se retira el acordeón «Áreas de trabajo». La pantalla se
+        // llama así en su cabecera: repetirlo dentro y encima plegado obligaba
+        // a dos toques para llegar a lo que se venía a ver. Las áreas salen
+        // directas; los apartados siguen abriéndose uno a uno.
         var s = '';
-        var areasOpen = edit || !!p.areasAbierto;
-        s += '<div class="plan-otros' + (areasOpen ? ' abierto' : '') + '" style="margin-top:0.4rem;">';
-        s += '<div class="plan-otros-hdr" onclick="planToggleAreas();this.parentNode.classList.toggle(\'abierto\')">Áreas de trabajo<span class="chev">›</span></div>';
+        s += '<div class="plan-otros abierto plan-otros-plano" style="margin-top:0.4rem;">';
         s += '<div class="plan-otros-body">';
         // v0.232: Competición marca sus etapas con tipo ('area' | 'ciclo');
         // Iniciación y Avanzado no llevan tipo, así que ahí valen todas.
@@ -19667,13 +19665,9 @@
         // propia pantalla, la de la barra de abajo.
         if (!edit) {
           h += _compListaMesHTML(p) + _rutaHTML();
-          // ── v0.285 — El ÁRBOL DE ÁREAS, también aquí ────────────────
-          // Es el mismo componente que abre el botón «Área» de la barra de
-          // abajo: apartados → bloques → clases tipo. Se planifica desde el
-          // mismo sitio en el que se busca, y no hay dos formas de moverse.
-          h += '<div class="ct-arbol-tit">Áreas de trabajo</div>';
-          h += '<div class="ct-arbol-sub">Toca un bloque para ver sus clases tipo</div>';
-          etapas.forEach(function(et, idx){ h += _planEtapaCardHTML(p, nivel, et, { ico:(idx + 1) }); });
+          // v0.286: aquí no se repite el árbol del catálogo — el recuadro de
+          // clases tipo ya viene clasificado por área, que es lo que hacía
+          // falta. El catálogo se explora desde el botón «Área» de la barra.
         }
       } else {
         // v0.232: no lo alcanza ningún nivel (los tres son COMP_NIVELES). Se
