@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.298.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.299.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,29 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.299.0 — Editar el día también desde Planificación · y deslizar para quitar (2026-08)
+    (sin migraciones nuevas)
+    · LOS MISMOS ＋ DE ASISTENCIA, AHORA EN EL DÍA DE PLANIFICACIÓN. Al abrir
+      un día, el 🛒 Carro y el 🎯 Área de trabajo llevan su ＋ con el árbol
+      plegable, igual que en la vista de pista. Antes desde aquí solo se
+      podía salir al panel grande con el ⚙.
+      Nuevo _repintarClaseAbierta(): los mismos selectores sirven en las dos
+      pantallas y refrescan la que esté abierta.
+    · GUARDAR EL DÍA COMO CLASE TIPO. Botón «⭐ Guardar esta clase como clase
+      tipo» al pie del día, cuando tiene algo. La función ctGuardarDia()
+      existía desde la v0.282 pero NO LA LLAMABA NADIE: no había botón en
+      ninguna pantalla, así que era código muerto.
+    · DESLIZAR A LA IZQUIERDA PARA QUITAR. Los ejercicios del carro y los
+      bloques del área se arrastran a la izquierda y asoma un «🗑️ Quitar»
+      detrás. Sirve en las dos vistas (Planificación y Asistencia) y evita
+      tener que entrar a editar para sacar algo que no interesa.
+      · El gesto solo entra si es CLARAMENTE horizontal (1,4 veces más que el
+        vertical), para no robarle el scroll a la lista.
+      · Al abrir uno se cierra el anterior, y tocar fuera lo cierra.
+      · Los listeners van delegados en document y se enganchan una sola vez
+        al cargar, así que las vistas pueden repintarse por dentro sin
+        quedarse sin gesto.
 
   v0.298.0 — Un ＋ en cada parte, con su árbol plegable (2026-08)
     (sin migraciones nuevas)
@@ -6495,6 +6518,20 @@
         padding:18px 20px 20px; box-shadow:0 -8px 30px rgba(0,0,0,.3); }
     }
     .asist-franja-pill { background:var(--lila-suave); color:var(--lila); font-size:11px; font-weight:700; border-radius:7px; padding:4px 9px; flex-shrink:0; white-space:nowrap; }
+    /* v0.299 — Deslizar a la izquierda para quitar */
+    .swipe-row { position:relative; overflow:hidden; border-radius:12px; margin-bottom:6px; }
+    .swipe-del { position:absolute; top:0; right:0; bottom:0; width:96px; border:none;
+      background:#dc2626; color:#fff; font-family:inherit; font-size:12.5px; font-weight:700;
+      cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; }
+    .swipe-fg { position:relative; background:var(--blanco); transition:transform .18s ease;
+      will-change:transform; }
+    .swipe-row.abierta .swipe-fg { transform:translateX(-96px); }
+    .swipe-fg > * { margin-bottom:0 !important; }
+    /* v0.299 — Guardar el día montado como clase tipo */
+    .comp-guardar-ct { width:100%; margin-top:10px; padding:11px; border-radius:11px;
+      border:1.5px solid var(--dorado); background:var(--ambar); color:var(--ambar-texto);
+      font-family:inherit; font-size:13.5px; font-weight:700; cursor:pointer; }
+    .comp-guardar-ct:active { transform:scale(0.99); }
     /* v0.298 — El ＋ de cada parte y su árbol plegable */
     .asist-mas { flex-shrink:0; margin-left:6px; width:26px; height:26px; border-radius:8px;
       border:1.5px solid currentColor; background:rgba(255,255,255,.55); color:inherit;
@@ -8861,7 +8898,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.298.0';
+    var APP_VERSION = '0.299.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -8873,6 +8910,11 @@
         });
       });
     }
+
+    // v0.299 — Gesto de deslizar para quitar. Los listeners van delegados en
+    // document, así que basta engancharlos una vez al arrancar; las vistas se
+    // repintan por dentro y siguen funcionando.
+    window.addEventListener('load', function () { try { _swipeInit(); } catch (e) {} });
 
     // ════════════════════════════════════════════════════════════
     //  SUPABASE — configuración y módulo de autenticación + sync
@@ -19314,7 +19356,12 @@
       // su «primera parte» / «segunda parte».
       // ÁREA DE TRABAJO
       h += '<div class="comp-clase-parte comp-clase-area">';
-      h += '<div class="ruta-parte-hdr">🎯 <b>Área de trabajo</b><span>segunda parte</span></div>';
+      // v0.299: el mismo ＋ que en Asistencia, para editar aquí sin salir
+      h += '<div class="ruta-parte-hdr">🎯 <b>Área de trabajo</b><span>segunda parte</span>' +
+           '<button type="button" class="asist-mas" onclick="asistAddAreaToggle()" ' +
+           'title="Marcar el bloque trabajado" aria-label="Marcar">' +
+           (_asistAddArea ? '×' : '＋') + '</button></div>';
+      if (_asistAddArea) h += _asistAreaPickerHTML(fechaISO, _compTodasFilas(p), elegidas);
       // v0.238 — Cada sesión va DEBAJO de la pestaña de su bloque (igual que
       // en el globo de Asistencia desde v0.228), no suelta encima de todo.
       var todasSesR = leerClases();
@@ -19336,7 +19383,7 @@
       // entero de un vistazo y el detalle se pide cuando hace falta.
       if (!filas.length) {
         h += '<div class="comp-picker-vacio">Nada planificado para este día.<br>' +
-             '<span class="ruta-panel-nota">Trae una clase tipo con ↧, o móntala a mano con el ⚙.</span></div>';
+             '<span class="ruta-panel-nota">Trae una clase tipo con ↧, o móntala aquí con el ＋.</span></div>';
       } else {
         filas.forEach(function(f){
           var sesF = (sesPorAreaD[f.id] || []).filter(function(c){ return sesIds.indexOf(c.id) >= 0; });
@@ -19345,11 +19392,14 @@
           var meta = [];
           if (sesF.length) meta.push(sesF.length + (sesF.length === 1 ? ' sesión' : ' sesiones'));
           if (nEj) meta.push(nEj + (nEj === 1 ? ' ejercicio' : ' ejercicios'));
-          h += '<button type="button" class="comp-bloque-fila" onclick="compBloqueVer(\'' + fechaISO + '\',\'' + f.id + '\')">' +
+          // v0.299: se desliza a la izquierda para desmarcar el bloque
+          h += _swipeWrap(
+            '<button type="button" class="comp-bloque-fila" onclick="compBloqueVer(\'' + fechaISO + '\',\'' + f.id + '\')">' +
             '<span class="cbf-txt"><b>' + _gEsc(f.t) + '</b>' +
               '<span class="cbf-ap">' + _gEsc(f.apartado) + '</span>' +
               (meta.length ? '<span class="cbf-meta">' + meta.join(' · ') + '</span>' : '') + '</span>' +
-            '<span class="cbf-chev">›</span></button>';
+            '<span class="cbf-chev">›</span></button>',
+            "asistMarcarArea('" + fechaISO + "','" + String(f.id).replace(/'/g,"\\'") + "')");
         });
       }
       // Las sesiones que no cuelgan de ningún bloque marcado no se pierden.
@@ -19360,8 +19410,13 @@
       h += '</div>';   // /comp-clase-area
       // CARRO
       h += '<div class="comp-clase-parte comp-clase-carro">';
+      // v0.299: el mismo ＋ que en Asistencia
       h += '<div class="ruta-parte-hdr">🛒 <b>Carro</b><span>primera parte</span>' +
-           '<span class="ruta-area-n">' + (carroIds.length || '—') + '</span></div>';
+           '<span class="ruta-area-n">' + (carroIds.length || '—') + '</span>' +
+           '<button type="button" class="asist-mas" onclick="asistAddCarroToggle()" ' +
+           'title="Añadir ejercicios de carro" aria-label="Añadir">' +
+           (_asistAddCarro ? '×' : '＋') + '</button></div>';
+      if (_asistAddCarro) h += _asistCarroPickerHTML(fechaISO, nivDia, carroIds, lunSem);
       if (!carroIds.length) {
         h += '<div class="comp-picker-vacio">Sin ejercicios de carro esta semana.</div>';
       } else {
@@ -19372,7 +19427,9 @@
           if (!e) return;
           // Misma tarjeta con golpe y miniatura que en el panel de planificar,
           // v0.254 numerada: en pista se lanza en este orden.
-          h += _rutaCarroFichaHTML(e, '', i + 1);
+          // v0.299: se desliza a la izquierda para quitarla del carro.
+          h += _swipeWrap(_rutaCarroFichaHTML(e, '', i + 1),
+                 "asistCarroToggleEj('" + fechaISO + "','" + nivDia + "'," + e.id + ",'" + lunSem + "')");
         });
         h += '</div>';
       }
@@ -19382,6 +19439,11 @@
       // v0.288: si el día tiene algo, se puede vaciar — por si te equivocaste
       // de día al traer la clase. No toca el repositorio.
       if (carroIds.length || sesIds.length || filas.length) {
+        // v0.299 — Si has montado la clase aquí, poder guardarla como clase
+        // tipo para reutilizarla. ctGuardarDia() existía desde la v0.282
+        // pero no la llamaba nadie: no había botón en ninguna pantalla.
+        h += '<button type="button" class="comp-guardar-ct" onclick="ctGuardarDia(\'' + fechaISO + '\')">' +
+             '⭐ Guardar esta clase como clase tipo</button>';
         h += '<button type="button" class="comp-quitar-dia" onclick="ctQuitarDia(\'' + fechaISO + '\')">' +
              '🗑️ Quitar esta clase del día</button>';
       }
@@ -24591,7 +24653,12 @@
         h += '<div class="comp-picker-vacio">Sin ejercicios de carro.</div>';
       } else {
         var mapEjA = _ejsById();
-        carroIds.forEach(function(id){ if (mapEjA[id]) h += _rutaCarroFichaHTML(mapEjA[id], ''); });
+        // v0.299: numerado y deslizable para quitarlo
+        carroIds.forEach(function(id, i){
+          if (!mapEjA[id]) return;
+          h += _swipeWrap(_rutaCarroFichaHTML(mapEjA[id], '', i + 1),
+                 "asistCarroToggleEj('" + fechaISO + "','" + niv + "'," + id + ",'" + lun + "')");
+        });
       }
       h += '</div>';
       // 🎯 Área de trabajo
@@ -24699,6 +24766,53 @@
       _ovPintarConScroll(ov, h);   // v0.284
     }
 
+    // ── v0.299 · Deslizar a la izquierda para quitar ───────────────────
+    // Se envuelve la ficha en un carril: al arrastrar hacia la izquierda
+    // asoma un botón «Quitar» detrás. Solo entra si el gesto es claramente
+    // horizontal, para no robarle el scroll vertical a la lista.
+    function _swipeWrap(inner, accion, etiqueta) {
+      return '<div class="swipe-row">' +
+               '<button type="button" class="swipe-del" onclick="' + accion + '">🗑️ ' +
+                 (etiqueta || 'Quitar') + '</button>' +
+               '<div class="swipe-fg">' + inner + '</div>' +
+             '</div>';
+    }
+    // Un solo juego de listeners para toda la app (delegación en document).
+    var _swS = null;
+    function _swipeInit() {
+      if (_swipeInit._on) return; _swipeInit._on = true;
+      var x0 = 0, y0 = 0, fg = null, row = null, horiz = null;
+      document.addEventListener('touchstart', function(ev) {
+        var r = ev.target.closest && ev.target.closest('.swipe-row');
+        // al tocar fuera, se cierra el que estuviera abierto
+        if (_swS && _swS !== r) { _swS.classList.remove('abierta'); _swS = null; }
+        if (!r) return;
+        row = r; fg = r.querySelector('.swipe-fg'); horiz = null;
+        x0 = ev.touches[0].clientX; y0 = ev.touches[0].clientY;
+      }, { passive: true });
+      document.addEventListener('touchmove', function(ev) {
+        if (!fg) return;
+        var dx = ev.touches[0].clientX - x0, dy = ev.touches[0].clientY - y0;
+        if (horiz === null) {
+          if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+          horiz = Math.abs(dx) > Math.abs(dy) * 1.4;   // el scroll manda si hay duda
+        }
+        if (!horiz) { fg = null; return; }
+        var d = Math.max(-96, Math.min(0, dx));
+        fg.style.transform = 'translateX(' + d + 'px)';
+        fg.style.transition = 'none';
+      }, { passive: true });
+      document.addEventListener('touchend', function() {
+        if (!fg || !row) { fg = null; row = null; return; }
+        var m = /translateX\((-?\d+(?:\.\d+)?)px\)/.exec(fg.style.transform || '');
+        var d = m ? parseFloat(m[1]) : 0;
+        fg.style.transition = ''; fg.style.transform = '';
+        if (d < -46) { row.classList.add('abierta'); _swS = row; }
+        else { row.classList.remove('abierta'); if (_swS === row) _swS = null; }
+        fg = null; row = null;
+      }, { passive: true });
+    }
+
     // ── v0.298 · Editar la clase desde pista ───────────────────────────
     // Cada parte tiene su ＋ en la cabecera: el del carro añade ejercicios,
     // el del área marca el bloque trabajado. Los dos escriben en el MISMO
@@ -24708,10 +24822,17 @@
     var _asistAddArea  = false;   // ＋ del área abierto
     var _asistCarroG   = null;    // golpe desplegado en el árbol del carro
     var _asistMarcarAp = null;    // apartado desplegado en el árbol del área
-    function asistAddCarroToggle() { _asistAddCarro = !_asistAddCarro; _asistClaseRender(); }
-    function asistAddAreaToggle()  { _asistAddArea  = !_asistAddArea;  _asistClaseRender(); }
-    function asistCarroG(k)  { _asistCarroG   = (_asistCarroG === k) ? null : k; _asistClaseRender(); }
-    function asistMarcarAp(ap){ _asistMarcarAp = (_asistMarcarAp === ap) ? null : ap; _asistClaseRender(); }
+    // v0.299: los mismos ＋ sirven en la vista de Asistencia y en la del día
+    // de Planificación, así que se repinta la que esté abierta.
+    function _repintarClaseAbierta() {
+      if (_asistClaseVista) { _asistClaseRender(); return; }
+      if (typeof compDiaAbierta !== 'undefined' && compDiaAbierta) { _compDiaOvPintar(); return; }
+      mostrarPlanificacion();
+    }
+    function asistAddCarroToggle() { _asistAddCarro = !_asistAddCarro; _repintarClaseAbierta(); }
+    function asistAddAreaToggle()  { _asistAddArea  = !_asistAddArea;  _repintarClaseAbierta(); }
+    function asistCarroG(k)  { _asistCarroG   = (_asistCarroG === k) ? null : k; _repintarClaseAbierta(); }
+    function asistMarcarAp(ap){ _asistMarcarAp = (_asistMarcarAp === ap) ? null : ap; _repintarClaseAbierta(); }
 
     // ÁRBOL del carro: zona de pista → golpe → ejercicios de ese golpe.
     function _asistCarroPickerHTML(fecha, niv, carroIds, lun) {
@@ -24750,7 +24871,7 @@
       if (i >= 0) arr.splice(i, 1); else arr.push(ejId);
       _rutaEscribeDia(p.rutaCarro, niv, fecha, arr, null);
       _planGuardar(p);
-      _asistClaseRender();
+      _repintarClaseAbierta();
     }
 
     // ÁRBOL del área: apartado → bloques.
