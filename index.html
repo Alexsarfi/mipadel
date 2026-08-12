@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.301.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.303.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,39 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.303.0 — En agosto el panel se quedaba en julio y no salía ningún alumno (2026-08)
+    (sin migraciones nuevas)
+    · EL FALLO: metías alumnos en las franjas y en el planning del gestor —en
+      «Toda la semana» y en cada día— la franja salía sin ningún nombre.
+    · POR QUÉ: la fila de meses del panel iba de septiembre a JULIO. En agosto
+      no hay mes que seleccionar, así que el panel caía en el último que
+      existía (julio) y se pintaba TODO respecto a julio. El filtro de la
+      franja descarta al alumno cuyo alta es posterior al mes que se está
+      viendo («aparece desde el día que entra, no antes»), y un alumno dado de
+      alta el 12 de agosto entra DESPUÉS del 31 de julio: fuera de la lista.
+      Mismo origen que el fallo que arregló la v0.178 con las fechas de baja:
+      en julio y agosto el curso ya ha terminado y las cuentas se tuercen.
+    · ARREGLO: el panel incluye AGOSTO. El curso escolar de la app va de
+      septiembre a agosto, así que agosto le pertenece igual que julio, y es
+      justo el mes en que se prepara el siguiente.
+    · Y el rótulo lo aclara: en julio y agosto pone «fuera de curso: se ven
+      los alumnos ya inscritos para el que viene» — los del curso que acabó
+      tienen baja el 30 de junio y por eso no aparecen.
+
+  v0.302.0 — El contador «Alumnos» de la cabecera del gestor, arreglado (2026-08)
+    (sin migraciones nuevas)
+    · EL FALLO: dabas de alta alumnos en «Alumnos de la academia» y el número
+      de la pill «👤 Alumnos» no se movía. No contaba las fichas del club:
+      sumaba los alumnos que estaban DENTRO de las franjas de cada entrenador
+      (_gestorStats.nAlumnos), así que una ficha nueva, todavía sin clase
+      asignada, no existía para él.
+    · AHORA CUENTA LA MISMA LISTA QUE ABRE EL BOTÓN: fichas del club + quien
+      aparezca en franjas o en registros, sin duplicar por nombre+apellidos y
+      sin los archivados (_gNumAlumnosClub, sobre _gtaIndex).
+    · Y SE ACTUALIZA AL MOMENTO: la cabecera se pinta aparte
+      (_gestorHdrPintar) y se refresca al dar de alta, archivar, restaurar o
+      borrar un alumno, sin tener que volver al panel a mirarlo.
 
   v0.301.0 — El atrás vuelve a donde estabas, no a otra pantalla (2026-08)
     (sin migraciones nuevas)
@@ -8936,7 +8969,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.301.0';
+    var APP_VERSION = '0.303.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -10645,6 +10678,29 @@
       cont.innerHTML = h;
     }
 
+    // ── v0.302 — EL CONTADOR DE ALUMNOS DE LA CABECERA ──────────────
+    // Antes sumaba los alumnos que estaban DENTRO de las franjas de cada
+    // entrenador, así que una ficha recién creada en «Alumnos de la
+    // academia» —todavía sin franja— no se contaba: dabas de alta y el
+    // número no se movía.
+    // Ahora cuenta exactamente lo que abre el botón: la lista de la
+    // academia (fichas del club + quien salga en franjas o registros, sin
+    // duplicar por nombre+apellidos y sin los archivados).
+    function _gNumAlumnosClub() {
+      try { return Object.keys(_gtaIndex().al).length; } catch (e) { return 0; }
+    }
+    // Pintar la cabecera aparte permite refrescarla al dar de alta o de baja
+    // sin volver al panel para ver el número al día.
+    function _gestorHdrPintar() {
+      var hdrEl = document.getElementById('gest-hdr-acts');
+      if (!hdrEl || !_gestorData) return;
+      hdrEl.innerHTML =
+        '<button type="button" class="gest-hdr-btn" onclick="abrirGestorEntrenadoresDirecto()"><span class="ghb-ic">👥</span>Entrenadores<b>' + _gNumEntrenadores() + '</b></button>' +
+        '<button type="button" class="gest-hdr-btn" onclick="abrirGestorTodosAlumnos()"><span class="ghb-ic">👤</span>Alumnos<b>' + _gNumAlumnosClub() + '</b></button>' +
+        '<button type="button" class="gest-hdr-btn" onclick="abrirGestorClasesMes()"><span class="ghb-ic">↩</span>Clases por recuperar<b>' + _gRecupSaldoClub() + '</b></button>' +
+        '<button type="button" class="gest-hdr-btn" onclick="abrirGestorCalendario()"><span class="ghb-ic">📅</span>Días sin clase</button>';
+    }
+
     function renderGestor() {
       var cont = document.getElementById('gestor-contenido');
       if (!cont || !_gestorData) return;
@@ -10652,16 +10708,9 @@
       var by = _gestorAgrupar();
       var uids = Object.keys(by).filter(function(u){ return by[u].clases.length || by[u].regs.length; });
       // Resumen global
-      var totClases = 0, totAlumnos = 0;
-      uids.forEach(function(u){ var s = _gestorStats(by[u]); totClases += s.nClases; totAlumnos += s.nAlumnos; });
-      // v0.88: los accesos (Entrenadores · Alumnos · Clases · Días sin clase)
-      // viven ahora en la cabecera verde, como pills glassy (toque pro).
-      var hdrEl = document.getElementById('gest-hdr-acts');
-      if (hdrEl) hdrEl.innerHTML =
-        '<button type="button" class="gest-hdr-btn" onclick="abrirGestorEntrenadoresDirecto()"><span class="ghb-ic">👥</span>Entrenadores<b>' + _gNumEntrenadores() + '</b></button>' +
-        '<button type="button" class="gest-hdr-btn" onclick="abrirGestorTodosAlumnos()"><span class="ghb-ic">👤</span>Alumnos<b>' + totAlumnos + '</b></button>' +
-        '<button type="button" class="gest-hdr-btn" onclick="abrirGestorClasesMes()"><span class="ghb-ic">↩</span>Clases por recuperar<b>' + _gRecupSaldoClub() + '</b></button>' +
-        '<button type="button" class="gest-hdr-btn" onclick="abrirGestorCalendario()"><span class="ghb-ic">📅</span>Días sin clase</button>';
+      var totClases = 0;
+      uids.forEach(function(u){ totClases += _gestorStats(by[u]).nClases; });
+      _gestorHdrPintar();
       var h = '';
       if (!uids.length) {
         h += '<p class="ajustes-desc" style="text-align:center;padding:1rem 0;">Aún no hay datos de asistencia de ningún entrenador.</p>';
@@ -10699,6 +10748,11 @@
       h += '<p class="ajustes-desc" style="margin:2px 0 0.6rem;">Viendo <b>' +
         MESES_NOMBRES_A[+_gPanelMes.slice(5,7)-1] + ' ' + _gPanelMes.slice(0,4) + '</b>' +
         (_gEsSeptiembre(_gPanelMes) ? ' · toca un día, una franja o un entrenador y se abre ya en ese mes. ✓ = clases dadas ese mes.' : '') +
+        // v0.303: julio y agosto no son lectivos. Ahí solo se ven los alumnos
+        // que ya están dados de alta para el curso que viene, y por eso los
+        // del curso que acabó (baja el 30 de junio) no salen.
+        (['07','08'].indexOf(_gPanelMes.slice(5,7)) >= 0
+          ? ' · fuera de curso: se ven los alumnos ya inscritos para el que viene.' : '') +
         '</p>';
 
       var slots = {};   // dia → franja → [{uid, ent, dadas}]
@@ -10928,7 +10982,13 @@
       var y0 = _gPanelCursoY0();
       var out = [];
       [9,10,11,12].forEach(function(m){ out.push(y0 + '-' + ('0'+m).slice(-2)); });
-      [1,2,3,4,5,6,7].forEach(function(m){ out.push((y0+1) + '-0' + m); });   // v0.90: incluye julio
+      // v0.90: incluye julio. v0.303: y AGOSTO, el mes en que se prepara el
+      // curso que viene. Sin él, en agosto el panel se plantaba en julio (el
+      // último mes que existía) y los alumnos dados de alta ese día quedaban
+      // fuera: su alta era POSTERIOR al mes visto, así que la franja salía
+      // sin ningún nombre. El curso escolar de la app va de septiembre a
+      // agosto, así que agosto le pertenece igual que julio.
+      [1,2,3,4,5,6,7,8].forEach(function(m){ out.push((y0+1) + '-0' + m); });
       return out;
     }
     // Cambiar de curso: reinicia el mes al primero del curso (o al mes en
@@ -14508,6 +14568,7 @@
         _gtaCache = _gtaIndex();
         if (typeof planToast === 'function') planToast('↩ ' + nom + ' de vuelta en el club');
         renderGestorTodosAlumnos();
+        _gestorHdrPintar();   // v0.302
       });
     }
     function gtaGuardarAlumno(){
@@ -14527,6 +14588,7 @@
         _gtaAltaOn = false;
         if (typeof planToast === 'function') planToast('👤 ' + nom + ' añadido a la academia');
         renderGestorTodosAlumnos();
+        _gestorHdrPintar();   // v0.302: el contador de la cabecera, al día
       });
     }
 
@@ -14740,6 +14802,7 @@
           _gtaCache = _gtaIndex();
           if (typeof planToast === 'function') planToast('📦 ' + d.nombre + ' fuera del club (datos conservados)');
           renderGestorTodosAlumnos();
+          _gestorHdrPintar();   // v0.302
         });
       });
     }
@@ -14825,6 +14888,7 @@
         _gtaCache = _gtaIndex();
         if (typeof planToast === 'function') planToast('🗑 ' + key + ' borrado');
         renderGestorTodosAlumnos();
+        _gestorHdrPintar();   // v0.302
       }
       if (d.fichaId) _acBorrar(d.fichaId, fin); else fin();
     }
