@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.299.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.300.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,23 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.300.0 — Las clases tipo dejan de perder bloques en silencio (2026-08)
+    (sin migraciones nuevas)
+    · EL FALLO, encontrado auditando antes de empezar a crear clases tipo:
+      una clase tipo guarda IDS de carro, sesiones y bloques, y guardaba una
+      copia del NOMBRE solo de los dos primeros (carroNom, sesNom). Si un id
+      de bloque dejaba de existir, la ficha lo filtraba y desaparecía SIN
+      decir cuál era — los ejercicios y las sesiones sí avisaban.
+      Los ids de bloque se generan al azar al sembrar el plan
+      (_planNuevoId), así que una resiembra los cambiaría todos.
+    · AHORA SE GUARDA `bloquesNom` («Apartado · Bloque»), tanto al crear
+      desde el día (_ctDesdeDia) como desde el compositor, y también al
+      editar una existente.
+    · Y LA FICHA LO DICE: si el bloque ya no existe sale «⚠️ Pared · Doble
+      pared (ya no existe)» en vez de no salir nada.
+    · Las clases tipo creadas antes de esta versión no tienen el respaldo:
+      si alguna pierde su bloque, se verá «⚠️ bloque que ya no existe».
 
   v0.299.0 — Editar el día también desde Planificación · y deslizar para quitar (2026-08)
     (sin migraciones nuevas)
@@ -8898,7 +8915,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.299.0';
+    var APP_VERSION = '0.300.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -18437,10 +18454,16 @@
       var c = _ctLista(p).filter(function(x){ return x.id === _ctFicha; })[0];
       if (!c) { ctFichaCerrar(); return; }
       var mapEj = _ejsById(), todasS = leerClases();
+      // v0.300: si el bloque ya no existe se dice, con su nombre de respaldo,
+      // en vez de desaparecer sin dejar rastro.
+      var _filasP = _compTodasFilas(p), _bloqFalta = 0;
       var bloqNom = (c.bloques || []).map(function(id){
-        var f = _compTodasFilas(p).filter(function(x){ return x.id === id; })[0];
-        return f ? f.t : null;
-      }).filter(Boolean);
+        var f = _filasP.filter(function(x){ return x.id === id; })[0];
+        if (f) return f.t;
+        _bloqFalta++;
+        var back = (c.bloquesNom && c.bloquesNom[id]) || '';
+        return back ? '⚠️ ' + back + ' (ya no existe)' : '⚠️ bloque que ya no existe';
+      });
 
       var h = '<div class="ruta-modal ct-ficha-modal" onclick="event.stopPropagation()">';
       h += '<div class="ruta-modal-hdr"><div>' +
@@ -18585,6 +18608,12 @@
         if (x) sesNom[id] = x.nombre || x.fecha || ('Sesión ' + id);
       });
       if (!p.clasesTipo) p.clasesTipo = [];
+      // v0.300: nombre de respaldo del bloque, igual que el del carro
+      var bloquesNom = {};
+      (function(){
+        var f = _compTodasFilas(p).filter(function(x){ return x.id === _ctcBloque; })[0];
+        if (f) bloquesNom[_ctcBloque] = f.apartado + ' · ' + f.t;
+      })();
 
       if (_ctcEdit) {
         // Editar: se conserva el id, los usos y la fecha de creación, para no
@@ -18594,7 +18623,7 @@
         c.nombre = nombre;
         c.carro = _ctcCarro.slice(); c.carroNom = carroNom;
         c.sesiones = _ctcSes.slice(); c.sesNom = sesNom;
-        c.bloques = [_ctcBloque];
+        c.bloques = [_ctcBloque]; c.bloquesNom = bloquesNom;   // v0.300
         _planGuardar(p);
         var vuelveA = _ctcEdit;
         ctCrearCerrar();
@@ -18609,7 +18638,8 @@
         nivel: nivel,
         nombre: nombre,
         carro: _ctcCarro.slice(), carroNom: carroNom,
-        bloques: [_ctcBloque], sesiones: _ctcSes.slice(), sesNom: sesNom,
+        bloques: [_ctcBloque], bloquesNom: bloquesNom,   // v0.300
+        sesiones: _ctcSes.slice(), sesNom: sesNom,
         usos: 0, ultimoUso: '', creada: hoyLocal()
       });
       _planGuardar(p);
@@ -18879,11 +18909,20 @@
         var c = todasS.filter(function(x){ return x.id === id; })[0];
         if (c) sesNom[id] = c.nombre || c.fecha || ('Sesión ' + id);
       });
+      // v0.300: también los BLOQUES llevan su nombre de respaldo. Antes solo
+      // lo tenían el carro y las sesiones, así que si un id de bloque dejaba
+      // de existir la clase tipo lo perdía SIN decir cuál era.
+      var filasT = _compTodasFilas(p), bloquesNom = {};
+      bloques.forEach(function(id){
+        var f = filasT.filter(function(x){ return x.id === id; })[0];
+        if (f) bloquesNom[id] = f.apartado + ' · ' + f.t;
+      });
       return {
         id: 'ct' + Date.now() + Math.random().toString(36).slice(2,6),
         nivel: nivel, nombre: nombre,
         carro: carro, carroNom: carroNom,
-        bloques: bloques, sesiones: ses, sesNom: sesNom,
+        bloques: bloques, bloquesNom: bloquesNom,
+        sesiones: ses, sesNom: sesNom,
         usos: 0, ultimoUso: '', creada: hoyLocal()
       };
     }
