@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.300.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.301.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,27 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.301.0 — El atrás vuelve a donde estabas, no a otra pantalla (2026-08)
+    (sin migraciones nuevas)
+    · EL FALLO (Área de trabajo → un bloque → una sesión → atrás): te llevaba
+      a Planificación. `sesionOrigen === 'planif'` iba FIJO a esa pantalla,
+      pero desde la v0.233 el catálogo se pinta en DOS (Planificación y Área
+      de trabajo) y las sesiones también salen en pantalla-plan-sesiones. Es
+      el mismo fallo que la v0.234 arregló para el botón del bloque; quedaba
+      este otro camino sin arreglar.
+    · AHORA se apunta la pantalla REAL desde la que se abrió la sesión y se
+      vuelve ahí (nuevo _sesVolverPant), con el rótulo correcto: «‹ Área de
+      trabajo», «‹ Sesiones» o «‹ Plan». Verificado en los tres caminos.
+    · SEGUNDO CASO, encontrado auditando: la lista de sesiones de un nivel
+      (pantalla-clases) volvía SIEMPRE a Área de trabajo, y se abre desde
+      tres sitios — Área, Inicio y el botón «Técnica» de la barra de abajo.
+      Desde los dos últimos te dejaba donde no habías estado. Nuevo
+      _clasesVolverA, con el rótulo «‹ Inicio» o «‹ Área de trabajo».
+    · Auditado el resto: se revisaron las 41 pantallas cruzando cuántas
+      entradas tiene cada una con su destino de vuelta. Las demás que salen
+      con varias entradas son falsos positivos: se alcanzan desde la barra de
+      abajo o desde Inicio, y ahí volver a Inicio es lo correcto.
 
   v0.300.0 — Las clases tipo dejan de perder bloques en silencio (2026-08)
     (sin migraciones nuevas)
@@ -8298,7 +8319,7 @@
   <!-- ══ CLASES — HUB ════════════════════════════ -->
   <div id="pantalla-clases" class="pantalla">
     <div class="cabecera">
-      <button class="btn-volver" onclick="irA('pantalla-clases-niveles')">‹ Área de trabajo</button>
+      <button class="btn-volver" id="clases-volver" onclick="clasesVolver()">‹ Área de trabajo</button>
       <div class="cab-titulo" id="clases-nivel-titulo">Sesiones</div>
       <div class="cab-sub" id="sub-clases">0 sesiones</div>
     </div>
@@ -8915,7 +8936,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.300.0';
+    var APP_VERSION = '0.301.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -9779,6 +9800,7 @@
     var origenSesionNivel = null;       // nivel recordado al entrar en una sesión
     var sesionOrigen = 'clases';        // 'clases' | 'plan' — de dónde se abrió la sesión
     var planSesCtx = null;              // contexto del bloque al ver sus sesiones
+    var _sesVolverPant = null;          // v0.301: pantalla real a la que vuelve el detalle de sesión
     var planSesEditMode = false;        // edición de sesiones enlazadas a un bloque
     var sesionTemaSeleccionada = null;
     var TEMATICAS = ['calentamiento','técnica','táctica','mixta','competición'];
@@ -22260,8 +22282,20 @@
       if (btn) btn.classList.toggle('open', open);
     }
 
+    // v0.301 — La lista de sesiones de un nivel volvía SIEMPRE a Área de
+    // trabajo, pero se abre desde tres sitios: Área, Inicio y el botón
+    // «Técnica» de la barra de abajo. Desde los dos últimos te dejaba en una
+    // pantalla en la que no habías estado. Se apunta de dónde vienes.
+    var _clasesVolverA = 'pantalla-clases-niveles';
+    function clasesVolver() { irA(_clasesVolverA || 'pantalla-clases-niveles'); }
     function irClasesNivel(nivel) {
       if (!nivelPermitido(nivel)) nivel = 'iniciacion';
+      var _act = document.querySelector('.pantalla.activa');
+      var _id  = (_act && _act.id) || '';
+      _clasesVolverA = (_id === 'pantalla-clases-niveles' || _id === 'pantalla-inicio')
+                       ? _id : 'pantalla-clases-niveles';
+      var _vb = document.getElementById('clases-volver');
+      if (_vb) _vb.textContent = (_clasesVolverA === 'pantalla-inicio') ? '‹ Inicio' : '‹ Área de trabajo';
       nivelClasesSel = nivel; grupoClasesSel = null; irA('pantalla-clases');
     }
     function irClasesGrupo(key)   { grupoClasesSel = key;   irA('pantalla-clases-grupo'); }
@@ -22658,10 +22692,17 @@
         if (vuelta) asistVerClase(vuelta.claseId, vuelta.fecha);
         return;
       }
-      if (sesionOrigen === 'planif') {   // abierta desde el plan (sesión inline)
+      if (sesionOrigen === 'planif') {   // abierta desde el catálogo del plan
+        // v0.301: vuelve a la pantalla desde la que se abrió de verdad
+        // (Planificación, Área de trabajo o la lista de sesiones del bloque).
+        var dest = _sesVolverPant || 'pantalla-planificacion';
+        if (!document.getElementById(dest)) dest = 'pantalla-planificacion';
         document.querySelectorAll('.pantalla').forEach(function(p){ p.classList.remove('activa'); });
-        document.getElementById('pantalla-planificacion').classList.add('activa');
-        mostrarPlanificacion(); window.scrollTo(0, 0);
+        document.getElementById(dest).classList.add('activa');
+        if (dest === 'pantalla-clases-niveles')      renderClasesNiveles();
+        else if (dest === 'pantalla-plan-sesiones')  renderPlanSesiones();
+        else                                         mostrarPlanificacion();
+        window.scrollTo(0, 0);
         return;
       }
       if (sesionOrigen === 'plan' && planSesCtx) {
@@ -22742,6 +22783,15 @@
     function verSesion(id, origen) {
       origenSesionNivel = nivelClasesSel;
       sesionOrigen = origen || 'clases';
+      // v0.301 — El atrás de 'planif' iba FIJO a Planificación, pero ese
+      // catálogo se pinta en dos pantallas desde la v0.233 (Planificación y
+      // Área de trabajo) y las sesiones también salen en pantalla-plan-
+      // sesiones. Se apunta la pantalla REAL desde la que se abrió y se
+      // vuelve ahí. Mismo criterio que _planSesVolverA en la v0.234.
+      if (sesionOrigen === 'planif') {
+        var _act = document.querySelector('.pantalla.activa');
+        _sesVolverPant = (_act && _act.id) ? _act.id : 'pantalla-planificacion';
+      }
       var sesion = leerClases().filter(function(c){ return c.id === id; })[0];
       var ejs    = leerEjercicios();
       if (!sesion) return;
@@ -22749,9 +22799,13 @@
       var vb = document.getElementById('volver-detalle-sesion');
       // v0.225: si la sesión se abrió desde el globo de una clase (Asistencia),
       // el botón vuelve ahí, no a Plan.
+      // v0.301: el rótulo dice el sitio de verdad, no siempre «Plan»
+      var _rotPlanif = (_sesVolverPant === 'pantalla-clases-niveles') ? '‹ Área de trabajo'
+                     : (_sesVolverPant === 'pantalla-plan-sesiones')  ? '‹ Sesiones'
+                     : '‹ Plan';
       if (vb) vb.textContent = (sesionOrigen === 'asist') ? '‹ Asistencia'
                              : (sesionOrigen === 'plan') ? '‹ Sesiones'
-                             : (sesionOrigen === 'planif') ? '‹ Plan' : '‹ Sesiones';
+                             : (sesionOrigen === 'planif') ? _rotPlanif : '‹ Sesiones';
 
       document.getElementById('detalle-sesion-titulo').textContent = nombreSesion(sesion);
       document.getElementById('detalle-sesion-fecha').textContent  = formatearFecha(sesion.fecha) + (sesion.tematica ? '  ·  ' + sesion.tematica : '');
