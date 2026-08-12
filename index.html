@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.303.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.304.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,22 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.304.0 — Borrar en el panel del gestor ya surte efecto a la primera (2026-08)
+    (sin migraciones nuevas)
+    · EL FALLO: en el perfil de gestor, borrar una clase o un alumno no se
+      notaba hasta hacerlo dos veces (o salir y volver a entrar).
+    · POR QUÉ: el panel del gestor no lee del almacenamiento local, lee de
+      `_gestorData`, la foto con los datos de TODOS los entrenadores que se
+      baja de Supabase al entrar. Al tocar las franjas de OTRO entrenador esa
+      foto sí se actualizaba. Al tocar LAS PROPIAS —y el gestor también da
+      clase— se guardaba en local y en el servidor, pero la foto se quedaba
+      con lo viejo. La pantalla se repintaba con el dato borrado todavía
+      dentro y solo desaparecía tras la siguiente descarga.
+    · ARREGLO en el único sitio por el que pasa todo: escribirAsistConfig y
+      escribirAsistRegistros corrigen ahora también la foto (_gDataEspejo).
+      Vale para todos los caminos a la vez —borrar una franja, guardarla,
+      sacar a un alumno del cupo, darlo de baja— sin parchear cada uno.
 
   v0.303.0 — En agosto el panel se quedaba en julio y no salía ningún alumno (2026-08)
     (sin migraciones nuevas)
@@ -8969,7 +8985,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.303.0';
+    var APP_VERSION = '0.304.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -10059,6 +10075,7 @@
         return;
       }
       _lzSet('padel-asistencia-cfg', JSON.stringify(d));
+      _gDataEspejo('clases', d.clases || []);   // v0.304
       if (!soloLocal) _bgUpsert('asistencia_clases', d.clases||[]);
     }
     function leerAsistRegistros() {
@@ -10089,7 +10106,29 @@
         return;
       }
       _lzSet('padel-asistencia-reg', JSON.stringify(d));
+      _gDataEspejo('registros', d || []);       // v0.304
       if (!soloLocal) _bgUpsert('asistencia_registros', cambiadas || d);
+    }
+
+    // ── v0.304 — EL PANEL DEL GESTOR, AL DÍA AL INSTANTE ─────────────
+    // El panel no lee del almacenamiento local: lee de _gestorData, la foto
+    // que se bajó de Supabase con los datos de TODOS los entrenadores.
+    // Cuando el gestor tocaba las franjas de OTRO entrenador, esa foto sí se
+    // actualizaba (rama _gEditUid, arriba). Pero cuando tocaba LAS SUYAS
+    // —que es lo normal: el gestor también da clase— se guardaba en local y
+    // en Supabase y la foto se quedaba con lo viejo. Resultado: borrabas una
+    // clase o un alumno, volvías al panel y seguía ahí; solo desaparecía tras
+    // la siguiente descarga, de ahí el «hay que hacerlo dos veces».
+    // Ahora la foto se corrige en el mismo sitio en que se guarda, así que
+    // vale para TODOS los caminos (borrar franja, guardarla, quitar un
+    // alumno del cupo, darlo de baja…) sin tocarlos uno a uno.
+    function _gDataEspejo(que, filas) {
+      if (!_gestorData || !_sbUser || !_sbUser.id) return;
+      var uid = _sbUser.id;
+      var tabla = (que === 'clases') ? 'asistencia_clases' : 'asistencia_registros';
+      var destino = (que === 'clases') ? 'clases' : 'registros';
+      var otras = (_gestorData[destino] || []).filter(function(x){ return x.user_id !== uid; });
+      _gestorData[destino] = otras.concat(filas.map(function(x){ return _upMap[tabla](x, uid); }));
     }
 
     // ══════════════════════════════════════════
