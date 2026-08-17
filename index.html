@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.304.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.305.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,25 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.305.0 — El Repositorio, y sus clases en tamaño de pista (2026-08)
+    (sin migraciones nuevas)
+    · «CLASES TIPO» PASA A LLAMARSE «📚 REPOSITORIO», con una línea debajo
+      que dice lo que es: el almacén de todas las clases ya preparadas de ese
+      nivel, listas para abrirlas en pista o llevarlas a un día.
+    · LA FICHA SE LEE EN PISTA. Antes reutilizaba las fichas del panel de
+      planificar: el nombre pequeño a la izquierda, cortado, y una miniatura
+      de 62 px al lado. Con el móvil en la mano y a contraluz, no se leía.
+      Ahora cada sesión y cada ejercicio es un bloque: NOMBRE ENTERO ARRIBA
+      (17→19 px, sin recortar, en varias líneas si hace falta) y debajo la
+      IMAGEN A TODO EL ANCHO, con su ▶ grande encima.
+    · Los ejercicios en progresión enseñan TODOS sus vídeos, en dos columnas
+      y numerados: en pista hay que pasar por las tres fases, no solo por la
+      primera.
+    · Y en el móvil la ficha se abre a PANTALLA COMPLETA, como ya hacía la
+      clase del día desde la v0.293.
+    · Solo cambia la ficha del repositorio: las fichas del panel de
+      planificar y de la vista del día se quedan como estaban.
 
   v0.304.0 — Borrar en el panel del gestor ya surte efecto a la primera (2026-08)
     (sin migraciones nuevas)
@@ -6922,6 +6941,9 @@
     .ct-hdr-t { font-size:14px; font-weight:800; color:var(--texto); }
     .ct-hdr-n { font-size:11.5px; color:var(--gris); }
     .ct-hdr-c { margin-left:auto; font-size:10.5px; color:var(--gris); }
+    .ct-hdr { flex-wrap:wrap; }                                  /* v0.305 */
+    .ct-hdr-sub { flex:0 0 100%; font-size:11px; color:var(--gris); line-height:1.35;
+      margin-top:5px; }
     /* v0.285 — El árbol dentro del selector del día */
     .ctu-ap { font-size:10.5px; font-weight:800; color:var(--gris); text-transform:uppercase;
       letter-spacing:.04em; margin:11px 2px 5px; display:flex; align-items:center; gap:7px; }
@@ -6978,10 +7000,52 @@
     .ctc-bl-mas { flex-shrink:0; width:34px; font-family:inherit; font-size:16px; color:#3730a3;
       border:1.5px dashed #c7d2fe; border-radius:10px; background:var(--blanco); cursor:pointer; }
     .ctc-bl-mas:active { background:#eef2ff; }
-    /* La ficha de una clase tipo */
-    .ct-ficha-modal { max-width:560px; }
-    .ct-ficha-modal .ruta-ses-eleg.borrado { opacity:.6; text-decoration:line-through; }
-    .ct-ficha-modal .ruta-carro-ficha.borrado { opacity:.6; }
+    /* La ficha de una clase tipo — v0.305: VISTA DE PISTA.
+       Nombre entero arriba y grande, imagen debajo a todo el ancho. Está
+       pensada para leerse con el móvil en la mano, en la pista y con sol. */
+    .ct-ficha-modal { max-width:640px; }
+    .ct-ficha-modal .ruta-modal-tit { font-size:20px; line-height:1.2; overflow-wrap:anywhere; }
+    .ct-ficha-modal .ruta-modal-sub { font-size:13px; }
+    .ctf-zlbl { font-size:12px !important; }
+    .ctf-item { border:1.5px solid #c7d2fe; border-radius:14px; background:var(--blanco);
+      padding:11px 12px 12px; margin-bottom:11px; }
+    .ctf-item.carro { border-color:#0891b2; background:#ecfeff; }
+    .ctf-item.clicable { cursor:pointer; }
+    .ctf-item.borrado { opacity:.6; }
+    /* Sin `text-overflow`, sin `nowrap`: el nombre se ve ENTERO, aunque
+       ocupe tres líneas. Es lo que se busca en pista. */
+    .ctf-nom { font-size:17px; font-weight:800; color:var(--texto); line-height:1.28;
+      overflow-wrap:anywhere; }
+    .ctf-num { display:inline-flex; align-items:center; justify-content:center;
+      width:26px; height:26px; margin-right:8px; vertical-align:-5px;
+      border-radius:50%; background:#0891b2; color:#fff; font-size:14px; font-weight:800; }
+    .ctf-sub { font-size:14px; font-weight:700; color:#0e7490; margin-top:4px; }
+    .ctf-sub.falta { color:#b91c1c; }
+    .ctf-img { position:relative; margin-top:10px; width:100%; aspect-ratio:16/9;
+      border-radius:12px; overflow:hidden; background:#111;
+      display:flex; align-items:center; justify-content:center; cursor:pointer; }
+    .ctf-img img { width:100%; height:100%; object-fit:cover; display:block; }
+    .ctf-noimg { font-size:38px; }
+    .ctf-play { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+      font-size:40px; color:#fff; text-shadow:0 2px 12px rgba(0,0,0,.75); pointer-events:none; }
+    .ctf-nvid { position:absolute; top:6px; left:6px; min-width:22px; text-align:center;
+      background:rgba(0,0,0,.62); color:#fff; font-size:13px; font-weight:800;
+      border-radius:999px; padding:1px 7px; }
+    .ctf-imgs { display:grid; grid-template-columns:1fr; gap:8px; }
+    .ctf-imgs.multi { grid-template-columns:1fr 1fr; }
+    .ctf-imgs .ctf-img { margin-top:10px; }
+    .ctf-imgs.multi .ctf-img { margin-top:0; }
+    .ctf-imgs.multi { margin-top:10px; }
+    /* En el móvil, la ficha ocupa la pantalla y todo sube un punto más */
+    @media (max-width:699px){
+      .ct-ficha-modal { max-width:none; width:100%; height:100dvh; max-height:100dvh;
+        border-radius:0; padding:calc(14px + env(safe-area-inset-top)) 13px calc(20px + env(safe-area-inset-bottom)); }
+      .ct-ficha-modal .ruta-modal-tit { font-size:22px; }
+      .ct-ficha-modal .plan-modal-x { width:42px; height:42px; font-size:20px; }
+      .ctf-nom { font-size:19px; }
+      .ctf-sub { font-size:15px; }
+      .ctf-num { width:28px; height:28px; font-size:15px; }
+    }
     .ct-chev { flex-shrink:0; font-size:15px; color:var(--gris); }
     /* Crear desde un bloque: sesión + carro */
     .ct-crear-modal { max-width:560px; }
@@ -8985,7 +9049,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.304.0';
+    var APP_VERSION = '0.305.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -18327,11 +18391,15 @@
       var todasSCT = leerClases();
 
       h += '<div class="ct-caja">';
-      h += '<div class="ct-hdr"><span class="ct-hdr-t">Clases tipo</span>' +
+      // v0.305: «Clases tipo» no decía lo que es. REPOSITORIO sí: el almacén
+      // de todas las clases ya elaboradas, listas para llevar a un día.
+      h += '<div class="ct-hdr"><span class="ct-hdr-t">📚 Repositorio</span>' +
            '<span class="ct-hdr-n">' + _gEsc(planNivelLabel(nivelCT)) + '</span>' +
            '<span class="ct-hdr-c">' + totalCT + ' guardada' + (totalCT !== 1 ? 's' : '') + '</span>' +
            '<button type="button" class="ct-nueva" onclick="ctNueva()" ' +
-             'title="Crear una clase tipo desde cero" aria-label="Nueva clase tipo">⚙</button></div>';
+             'title="Crear una clase desde cero" aria-label="Nueva clase">⚙</button>' +
+           '<span class="ct-hdr-sub">Todas las clases ya preparadas de este nivel. ' +
+             'Ábrelas para verlas en pista o llévalas a un día desde el calendario.</span></div>';
 
       etapasCT.forEach(function(et){
         var filasCT = contCT[et.key] || [];
@@ -18362,7 +18430,7 @@
                 'title="Crear una clase tipo de este bloque" aria-label="Nueva">＋</button></div>';
             if (!abBl) return;
             if (!suyas.length) {
-              h += '<div class="ruta-panel-nota" style="padding:2px 4px 8px;">Sin clases tipo. Pulsa ＋ para crear una con las sesiones de este bloque.</div>';
+              h += '<div class="ruta-panel-nota" style="padding:2px 4px 8px;">Todavía no hay ninguna clase guardada aquí. Pulsa ＋ para preparar una con las sesiones de este bloque.</div>';
             }
             suyas.forEach(function(c){
               var gv = {}, gl = [];
@@ -18571,6 +18639,43 @@
       var ov = document.getElementById('ct-ficha-ov');
       if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; }
     }
+    // v0.305 — Un ejercicio del carro en la vista de pista: número y nombre
+    // ENTERO arriba, su golpe debajo y el vídeo a todo el ancho. Si es una
+    // progresión de varios vídeos, salen todos (en dos columnas), porque en
+    // pista hay que pasar por las tres fases, no solo por la primera.
+    function _ctFichaEjHTML(e, num) {
+      var gk = ejFaceta(e, 'golpe');
+      var g  = gk ? (GOLPE_LABEL[gk] || gk) : '';
+      var vids = ejVideos(e);
+      var h = '<div class="ctf-item carro">' +
+        '<div class="ctf-nom"><span class="ctf-num">' + num + '</span>' +
+          _gEsc(e.nombre || ('Ejercicio ' + e.id)) + '</div>' +
+        (g ? '<div class="ctf-sub">' + _gEsc(g) +
+             (vids.length > 1 ? ' · ' + vids.length + ' vídeos' : '') + '</div>'
+           : (vids.length > 1 ? '<div class="ctf-sub">' + vids.length + ' vídeos</div>' : ''));
+      if (!vids.length) {
+        var th0 = _rutaEjThumb(e);
+        h += '<div class="ctf-img">' + (th0
+          ? '<img src="' + th0 + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
+          : '<span class="ctf-noimg">🎾</span>') + '</div>';
+      } else {
+        h += '<div class="ctf-imgs' + (vids.length > 1 ? ' multi' : '') + '">';
+        vids.forEach(function(v, vi){
+          var yt = extraerIdYoutube(v);
+          var th = yt ? ('https://img.youtube.com/vi/' + yt + '/mqdefault.jpg') : null;
+          var ver = ' onclick="abrirLightboxVideo(' + (yt ? "'" + yt + "'" : 'null') +
+                    ',\'' + String(v).replace(/'/g, "\\'") + '\');event.stopPropagation()"';
+          h += '<div class="ctf-img"' + ver + ' title="Vídeo ' + (vi + 1) + '">' + (th
+            ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
+            : '<span class="ctf-noimg">🎾</span>') +
+            '<span class="ctf-play">▶</span>' +
+            (vids.length > 1 ? '<span class="ctf-nvid">' + (vi + 1) + '</span>' : '') + '</div>';
+        });
+        h += '</div>';
+      }
+      return h + '</div>';
+    }
+
     function _ctFichaPintar() {
       var ov = document.getElementById('ct-ficha-ov');
       if (!ov) return;
@@ -18598,31 +18703,42 @@
           (c.ultimoUso ? ' · última el ' + formatFechaDiaMes(c.ultimoUso) : '') + '</div></div>' +
         '<button class="plan-modal-x" onclick="ctFichaCerrar()" aria-label="Cerrar">✕</button></div>';
 
-      // ── Área de trabajo: la sesión, con su miniatura ──
-      h += '<div class="ruta-wk-zlbl" style="color:#3730a3;">🎯 Área de trabajo</div>';
+      // ── v0.305 · VISTA DE PISTA ─────────────────────────────────
+      // Antes esto reutilizaba las fichas del panel de planificar: nombre
+      // pequeño a la izquierda y una miniatura de 62 px al lado. En pista,
+      // con el móvil en la mano y a contraluz, no se leía.
+      // Ahora cada cosa es un bloque: NOMBRE ENTERO ARRIBA, grande y sin
+      // cortar, y debajo la imagen a todo el ancho.
+      h += '<div class="ruta-wk-zlbl ctf-zlbl" style="color:#3730a3;">🎯 Área de trabajo</div>';
       bloqNom.forEach(function(t){ h += '<span class="ruta-chip">' + _gEsc(t) + '</span>'; });
       (c.sesiones || []).forEach(function(id){
         var x = todasS.filter(function(t){ return t.id === id; })[0];
+        var nom = x ? (x.nombre || x.fecha || ('Sesión ' + id))
+                    : ((c.sesNom && c.sesNom[id]) || ('Sesión ' + id));
         var th = x ? _rutaSesThumb(x) : null;
-        h += '<div class="ruta-ses-eleg' + (x ? ' clicable' : ' borrado') + '"' +
+        h += '<div class="ctf-item area' + (x ? ' clicable' : ' borrado') + '"' +
           (x ? ' onclick="verSesion(' + x.id + ',\'planif\')"' : '') + '>' +
-          '<span class="ruta-ses-thumb">' + (th ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="ruta-ses-noimg">🎾</span>') + '</span>' +
-          '<span class="ruta-ses-nom">' + _gEsc(x ? (x.nombre || x.fecha || ('Sesión ' + id)) : ((c.sesNom && c.sesNom[id]) || ('Sesión ' + id))) + '</span></div>';
+          '<div class="ctf-nom">' + _gEsc(nom) + '</div>' +
+          (x ? '' : '<div class="ctf-sub falta">ya no existe</div>') +
+          '<div class="ctf-img">' + (th
+            ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
+            : '<span class="ctf-noimg">🎾</span>') + '</div></div>';
       });
       if ((c.sesiones || []).some(function(id){ return !todasS.some(function(t){ return t.id === id; }); }))
         h += '<div class="ct-aviso">Alguna sesión ya no existe — se borró del catálogo</div>';
 
-      // ── Carro: cada ejercicio con su miniatura y su ▶ ──
-      h += '<div class="ruta-wk-zlbl" style="color:#0e7490;margin-top:11px;">🛒 Carro</div>';
+      // ── Carro: cada ejercicio, con su nombre entero y su vídeo grande ──
+      h += '<div class="ruta-wk-zlbl ctf-zlbl" style="color:#0e7490;margin-top:14px;">🛒 Carro</div>';
       if (!(c.carro || []).length) h += '<div class="ruta-panel-nota">Sin ejercicios de carro.</div>';
       var faltanE = 0;
       (c.carro || []).forEach(function(id, i){
         var e = mapEj[id];
-        if (e) { h += _rutaCarroFichaHTML(e, '', i + 1); return; }
+        if (e) { h += _ctFichaEjHTML(e, i + 1); return; }
         faltanE++;
-        h += '<div class="ruta-carro-ficha borrado"><span class="ruta-carro-num">' + (i + 1) + '</span>' +
-             '<span class="ruta-carro-ficha-txt"><b>' + _gEsc((c.carroNom && c.carroNom[id]) || ('Ejercicio ' + id)) + '</b>' +
-             '<span>ya no existe</span></span></div>';
+        h += '<div class="ctf-item carro borrado">' +
+             '<div class="ctf-nom"><span class="ctf-num">' + (i + 1) + '</span>' +
+               _gEsc((c.carroNom && c.carroNom[id]) || ('Ejercicio ' + id)) + '</div>' +
+             '<div class="ctf-sub falta">ya no existe</div></div>';
       });
       if (faltanE) h += '<div class="ct-aviso">' + (faltanE === 1 ? 'Ese ejercicio ya no existe' : 'Esos ' + faltanE + ' ejercicios ya no existen') + ' — se borraron del catálogo</div>';
 
