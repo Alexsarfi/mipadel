@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.308.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.309.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,17 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.309.0 — Cuarto nivel de alumno: 🌿 Medio (2026-08)
+    (sin migraciones nuevas — `nivel` ya es texto libre)
+    · El nivel del alumno pasa a tener cuatro escalones:
+      🌱 Iniciación · 🌿 Medio · 🔥 Avanzado · 🏆 Competición.
+    · Sale solo en los tres sitios: el desplegable del alta, el de la ficha
+      y los chips de filtro de Alumnos de la academia.
+    · NO toca los niveles del PLAN (iniciación · avanzado · competición).
+      Son otra cosa: cada uno tiene su planificación detrás y añadir uno
+      obligaría a sembrarle un plan entero. El nivel del alumno es suyo y
+      solo describe cómo juega.
 
   v0.308.0 — La ficha del alumno: nivel, edad, categoría FEP y observaciones (2026-08)
     ⚠ EJECUTAR migraciones/migracion_alumnos_ficha.sql ANTES de usar esta versión.
@@ -5442,6 +5453,7 @@
       color:var(--gris); background:var(--arena); }
     .gta-tag.cat { color:#3730a3; background:#eef2ff; }
     .gta-tag.niv-iniciacion  { color:#166534; background:#f0fdf4; }
+    .gta-tag.niv-medio       { color:#155e75; background:#ecfeff; }   /* v0.309 */
     .gta-tag.niv-avanzado    { color:#9a3412; background:#fff7ed; }
     .gta-tag.niv-competicion { color:#9d174d; background:#fdf2f8; }
     /* Buscador y filtro por clase en Alumnos (gestor) */
@@ -9199,7 +9211,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.308.0';
+    var APP_VERSION = '0.309.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -10808,8 +10820,14 @@
     // ── v0.308 — NIVEL del alumno ────────────────────────────────────
     // Es SUYO, no de su franja: un alumno de competición puede estar en un
     // grupo de avanzado. Por eso se pone a mano y sirve para filtrar.
+    // v0.309: cuatro escalones. MEDIO es el de en medio de verdad — el que
+    // ya no es iniciación pero todavía no es avanzado —, y es donde está la
+    // mayoría de una escuela. Ojo: esto es el nivel DEL ALUMNO. Los niveles
+    // del PLAN (iniciación · avanzado · competición) no cambian: son otra
+    // cosa y tienen su propia planificación detrás.
     var AL_NIVELES = [
       { k:'iniciacion',  t:'Iniciación',  ico:'🌱' },
+      { k:'medio',       t:'Medio',       ico:'🌿' },
       { k:'avanzado',    t:'Avanzado',    ico:'🔥' },
       { k:'competicion', t:'Competición', ico:'🏆' }
     ];
