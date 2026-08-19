@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.307.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.308.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,34 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.308.0 — La ficha del alumno: nivel, edad, categoría FEP y observaciones (2026-08)
+    ⚠ EJECUTAR migraciones/migracion_alumnos_ficha.sql ANTES de usar esta versión.
+    · NIVEL DEL ALUMNO (🌱 Iniciación · 🔥 Avanzado · 🏆 Competición). Es SUYO,
+      no el de su franja: un alumno de competición puede estar en un grupo de
+      avanzado, y esa diferencia es justo la que interesa ver.
+    · FECHA DE NACIMIENTO, y de ella salen solas la EDAD y la CATEGORÍA. No se
+      guardan calculadas a propósito: guardarlas sería garantizar que el 1 de
+      enero toda la base de datos se queda mentirosa.
+    · CATEGORÍA SEGÚN LA NORMATIVA TÉCNICA DE LA FEP (apartado 11.1). Sus
+      límites («no tener N años cumplidos el 1 de enero del año de la
+      competición») equivalen a la edad que se cumple durante el año natural:
+        Benjamín ≤10 · Alevín 11-12 · Infantil 13-14 · Cadete 15-16 ·
+        Júnior 17-18 · Sub-23 19-23 · Absoluta 24-34
+      y veteranos por quinquenios: +35, +40, +45, +50, +55 y +60.
+      Cuadra con las tablas de años de nacimiento de las federaciones
+      autonómicas. Por debajo de 6 no hay categoría FEP: sale «Prebenjamín»
+      avisando de que ese nombre es de casa, no de la federación.
+    · OBSERVACIONES, un campo libre que se ve SIEMPRE en la ficha (lesiones,
+      material, con quién juega), sin tener que entrar a editar.
+    · FILTRO POR NIVEL en Alumnos de la academia, con la cuenta de cada uno y
+      un chip «Sin nivel» que solo sale si queda alguno por rellenar — así se
+      ve lo que falta. Se combina con el buscador y el abecedario.
+    · Nivel y nacimiento se piden ya EN EL ALTA, que es cuando se tienen los
+      datos delante; las observaciones se añaden después.
+    · Y en la lista, cada alumno enseña su nivel y su categoría.
+    · Si la migración no está ejecutada, la app no se rompe: el alta y la
+      edición reintentan sin los campos nuevos y solo se pierden esos datos.
 
   v0.307.0 — Área entra por los ejercicios de juego, y «Equipo» como grupo propio (2026-08)
     (sin migraciones nuevas)
@@ -5386,6 +5414,36 @@
     .dsc-grid.mini .dsc-cell { height:24px; font-size:11px; font-weight:700; border-radius:6px; border-width:1px; }
     .dsc-grid.mini .dsc-cell.off::after { content:''; margin:0; }
     @media (max-width:360px){ .dsc-anio { grid-template-columns:1fr; } }
+    /* ── v0.308 — ficha del alumno ampliada ── */
+    .gta-campo { margin-top:9px; }
+    .gta-lbl { display:block; font-size:11px; font-weight:800; color:var(--gris);
+      text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; }
+    .gta-edad { font-size:12px; font-weight:700; color:#0e7490; margin-top:5px; }
+    .gta-obs-in { resize:vertical; min-height:62px; font-family:inherit; line-height:1.4; }
+    .gta-obs { border:1.5px solid var(--borde); border-left:4px solid #f59e0b;
+      border-radius:10px; background:#fffbeb; padding:9px 11px; margin-bottom:0.6rem; }
+    .gta-obs-tit { font-size:11px; font-weight:800; color:#92400e;
+      text-transform:uppercase; letter-spacing:.04em; margin-bottom:3px; }
+    .gta-obs-txt { font-size:13px; color:var(--texto); line-height:1.45; white-space:pre-wrap;
+      overflow-wrap:anywhere; }
+    .gta-alta-2 { display:flex; gap:7px; flex-wrap:wrap; margin-top:7px; }
+    .gta-alta-2 > * { flex:1; min-width:135px; }
+    .gta-nivrow { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:0.5rem; }
+    .gta-nivchip { display:inline-flex; align-items:center; gap:5px; font-family:inherit;
+      font-size:12px; font-weight:700; color:var(--gris); padding:5px 10px;
+      border:1.5px solid var(--borde); border-radius:999px; background:var(--blanco); cursor:pointer; }
+    .gta-nivchip b { font-size:10.5px; color:var(--gris); background:var(--arena);
+      border-radius:999px; padding:1px 6px; }
+    .gta-nivchip.on { border-color:#0891b2; background:#ecfeff; color:#0e7490; }
+    .gta-nivchip.on b { color:#0e7490; background:#cffafe; }
+    .gta-nivchip.sin { border-style:dashed; }
+    .gta-tags { display:flex; gap:5px; flex-wrap:wrap; margin:2px 0 1px; }
+    .gta-tag { font-size:10.5px; font-weight:800; border-radius:999px; padding:1px 7px;
+      color:var(--gris); background:var(--arena); }
+    .gta-tag.cat { color:#3730a3; background:#eef2ff; }
+    .gta-tag.niv-iniciacion  { color:#166534; background:#f0fdf4; }
+    .gta-tag.niv-avanzado    { color:#9a3412; background:#fff7ed; }
+    .gta-tag.niv-competicion { color:#9d174d; background:#fdf2f8; }
     /* Buscador y filtro por clase en Alumnos (gestor) */
     .gals-chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:0.35rem; }
     .gals-chip { border:1.5px solid var(--borde); background:var(--blanco); color:var(--gris);
@@ -9141,7 +9199,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.307.0';
+    var APP_VERSION = '0.308.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -10678,34 +10736,131 @@
           if (!r.error && r.data) {
             _acLista = r.data.map(function(a){
               return { id:a.id, nombre:a.nombre||'', apellidos:a.apellidos||'', telefono:a.telefono||'',
-                       archivado: !!a.archivado };   // v0.180
+                       archivado: !!a.archivado,     // v0.180
+                       // v0.308 — si la migración no está puesta, llegan
+                       // undefined y la ficha funciona igual, en blanco.
+                       nivel:a.nivel||'', nacimiento:a.nacimiento||'',
+                       observaciones:a.observaciones||'' };
             });
             _acGuardarLocal();
           }
           if (cb) cb();
         }).catch(function(){ _acCargado = true; if (cb) cb(); });
     }
+    // ── v0.308 — EDAD Y CATEGORÍA FEP ────────────────────────────────
+    // Ni la edad ni la categoría se guardan: se calculan de la fecha de
+    // nacimiento cada vez. Guardarlas sería garantizar que el 1 de enero
+    // toda la base de datos se queda mentirosa.
+    //
+    // FUENTE: Normativa Técnica de la FEP, apartado 11.1 — los límites se
+    // expresan como «no tener N años cumplidos el 1 de enero del año en que
+    // se celebre la competición», que equivale a la EDAD QUE SE CUMPLE
+    // DURANTE EL AÑO NATURAL:
+    //     Benjamín ≤10 · Alevín 11-12 · Infantil 13-14 · Cadete 15-16 ·
+    //     Júnior 17-18 · Sub-23 19-23 · Absoluta 24-34
+    // y veteranos por quinquenios («haber cumplido 35/40/45… antes del 31 de
+    // diciembre»): +35, +40, +45, +50, +55 y +60.
+    // Cuadra con las tablas de años de nacimiento que publican las
+    // federaciones autonómicas (p. ej. Benjamín 2015/2016 en la temporada
+    // 2024-25, Alevín 2013/2014, Infantil 2011/2012…).
+    // Por debajo de 6 años no hay categoría FEP: se etiqueta Prebenjamín,
+    // que es como se le llama en las escuelas, avisando de que es de casa.
+    var FEP_CATS = [
+      { max:5,  t:'Prebenjamín', fuera:true },
+      { max:10, t:'Benjamín' },
+      { max:12, t:'Alevín' },
+      { max:14, t:'Infantil' },
+      { max:16, t:'Cadete' },
+      { max:18, t:'Júnior' },
+      { max:23, t:'Sub-23' },
+      { max:34, t:'Absoluta' },
+      { max:39, t:'Veteranos +35' },
+      { max:44, t:'Veteranos +40' },
+      { max:49, t:'Veteranos +45' },
+      { max:54, t:'Veteranos +50' },
+      { max:59, t:'Veteranos +55' },
+      { max:999,t:'Veteranos +60' }
+    ];
+    // Edad CUMPLIDA hoy (la que diría el alumno). '' si no hay fecha.
+    function alEdad(nacISO, hoyISO) {
+      if (!nacISO || !/^\d{4}-\d{2}-\d{2}$/.test(nacISO)) return '';
+      var h = hoyISO || hoyLocal();
+      var e = parseInt(h.slice(0,4),10) - parseInt(nacISO.slice(0,4),10);
+      if (h.slice(5) < nacISO.slice(5)) e--;    // aún no ha cumplido este año
+      return (e >= 0 && e < 130) ? e : '';
+    }
+    // Edad que CUMPLE durante el año natural — la que manda para la categoría
+    function alEdadAnio(nacISO, hoyISO) {
+      if (!nacISO || !/^\d{4}-\d{2}-\d{2}$/.test(nacISO)) return '';
+      var e = parseInt((hoyISO || hoyLocal()).slice(0,4),10) - parseInt(nacISO.slice(0,4),10);
+      return (e >= 0 && e < 130) ? e : '';
+    }
+    function alCategoria(nacISO, hoyISO) {
+      var e = alEdadAnio(nacISO, hoyISO);
+      if (e === '') return null;
+      for (var i = 0; i < FEP_CATS.length; i++) if (e <= FEP_CATS[i].max) return FEP_CATS[i];
+      return null;
+    }
+    function alCategoriaTxt(nacISO, hoyISO) {
+      var c = alCategoria(nacISO, hoyISO);
+      return c ? c.t : '';
+    }
+    // ── v0.308 — NIVEL del alumno ────────────────────────────────────
+    // Es SUYO, no de su franja: un alumno de competición puede estar en un
+    // grupo de avanzado. Por eso se pone a mano y sirve para filtrar.
+    var AL_NIVELES = [
+      { k:'iniciacion',  t:'Iniciación',  ico:'🌱' },
+      { k:'avanzado',    t:'Avanzado',    ico:'🔥' },
+      { k:'competicion', t:'Competición', ico:'🏆' }
+    ];
+    function alNivelMeta(k) {
+      return AL_NIVELES.filter(function(n){ return n.k === k; })[0] || null;
+    }
+    function alNivelTxt(k) {
+      var m = alNivelMeta(k);
+      return m ? (m.ico + ' ' + m.t) : '';
+    }
+
     // Alta de una ficha. Devuelve por callback si se pudo guardar.
-    function _acAnadir(nombre, apellidos, telefono, cb){
+    // v0.308: `extra` (opcional) = { nivel, nacimiento, observaciones }.
+    // Si la migración no está ejecutada, el insert falla por columna
+    // desconocida y se REINTENTA sin los campos nuevos: el alumno se crea
+    // igual y solo se pierden esos datos, con aviso en consola.
+    function _acAnadir(nombre, apellidos, telefono, cb, extra){
       _acInit();
-      var ficha = { nombre:nombre, apellidos:apellidos||'', telefono:telefono||'' };
+      var ex = extra || {};
+      var ficha = { nombre:nombre, apellidos:apellidos||'', telefono:telefono||'',
+                    nivel:ex.nivel||'', nacimiento:ex.nacimiento||'',
+                    observaciones:ex.observaciones||'' };
       if (!_sb || !_sbUser) {
         // Sin sesión: se guarda solo en local (no se comparte con el club)
         ficha.id = 'loc-' + Date.now();
         _acLista.push(ficha); _acGuardarLocal();
         if (cb) cb(true, 'local'); return;
       }
-      var row = { scope_id:_dscScope(), nombre:ficha.nombre, apellidos:ficha.apellidos, telefono:ficha.telefono };
-      _sb.from('alumnos_club').insert(row).select().then(function(r){
-        if (r.error) {
-          console.warn('alta alumno club', r.error && r.error.message);
-          if (cb) cb(false, r.error && r.error.message); return;
-        }
-        var nuevo = (r.data && r.data[0]) || row;
-        _acLista.push({ id:nuevo.id, nombre:nuevo.nombre, apellidos:nuevo.apellidos||'', telefono:nuevo.telefono||'' });
-        _acGuardarLocal();
-        if (cb) cb(true);
-      }).catch(function(e){ if (cb) cb(false, e && e.message); });
+      var base = { scope_id:_dscScope(), nombre:ficha.nombre, apellidos:ficha.apellidos, telefono:ficha.telefono };
+      function meter(row, reintento){
+        _sb.from('alumnos_club').insert(row).select().then(function(r){
+          if (r.error) {
+            if (!reintento) {
+              console.warn('alta alumno club (reintento sin campos nuevos)', r.error.message);
+              meter(base, true); return;
+            }
+            console.warn('alta alumno club', r.error.message);
+            if (cb) cb(false, r.error.message); return;
+          }
+          var nuevo = (r.data && r.data[0]) || row;
+          _acLista.push({ id:nuevo.id, nombre:nuevo.nombre, apellidos:nuevo.apellidos||'',
+                          telefono:nuevo.telefono||'', nivel:nuevo.nivel||'',
+                          nacimiento:nuevo.nacimiento||'', observaciones:nuevo.observaciones||'' });
+          _acGuardarLocal();
+          if (cb) cb(true);
+        }).catch(function(e){ if (cb) cb(false, e && e.message); });
+      }
+      var full = { scope_id:base.scope_id, nombre:base.nombre, apellidos:base.apellidos, telefono:base.telefono,
+                   nivel:ficha.nivel || null, nacimiento:ficha.nacimiento || null,
+                   observaciones:ficha.observaciones || null };
+      meter(full, false);
     }
     function _acBorrar(id, cb){
       _acInit();
@@ -14454,7 +14609,21 @@
     var _gtaMesOff    = 0;    // navegación por meses en el detalle
     var _gtaCache     = null; // índice { al:{nombre:{sesiones:[]}}, ents:[{nombre, alumnos:[]}] }
 
-    function abrirGestorTodosAlumnos() { _gtaFiltroTxt = ''; _gtaFiltroEnt = null; _gtaLetra = null; irA('pantalla-gestor-todos-alumnos'); }
+    var _gtaFiltroNiv = null;   // v0.308: null = todos los niveles
+    function abrirGestorTodosAlumnos() { _gtaFiltroTxt = ''; _gtaFiltroEnt = null; _gtaLetra = null; _gtaFiltroNiv = null; irA('pantalla-gestor-todos-alumnos'); }
+    // v0.308 — nivel de un alumno de la lista (vive en su ficha de academia)
+    function _gtaNivelDe(key) {
+      var a = _gtaCache && _gtaCache.al[key];
+      return (a && a.ficha && a.ficha.nivel) || '';
+    }
+    function _gtaNacDe(key) {
+      var a = _gtaCache && _gtaCache.al[key];
+      return (a && a.ficha && a.ficha.nacimiento) || '';
+    }
+    function gtaFiltroNivel(k) {
+      _gtaFiltroNiv = (_gtaFiltroNiv === k) ? null : k;
+      _gtaRenderLista();
+    }
     // v0.64.3: al tocar un alumno en la lista global de la academia se
     // abre la MISMA ficha que entrando por entrenador (editar datos,
     // alta/baja, mes navegable e historial por curso). Si el alumno tiene
@@ -14685,6 +14854,7 @@
         '<input id="gta-input" class="form-input" type="search" placeholder="🔍 Buscar alumno…" ' +
           'autocomplete="off" oninput="gtaFiltrar(this.value)" style="margin-bottom:0.6rem;">' +
         '<div id="gta-alta"></div>' +
+        '<div id="gta-niv-chips"></div>' +   // v0.308
         '<div id="gta-abc"></div>' +
         '<p class="ajustes-desc" id="gta-count" style="margin:0.15rem 0 0.6rem;"></p>' +
         '<div id="gta-lista"></div>' +
@@ -14741,6 +14911,19 @@
             '<input id="gta-tel" class="form-input" type="tel" placeholder="Teléfono" style="flex:1;min-width:110px;" ' +
               'onkeydown="if(event.key===\'Enter\'){event.preventDefault();gtaGuardarAlumno();}">' +
           '</div>' +
+          // v0.308 — nivel y nacimiento ya en el alta: es cuando se tienen
+          // los datos delante. Lo demás (observaciones) se añade luego.
+          '<div class="gta-alta-2">' +
+            '<select id="gta-niv" class="form-select">' +
+              '<option value="">Nivel — sin asignar</option>' +
+              AL_NIVELES.map(function(n){
+                return '<option value="' + n.k + '">' + n.ico + ' ' + n.t + '</option>';
+              }).join('') +
+            '</select>' +
+            '<input id="gta-nac" class="form-input" type="date" max="' + hoyLocal() + '" ' +
+              'title="Fecha de nacimiento" oninput="gtaAltaEdadPreview(this.value)">' +
+          '</div>' +
+          '<div class="gta-edad" id="gta-alta-edad">Sin fecha · sin categoría</div>' +
           '<div style="display:flex;gap:8px;margin-top:8px;">' +
             '<button class="btn btn-verde btn-sm" onclick="gtaGuardarAlumno()">Guardar</button>' +
             '<button class="btn btn-sec btn-sm" onclick="gtaToggleAlta()">Cancelar</button>' +
@@ -14774,6 +14957,10 @@
       if (!nom) { if (iN) iN.classList.add('form-error'); alert('El nombre es obligatorio.'); return; }
       var ape = (iA && iA.value || '').trim();
       var tel = (iT && iT.value || '').trim();
+      // v0.308
+      var niv = (document.getElementById('gta-niv') || {}).value || '';
+      var nac = (document.getElementById('gta-nac') || {}).value || '';
+      if (nac && nac > hoyLocal()) { alert('La fecha de nacimiento no puede ser futura.'); return; }
       // Aviso si ya existe alguien con ese nombre y apellidos
       var yaKey = _gtaFullKey(nom, ape);
       if (_gtaCache && _gtaCache.al[yaKey] &&
@@ -14784,7 +14971,11 @@
         if (typeof planToast === 'function') planToast('👤 ' + nom + ' añadido a la academia');
         renderGestorTodosAlumnos();
         _gestorHdrPintar();   // v0.302: el contador de la cabecera, al día
-      });
+      }, { nivel:niv, nacimiento:nac, observaciones:'' });   // v0.308
+    }
+    function gtaAltaEdadPreview(v) {
+      var el = document.getElementById('gta-alta-edad');
+      if (el) el.textContent = _gtaEdadTxt(v);
     }
 
     // Orden alfabético en español (respeta acentos y ñ)
@@ -14847,10 +15038,19 @@
       // v0.180: el porcentaje se va de aquí (ya no se usaba para decidir
       // nada) y su sitio lo ocupa la ✕ de eliminar alumno.
       var nEsc = _gEsc(n).replace(/'/g,"\\'");
+      // v0.308 — nivel y categoría en la tarjeta: son los dos datos por los
+      // que se busca a alguien en una lista de cien.
+      var _nv = _gtaNivelDe(n), _nac = _gtaNacDe(n);
+      var _edad = alEdad(_nac), _cat = alCategoriaTxt(_nac);
+      var etiq = '';
+      if (_nv)   etiq += '<span class="gta-tag niv-' + _nv + '">' + _gEsc(alNivelTxt(_nv)) + '</span>';
+      if (_cat)  etiq += '<span class="gta-tag cat">' + _gEsc(_cat) +
+                          (_edad !== '' ? ' · ' + _edad : '') + '</span>';
       return '<div class="gestor-card" onclick="abrirGestorTodosAlumno(\'' + nEsc + '\')">' +
         '<div class="gestor-card-ava">' + _gEsc(n.charAt(0).toUpperCase()) + '</div>' +
         '<div class="gestor-card-body">' +
           '<div class="gestor-card-nom">' + _gEsc(n) + '</div>' +
+          (etiq ? '<div class="gta-tags">' + etiq + '</div>' : '') +
           '<div class="gestor-card-meta">' + _gEsc(meta) + '</div>' +
           (conTxt ? '<div class="gestor-card-con">' + _gEsc(conTxt) + '</div>' : '') +
         '</div>' +
@@ -14876,13 +15076,40 @@
         return _gtaFiltroEnt == null || _gtaEntsDe(n)[_gtaFiltroEnt];
       });
 
+      // v0.308 — chips de NIVEL, con la cuenta de cada uno. Se pintan
+      // siempre (aunque un nivel esté vacío) para que se vea que existen, y
+      // «Sin nivel» solo aparece si de verdad hay alguno sin poner: es el
+      // recordatorio de lo que falta por rellenar.
+      var porNiv = {};
+      base.forEach(function(n){ var k = _gtaNivelDe(n) || '_'; porNiv[k] = (porNiv[k]||0)+1; });
+      var nivEl = document.getElementById('gta-niv-chips');
+      if (nivEl) {
+        var chips = AL_NIVELES.map(function(nv){
+          return '<button type="button" class="gta-nivchip' + (_gtaFiltroNiv === nv.k ? ' on' : '') +
+            '" onclick="gtaFiltroNivel(\'' + nv.k + '\')">' + nv.ico + ' ' + nv.t +
+            '<b>' + (porNiv[nv.k] || 0) + '</b></button>';
+        }).join('');
+        if (porNiv['_']) {
+          chips += '<button type="button" class="gta-nivchip sin' + (_gtaFiltroNiv === '_' ? ' on' : '') +
+            '" onclick="gtaFiltroNivel(\'_\')">Sin nivel<b>' + porNiv['_'] + '</b></button>';
+        }
+        nivEl.innerHTML = '<div class="gta-nivrow">' + chips + '</div>';
+      }
+      // El nivel acota antes que la letra: así el abecedario enseña solo las
+      // iniciales que de verdad tienen a alguien del nivel elegido.
+      var baseN = base.filter(function(n){
+        if (!_gtaFiltroNiv) return true;
+        var k = _gtaNivelDe(n);
+        return _gtaFiltroNiv === '_' ? !k : k === _gtaFiltroNiv;
+      });
+
       // Abecedario: letras con al menos un alumno en la base actual
       var dispon = {};
-      base.forEach(function(n){ dispon[_letraDe(n)] = true; });
+      baseN.forEach(function(n){ dispon[_letraDe(n)] = true; });
       var abcEl = document.getElementById('gta-abc');
       if (abcEl) abcEl.innerHTML = _abcBar(dispon, _gtaLetra, 'gtaLetra');
 
-      var visibles = base.filter(function(n){
+      var visibles = baseN.filter(function(n){
         if (txt && _galsNorm(n).indexOf(txt) < 0) return false;
         if (_gtaLetra && _letraDe(n) !== _gtaLetra) return false;
         return true;
@@ -14890,8 +15117,11 @@
 
       // Contador contextual
       if (cnt) {
+        var _nvTxt = _gtaFiltroNiv
+          ? (_gtaFiltroNiv === '_' ? ' · sin nivel' : ' · ' + (alNivelMeta(_gtaFiltroNiv) || {}).t)
+          : '';
         var ambito = (_gtaFiltroEnt != null ? (' · ' + _gEsc(_gtaFiltroEnt)) : '') +
-                     (_gtaLetra ? ' · letra ' + _gtaLetra : '');
+                     _nvTxt + (_gtaLetra ? ' · letra ' + _gtaLetra : '');
         cnt.textContent = (visibles.length === todos.length)
           ? todos.length + ' alumno' + (todos.length!==1?'s':'') + ' del club · toca uno para ver su ficha'
           : visibles.length + ' de ' + todos.length + ' alumnos' + ambito;
@@ -15103,6 +15333,10 @@
         nombre:    (f && f.nombre)    || al.nombre    || _gtaAlumno,
         apellidos: (f && f.apellidos) || al.apellidos || '',
         telefono:  (f && f.telefono)  || '',
+        // v0.308 — solo viven en la ficha de academia; sin ficha, en blanco
+        nivel:         (f && f.nivel)         || '',
+        nacimiento:    (f && f.nacimiento)    || '',
+        observaciones: (f && f.observaciones) || '',
         fichaId:   (al.ficha && al.ficha.id) || (f && f.id) || null
       };
     }
@@ -15125,6 +15359,13 @@
       if (sub) {
         var meta = [];
         if (d.apellidos) meta.push(d.apellidos);
+        // v0.308 — nivel, edad y categoría, que es lo que se mira al abrir
+        if (d.nivel) meta.push(alNivelTxt(d.nivel));
+        var _ed = alEdad(d.nacimiento);
+        if (_ed !== '') {
+          var _cat = alCategoriaTxt(d.nacimiento);
+          meta.push(_ed + ' años' + (_cat ? ' · ' + _cat : ''));
+        }
         if (d.telefono)  meta.push('📞 ' + d.telefono);
         sub.textContent = meta.length ? meta.join(' · ') : 'Sin apellidos ni teléfono';
       }
@@ -15162,6 +15403,23 @@
             '<input id="gta-ed-ape" class="form-input" type="text" placeholder="Apellidos" style="flex:1;min-width:110px;" value="' + _gEsc(d.apellidos) + '">' +
             '<input id="gta-ed-tel" class="form-input" type="tel" placeholder="Teléfono" style="flex:1;min-width:110px;" value="' + _gEsc(d.telefono) + '">' +
           '</div>' +
+          // ── v0.308 — nivel · nacimiento · observaciones ──
+          '<div class="gta-campo"><label class="gta-lbl" for="gta-ed-niv">Nivel</label>' +
+            '<select id="gta-ed-niv" class="form-select">' +
+              '<option value="">— sin asignar —</option>' +
+              AL_NIVELES.map(function(n){
+                return '<option value="' + n.k + '"' + (d.nivel === n.k ? ' selected' : '') + '>' +
+                       n.ico + ' ' + n.t + '</option>';
+              }).join('') +
+            '</select></div>' +
+          '<div class="gta-campo"><label class="gta-lbl" for="gta-ed-nac">Fecha de nacimiento</label>' +
+            '<input id="gta-ed-nac" class="form-input" type="date" max="' + hoyLocal() + '" ' +
+              'value="' + _gEsc(d.nacimiento) + '" oninput="gtaEdadPreview(this.value)">' +
+            '<div class="gta-edad" id="gta-ed-edad">' + _gtaEdadTxt(d.nacimiento) + '</div></div>' +
+          '<div class="gta-campo"><label class="gta-lbl" for="gta-ed-obs">Observaciones</label>' +
+            '<textarea id="gta-ed-obs" class="form-input gta-obs-in" rows="3" ' +
+              'placeholder="Lesiones, material, con quién juega, lo que haga falta recordar…">' +
+              _gEsc(d.observaciones) + '</textarea></div>' +
           '<div style="display:flex;gap:8px;margin-top:8px;">' +
             '<button class="btn btn-verde btn-sm" style="flex:1;" onclick="gtaGuardarDatos()">Guardar</button>' +
             '<button class="btn btn-sec btn-sm" style="flex:1;" onclick="gtaToggleEditar()">Cancelar</button>' +
@@ -15170,6 +15428,15 @@
         '</div>';
       }
       return '';   // v0.159: sin panel abierto, el cuerpo no lleva ficha
+    }
+    // v0.308 — tarjeta de observaciones (solo si las tiene y no se está
+    // editando ya, para no enseñar el mismo texto dos veces).
+    function _gtaObsHTML(al) {
+      if (_gtaEditOn || _gtaMoverOn) return '';
+      var d = _gtaDatosDe(al);
+      if (!d.observaciones) return '';
+      return '<div class="gta-obs"><div class="gta-obs-tit">📝 Observaciones</div>' +
+             '<div class="gta-obs-txt">' + _gEsc(d.observaciones) + '</div></div>';
     }
     function gtaToggleEditar() { _gtaEditOn = !_gtaEditOn; renderGestorTodosAlumno(); }
     // ── v0.158: CAMBIAR DE CLASE (mover de franja) ───────────────
@@ -15419,10 +15686,28 @@
       planToast('🔄 ' + d.nombre + ' movido a ' + (cDest.franja || 'la nueva franja'));
       renderGestorTodosAlumno();
     }
+    // v0.308 — la línea de debajo del campo de fecha, en vivo
+    function _gtaEdadTxt(nacISO) {
+      var e = alEdad(nacISO);
+      if (e === '') return 'Sin fecha · sin categoría';
+      var c = alCategoria(nacISO);
+      return e + ' año' + (e !== 1 ? 's' : '') +
+             (c ? ' · ' + c.t + (c.fuera ? ' (aún sin categoría FEP)' : '') : '');
+    }
+    function gtaEdadPreview(v) {
+      var el = document.getElementById('gta-ed-edad');
+      if (el) el.textContent = _gtaEdadTxt(v);
+    }
     function gtaGuardarDatos() {
       var nom = (document.getElementById('gta-ed-nom') || {}).value || '';
       var ape = (document.getElementById('gta-ed-ape') || {}).value || '';
       var tel = (document.getElementById('gta-ed-tel') || {}).value || '';
+      // v0.308 — los tres campos nuevos
+      var niv = (document.getElementById('gta-ed-niv') || {}).value || '';
+      var nac = (document.getElementById('gta-ed-nac') || {}).value || '';
+      var obs = (document.getElementById('gta-ed-obs') || {}).value || '';
+      obs = obs.trim();
+      if (nac && nac > hoyLocal()) { alert('La fecha de nacimiento no puede ser futura.'); return; }
       nom = nom.trim(); ape = ape.trim(); tel = tel.trim();
       if (!nom) { alert('El nombre es obligatorio.'); return; }
       var al = (_gtaCache && _gtaCache.al[_gtaAlumno]) || {};
@@ -15438,14 +15723,31 @@
         // Ya tiene ficha de academia: se actualiza
         _acInit();
         _acLista.forEach(function(f){
-          if (f.id === d.fichaId) { f.nombre = nom; f.apellidos = ape; f.telefono = tel; }
+          if (f.id === d.fichaId) {
+            f.nombre = nom; f.apellidos = ape; f.telefono = tel;
+            f.nivel = niv; f.nacimiento = nac; f.observaciones = obs;   // v0.308
+          }
         });
         _acGuardarLocal();
         if (_sb && _sbUser && String(d.fichaId).slice(0,4) !== 'loc-') {
-          _sb.from('alumnos_club').update({ nombre:nom, apellidos:ape, telefono:tel })
-            .eq('id', d.fichaId)
-            .then(function(r){ if (r.error) console.warn('editar alumno club', r.error.message); tras(); })
-            .catch(tras);
+          // v0.308: si falta la migración, el update falla por columna
+          // desconocida — se reintenta con lo de siempre para no perder la
+          // corrección del nombre por culpa de un campo nuevo.
+          var _base = { nombre:nom, apellidos:ape, telefono:tel };
+          var _full = { nombre:nom, apellidos:ape, telefono:tel,
+                        nivel:niv || null, nacimiento:nac || null, observaciones:obs || null };
+          var _upd = function(row, reintento){
+            _sb.from('alumnos_club').update(row).eq('id', d.fichaId)
+              .then(function(r){
+                if (r.error && !reintento) {
+                  console.warn('editar alumno club (reintento sin campos nuevos)', r.error.message);
+                  _upd(_base, true); return;
+                }
+                if (r.error) console.warn('editar alumno club', r.error.message);
+                tras();
+              }).catch(tras);
+          };
+          _upd(_full, false);
           return;
         }
         tras(); return;
@@ -15455,7 +15757,7 @@
       _acAnadir(nom, ape, tel, function(ok, err){
         if (!ok) { alert('No se pudo guardar' + (err ? ': ' + err : '') + '.'); return; }
         tras();
-      });
+      }, { nivel:niv, nacimiento:nac, observaciones:obs });
     }
     // v0.161: se retira _gtaFranjasHTML ("Sus franjas"). El entrenador de
     // cada día ya se ve en los chips del mes, y el reparto por curso en el
@@ -15473,7 +15775,10 @@
       // v0.159: las acciones (editar / cambiar de clase) y sus datos van en
       // la CABECERA, bajo el nombre. El cuerpo solo lleva el panel abierto.
       _gtaPintarCabecera(al);
-      var fichaHTML = _gtaFichaHTML(al);
+      // v0.308 — las observaciones se ven SIEMPRE, sin tener que abrir
+      // «Editar datos»: es una nota sobre la persona (lesiones, material,
+      // con quién juega) y si hay que buscarla no sirve de nada.
+      var fichaHTML = _gtaFichaHTML(al) + _gtaObsHTML(al);
       if (!al.sesiones.length) {
         cont.innerHTML = fichaHTML +
           '<div class="vacio" style="padding:1.2rem 0;"><div class="vacio-icono">📅</div>' +
