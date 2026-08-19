@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.309.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.310.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,19 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.310.0 — Ejercicios: las pestañas salen de la cabecera (2026-08)
+    (sin migraciones nuevas)
+    · Técnica · Combinada · Táctica · Otros bajan de la cabecera azul a la
+      ZONA DE FILTROS, justo encima del buscador y de los golpes. La cabecera
+      se queda con lo que le toca: el título y la cuenta.
+    · En el móvil eso son 40 px menos de azul y 40 px más de ejercicios, que
+      es a lo que se viene.
+    · Todo lo demás igual: siguen siendo la navegación de la pantalla (una
+      sección activa siempre) y conservan su contador y sus colores.
+    · Se retira el bloque de estilos de la v0.250 que invertía los tonos para
+      que se leyeran sobre el azul. Sobre el fondo claro valen los colores
+      originales, que nunca se habían borrado.
 
   v0.309.0 — Cuarto nivel de alumno: 🌿 Medio (2026-08)
     (sin migraciones nuevas — `nivel` ya es texto libre)
@@ -6064,18 +6077,11 @@
     .ejtab.secc-tactica.on { background:#993c1d; border-color:#993c1d; }
     .ejtab.secc-comb.on { background:#8a6d24; border-color:#8a6d24; }
     .ejtab:active { transform:scale(0.97); }
-    /* v0.250 — Las pestañas viven en la cabecera azul: se invierten los tonos */
-    .cabecera .ejtabs { position:relative; margin-top:13px; padding:0; }
-    .cabecera .ejtab { background:rgba(255,255,255,0.13); border-color:rgba(255,255,255,0.20);
-      color:rgba(255,255,255,0.85); box-shadow:none; padding:6px 11px; font-size:12px; }
-    .cabecera .ejtab b { background:rgba(255,255,255,0.16); color:rgba(255,255,255,0.8); }
-    .cabecera .ejtab.on { background:var(--blanco); border-color:var(--blanco); color:var(--verde);
-      box-shadow:0 2px 10px rgba(0,0,0,0.18); }
-    .cabecera .ejtab.on b { background:var(--verde-suave); color:var(--verde); }
-    .cabecera .ejtab.secc-tactica.on { background:#f7d9cd; border-color:#f7d9cd; color:#7d2f16; }
-    .cabecera .ejtab.secc-tactica.on b { background:rgba(153,60,29,0.14); color:#7d2f16; }
-    .cabecera .ejtab.secc-comb.on { background:#f3e4c2; border-color:#f3e4c2; color:#6d5518; }
-    .cabecera .ejtab.secc-comb.on b { background:rgba(109,85,24,0.14); color:#6d5518; }
+    /* v0.310 — Las pestañas salen de la cabecera azul y bajan a la zona de
+       filtros, con el buscador y los golpes. Se cae todo el bloque de tonos
+       invertidos que necesitaban sobre el azul (v0.250): sobre el fondo
+       claro valen los colores de siempre, que son los de arriba. */
+    .filtros-zona .ejtabs { margin:0 0 2px; padding:1px 0 4px; }
 
     /* ── ESTRELLAS ── */
     .stars { display:flex; gap:1px; align-items:center; }
@@ -8459,10 +8465,12 @@
       <button class="btn-volver" onclick="irA('pantalla-inicio')">‹ Inicio</button>
       <div class="cab-titulo">Ejercicios</div>
       <div class="cab-sub" id="sub-ejercicios">0 ejercicios</div>
-      <div id="filtros-tipo-ej"></div>
     </div>
-    <!-- Filtros fuera del scroll del contenido -->
+    <!-- Filtros fuera del scroll del contenido.
+         v0.310: las pestañas de tipo (Técnica · Combinada · Táctica · Otros)
+         bajan aquí, con el resto de filtros, y dejan la cabecera limpia. -->
     <div class="filtros-zona">
+      <div id="filtros-tipo-ej"></div>
       <input id="busqueda-ej" type="search" inputmode="search" autocomplete="off"
              placeholder="🔍 Buscar por nombre o código…" oninput="buscarEjercicios(this.value)"
              style="width:100%;box-sizing:border-box;border:1px solid var(--borde,#d8d8d2);border-radius:10px;padding:9px 12px;font-size:14px;font-family:inherit;background:#fff;color:var(--tinta);outline:none;margin-bottom:2px;">
@@ -9211,7 +9219,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.309.0';
+    var APP_VERSION = '0.310.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
