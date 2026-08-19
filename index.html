@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.310.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.312.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,39 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.312.0 — En el repositorio, «Por grabar» en vez de un hueco negro (2026-08)
+    (sin migraciones nuevas)
+    · CONTEXTO: `sync_padel.py` dejó de filtrar por vídeo el 28 de julio —antes
+      solo subían los ejercicios grabados, y eso dejaba fuera 12 de las 23
+      áreas de trabajo—. Desde entonces sube el vault entero: hoy son 117
+      ejercicios, 19 con vídeo y 98 por grabar.
+    · EL PROBLEMA: en la ficha de pista de una clase tipo (v0.305) la imagen
+      ocupa todo el ancho. Sin vídeo quedaba un rectángulo negro con una
+      pelotita, que en pista se lee como «no ha cargado».
+    · AHORA pone «POR GRABAR», con borde discontinuo y claqueta. Se entiende
+      que falta material, no que la app falle, y de paso la propia app va
+      diciendo lo que queda pendiente.
+    · Vale igual para la sesión del área y para los ejercicios del carro. La
+      pantalla Ejercicios ya lo hacía desde la v0.248; esto lo iguala.
+
+  v0.311.0 — FIX: en el móvil, el bloque salía sin sus sesiones (2026-08)
+    (sin migraciones nuevas)
+    · EL FALLO: entrabas en un bloque del plan —«Presión en la red en pareja»,
+      por ejemplo— y en el MÓVIL salía el aviso «esta fila tiene 1 sesión
+      enlazada» pero debajo no había nada. En el ordenador sí se veía.
+    · POR QUÉ: la v0.287 escondió en el móvil las listas de sesiones que se
+      despliegan bajo cada bloque del catálogo (con seis bloques por apartado
+      la pantalla se hacía interminable). La regla iba por clase suelta,
+      `.plan-item-ses`, y esa clase la usan TRES sitios: la fila del catálogo,
+      el detalle del bloque y el resumen. En los dos últimos la lista no es
+      ruido, es el contenido — y se escondía igual.
+    · ARREGLO: las listas de la fila del catálogo se marcan ahora con
+      `plan-inline` y la regla del móvil solo mira a esas. El detalle del
+      bloque y el resumen vuelven a verse en el móvil.
+    · Es la misma clase de fallo que la v0.262 (un selector genérico que
+      capturaba de más). Cuando una regla dependa de DÓNDE está el elemento,
+      la clase tiene que decirlo.
 
   v0.310.0 — Ejercicios: las pestañas salen de la cabecera (2026-08)
     (sin migraciones nuevas)
@@ -7169,6 +7202,11 @@
       display:flex; align-items:center; justify-content:center; cursor:pointer; }
     .ctf-img img { width:100%; height:100%; object-fit:cover; display:block; }
     .ctf-noimg { font-size:38px; }
+    /* v0.312 — sin vídeo no es un fallo, es material pendiente de grabar */
+    .ctf-img.porgrabar { flex-direction:column; gap:6px; background:#1e293b;
+      border:1.5px dashed #475569; cursor:default; }
+    .ctf-pend { font-size:13px; font-weight:800; letter-spacing:.04em;
+      text-transform:uppercase; color:#94a3b8; }
     .ctf-play { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
       font-size:40px; color:#fff; text-shadow:0 2px 12px rgba(0,0,0,.75); pointer-events:none; }
     .ctf-nvid { position:absolute; top:6px; left:6px; min-width:22px; text-align:center;
@@ -7888,9 +7926,14 @@
     /* v0.287 — En el MÓVIL, las sesiones enlazadas no se despliegan bajo cada
        bloque: con seis bloques por apartado la pantalla se hacía interminable.
        Queda el número a la derecha, y las sesiones se ven al entrar al bloque.
-       En pantalla ancha sí caben, así que ahí no cambia nada. */
+       En pantalla ancha sí caben, así que ahí no cambia nada.
+       v0.311 (FIX): la regla iba por clase suelta y esa clase la usan TRES
+       sitios. Dentro del bloque, y en el resumen, la lista NO es ruido: es el
+       contenido. En el móvil desaparecía y en el ordenador no, que es
+       exactamente lo que se veía. Ahora solo se esconden las de la fila del
+       catálogo, marcadas con `plan-inline`. */
     @media (max-width: 699px) {
-      .plan-item-ses, .plan-item-ses-vacio { display:none; }
+      .plan-item-ses.plan-inline, .plan-item-ses-vacio.plan-inline { display:none; }
     }
     /* Ordenador: bloque estrecho a la izquierda, sesiones en rejilla a la derecha */
     @media (min-width:560px) {
@@ -9219,7 +9262,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.310.0';
+    var APP_VERSION = '0.312.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -16907,7 +16950,7 @@
       if (nivel === 'competicion') {
         var ejsB = _planEjerciciosDeBloque(nivel, it);
         if (ejsB.length) {
-          h2 += '<div class="plan-item-ses">';
+          h2 += '<div class="plan-item-ses plan-inline">';
           ejsB.forEach(function(e){
             h2 += '<div class="plan-ses-mini" onclick="verEjercicio(' + e.id + ',\'planif\')" title="' + e.nombre.replace(/"/g,'') + '">' +
               '<span class="plan-ses-mini-ic">🎯</span>' +
@@ -16922,7 +16965,7 @@
           // contenido real detrás (p. ej. "Presión en la red en pareja").
           var sesLeg = _planSesionesDeBloque(nivel, it);
           if (sesLeg.length) {
-            h2 += '<div class="plan-item-ses">';
+            h2 += '<div class="plan-item-ses plan-inline">';
             sesLeg.forEach(function(c){
               h2 += '<div class="plan-ses-mini' + (c.trabajada ? ' trabajada' : '') + '" onclick="verSesion(' + c.id + ',\'planif\')" title="' + nombreSesion(c).replace(/"/g,'') + ' (sesión antigua, sin migrar a ejercicios)">' +
                 '<span class="plan-ses-mini-ic">' + (c.trabajada ? '✓' : '🎾') + '</span>' +
@@ -16930,13 +16973,13 @@
             });
             h2 += '</div>';
           } else {
-            h2 += '<div class="plan-item-ses-vacio">Sin ejercicios enlazados</div>';
+            h2 += '<div class="plan-item-ses-vacio plan-inline">Sin ejercicios enlazados</div>';
           }
         }
       } else {
         var ses = _sesionesDeBloqueUnion(nivel, mes, it);
         if (ses.length) {
-          h2 += '<div class="plan-item-ses">';
+          h2 += '<div class="plan-item-ses plan-inline">';
           ses.forEach(function(c){
             h2 += '<div class="plan-ses-mini' + (c.trabajada ? ' trabajada' : '') + '" onclick="verSesion(' + c.id + ',\'planif\')" title="' + nombreSesion(c).replace(/"/g,'') + '">' +
               '<span class="plan-ses-mini-ic">' + (c.trabajada ? '✓' : '🎾') + '</span>' +
@@ -16944,7 +16987,7 @@
           });
           h2 += '</div>';
         } else {
-          h2 += '<div class="plan-item-ses-vacio">Sin sesiones enlazadas</div>';
+          h2 += '<div class="plan-item-ses-vacio plan-inline">Sin sesiones enlazadas</div>';
         }
       }
       h2 += '</div>'; // .plan-item
@@ -19078,9 +19121,13 @@
            : (vids.length > 1 ? '<div class="ctf-sub">' + vids.length + ' vídeos</div>' : ''));
       if (!vids.length) {
         var th0 = _rutaEjThumb(e);
-        h += '<div class="ctf-img">' + (th0
+        // v0.312: desde que el sincronizador sube TODO el vault (y no solo lo
+        // grabado), muchos ejercicios llegan sin vídeo. Un recuadro negro y
+        // vacío parece un error de carga; decir «por grabar» lo explica y de
+        // paso deja a la vista lo que falta.
+        h += '<div class="ctf-img' + (th0 ? '' : ' porgrabar') + '">' + (th0
           ? '<img src="' + th0 + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
-          : '<span class="ctf-noimg">🎾</span>') + '</div>';
+          : '<span class="ctf-noimg">🎬</span><span class="ctf-pend">Por grabar</span>') + '</div>';
       } else {
         h += '<div class="ctf-imgs' + (vids.length > 1 ? ' multi' : '') + '">';
         vids.forEach(function(v, vi){
@@ -19143,9 +19190,9 @@
           (x ? ' onclick="verSesion(' + x.id + ',\'planif\')"' : '') + '>' +
           '<div class="ctf-nom">' + _gEsc(nom) + '</div>' +
           (x ? '' : '<div class="ctf-sub falta">ya no existe</div>') +
-          '<div class="ctf-img">' + (th
+          '<div class="ctf-img' + (th ? '' : ' porgrabar') + '">' + (th   // v0.312
             ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
-            : '<span class="ctf-noimg">🎾</span>') + '</div></div>';
+            : '<span class="ctf-noimg">🎬</span><span class="ctf-pend">Por grabar</span>') + '</div></div>';
       });
       if ((c.sesiones || []).some(function(id){ return !todasS.some(function(t){ return t.id === id; }); }))
         h += '<div class="ct-aviso">Alguna sesión ya no existe — se borró del catálogo</div>';
