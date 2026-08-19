@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.312.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.313.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,27 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.313.0 — FIX: en Competición solo se veía UNA sesión de seis (2026-08)
+    (sin migraciones nuevas)
+    · EL FALLO: en el plan de Competición solo aparecía una sesión, «Presión en
+      la red en pareja». Las otras cinco estaban en la base de datos, subidas
+      del vault con su apartado y su bloque, y no salían por ningún sitio.
+    · POR QUÉ: desde la v0.119 Competición enlaza EJERCICIOS directamente, y esa
+      rama del código nunca preguntó por las sesiones del bloque. Solo tenía un
+      apaño (v0.127) que miraba `sesInc` —el enlace manual antiguo— y solo
+      cuando la fila no tenía ningún ejercicio. La única sesión que se veía era
+      justamente la que arrastraba ese enlace viejo; las que llegan del vault
+      por `apartado` + `bloque` no las miraba nadie.
+    · ARREGLO: en Competición la fila y el detalle del bloque enseñan ahora las
+      dos cosas — sus ejercicios (🎯) y sus sesiones (🎾) —, usando la misma
+      unión que ya usaban Iniciación y Avanzado (_sesionesDeBloqueUnion).
+    · Y EL CONTADOR CUADRA. Contaba con `_planSesionesDeBloque`, que solo mira
+      `sesInc`: ponía 0 mientras la lista de debajo enseñaba sesiones. Ahora
+      cuenta lo mismo que se ve, y el title lo desglosa («3 ejercicios · 2
+      sesiones»). Esto afectaba a los tres niveles, no solo a Competición.
+    · Se retira el aviso «enlazada al modelo antiguo (sin migrar)»: ya no
+      distingue nada útil, porque ahora se ven todas.
 
   v0.312.0 — En el repositorio, «Por grabar» en vez de un hueco negro (2026-08)
     (sin migraciones nuevas)
@@ -9262,7 +9283,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.312.0';
+    var APP_VERSION = '0.313.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -16766,22 +16787,26 @@
             visEj.forEach(function(e){ h += ejercicioCardHTML(e, 'plan'); });
             h += '</div>';
           } else {
-            // v0.127: fallback — sesión enlazada al modelo antiguo (sesInc),
-            // de antes del POC de ejercicios (v0.119), sin migrar todavía.
-            var incSesLeg = (it && it.sesInc) ? it.sesInc : [];
-            var sesLeg = incSesLeg.length ? leerClases().filter(function(c){ return incSesLeg.indexOf(c.id) >= 0; }) : [];
-            if (sesLeg.length) {
-              h += '<div class="plan-ses-intro">⚠️ Sin ejercicios enlazados todavía, pero esta fila tiene ' + sesLeg.length + (sesLeg.length!==1 ? ' sesiones' : ' sesión') + ' enlazada' + (sesLeg.length!==1?'s':'') + ' al modelo antiguo (sin migrar). Toca para ver el detalle.</div>';
-              h += '<div class="plan-item-ses" style="border:1px solid var(--borde);border-radius:10px;">';
-              sesLeg.forEach(function(c){
-                h += '<div class="plan-ses-mini' + (c.trabajada ? ' trabajada' : '') + '" onclick="verSesion(' + c.id + ',\'planif\')" title="' + nombreSesion(c).replace(/"/g,'') + '">' +
-                  '<span class="plan-ses-mini-ic">' + (c.trabajada ? '✓' : '🎾') + '</span>' +
-                  '<span class="plan-ses-mini-nom">' + nombreSesion(c) + '</span></div>';
-              });
-              h += '</div>';
-            } else {
-              h += '<div class="plan-ses-intro">Esta fila no tiene ejercicios enlazados. Pulsa «Añadir / quitar ejercicios» para enlazar los que quieras.</div>';
-            }
+            h += '<div class="plan-ses-intro">Esta fila no tiene ejercicios enlazados. Pulsa «Añadir / quitar ejercicios» para enlazar los que quieras.</div>';
+          }
+          // ── v0.313 — Y SUS SESIONES ────────────────────────────────
+          // Competición enlaza ejercicios directamente (POC v0.119), pero las
+          // sesiones del vault llegan igual a todos los niveles con su
+          // apartado y su bloque. Aquí solo se miraba `sesInc` (el enlace
+          // manual antiguo), así que de las seis sesiones de competición solo
+          // se veía la única que lo tenía. Las demás estaban en la base de
+          // datos y no salían por ninguna parte.
+          var sesU = _sesionesDeBloqueUnion(ctx.nivel, ctx.mes, it);
+          if (sesU.length) {
+            h += '<div class="plan-ses-intro" style="margin-top:12px;">' + sesU.length +
+                 (sesU.length !== 1 ? ' sesiones' : ' sesión') + ' de este bloque · toca para ver el detalle.</div>';
+            h += '<div class="plan-item-ses" style="border:1px solid var(--borde);border-radius:10px;">';
+            sesU.forEach(function(c){
+              h += '<div class="plan-ses-mini' + (c.trabajada ? ' trabajada' : '') + '" onclick="verSesion(' + c.id + ',\'planif\')" title="' + nombreSesion(c).replace(/"/g,'') + '">' +
+                '<span class="plan-ses-mini-ic">' + (c.trabajada ? '✓' : '🎾') + '</span>' +
+                '<span class="plan-ses-mini-nom">' + nombreSesion(c) + '</span></div>';
+            });
+            h += '</div>';
           }
         }
         document.getElementById('plan-ses-list').innerHTML = h;
@@ -16936,10 +16961,17 @@
         // SESIONES del bloque. En la v0.285 contaba clases tipo, pero desde la
         // v0.286 pulsar aquí lleva a las sesiones, así que no correspondía.
         // Las veces trabajadas siguen en el title, que es donde no estorban.
-        var nSesB = (nivel === 'competicion')
-          ? _planEjerciciosDeBloque(nivel, it).length || _planSesionesDeBloque(nivel, it).length
-          : _planSesionesDeBloque(nivel, it).length;
-        var titSes = (nSesB ? nSesB + (nSesB !== 1 ? ' sesiones' : ' sesión') : 'Sin sesiones enlazadas') +
+        // v0.313: el contador contaba con `_planSesionesDeBloque`, que solo mira
+        // el enlace manual antiguo (sesInc). Las sesiones que llegan del vault
+        // por apartado+bloque no entraban, así que ponía 0 mientras la lista de
+        // debajo enseñaba sesiones. Ahora cuenta lo mismo que se ve.
+        var _nEjB  = (nivel === 'competicion') ? _planEjerciciosDeBloque(nivel, it).length : 0;
+        var _nSesU = _sesionesDeBloqueUnion(nivel, mes, it).length;
+        var nSesB  = _nEjB + _nSesU;
+        var _bits = [];
+        if (_nEjB)  _bits.push(_nEjB + (_nEjB !== 1 ? ' ejercicios' : ' ejercicio'));
+        if (_nSesU) _bits.push(_nSesU + (_nSesU !== 1 ? ' sesiones' : ' sesión'));
+        var titSes = (_bits.length ? _bits.join(' · ') : 'Sin nada enlazado') +
                      (veces ? ' · trabajado ' + veces + '× este curso' : '');
         h2 += '<div class="plan-item-contador' + (nSesB ? ' con' : '') + '" title="' + titSes + '">' + nSesB + '</div>';
       }
@@ -16948,33 +16980,26 @@
       // ── Enlazados (inline, tocables) ──
       // v0.119 (POC): en Competición son ejercicios directos; en el resto, sesiones.
       if (nivel === 'competicion') {
+        // v0.313: los ejercicios enlazados a mano Y las sesiones del bloque.
+        // Antes las sesiones solo salían si NO había ejercicios, y aun así
+        // solo las del enlace manual antiguo.
         var ejsB = _planEjerciciosDeBloque(nivel, it);
-        if (ejsB.length) {
+        var sesC = _sesionesDeBloqueUnion(nivel, mes, it);
+        if (ejsB.length || sesC.length) {
           h2 += '<div class="plan-item-ses plan-inline">';
           ejsB.forEach(function(e){
             h2 += '<div class="plan-ses-mini" onclick="verEjercicio(' + e.id + ',\'planif\')" title="' + e.nombre.replace(/"/g,'') + '">' +
               '<span class="plan-ses-mini-ic">🎯</span>' +
               '<span class="plan-ses-mini-nom">' + e.nombre + '</span></div>';
           });
+          sesC.forEach(function(c){
+            h2 += '<div class="plan-ses-mini' + (c.trabajada ? ' trabajada' : '') + '" onclick="verSesion(' + c.id + ',\'planif\')" title="' + nombreSesion(c).replace(/"/g,'') + '">' +
+              '<span class="plan-ses-mini-ic">' + (c.trabajada ? '✓' : '🎾') + '</span>' +
+              '<span class="plan-ses-mini-nom">' + nombreSesion(c) + '</span></div>';
+          });
           h2 += '</div>';
         } else {
-          // v0.127: fallback — filas migradas antes del POC de ejercicios
-          // (v0.119) pueden tener una SESIÓN enlazada a la antigua (sesInc)
-          // y ningún ejercicio (ejInc) todavía. Sin este fallback, ese
-          // enlace se veía "Sin ejercicios enlazados" aunque sí hubiera
-          // contenido real detrás (p. ej. "Presión en la red en pareja").
-          var sesLeg = _planSesionesDeBloque(nivel, it);
-          if (sesLeg.length) {
-            h2 += '<div class="plan-item-ses plan-inline">';
-            sesLeg.forEach(function(c){
-              h2 += '<div class="plan-ses-mini' + (c.trabajada ? ' trabajada' : '') + '" onclick="verSesion(' + c.id + ',\'planif\')" title="' + nombreSesion(c).replace(/"/g,'') + ' (sesión antigua, sin migrar a ejercicios)">' +
-                '<span class="plan-ses-mini-ic">' + (c.trabajada ? '✓' : '🎾') + '</span>' +
-                '<span class="plan-ses-mini-nom">' + nombreSesion(c) + '</span></div>';
-            });
-            h2 += '</div>';
-          } else {
-            h2 += '<div class="plan-item-ses-vacio plan-inline">Sin ejercicios enlazados</div>';
-          }
+          h2 += '<div class="plan-item-ses-vacio plan-inline">Sin ejercicios ni sesiones enlazados</div>';
         }
       } else {
         var ses = _sesionesDeBloqueUnion(nivel, mes, it);
