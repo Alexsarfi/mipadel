@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.305.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.306.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,39 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.306.0 — Área de trabajo, en dos pestañas: el Plan y los ejercicios de juego (2026-08)
+    (sin migraciones nuevas)
+    · EL PROBLEMA: los ejercicios en los que la bola SE PONE EN JUEGO (36 de
+      los 106) solo se podían ver mezclados con los 70 de carro en la pantalla
+      Ejercicios, ordenados por golpe. Y ese orden es lógica de carro: en los
+      de área el golpe muchas veces es «mixto» o está vacío, y lo que de
+      verdad los distingue es en qué situación del punto se juegan y cuántos
+      jugadores hacen falta.
+    · ÁREA (barra de abajo) GANA DOS PESTAÑAS. «Plan» es el catálogo de
+      siempre, intacto: nivel → apartado → bloque → áreas de trabajo.
+      «Ejercicios de juego» es el repertorio de los que NO son de carro.
+    · EL EJE PRINCIPAL ES LA SITUACIÓN DEL PUNTO, en el orden en que el punto
+      se desarrolla: fondo → mitad de pista → transición → red → saque y
+      resto. Cada situación es una cabecera con su cuenta, y debajo sus
+      ejercicios en fila con la miniatura al lado, como en Ejercicios.
+    · SEGUNDA FILA, «JUGADORES»: filtra por formato (2v0, 3J, 4J, rotaciones),
+      que en pista es la restricción real — llegas y tienes los alumnos que
+      tienes. Se toca el activo para soltarlo, como en el resto de la app.
+    · La chapa de cada tarjeta enseña el GOLPE concreto si lo tiene, y si es
+      «mixto» o no tiene, la INTENCIÓN. Aquí el golpe no agrupa, así que como
+      dato suelto sí aporta.
+    · En esta pestaña la barra de niveles se ESCONDE: el repertorio no depende
+      del nivel del plan, y dejarla puesta habría dado a entender que filtra.
+    · Los que no tengan «situacion:» salen al final en «Sin situación puesta»,
+      para que se vean y se puedan arreglar en el vault en vez de perderse.
+    · Y el atrás vuelve aquí (nuevo origen 'area'), no a la pantalla
+      Ejercicios — el mismo fallo que arregló la v0.301 por otro camino.
+    · EN EL VAULT, el espejo de esto es la nota «00 Índice - Ejercicios de
+      área» de 03 EJERCICIOS: los mismos apartados y el mismo orden, con
+      consultas Dataview. No mueve ningún archivo: el único sitio donde está
+      escrito si un ejercicio es de carro o de área sigue siendo su campo
+      `parte:`.
 
   v0.305.0 — El Repositorio, y sus clases en tamaño de pista (2026-08)
     (sin migraciones nuevas)
@@ -6031,16 +6064,30 @@
     /* v0.246 — Pantalla EJERCICIOS: tarjeta en FILA, miniatura al lado.
        Va acotado a #lista-ejercicios para no tocar las mismas tarjetas
        cuando se reutilizan en Planificación o en el resumen del día. */
-    #lista-ejercicios .grid-ejercicios { grid-template-columns:1fr; gap:8px; }
-    #lista-ejercicios .ejcard { display:flex; align-items:stretch; }
-    #lista-ejercicios .ejcard-thumb { width:132px; flex-shrink:0; aspect-ratio:16/10; }
-    #lista-ejercicios .ejcard-body { flex:1; min-width:0; padding:9px 12px; display:flex; flex-direction:column; justify-content:center; gap:2px; }
-    #lista-ejercicios .ejcard-titulo { font-size:13.5px; -webkit-line-clamp:3; }
-    #lista-ejercicios .ejcard-meta { margin-top:4px; }
-    #lista-ejercicios .ejcard-play { width:30px; height:30px; font-size:13px; }
+    /* v0.306: la clase .ejlista-filas lleva este mismo formato de fila a la
+       pestaña «Ejercicios de juego» de Área, que es el mismo tipo de
+       navegación. Se añade como segundo selector en vez de duplicar reglas. */
+    #lista-ejercicios .grid-ejercicios,
+    .ejlista-filas .grid-ejercicios { grid-template-columns:1fr; gap:8px; }
+    #lista-ejercicios .ejcard,
+    .ejlista-filas .ejcard { display:flex; align-items:stretch; }
+    #lista-ejercicios .ejcard-thumb,
+    .ejlista-filas .ejcard-thumb { width:132px; flex-shrink:0; aspect-ratio:16/10; }
+    #lista-ejercicios .ejcard-body,
+    .ejlista-filas .ejcard-body { flex:1; min-width:0; padding:9px 12px; display:flex; flex-direction:column; justify-content:center; gap:2px; }
+    #lista-ejercicios .ejcard-titulo,
+    .ejlista-filas .ejcard-titulo { font-size:13.5px; -webkit-line-clamp:3; }
+    #lista-ejercicios .ejcard-meta,
+    .ejlista-filas .ejcard-meta { margin-top:4px; }
+    #lista-ejercicios .ejcard-play,
+    .ejlista-filas .ejcard-play { width:30px; height:30px; font-size:13px; }
     /* Short (vertical): se amplía para que las barras negras salgan de la caja */
-    #lista-ejercicios .ejcard.vert .ejcard-img { transform:scale(1.85); }
-    @media (min-width:560px) { #lista-ejercicios .grid-ejercicios { grid-template-columns:1fr 1fr; } }
+    #lista-ejercicios .ejcard.vert .ejcard-img,
+    .ejlista-filas .ejcard.vert .ejcard-img { transform:scale(1.85); }
+    @media (min-width:560px) {
+      #lista-ejercicios .grid-ejercicios,
+      .ejlista-filas .grid-ejercicios { grid-template-columns:1fr 1fr; }
+    }
     /* v0.247 — Secciones por tipo (Técnica simple · Combinada · Táctica),
        como las carpetas de 03 EJERCICIOS en el vault. */
     #lista-ejercicios .secc { margin:0 0 22px; }
@@ -6074,10 +6121,13 @@
       color:var(--gris); background:var(--verde-suave); padding:1px 6px; border-radius:5px; }
     .ejcard-niv { font-size:9px; color:var(--gris); letter-spacing:1.5px; }
     /* Pendientes de grabar: se ven, pero apagados */
-    #lista-ejercicios .ejcard.porgrabar { opacity:.62; }
-    #lista-ejercicios .ejcard-nov { background:var(--verde-suave); display:flex; align-items:center;
+    #lista-ejercicios .ejcard.porgrabar,
+    .ejlista-filas .ejcard.porgrabar { opacity:.62; }
+    #lista-ejercicios .ejcard-nov,
+    .ejlista-filas .ejcard-nov { background:var(--verde-suave); display:flex; align-items:center;
       justify-content:center; }
-    #lista-ejercicios .ejcard-nov span { font-size:19px; filter:grayscale(1); opacity:.5; }
+    #lista-ejercicios .ejcard-nov span,
+    .ejlista-filas .ejcard-nov span { font-size:19px; filter:grayscale(1); opacity:.5; }
 
     /* ── VACÍO ── */
     .vacio { text-align:center; padding:2.5rem 1rem; color:var(--gris); }
@@ -8421,6 +8471,8 @@
       <button class="btn-volver" onclick="irA('pantalla-inicio')">‹ Inicio</button>
       <div class="cab-titulo">Área de trabajo</div>
       <div class="cab-sub" id="area-sub">—</div>
+      <!-- v0.306: Plan (apartados y bloques) / Ejercicios de juego -->
+      <div class="area-tabs" id="area-tabs"></div>
       <!-- v0.233: los niveles, en la propia cabecera -->
       <div class="nivelbar area-nivelbar" id="area-nivelbar"></div>
     </div>
@@ -8957,6 +9009,29 @@
     .area-nivelbar { margin:10px 0 0; padding:0; background:none; gap:5px; }
     .area-nivelbar .nivel-btn { padding:6px 4px; }
     .area-nivelbar .nivel-btn-lbl { font-size:10px; }
+    /* v0.306: dos pestañas en la cabecera de Área — el PLAN (apartados y
+       bloques por nivel) y el REPERTORIO de ejercicios de juego. */
+    .area-tabs { display:flex; gap:4px; margin:12px 0 0; padding:3px;
+                 background:rgba(255,255,255,0.10); border-radius:12px; }
+    .area-tab { flex:1; min-width:0; background:none; border:none; border-radius:9px;
+                font-family:'Outfit',sans-serif; font-size:11px; font-weight:700;
+                color:rgba(255,255,255,0.62); padding:7px 4px; cursor:pointer;
+                white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+                -webkit-tap-highlight-color:transparent; transition:all .15s; }
+    .area-tab.activo { background:var(--blanco); color:var(--verde);
+                       box-shadow:0 2px 8px rgba(0,0,0,0.18); }
+    .area-tab:active { transform:scale(0.97); }
+    /* Cabecera de cada situación del punto dentro del repertorio */
+    .areaej-sit { display:flex; align-items:center; gap:7px; margin:14px 0 8px; }
+    .areaej-sit:first-child { margin-top:2px; }
+    .areaej-sit-ico { font-size:15px; line-height:1; }
+    .areaej-sit-lbl { font-size:13px; font-weight:800; color:var(--texto); }
+    .areaej-sit-n   { font-size:10px; font-weight:800; color:var(--gris);
+                      background:var(--arena); border:1px solid var(--borde);
+                      border-radius:20px; padding:1px 8px; }
+    .areaej-sit-linea { flex:1; height:1px; background:var(--borde); }
+    .areaej-filtro-tit { font-size:9px; font-weight:800; color:var(--gris);
+                         letter-spacing:.06em; text-transform:uppercase; margin:0 0 5px 2px; }
     .appnav-btn > span:last-child{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .appnav-btn .d{ font-size:21px; line-height:1; }
     .appnav-btn.activo{ color:var(--dorado); }
@@ -9049,7 +9124,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.305.0';
+    var APP_VERSION = '0.306.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -21842,7 +21917,10 @@
       // el tipo: en TÁCTICA manda la intención (anular/dominar/definir) y en
       // técnica el puesto que ocupa en la progresión del golpe. Detrás van
       // formato y nivel, que es lo que necesitas saber para montar la clase.
-      var esEj = (origen === 'ejercicios');
+      // v0.306: 'area' (pestaña Ejercicios de juego) usa las mismas chapas que
+      // la pantalla Ejercicios — formato, nivel e intención — porque es la
+      // misma información que necesitas para montar la clase.
+      var esEj = (origen === 'ejercicios' || origen === 'area');
       if (esEj && ejTipo(ej) === 'Táctica') {
         var itn = ejIntencion(ej);
         if (itn) badges += '<span class="ejcard-int ' + itn + '">' + INTENCION_LABEL[itn] + '</span>';
@@ -22119,8 +22197,12 @@
 
     function verEjercicio(id, origen) {
       ejActivoId      = id;
+      // v0.306: 'area' es la pestaña «Ejercicios de juego» de Área de trabajo.
+      // Sin este caso, volver desde un ejercicio abierto ahí te dejaba en la
+      // pantalla Ejercicios, que no es de donde venías.
       origenDetalleEj = origen === 'explorar' ? 'pantalla-explorar-cat' : origen === 'sesion' ? 'pantalla-detalle-sesion' :
-                        origen === 'plan' ? 'pantalla-plan-sesiones' : origen === 'planif' ? 'pantalla-planificacion' : 'pantalla-ejercicios';
+                        origen === 'plan' ? 'pantalla-plan-sesiones' : origen === 'planif' ? 'pantalla-planificacion' :
+                        origen === 'area' ? 'pantalla-clases-niveles' : 'pantalla-ejercicios';
 
       var ej   = leerEjercicios().filter(function(e){ return e.id === id; })[0];
       var cats = leerCategorias();
@@ -22439,9 +22521,159 @@
       grupoClasesSel = null;
       renderClasesNiveles();
     }
+    // ══ v0.306 — ÁREA, dos pestañas ══════════════════════════════════════
+    // «Plan» es el catálogo de siempre: nivel → apartado → bloque → áreas de
+    // trabajo. «Ejercicios de juego» es el repertorio de los que NO son de
+    // carro (`parte: area` en el vault), que hasta ahora solo se veían
+    // mezclados con los de carro en la pantalla Ejercicios.
+    //
+    // El eje principal es la SITUACIÓN DEL PUNTO, en el orden en que el punto
+    // se desarrolla: fondo → mitad de pista → transición → red → saque. Es el
+    // mismo orden que la nota «00 Índice - Ejercicios de área» del vault, para
+    // que buscar en el móvil y buscar en Obsidian se sientan igual.
+    var AREA_SIT_ORDEN = ['fondo', 'mitad-pista', 'transicion', 'red', 'saque'];
+    var _areaTab    = null;   // 'plan' | 'ejs' — se recuerda entre sesiones
+    var _areaEjSit  = null;   // situación elegida (null = todas)
+    var _areaEjForm = null;   // formato elegido (null = todos)
+
+    function areaTab() {
+      if (_areaTab === null) {
+        try { _areaTab = localStorage.getItem('padel-area-tab') || 'plan'; }
+        catch (e) { _areaTab = 'plan'; }
+        if (_areaTab !== 'ejs') _areaTab = 'plan';
+      }
+      return _areaTab;
+    }
+    function areaSetTab(k) {
+      _areaTab = (k === 'ejs') ? 'ejs' : 'plan';
+      try { localStorage.setItem('padel-area-tab', _areaTab); } catch (e) {}
+      _areaEjSit = null; _areaEjForm = null;   // los filtros no se arrastran
+      renderClasesNiveles();
+    }
+    function areaEjFiltroSit(k)  { _areaEjSit  = (_areaEjSit  === k) ? null : k; renderClasesNiveles(); }
+    function areaEjFiltroForm(k) { _areaEjForm = (_areaEjForm === k) ? null : k; renderClasesNiveles(); }
+
+    // Los ejercicios de juego, ya filtrados por lo que esté pulsado.
+    function _areaEjLista() {
+      return leerEjercicios().filter(function(e) {
+        if (_esDeCarro(e)) return false;
+        if (_areaEjSit  !== null && (ejSituacion(e) || '_') !== _areaEjSit) return false;
+        if (_areaEjForm !== null && (String(ejFaceta(e, 'formato') || '').trim() || '—') !== _areaEjForm) return false;
+        return true;
+      });
+    }
+    // La chapa de la tarjeta: el golpe concreto si lo hay, y si es mixto o no
+    // tiene, la intención. Aquí el golpe no es el criterio de agrupación, así
+    // que como dato suelto sí aporta.
+    function _areaEjChip(ej) {
+      var g = ejGolpe(ej);
+      if (g && g !== 'mixto' && GOLPE_LABEL[g]) return GOLPE_LABEL[g];
+      var i = ejIntencion(ej);
+      return (i && INTENCION_LABEL[i]) ? INTENCION_LABEL[i] : '';
+    }
+    function _areaEjsHTML() {
+      var deArea = leerEjercicios().filter(function(e){ return !_esDeCarro(e); });
+      if (!deArea.length) {
+        return '<div class="vacio"><div class="vacio-icono">🎬</div>' +
+               '<p>Todavía no hay ejercicios de juego. Se marcan con <b>parte: area</b> ' +
+               'en el vault y llegan aquí al sincronizar.</p></div>';
+      }
+      var h = '';
+
+      // ── Fila 1: situación del punto (el eje principal)
+      var cSit = {};
+      deArea.forEach(function(e){ var s = ejSituacion(e) || '_'; cSit[s] = (cSit[s] || 0) + 1; });
+      var sits = AREA_SIT_ORDEN.filter(function(k){ return cSit[k]; });
+      if (cSit['_']) sits.push('_');
+      h += '<div class="areaej-filtro-tit">Situación del punto</div><div class="filtros subcats">';
+      sits.forEach(function(k) {
+        h += '<div class="fpill' + (_areaEjSit === k ? ' activo' : '') +
+             '" onclick="areaEjFiltroSit(\'' + k + '\')">' +
+             (k === '_' ? '❓ Sin situación' : (SITUACION_ICONO[k] + ' ' + SITUACION_LABEL[k])) +
+             ' <b>' + cSit[k] + '</b></div>';
+      });
+      h += '</div>';
+
+      // ── Fila 2: cuántos jugadores hace falta. En pista es la restricción
+      //    real: llegas y tienes los alumnos que tienes.
+      var cForm = {};
+      deArea.forEach(function(e) {
+        var f = String(ejFaceta(e, 'formato') || '').trim() || '—';
+        cForm[f] = (cForm[f] || 0) + 1;
+      });
+      var forms = Object.keys(cForm).sort(function(a, b) {
+        if (a === '—') return 1;
+        if (b === '—') return -1;
+        return a.localeCompare(b);
+      });
+      if (forms.length > 1) {
+        h += '<div class="areaej-filtro-tit">Jugadores</div><div class="filtros subcats">';
+        forms.forEach(function(f) {
+          h += '<div class="fpill' + (_areaEjForm === f ? ' activo' : '') +
+               '" onclick="areaEjFiltroForm(\'' + f.replace(/'/g, "\\'") + '\')">' +
+               (f === '—' ? 'Sin formato' : _gEsc(f)) + ' <b>' + cForm[f] + '</b></div>';
+        });
+        h += '</div>';
+      }
+
+      // ── Los ejercicios, agrupados por situación
+      var lista = _areaEjLista();
+      if (!lista.length) {
+        return h + '<div class="vacio"><div class="vacio-icono">🔍</div>' +
+               '<p>Ningún ejercicio de juego con esos filtros.</p></div>';
+      }
+      var porSit = {};
+      lista.forEach(function(e){ var s = ejSituacion(e) || '_'; (porSit[s] = porSit[s] || []).push(e); });
+      var claves = AREA_SIT_ORDEN.filter(function(k){ return porSit[k]; });
+      if (porSit['_']) claves.push('_');
+      claves.forEach(function(k) {
+        var grupo = porSit[k].slice().sort(_ejOrdenGolpe);
+        h += '<div class="areaej-sit">' +
+               '<span class="areaej-sit-ico">' + (k === '_' ? '❓' : SITUACION_ICONO[k]) + '</span>' +
+               '<span class="areaej-sit-lbl">' + (k === '_' ? 'Sin situación puesta' : SITUACION_LABEL[k]) + '</span>' +
+               '<span class="areaej-sit-n">' + grupo.length + '</span>' +
+               '<span class="areaej-sit-linea"></span>' +
+             '</div>';
+        h += '<div class="grid-ejercicios">';
+        grupo.forEach(function(ej){ h += ejercicioCardHTML(ej, 'area', _areaEjChip(ej)); });
+        h += '</div>';
+      });
+      return h;
+    }
+
     function renderClasesNiveles() {
       var cont = document.getElementById('clases-niveles-cont');
       if (!cont) return;
+
+      // Las dos pestañas, siempre visibles
+      var tabs = document.getElementById('area-tabs');
+      var tab  = areaTab();
+      if (tabs) {
+        tabs.innerHTML =
+          '<button class="area-tab' + (tab === 'plan' ? ' activo' : '') + '" onclick="areaSetTab(\'plan\')">Plan</button>' +
+          '<button class="area-tab' + (tab === 'ejs'  ? ' activo' : '') + '" onclick="areaSetTab(\'ejs\')">Ejercicios de juego</button>';
+      }
+
+      // Pestaña «Ejercicios de juego»: el repertorio no depende del nivel del
+      // plan, así que la barra de niveles se esconde en vez de engañar.
+      if (tab === 'ejs') {
+        var barE = document.getElementById('area-nivelbar');
+        if (barE) barE.style.display = 'none';
+        var deArea  = leerEjercicios().filter(function(e){ return !_esDeCarro(e); });
+        var vis     = _areaEjLista().length;
+        var subEjs  = document.getElementById('area-sub');
+        if (subEjs) {
+          subEjs.textContent = deArea.length + ' ejercicio' + (deArea.length !== 1 ? 's' : '') + ' de juego' +
+                               (vis < deArea.length ? ' · ' + vis + ' filtrado' + (vis !== 1 ? 's' : '') : '');
+        }
+        // .ejlista-filas → tarjeta en fila con la miniatura al lado, igual que
+        // en la pantalla Ejercicios.
+        cont.innerHTML = '<div class="ejlista-filas">' + _areaEjsHTML() + '</div>';
+        return;
+      }
+      var barP = document.getElementById('area-nivelbar');
+      if (barP) barP.style.display = '';
+
       var nivel = _areaNivel();
       var p = leerPlan();
       var meta = NIV_META.filter(function(n){ return n.key === nivel; })[0] || { label:'', icono:'🎾' };
