@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.306.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.307.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,23 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.307.0 — Área entra por los ejercicios de juego, y «Equipo» como grupo propio (2026-08)
+    (sin migraciones nuevas)
+    · EL BOTÓN «ÁREA» DE LA BARRA DE ABAJO abre ahora directamente la pestaña
+      «Ejercicios de juego», que es lo que se busca con el móvil en la mano.
+      El Plan sigue a un toque, y se llega a él igual desde Inicio y desde el
+      botón «Plan». Volver de una sesión o de un ejercicio respeta la pestaña
+      que estuviera abierta.
+    · LA FILA «JUGADORES» YA NO LISTA LOS FORMATOS CRUDOS del vault, los agrupa
+      de menos a más gente: 1 + entrenador · 2 · 3 · 4 · 👥 Equipo.
+    · «EQUIPO» ES GRUPO PROPIO: los de grupo entero (rotación-capitán, todos
+      con todos, round robin) no son «4 jugadores», son otra cosa — se montan
+      con los alumnos que haya. Antes cada formato salía como una pill suelta
+      y esos dos se perdían al final de la fila.
+    · Un formato que no esté en la tabla cae en «Otros formatos» a propósito,
+      igual que hace `_esDeCarro`: mejor que sobre que no que desaparezca
+      material sin avisar.
 
   v0.306.0 — Área de trabajo, en dos pestañas: el Plan y los ejercicios de juego (2026-08)
     (sin migraciones nuevas)
@@ -9118,13 +9135,13 @@
     <button class="appnav-btn activo" data-nav="inicio"     onclick="irA('pantalla-inicio')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg></span><span>Inicio</span></button>
     <button class="appnav-btn"        data-nav="plan"       onclick="irA('pantalla-planificacion')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 3v3M16 3v3"/></svg></span><span>Plan</span></button>
     <button class="appnav-btn"        data-nav="partido"    onclick="irA('pantalla-partido')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M4.5 6.5c3.5 2.5 3.5 8.5 0 11M19.5 6.5c-3.5 2.5-3.5 8.5 0 11"/></svg></span><span>Partido</span></button>
-    <button class="appnav-btn"        data-nav="clases"     onclick="irA('pantalla-clases-niveles')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M9.5 9.5V20"/></svg></span><span>Área</span></button>
+    <button class="appnav-btn"        data-nav="clases"     onclick="navArea()"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M9.5 9.5V20"/></svg></span><span>Área</span></button>
   </nav>
 
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.306.0';
+    var APP_VERSION = '0.307.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -20809,7 +20826,7 @@
       partido:    '<button class="appnav-btn" data-nav="partido" onclick="irA(\'pantalla-partido\')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M4.5 6.5c3.5 2.5 3.5 8.5 0 11M19.5 6.5c-3.5 2.5-3.5 8.5 0 11"/></svg></span><span>Partido</span></button>',
       // v0.233: era «Sesiones»; ahora es el ÁREA DE TRABAJO (el catálogo por
       // nivel). Icono de tablero con sus bloques, que es lo que hay dentro.
-      clases:     '<button class="appnav-btn" data-nav="clases" onclick="irA(\'pantalla-clases-niveles\')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M9.5 9.5V20"/></svg></span><span>Área</span></button>',
+      clases:     '<button class="appnav-btn" data-nav="clases" onclick="navArea()"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M9.5 9.5V20"/></svg></span><span>Área</span></button>',
       ejercicios: '<button class="appnav-btn" data-nav="ejercicios" onclick="irA(\'pantalla-ejercicios\')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none"/></svg></span><span>Ejercicios</span></button>',
       // v0.222 — Aspectos técnicos, con icono de cerebro: es el saber técnico
       // (el gesto y sus matices), no una sesión.
@@ -22532,10 +22549,47 @@
     // mismo orden que la nota «00 Índice - Ejercicios de área» del vault, para
     // que buscar en el móvil y buscar en Obsidian se sientan igual.
     var AREA_SIT_ORDEN = ['fondo', 'mitad-pista', 'transicion', 'red', 'saque'];
+
+    // v0.307 — La fila «Jugadores» no lista los formatos crudos del vault, los
+    // AGRUPA por cuánta gente hace falta, de menos a más. El último grupo es
+    // EQUIPO: los ejercicios de grupo entero (rotaciones, todos con todos),
+    // que no son «4 jugadores», son otra cosa — se montan con el grupo que
+    // haya. Cualquier formato que no esté en la tabla cae en «Otros» a
+    // propósito: preferimos que sobre a que desaparezca material sin avisar.
+    var AREA_FORM_GRUPOS = [
+      { key:'1a',     label:'1 + entrenador', fmts:['1+a', '2+a'] },
+      { key:'2',      label:'2 jugadores',    fmts:['2v0', '1+1'] },
+      { key:'3',      label:'3 jugadores',    fmts:['3j'] },
+      { key:'4',      label:'4 jugadores',    fmts:['4j', '2v2'] },
+      { key:'equipo', label:'👥 Equipo',      fmts:['rotación-capitán', 'rotacion-capitan',
+                                                   'todos-con-todos', 'round-robin', 'equipo'] }
+    ];
+    var AREA_FORM_LABEL = { otros:'Otros formatos', _:'Sin formato' };
+    AREA_FORM_GRUPOS.forEach(function(g){ AREA_FORM_LABEL[g.key] = g.label; });
+    function _areaFormGrupo(ej) {
+      var f = String(ejFaceta(ej, 'formato') || '').trim().toLowerCase();
+      if (!f) return '_';
+      for (var i = 0; i < AREA_FORM_GRUPOS.length; i++) {
+        if (AREA_FORM_GRUPOS[i].fmts.indexOf(f) >= 0) return AREA_FORM_GRUPOS[i].key;
+      }
+      return 'otros';
+    }
+
     var _areaTab    = null;   // 'plan' | 'ejs' — se recuerda entre sesiones
     var _areaEjSit  = null;   // situación elegida (null = todas)
-    var _areaEjForm = null;   // formato elegido (null = todos)
+    var _areaEjForm = null;   // grupo de jugadores elegido (null = todos)
 
+    // v0.307 — El botón «Área» de la barra de abajo entra SIEMPRE por
+    // «Ejercicios de juego», que es lo que se busca en pista. El Plan sigue a
+    // un toque, y a él se llega también por Inicio y por el botón «Plan».
+    // Los otros caminos (volver de una sesión, de un ejercicio) respetan la
+    // pestaña que estuviera abierta.
+    function navArea() {
+      _areaTab = 'ejs';
+      try { localStorage.setItem('padel-area-tab', 'ejs'); } catch (e) {}
+      _areaEjSit = null; _areaEjForm = null;
+      irA('pantalla-clases-niveles');
+    }
     function areaTab() {
       if (_areaTab === null) {
         try { _areaTab = localStorage.getItem('padel-area-tab') || 'plan'; }
@@ -22558,7 +22612,7 @@
       return leerEjercicios().filter(function(e) {
         if (_esDeCarro(e)) return false;
         if (_areaEjSit  !== null && (ejSituacion(e) || '_') !== _areaEjSit) return false;
-        if (_areaEjForm !== null && (String(ejFaceta(e, 'formato') || '').trim() || '—') !== _areaEjForm) return false;
+        if (_areaEjForm !== null && _areaFormGrupo(e) !== _areaEjForm) return false;
         return true;
       });
     }
@@ -22597,21 +22651,17 @@
       // ── Fila 2: cuántos jugadores hace falta. En pista es la restricción
       //    real: llegas y tienes los alumnos que tienes.
       var cForm = {};
-      deArea.forEach(function(e) {
-        var f = String(ejFaceta(e, 'formato') || '').trim() || '—';
-        cForm[f] = (cForm[f] || 0) + 1;
-      });
-      var forms = Object.keys(cForm).sort(function(a, b) {
-        if (a === '—') return 1;
-        if (b === '—') return -1;
-        return a.localeCompare(b);
-      });
+      deArea.forEach(function(e){ var g = _areaFormGrupo(e); cForm[g] = (cForm[g] || 0) + 1; });
+      var forms = AREA_FORM_GRUPOS.map(function(g){ return g.key; })
+                                  .filter(function(k){ return cForm[k]; });
+      if (cForm['otros']) forms.push('otros');
+      if (cForm['_'])     forms.push('_');
       if (forms.length > 1) {
         h += '<div class="areaej-filtro-tit">Jugadores</div><div class="filtros subcats">';
         forms.forEach(function(f) {
           h += '<div class="fpill' + (_areaEjForm === f ? ' activo' : '') +
-               '" onclick="areaEjFiltroForm(\'' + f.replace(/'/g, "\\'") + '\')">' +
-               (f === '—' ? 'Sin formato' : _gEsc(f)) + ' <b>' + cForm[f] + '</b></div>';
+               '" onclick="areaEjFiltroForm(\'' + f + '\')">' +
+               _gEsc(AREA_FORM_LABEL[f] || f) + ' <b>' + cForm[f] + '</b></div>';
         });
         h += '</div>';
       }
