@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.313.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.314.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,15 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.314.0 — Área: «Ejercicios de juego» a la izquierda (2026-08)
+    (sin migraciones nuevas)
+    · Las dos pestañas de Área cambian de orden: «Ejercicios de juego» primero
+      y «Plan» después. Es la pestaña que se abre al entrar desde la barra de
+      abajo desde la v0.307, así que la activa ya no arranca en el segundo
+      hueco.
+    · Solo cambia el orden. Cada una sigue haciendo lo mismo y la app recuerda
+      igual cuál dejaste abierta.
 
   v0.313.0 — FIX: en Competición solo se veía UNA sesión de seis (2026-08)
     (sin migraciones nuevas)
@@ -9283,7 +9292,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.313.0';
+    var APP_VERSION = '0.314.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -23102,9 +23111,12 @@
       var tabs = document.getElementById('area-tabs');
       var tab  = areaTab();
       if (tabs) {
+        // v0.314: «Ejercicios de juego» a la izquierda. Es la que se abre al
+        // entrar desde la barra de abajo (v0.307), y la primera posición es la
+        // que el pulgar alcanza sin pensar.
         tabs.innerHTML =
-          '<button class="area-tab' + (tab === 'plan' ? ' activo' : '') + '" onclick="areaSetTab(\'plan\')">Plan</button>' +
-          '<button class="area-tab' + (tab === 'ejs'  ? ' activo' : '') + '" onclick="areaSetTab(\'ejs\')">Ejercicios de juego</button>';
+          '<button class="area-tab' + (tab === 'ejs'  ? ' activo' : '') + '" onclick="areaSetTab(\'ejs\')">Ejercicios de juego</button>' +
+          '<button class="area-tab' + (tab === 'plan' ? ' activo' : '') + '" onclick="areaSetTab(\'plan\')">Plan</button>';
       }
 
       // Pestaña «Ejercicios de juego»: el repertorio no depende del nivel del
