@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.318.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.320.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,48 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.320.0 — El Repositorio también lista sesiones · vídeo sin salir de la clase (2026-08)
+    (sin migraciones nuevas)
+    · «EN PLANIFICACIÓN NO SE CARGAN LAS SESIONES». No era un fallo de carga:
+      el Repositorio solo listaba CLASES TIPO. Quien no tuviera ninguna veía
+      todos los bloques a 0 y parecía que el plan venía vacío, mientras que
+      Área de trabajo › Plan sí enseñaba las sesiones del vault.
+    · AHORA EL BLOQUE ENSEÑA LAS DOS COSAS, que son las dos que se pueden
+      llevar a un día: las clases preparadas (⭐) y las sesiones del vault
+      (🎾), con la misma unión que usa Área (_sesionesDeBloqueUnion). Los
+      contadores del bloque, del apartado y de la cabecera cuentan ya las dos.
+    · MINIATURA DEL VÍDEO EN CADA FILA DE LA SESIÓN, con su ▶. Al tocarla se
+      abre el globo del vídeo POR ENCIMA de la clase, así que al cerrarlo
+      sigues en la sesión: no se navega a ningún sitio y no hay que volver.
+    · El toque de la miniatura NO abre la ficha del ejercicio, solo el vídeo.
+      En pista se busca ver la bola, no leer; y el resto de la fila sigue
+      abriendo el ejercicio como siempre.
+    · Si el ejercicio es una progresión, la miniatura lleva el número de
+      vídeos y abre el primero. Si no tiene vídeo, sale la claqueta apagada
+      —el mismo «por grabar» del resto de la app— y no hace nada al tocarla.
+
+  v0.319.0 — Fuera el Archivo · llega la Temporalización (2026-08)
+    (sin migraciones nuevas)
+    · SE RETIRA EL ARCHIVO del pie de la planificación. Enseñaba TODOS los
+      meses cerrados del curso, tuvieran algo o no: cuarenta semanas para
+      encontrar las seis con contenido, y encima repartidas en cuatro niveles
+      de acordeón (curso › trimestre › mes › semana).
+    · EN SU SITIO, LA TEMPORALIZACIÓN: el historial de clases de ese nivel.
+      Solo aparece lo que EXISTE. Un mes sin nada no sale; una semana sin
+      nada, tampoco. La lista crece sola según vas llenando días.
+    · De lo más reciente a lo más antiguo, agrupado por mes y, dentro, por
+      semana («Semana del 17 al 23»). El mes en curso viene desplegado y
+      marcado; los demás, plegados.
+    · CADA DÍA con su estado —✓ dada · ● hoy · ○ programada—, sus áreas de
+      trabajo y sus sesiones en chips, y cuántos ejercicios de carro lleva.
+      Al tocarlo se abre el día, como en el calendario.
+    · Lo que cuenta como clase: que ese día tenga algo de ESE nivel, sea un
+      bloque de área, una sesión o carro.
+    · PENDIENTE, y está avisado en el código: con el Archivo se va también el
+      botón de abrir un curso pasado y copiar su planificación
+      (_rutaArchAccionesHTML). La función se conserva entera, sin usar, para
+      recolocarla donde toque.
 
   v0.318.0 — El Repositorio se navega igual que el Plan (2026-08)
     (sin migraciones nuevas)
@@ -8058,6 +8100,26 @@
     .plan-bl-tag { flex-shrink:0; font-size:10px; font-weight:800; border-radius:999px;
       padding:1px 7px; color:#3730a3; background:#eef2ff; }
     .plan-bl-tag.ok { color:#166534; background:#dcfce7; }
+    /* v0.319 — Temporalización: el log de clases por mes y semana */
+    .temp-sem { font-size:10.5px; font-weight:800; color:var(--gris); text-transform:uppercase;
+      letter-spacing:.04em; margin:10px 2px 5px; }
+    .temp-dia { display:flex; align-items:center; gap:9px; padding:8px 9px; margin-bottom:5px;
+      border:1.5px solid var(--borde); border-radius:10px; background:var(--blanco); cursor:pointer; }
+    .temp-dia:active { border-color:#0891b2; }
+    .temp-dia.dada { border-left:5px solid #22c55e; }
+    .temp-dia.hoy  { border-left:5px solid #f59e0b; background:#fffbeb; }
+    .temp-dia.prog { border-left:5px solid var(--borde); }
+    .temp-ico { flex-shrink:0; width:19px; text-align:center; font-size:13px; color:var(--gris); }
+    .temp-dia.dada .temp-ico { color:#16a34a; }
+    .temp-dia.hoy  .temp-ico { color:#d97706; }
+    .temp-cuerpo { flex:1; min-width:0; }
+    .temp-fecha { font-size:12px; font-weight:800; color:var(--texto); text-transform:capitalize; }
+    .temp-carro { font-size:10.5px; font-weight:700; color:#0e7490; }
+    .temp-chips { display:flex; flex-wrap:wrap; gap:4px; margin-top:3px; }
+    .temp-chip { font-size:11px; font-weight:700; border-radius:999px; padding:1px 8px; }
+    .temp-chip.ses  { color:#0e7490; background:#ecfeff; }
+    .temp-chip.area { color:#3730a3; background:#eef2ff; }
+    .temp-vacio { font-size:11px; color:var(--gris); font-style:italic; margin-top:2px; }
     .plan-bl-vacio { font-size:12px; color:var(--gris); font-style:italic; padding:6px 4px; }
     /* v0.315 — la sesión, como secuencia de clase */
     .seq-cab { display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin:0 0 10px; }
@@ -8101,6 +8163,18 @@
     .seq-nom { font-size:15px; font-weight:700; color:var(--texto); line-height:1.3;
       overflow-wrap:anywhere; }
     /* v0.317 — dosis a la derecha de cada fila, y barra de reparto */
+    /* v0.320 — miniatura de vídeo en la fila de la sesión */
+    .seq-vid { position:relative; flex-shrink:0; width:64px; aspect-ratio:16/9; border-radius:7px;
+      overflow:hidden; background:#111; display:flex; align-items:center; justify-content:center; }
+    .seq-vid img { width:100%; height:100%; object-fit:cover; display:block; }
+    .seq-vid.ver { cursor:pointer; }
+    .seq-vid.sinvid { background:#1e293b; border:1.5px dashed #475569; font-size:16px; }
+    .seq-vid-ph { font-size:16px; }
+    .seq-vid-play { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+      font-size:19px; color:#fff; text-shadow:0 1px 6px rgba(0,0,0,.75); pointer-events:none; }
+    .seq-vid-n { position:absolute; top:2px; left:3px; font-size:10px; font-weight:800; color:#fff;
+      background:rgba(0,0,0,.6); border-radius:999px; padding:0 5px; }
+    @media (max-width:699px){ .seq-vid { width:74px; } }
     .seq-dosis { flex-shrink:0; min-width:52px; text-align:right; cursor:pointer;
       display:flex; flex-direction:column; gap:1px; }
     .seq-dosis b { font-size:15px; font-weight:800; color:var(--texto); }
@@ -9485,7 +9559,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.318.0';
+    var APP_VERSION = '0.320.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -19116,13 +19190,21 @@
       h += '<div class="ct-caja">';
       // v0.305: «Clases tipo» no decía lo que es. REPOSITORIO sí: el almacén
       // de todas las clases ya elaboradas, listas para llevar a un día.
+      // v0.320: el total cuenta clases tipo Y sesiones, que es lo que se ve
+      var totalSesCT = 0;
+      etapasCT.forEach(function(et){
+        (contCT[et.key] || []).forEach(function(it){
+          totalSesCT += _sesionesDeBloqueUnion(nivelCT, et.key, it).length;
+        });
+      });
       h += '<div class="ct-hdr"><span class="ct-hdr-t">📚 Repositorio</span>' +
            '<span class="ct-hdr-n">' + _gEsc(planNivelLabel(nivelCT)) + '</span>' +
-           '<span class="ct-hdr-c">' + totalCT + ' guardada' + (totalCT !== 1 ? 's' : '') + '</span>' +
+           '<span class="ct-hdr-c">' + totalCT + ' clase' + (totalCT !== 1 ? 's' : '') +
+             ' · ' + totalSesCT + ' sesion' + (totalSesCT !== 1 ? 'es' : '') + '</span>' +
            '<button type="button" class="ct-nueva" onclick="ctNueva()" ' +
              'title="Crear una clase desde cero" aria-label="Nueva clase">⚙</button>' +
-           '<span class="ct-hdr-sub">Todas las clases ya preparadas de este nivel. ' +
-             'Ábrelas para verlas en pista o llévalas a un día desde el calendario.</span></div>';
+           '<span class="ct-hdr-sub">Las clases ya preparadas (⭐) y las sesiones del vault (🎾) ' +
+             'de este nivel. Ábrelas para verlas en pista o llévalas a un día desde el calendario.</span></div>';
 
       // ── v0.318 — EL MISMO ÁRBOL QUE EL PLAN ─────────────────────────
       // El Repositorio tenía su propio juego de piezas (.ctc-area / .ctc-bl)
@@ -19134,7 +19216,10 @@
       etapasCT.forEach(function(et, iEt){
         var filasCT = contCT[et.key] || [];
         var nEt = 0;
-        filasCT.forEach(function(it){ nEt += _ctDeBloque(p, nivelCT, it.id).length; });
+        filasCT.forEach(function(it){
+          nEt += _ctDeBloque(p, nivelCT, it.id).length +
+                 _sesionesDeBloqueUnion(nivelCT, et.key, it).length;   // v0.320
+        });
         var abEt = !!_ctApAbierto[et.key];
         h += '<div class="plan-etapa' + (abEt ? ' abierto' : '') + '">';
         h += '<div class="plan-etapa-cab" onclick="ctApToggle(\'' + et.key + '\')">' +
@@ -19149,6 +19234,12 @@
         }
         filasCT.forEach(function(it){
           var suyas = _ctDeBloque(p, nivelCT, it.id);
+          // v0.320: y TAMBIÉN las sesiones del bloque, las mismas que salen en
+          // Área de trabajo › Plan. Antes aquí solo había clases tipo, así que
+          // quien no tuviera ninguna veía todos los bloques a 0 y parecía que
+          // la planificación no cargaba. Son las dos cosas que se pueden
+          // llevar a un día, así que las dos tienen que estar.
+          var sesBl = _sesionesDeBloqueUnion(nivelCT, et.key, it);
           var abBl  = !!_ctBlAbierto[it.id];
           h += '<div class="plan-item">';
           h += '<div class="plan-item-row">';
@@ -19156,17 +19247,20 @@
                  '<div class="plan-item-top">' +
                    '<span class="plan-item-chev' + (abBl ? ' abierto' : '') + '">›</span>' +
                    '<span class="plan-item-titulo">' + _gEsc(it.t) + '</span></div></div>';
-          h += '<div class="plan-item-contador' + (suyas.length ? ' con' : '') + '" title="' +
-               (suyas.length ? suyas.length + (suyas.length !== 1 ? ' clases guardadas' : ' clase guardada')
-                             : 'Sin clases guardadas') + '">' + suyas.length + '</div>';
+          var _nBl = suyas.length + sesBl.length;
+          var _tit = [];
+          if (suyas.length) _tit.push(suyas.length + (suyas.length !== 1 ? ' clases guardadas' : ' clase guardada'));
+          if (sesBl.length) _tit.push(sesBl.length + (sesBl.length !== 1 ? ' sesiones' : ' sesión'));
+          h += '<div class="plan-item-contador' + (_nBl ? ' con' : '') + '" title="' +
+               (_tit.length ? _tit.join(' · ') : 'Sin nada enlazado') + '">' + _nBl + '</div>';
           h += '<button type="button" class="plan-item-cfg" title="Preparar una clase de este bloque" ' +
                'aria-label="Nueva clase" onclick="event.stopPropagation();ctCrearAbrir(\'' + it.id + '\')">＋</button>';
           h += '</div>';
           if (abBl) {
             h += '<div class="plan-bl-arbol">';
-            if (!suyas.length) {
-              h += '<div class="plan-bl-vacio">Todavía no hay ninguna clase guardada aquí. ' +
-                   'Pulsa ＋ para preparar una con las sesiones de este bloque.</div>';
+            if (!_nBl) {
+              h += '<div class="plan-bl-vacio">Este bloque no tiene nada todavía. ' +
+                   'Pulsa ＋ para preparar una clase con las sesiones de este bloque.</div>';
             }
             suyas.forEach(function(c){
               var th = _ctThumb(c, mapEjCT, todasSCT);
@@ -19175,7 +19269,17 @@
                   ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
                   : '<span class="plan-bl-noimg">⭐</span>') + '</span>' +
                 '<span class="plan-bl-nom">' + _gEsc(c.nombre) + '</span>' +
-                (c.usos ? '<span class="plan-bl-tag">' + c.usos + '×</span>' : '') + '</div>';
+                '<span class="plan-bl-tag">⭐' + (c.usos ? ' ' + c.usos + '×' : '') + '</span></div>';
+            });
+            sesBl.forEach(function(c){
+              var th = _rutaSesThumb(c);
+              h += '<div class="plan-bl-fila' + (c.trabajada ? ' trabajada' : '') +
+                '" onclick="verSesion(' + c.id + ',\'planif\')">' +
+                '<span class="plan-bl-thumb">' + (th
+                  ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
+                  : '<span class="plan-bl-noimg">🎾</span>') + '</span>' +
+                '<span class="plan-bl-nom">' + _gEsc(nombreSesion(c)) + '</span>' +
+                (c.trabajada ? '<span class="plan-bl-tag ok">✓</span>' : '') + '</div>';
             });
             h += '</div>';
           }
@@ -19185,7 +19289,7 @@
       });
       h += '</div>';
 
-      h += _rutaArchivoHTML(p, idsNivel, areaN, sesN, ejN, ejG);
+      h += _rutaTemporalizacionHTML(p, idsNivel);   // v0.319
       h += '<div class="ruta-leyenda">✓ trabajada · ◉ esta semana · ● planificada · ○ vacía</div>';
       return h;
     }
@@ -19237,6 +19341,142 @@
       return h;
     }
 
+    // ══ v0.319 — TEMPORALIZACIÓN ═════════════════════════════════════
+    // Sustituye al Archivo, que enseñaba TODOS los meses cerrados del curso
+    // estuvieran vacíos o no: cuarenta semanas para encontrar las seis que
+    // tenían algo. Esto es al revés — solo aparece lo que existe.
+    //
+    // Es el historial de clases: cada día con algo planificado, agrupado por
+    // mes y por semana, de lo más reciente a lo más antiguo. Un mes sin nada
+    // no sale; una semana sin nada, tampoco. Así la lista crece sola según
+    // vas dando clases y no hay que navegar por huecos.
+    var _rutaTempOpen = false;
+    var _rutaTempMes  = {};   // qué meses están desplegados
+    function rutaTempToggle() { _rutaTempOpen = !_rutaTempOpen; }
+    function rutaTempMesToggle(k) { _rutaTempMes[k] = !_rutaTempMes[k]; mostrarPlanificacion(); }
+
+    // Días con algo de ESTE nivel: un bloque de área, una sesión o carro.
+    // Nota: las claves de rutaSes/rutaCarro tienen la misma forma para día y
+    // para semana («nivel|YYYY-MM-DD»); una clave de semana siempre cae en su
+    // lunes, así que en el peor caso se lista ese lunes — que es justo donde
+    // vive lo planificado en el formato viejo.
+    function _rutaDiasConAlgo(p, nivel, idsNivel) {
+      var set = {};
+      Object.keys(p.compDias || {}).forEach(function(f){
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(f)) return;
+        if ((p.compDias[f] || []).some(function(id){ return idsNivel[id]; })) set[f] = true;
+      });
+      [p.rutaSes, p.rutaCarro].forEach(function(m){
+        Object.keys(m || {}).forEach(function(k){
+          var pt = k.split('|');
+          if (pt.length !== 2 || pt[0] !== nivel || !/^\d{4}-\d{2}-\d{2}$/.test(pt[1])) return;
+          var v = m[k];
+          if (v == null || v === '') return;
+          if (Array.isArray(v) && !v.length) return;
+          set[pt[1]] = true;
+        });
+      });
+      return Object.keys(set).sort().reverse();
+    }
+
+    // Lo que hay ese día, en texto corto: bloques de área y sesiones.
+    function _rutaDiaResumen(p, nivel, fechaISO, filas, todasS) {
+      var w = _rutaSemanaLibre(fechaISO);
+      var bloques = ((p.compDias || {})[fechaISO] || []).map(function(id){
+        var f = filas.filter(function(x){ return x.id === id; })[0];
+        return f ? f.t : null;
+      }).filter(Boolean);
+      var ses = _rutaSesArr(_rutaLeeDia(p.rutaSes, nivel, fechaISO, w.lunISO)).map(function(id){
+        var c = todasS.filter(function(x){ return x.id === id; })[0];
+        return c ? nombreSesion(c) : null;
+      }).filter(Boolean);
+      var nCarro = _rutaSesArr(_rutaLeeDia(p.rutaCarro, nivel, fechaISO, w.lunISO)).length;
+      return { bloques: bloques, ses: ses, nCarro: nCarro };
+    }
+
+    function _rutaTemporalizacionHTML(p, idsNivel) {
+      var nivel   = _compNivel();
+      var dias    = _rutaDiasConAlgo(p, nivel, idsNivel);
+      var filas   = _compTodasFilas(p);
+      var todasS  = leerClases();
+      var hoy     = hoyLocal();
+      var mesHoy  = hoy.slice(0, 7);
+
+      var h = '<div class="plan-otros' + (_rutaTempOpen ? ' abierto' : '') + '" style="margin-top:1rem;">';
+      h += '<div class="plan-otros-hdr" onclick="rutaTempToggle();this.parentNode.classList.toggle(\'abierto\')">' +
+        '<span style="flex:1;">🗓️ Temporalización ' +
+        '<span class="ruta-panel-nota">(' + dias.length + (dias.length === 1 ? ' clase' : ' clases') + ')</span></span>' +
+        '<span class="chev">›</span></div>';
+      h += '<div class="plan-otros-body">';
+
+      if (!dias.length) {
+        h += '<div class="plan-bl-vacio">Todavía no hay ninguna clase planificada en este nivel. ' +
+             'Según vayas llenando días, irán apareciendo aquí por meses y semanas.</div>';
+        return h + '</div></div>';
+      }
+
+      // Agrupar por mes y, dentro, por semana. Solo lo que tiene algo.
+      var meses = [], porMes = {};
+      dias.forEach(function(f){
+        var m = f.slice(0, 7);
+        if (!porMes[m]) { porMes[m] = []; meses.push(m); }
+        porMes[m].push(f);
+      });
+
+      meses.forEach(function(m){
+        var abierto = (_rutaTempMes[m] === undefined) ? (m === mesHoy) : !!_rutaTempMes[m];
+        var nM = porMes[m].length;
+        h += '<div class="plan-otros' + (abierto ? ' abierto' : '') + '">';
+        h += '<div class="plan-otros-hdr" onclick="rutaTempMesToggle(\'' + m + '\')">' +
+          '<span style="flex:1;">' + _gEsc(MESES_NOMBRES_A[+m.slice(5, 7) - 1]) + ' ' + m.slice(0, 4) +
+            (m === mesHoy ? ' <span class="plan-etapa-badge">en curso</span>' : '') + '</span>' +
+          '<span class="plan-etapa-prog">' + nM + '</span>' +
+          '<span class="chev">›</span></div>';
+        h += '<div class="plan-otros-body">';
+
+        // Semanas dentro del mes, también solo las que tienen algo
+        var sems = [], porSem = {};
+        porMes[m].forEach(function(f){
+          var lun = _rutaSemanaLibre(f).lunISO;
+          if (!porSem[lun]) { porSem[lun] = []; sems.push(lun); }
+          porSem[lun].push(f);
+        });
+        sems.forEach(function(lun){
+          var dom = addDiasISO(lun, 6);
+          h += '<div class="temp-sem">Semana del ' + parseInt(lun.slice(8), 10) +
+               ' al ' + parseInt(dom.slice(8), 10) + '</div>';
+          porSem[lun].forEach(function(f){
+            var r = _rutaDiaResumen(p, nivel, f, filas, todasS);
+            var estado = (f < hoy) ? 'dada' : (f === hoy ? 'hoy' : 'prog');
+            var ico    = (estado === 'dada') ? '✓' : (estado === 'hoy' ? '●' : '○');
+            var chips  = r.ses.map(function(t){ return '<span class="temp-chip ses">' + _gEsc(t) + '</span>'; })
+                         .concat(r.bloques.map(function(t){ return '<span class="temp-chip area">' + _gEsc(t) + '</span>'; }))
+                         .join('');
+            h += '<div class="temp-dia ' + estado + '" onclick="rutaAbrirDia(\'' + f + '\')">' +
+              '<span class="temp-ico">' + ico + '</span>' +
+              '<div class="temp-cuerpo">' +
+                '<div class="temp-fecha">' + _gEsc(_diaSemanaNombre(f)) + ' ' + parseInt(f.slice(8), 10) +
+                  (r.nCarro ? ' <span class="temp-carro">🛒 ' + r.nCarro + '</span>' : '') + '</div>' +
+                (chips ? '<div class="temp-chips">' + chips + '</div>'
+                       : '<div class="temp-vacio">Sin contenido todavía</div>') +
+              '</div>' +
+              '<span class="ct-chev">›</span></div>';
+          });
+        });
+        h += '</div></div>';
+      });
+
+      return h + '</div></div>';
+    }
+    // Nombre corto del día de la semana de una fecha
+    function _diaSemanaNombre(fechaISO) {
+      var d = new Date(+fechaISO.slice(0,4), +fechaISO.slice(5,7) - 1, +fechaISO.slice(8,10));
+      return (DIAS_NOMBRES_A[d.getDay()] || '').slice(0, 3);
+    }
+
+    // v0.319: el Archivo se retira de la pantalla. La función se conserva
+    // porque dentro vive _rutaArchAccionesHTML (abrir un curso pasado y
+    // copiar su planificación), que sigue siendo útil y hay que recolocar.
     function _rutaArchivoHTML(p, idsNivel, areaN, sesN, ejN, ejG) {
       // Cursos candidatos: los que tienen datos + el actual + el que se mira.
       var cursos = _rutaCursosConDatos(p);
@@ -24160,7 +24400,8 @@
                 '<button type="button" class="seq-fl" ' + (i === ejsEnSesion.length - 1 ? 'disabled ' : '') +
                   'onclick="seqMover(' + e.id + ',1)" aria-label="Bajar">▼</button>' +
               '</span>'
-            : '<span class="seq-dosis"' + abre + '>' +
+            : _seqVideoHTML(e) +
+              '<span class="seq-dosis"' + abre + '>' +
                 (min ? '<b>' + min + '′</b>' : '<b class="falta">—</b>') +
                 (jug ? '<span>' + jug + '</span>' : '') + '</span>') +
         '</div>';
@@ -24185,6 +24426,32 @@
              'Faltan minutos en algún ejercicio · ' + total + ' min contados</div>';
       }
       return h;
+    }
+
+    // v0.320 — La miniatura del vídeo, en la propia fila de la sesión. Al
+    // tocarla se abre el globo del vídeo POR ENCIMA de la sesión (z-index
+    // 10050), así que al cerrarlo sigues donde estabas: no se navega a
+    // ningún sitio y no hay que volver. Si el ejercicio es una progresión,
+    // abre el primero y avisa de cuántos hay.
+    // El toque de la miniatura no abre el ejercicio (stopPropagation): son
+    // dos cosas distintas y en pista se busca el vídeo, no la ficha.
+    function _seqVideoHTML(e) {
+      var vids = ejVideos(e);
+      if (!vids.length) {
+        var th0 = _rutaEjThumb(e);
+        if (!th0) return '<span class="seq-vid sinvid" title="Sin vídeo todavía">🎬</span>';
+        return '<span class="seq-vid"><img src="' + th0 + '" alt="" loading="lazy" ' +
+               'onerror="this.style.display=\'none\'"></span>';
+      }
+      var v = vids[0], yt = extraerIdYoutube(v);
+      var th = yt ? ('https://img.youtube.com/vi/' + yt + '/mqdefault.jpg') : _rutaEjThumb(e);
+      return '<span class="seq-vid ver" title="Ver el vídeo" onclick="event.stopPropagation();' +
+        'abrirLightboxVideo(' + (yt ? "'" + yt + "'" : 'null') + ',\'' +
+        String(v).replace(/'/g, "\\'") + '\')">' +
+        (th ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
+            : '<span class="seq-vid-ph">🎬</span>') +
+        '<span class="seq-vid-play">▶</span>' +
+        (vids.length > 1 ? '<span class="seq-vid-n">' + vids.length + '</span>' : '') + '</span>';
     }
 
     // ── v0.316 — REORDENAR SOLO CUANDO SE PIDE ───────────────────────
