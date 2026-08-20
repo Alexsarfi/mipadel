@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.317.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.318.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,23 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.318.0 — El Repositorio se navega igual que el Plan (2026-08)
+    (sin migraciones nuevas)
+    · EL REPOSITORIO tenía su propio juego de piezas (.ctc-area / .ctc-bl) y
+      se leía distinto que Área de trabajo › Plan, aunque por dentro es EL
+      MISMO árbol: apartado → bloque → lo que hay dentro.
+    · AHORA REUTILIZA LAS PIEZAS DEL PLAN: cabecera de apartado con su número
+      y su objetivo, filas de bloque con chevron y contador, y el árbol que se
+      despliega debajo. Se navegan igual y solo cambia lo que cuelga del
+      bloque: en el Plan, sesiones y ejercicios; aquí, clases tipo.
+    · CADA CLASE TIPO CON SU MINIATURA, la de su primera sesión o, si no
+      tiene, la del primer ejercicio de carro — la misma que se ve al abrirla.
+      Antes era una fila de texto con chips de golpe.
+    · EL ＋ pasa al sitio del ⚙ del Plan, con el mismo aspecto y en la misma
+      posición. Sigue haciendo lo de siempre: preparar una clase de ese bloque.
+    · Menos código y menos CSS: las reglas .ctc-* que solo servían aquí dejan
+      de hacer falta.
 
   v0.317.0 — La sesión se lee como la clase que es (2026-08)
     (sin migraciones nuevas · sí hace falta volver a sincronizar el vault)
@@ -9468,7 +9485,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.317.0';
+    var APP_VERSION = '0.318.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -19107,54 +19124,64 @@
            '<span class="ct-hdr-sub">Todas las clases ya preparadas de este nivel. ' +
              'Ábrelas para verlas en pista o llévalas a un día desde el calendario.</span></div>';
 
-      etapasCT.forEach(function(et){
+      // ── v0.318 — EL MISMO ÁRBOL QUE EL PLAN ─────────────────────────
+      // El Repositorio tenía su propio juego de piezas (.ctc-area / .ctc-bl)
+      // y se leía distinto que Área de trabajo › Plan, aunque es EL MISMO
+      // árbol: apartado → bloque → lo que hay dentro. Ahora reutiliza las
+      // clases del plan (.plan-etapa, .plan-item, .plan-bl-arbol), así que
+      // las dos pantallas se navegan igual y solo cambia lo que cuelga del
+      // bloque: allí sesiones y ejercicios, aquí clases tipo.
+      etapasCT.forEach(function(et, iEt){
         var filasCT = contCT[et.key] || [];
         var nEt = 0;
         filasCT.forEach(function(it){ nEt += _ctDeBloque(p, nivelCT, it.id).length; });
         var abEt = !!_ctApAbierto[et.key];
-        h += '<div class="ctc-area' + (abEt ? ' abierta' : '') + '">';
-        h += '<button type="button" class="ctc-area-hdr" onclick="ctApToggle(\'' + et.key + '\')">' +
-          '<span class="ruta-parte-chev' + (abEt ? ' abierto' : '') + '">›</span>' +
-          '<span class="ctc-area-t">' + _gEsc(et.nombre) + '</span>' +
-          '<span class="ctc-area-n' + (nEt ? ' con' : '') + '">' + nEt + '</span></button>';
-        if (abEt) {
-          h += '<div class="ctc-area-body">';
-          if (!filasCT.length) {
-            h += '<div class="ruta-panel-nota" style="padding:6px 2px;">Este apartado no tiene bloques todavía.</div>';
-          }
-          filasCT.forEach(function(it){
-            var suyas = _ctDeBloque(p, nivelCT, it.id);
-            var abBl  = !!_ctBlAbierto[it.id];
-            // v0.289: el bloque también se pliega. Tocarlo abre sus clases
-            // tipo; el ＋ de la derecha crea una nueva de ese bloque.
-            h += '<div class="ctc-bl-fila">' +
-              '<button type="button" class="ctc-bl' + (abBl ? ' ab' : '') + '" onclick="ctBlToggle(\'' + it.id + '\')">' +
-                '<span class="ruta-parte-chev' + (abBl ? ' abierto' : '') + '">›</span>' +
-                '<span class="ctc-bl-t">' + _gEsc(it.t) + '</span>' +
-                '<span class="ctc-bl-n' + (suyas.length ? ' con' : '') + '">' + suyas.length + '</span></button>' +
-              '<button type="button" class="ctc-bl-mas" onclick="ctCrearAbrir(\'' + it.id + '\')" ' +
-                'title="Crear una clase tipo de este bloque" aria-label="Nueva">＋</button></div>';
-            if (!abBl) return;
+        h += '<div class="plan-etapa' + (abEt ? ' abierto' : '') + '">';
+        h += '<div class="plan-etapa-cab" onclick="ctApToggle(\'' + et.key + '\')">' +
+          '<span class="plan-etapa-num">' + (nivelCT === 'competicion' ? '◆' : (iEt + 1)) + '</span>' +
+          '<div class="plan-etapa-tit"><span class="plan-etapa-nom">' + _gEsc(et.nombre) + '</span>' +
+            (et.obj ? '<span class="plan-etapa-obj">' + _gEsc(et.obj) + '</span>' : '') + '</div>' +
+          '<span class="plan-etapa-prog">' + nEt + '</span>' +
+          '<span class="plan-etapa-chev">›</span></div>';
+        h += '<div class="plan-etapa-body">';
+        if (!filasCT.length) {
+          h += '<div class="plan-bl-vacio">Este apartado no tiene bloques todavía.</div>';
+        }
+        filasCT.forEach(function(it){
+          var suyas = _ctDeBloque(p, nivelCT, it.id);
+          var abBl  = !!_ctBlAbierto[it.id];
+          h += '<div class="plan-item">';
+          h += '<div class="plan-item-row">';
+          h += '<div class="plan-item-body" onclick="ctBlToggle(\'' + it.id + '\')">' +
+                 '<div class="plan-item-top">' +
+                   '<span class="plan-item-chev' + (abBl ? ' abierto' : '') + '">›</span>' +
+                   '<span class="plan-item-titulo">' + _gEsc(it.t) + '</span></div></div>';
+          h += '<div class="plan-item-contador' + (suyas.length ? ' con' : '') + '" title="' +
+               (suyas.length ? suyas.length + (suyas.length !== 1 ? ' clases guardadas' : ' clase guardada')
+                             : 'Sin clases guardadas') + '">' + suyas.length + '</div>';
+          h += '<button type="button" class="plan-item-cfg" title="Preparar una clase de este bloque" ' +
+               'aria-label="Nueva clase" onclick="event.stopPropagation();ctCrearAbrir(\'' + it.id + '\')">＋</button>';
+          h += '</div>';
+          if (abBl) {
+            h += '<div class="plan-bl-arbol">';
             if (!suyas.length) {
-              h += '<div class="ruta-panel-nota" style="padding:2px 4px 8px;">Todavía no hay ninguna clase guardada aquí. Pulsa ＋ para preparar una con las sesiones de este bloque.</div>';
+              h += '<div class="plan-bl-vacio">Todavía no hay ninguna clase guardada aquí. ' +
+                   'Pulsa ＋ para preparar una con las sesiones de este bloque.</div>';
             }
             suyas.forEach(function(c){
-              var gv = {}, gl = [];
-              (c.carro || []).forEach(function(id){
-                var e = mapEjCT[id]; if (!e) return;
-                var kg = ejFaceta(e, 'golpe'); if (!kg || gv[kg]) return;
-                gv[kg] = true; gl.push(GOLPE_LABEL[kg] || kg);
-              });
-              h += '<button type="button" class="ct-fila" onclick="ctFichaAbrir(\'' + c.id + '\')">' +
-                '<span class="ct-nom">' + _gEsc(c.nombre) + '</span>' +
-                gl.map(function(t){ return '<span class="ct-gol">' + _gEsc(t) + '</span>'; }).join('') +
-                '<span class="ct-uso">' + (c.usos || 0) + '×</span>' +
-                '<span class="ct-chev">›</span></button>';
+              var th = _ctThumb(c, mapEjCT, todasSCT);
+              h += '<div class="plan-bl-fila" onclick="ctFichaAbrir(\'' + c.id + '\')">' +
+                '<span class="plan-bl-thumb">' + (th
+                  ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
+                  : '<span class="plan-bl-noimg">⭐</span>') + '</span>' +
+                '<span class="plan-bl-nom">' + _gEsc(c.nombre) + '</span>' +
+                (c.usos ? '<span class="plan-bl-tag">' + c.usos + '×</span>' : '') + '</div>';
             });
-          });
+            h += '</div>';
+          }
           h += '</div>';
-        }
-        h += '</div>';
+        });
+        h += '</div></div>';
       });
       h += '</div>';
 
@@ -19834,6 +19861,22 @@
       if (_ctAbierta === id) _ctAbierta = null;
       if (_ctFicha === id) ctFichaCerrar();   // v0.289
       _planGuardar(p); mostrarPlanificacion();
+    }
+    // v0.318 — miniatura de una clase tipo: la de su primera sesión y, si no
+    // tiene, la del primer ejercicio de carro. Es lo mismo que se ve al
+    // abrirla, así que la lista y la ficha cuentan lo mismo.
+    function _ctThumb(c, mapEj, todasS) {
+      var ses = (c.sesiones || [])[0];
+      if (ses) {
+        var x = (todasS || leerClases()).filter(function(t){ return t.id === ses; })[0];
+        if (x) { var t = _rutaSesThumb(x); if (t) return t; }
+      }
+      var ids = c.carro || [], m = mapEj || _ejsById();
+      for (var i = 0; i < ids.length; i++) {
+        var e = m[ids[i]];
+        if (e) { var te = _rutaEjThumb(e); if (te) return te; }
+      }
+      return null;
     }
     function _ctLista(p) { return (p && p.clasesTipo) || []; }
     // v0.285 — Las clases tipo que cuelgan de un bloque concreto del área.
