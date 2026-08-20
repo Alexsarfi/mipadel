@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.321.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.322.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,30 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.322.0 — La Temporalización, en rejilla por días de la semana (2026-08)
+    (sin migraciones nuevas)
+    · UNA COLUMNA POR DÍA DE LA SEMANA y una fila por semana. Bajar por la
+      columna del miércoles es ver la progresión de todos los miércoles del
+      curso seguidos. La lista cuenta bien UNA semana; la rejilla cuenta la
+      PROGRESIÓN, que es otra pregunta.
+    · SOLO SALEN LOS DÍAS QUE DE VERDAD SE ENTRENA en ese nivel: si solo hay
+      clase martes y jueves, la rejilla tiene dos columnas. Nada de siete
+      columnas con cinco vacías.
+    · EL HUECO SE VE. La raya de una celda vacía dice que esa semana ese día
+      no hubo clase — en una lista eso no se nota, y es justo lo que se busca
+      al mirar atrás.
+    · LOS MESES SON SEPARADORES, NO ACORDEONES. Si el mes se pudiera plegar no
+      se podría comparar el último miércoles de septiembre con el primero de
+      octubre, que es cuando más falta hace.
+    · LA COLUMNA DE SEMANAS SE QUEDA FIJA al deslizar; con más de tres días la
+      rejilla se desliza en horizontal en vez de estrechar los nombres.
+    · EN LA CELDA, LA SESIÓN. Si ese día no tiene sesión, el bloque de área. Y
+      debajo, en pequeño, lo que completa la clase: cuántas áreas, cuánto
+      carro, si hay más de una sesión.
+    · CONVIVE CON LA LISTA: interruptor arriba a la derecha, rejilla por
+      defecto, y la app recuerda cuál dejaste abierta. El Archivo usa la misma
+      vista que elijas.
 
   v0.321.0 — La Temporalización es del curso · y el Archivo, debajo (2026-08)
     (sin migraciones nuevas)
@@ -8123,6 +8147,41 @@
     .plan-bl-tag { flex-shrink:0; font-size:10px; font-weight:800; border-radius:999px;
       padding:1px 7px; color:#3730a3; background:#eef2ff; }
     .plan-bl-tag.ok { color:#166534; background:#dcfce7; }
+    /* v0.322 — Temporalización en rejilla. La columna de semanas se queda
+       fija al deslizar: sin ella, tres días a la derecha ya no sabes qué
+       semana estás mirando. */
+    .temp-vista { display:flex; gap:0; margin:0 0 9px auto; width:max-content;
+      border:1.5px solid var(--borde); border-radius:9px; overflow:hidden; }
+    .temp-vista-b { font-family:inherit; font-size:12px; font-weight:700; color:var(--gris);
+      padding:5px 12px; border:none; background:var(--blanco); cursor:pointer; }
+    .temp-vista-b.on { color:#fff; background:#0891b2; }
+    .temp-rej-wrap { overflow-x:auto; border:1.5px solid var(--borde); border-radius:10px;
+      background:var(--blanco); -webkit-overflow-scrolling:touch; }
+    .temp-rej { border-collapse:separate; border-spacing:0; font-size:12px; width:100%; }
+    .temp-rej th { font-size:11px; font-weight:800; color:var(--gris); padding:7px 6px;
+      border-bottom:1px solid var(--borde); min-width:112px; text-align:center; }
+    .temp-rej th.hoy { color:#0e7490; }
+    .temp-rej-sem { position:sticky; left:0; z-index:1; background:var(--blanco);
+      width:52px; min-width:52px; font-size:10.5px; color:var(--gris); text-align:right;
+      padding:4px 7px; border-right:1px solid var(--borde); }
+    .temp-rej-mes td { position:sticky; left:0; font-size:10px; font-weight:800; color:var(--gris);
+      letter-spacing:.05em; text-transform:uppercase; padding:9px 7px 3px; background:var(--blanco); }
+    .temp-rej-c { padding:3px; vertical-align:top; }
+    .temp-rej-no { text-align:center; color:var(--borde); font-weight:800; }
+    .temp-cel { border-left:4px solid var(--borde); padding:6px 7px; cursor:pointer; line-height:1.25; }
+    .temp-cel.dada { border-left-color:#22c55e; background:#f0fdf4; }
+    .temp-cel.hoy  { border-left-color:#f59e0b; background:#fffbeb; }
+    .temp-cel.prog { border:1.5px dashed var(--borde); border-left-width:4px; }
+    .temp-cel-n { display:block; font-size:12.5px; font-weight:700; color:var(--texto);
+      overflow-wrap:anywhere; }
+    .temp-cel-m { display:block; font-size:10.5px; color:var(--gris); margin-top:2px; }
+    .temp-leyenda { display:flex; gap:12px; flex-wrap:wrap; align-items:center;
+      font-size:10.5px; color:var(--gris); margin-top:8px; }
+    .temp-lg { display:inline-block; width:8px; height:8px; margin-right:4px; vertical-align:0; }
+    .temp-lg.dada { background:#22c55e; }
+    .temp-lg.hoy  { background:#f59e0b; }
+    .temp-lg.prog { border:1px dashed var(--gris); }
+    .temp-lg-scroll { margin-left:auto; }
     /* v0.319 — Temporalización: el log de clases por mes y semana */
     .temp-sem { font-size:10.5px; font-weight:800; color:var(--gris); text-transform:uppercase;
       letter-spacing:.04em; margin:10px 2px 5px; }
@@ -9582,7 +9641,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.321.0';
+    var APP_VERSION = '0.322.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -19425,6 +19484,112 @@
       return { bloques: bloques, ses: ses, nCarro: nCarro };
     }
 
+    // ══ v0.322 — LA REJILLA: UNA COLUMNA POR DÍA DE LA SEMANA ═══════
+    // La lista cuenta bien UNA semana; la rejilla cuenta la PROGRESIÓN. Al
+    // poner todos los miércoles en la misma columna, bajar por ella es ver
+    // qué se ha ido trabajando ese día del curso entero — y los huecos, que
+    // en una lista no se notan, aquí saltan a la vista.
+    //
+    // Solo salen los días de la semana en los que de verdad hay clase en ese
+    // nivel: si solo entrenas martes y jueves, la rejilla tiene dos columnas.
+    // Y los meses son SEPARADORES, no acordeones: si el mes se pudiera
+    // plegar, no podrías comparar el último miércoles de septiembre con el
+    // primero de octubre, que es justo cuando hace falta.
+    var _rutaTempVista = 'rejilla';   // 'rejilla' | 'lista'
+    function rutaTempVista(v) {
+      _rutaTempVista = (v === 'lista') ? 'lista' : 'rejilla';
+      try { localStorage.setItem('padel-temp-vista', _rutaTempVista); } catch (e) {}
+      mostrarPlanificacion();
+    }
+    (function(){
+      try { var v = localStorage.getItem('padel-temp-vista'); if (v) _rutaTempVista = v; } catch (e) {}
+    })();
+    var _TEMP_DOW = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+    function _rutaDow(fechaISO) {
+      return new Date(+fechaISO.slice(0,4), +fechaISO.slice(5,7) - 1, +fechaISO.slice(8,10)).getDay();
+    }
+    function _rutaTempRejillaHTML(p, nivel, dias) {
+      var filas  = _compTodasFilas(p);
+      var todasS = leerClases();
+      var hoy    = hoyLocal();
+      var dowHoy = _rutaDow(hoy);
+
+      // Columnas: solo los días de la semana que tienen algo. En orden de
+      // lunes a domingo, no en el orden en que aparezcan los datos.
+      var hayDow = {};
+      dias.forEach(function(f){ hayDow[_rutaDow(f)] = true; });
+      var cols = [1,2,3,4,5,6,0].filter(function(d){ return hayDow[d]; });
+      if (!cols.length) return '';
+
+      // Filas: una por semana con algo, de la más reciente a la más antigua.
+      var sems = [], porSem = {};
+      dias.forEach(function(f){
+        var lun = _rutaSemanaLibre(f).lunISO;
+        if (!porSem[lun]) { porSem[lun] = {}; sems.push(lun); }
+        porSem[lun][_rutaDow(f)] = f;
+      });
+      sems.sort().reverse();
+
+      var h = '<div class="temp-rej-wrap"><table class="temp-rej">';
+      h += '<tr><th class="temp-rej-sem"></th>';
+      cols.forEach(function(d){
+        h += '<th' + (d === dowHoy ? ' class="hoy"' : '') + '>' + _TEMP_DOW[d] + '</th>';
+      });
+      h += '</tr>';
+
+      var mesPrev = '';
+      sems.forEach(function(lun){
+        // Separador de mes: el mes del lunes de esa semana
+        var m = lun.slice(0, 7);
+        if (m !== mesPrev) {
+          mesPrev = m;
+          h += '<tr class="temp-rej-mes"><td colspan="' + (cols.length + 1) + '">' +
+               _gEsc(MESES_NOMBRES_A[+m.slice(5, 7) - 1]) + ' ' + m.slice(0, 4) + '</td></tr>';
+        }
+        var dom = addDiasISO(lun, 6);
+        h += '<tr><td class="temp-rej-sem">' + parseInt(lun.slice(8), 10) + '–' +
+             parseInt(dom.slice(8), 10) + '</td>';
+        cols.forEach(function(d){
+          var f = porSem[lun][d];
+          if (!f) { h += '<td class="temp-rej-no">—</td>'; return; }
+          var r = _rutaDiaResumen(p, nivel, f, filas, todasS);
+          var estado = (f < hoy) ? 'dada' : (f === hoy ? 'hoy' : 'prog');
+          // El nombre de la celda es la SESIÓN; si ese día no tiene, el bloque
+          // de área, que es lo segundo que identifica la clase.
+          var nom = r.ses[0] || r.bloques[0] || 'Sin contenido';
+          var extra = [];
+          if (r.ses.length > 1)     extra.push('+' + (r.ses.length - 1) + ' ses');
+          if (r.bloques.length)     extra.push(r.bloques.length + ' área');
+          if (r.nCarro)             extra.push(r.nCarro + ' carro');
+          if (estado === 'hoy')     extra.unshift('hoy');
+          if (estado === 'prog')    extra.push('programada');
+          h += '<td class="temp-rej-c"><div class="temp-cel ' + estado +
+               '" onclick="rutaAbrirDia(\'' + f + '\')">' +
+               '<span class="temp-cel-n">' + _gEsc(nom) + '</span>' +
+               (extra.length ? '<span class="temp-cel-m">' + _gEsc(extra.join(' · ')) + '</span>' : '') +
+               '</div></td>';
+        });
+        h += '</tr>';
+      });
+      h += '</table></div>';
+      h += '<div class="temp-leyenda">' +
+        '<span><i class="temp-lg dada"></i>dada</span>' +
+        '<span><i class="temp-lg hoy"></i>hoy</span>' +
+        '<span><i class="temp-lg prog"></i>programada</span>' +
+        (cols.length > 3 ? '<span class="temp-lg-scroll">↔ desliza para ver más días</span>' : '') +
+        '</div>';
+      return h;
+    }
+    // Interruptor rejilla / lista
+    function _rutaTempVistaHTML() {
+      var v = _rutaTempVista;
+      return '<div class="temp-vista">' +
+        '<button type="button" class="temp-vista-b' + (v === 'rejilla' ? ' on' : '') +
+          '" onclick="rutaTempVista(\'rejilla\')">Rejilla</button>' +
+        '<button type="button" class="temp-vista-b' + (v === 'lista' ? ' on' : '') +
+          '" onclick="rutaTempVista(\'lista\')">Lista</button></div>';
+    }
+
     // v0.321 — El cuerpo (mes → semana → día) se pinta igual en la
     // Temporalización y en el Archivo, así que vive en un solo sitio.
     // `pref` distingue las claves de plegado de un curso y otro.
@@ -19510,10 +19675,15 @@
         ' (' + deEste.length + (deEste.length === 1 ? ' clase' : ' clases') + ')</span></span>' +
         '<span class="chev">›</span></div>';
       h += '<div class="plan-otros-body">';
-      h += deEste.length
-        ? _rutaTempCuerpoHTML(p, nivel, deEste, 'act')
-        : '<div class="plan-bl-vacio">El curso ' + cursoAct + ' todavía no tiene ninguna clase en este ' +
-          'nivel. Según vayas llenando días, irán apareciendo aquí por meses y semanas.</div>';
+      if (!deEste.length) {
+        h += '<div class="plan-bl-vacio">El curso ' + cursoAct + ' todavía no tiene ninguna clase en este ' +
+             'nivel. Según vayas llenando días, irán apareciendo aquí por meses y semanas.</div>';
+      } else {
+        h += _rutaTempVistaHTML();
+        h += (_rutaTempVista === 'lista')
+          ? _rutaTempCuerpoHTML(p, nivel, deEste, 'act')
+          : _rutaTempRejillaHTML(p, nivel, deEste);
+      }
       h += '</div></div>';
 
       // ── Archivo: los cursos anteriores, cada uno con su árbol ──
@@ -19535,7 +19705,9 @@
             '<span class="plan-etapa-prog">' + pasados[c].length + '</span>' +
             '<span class="chev">›</span></div>';
           h += '<div class="plan-otros-body">' + _rutaArchAccionesHTML(c) +
-               _rutaTempCuerpoHTML(p, nivel, pasados[c], c) + '</div></div>';
+               ((_rutaTempVista === 'lista')
+                 ? _rutaTempCuerpoHTML(p, nivel, pasados[c], c)
+                 : _rutaTempRejillaHTML(p, nivel, pasados[c])) + '</div></div>';
         });
         h += '</div></div>';
       }
