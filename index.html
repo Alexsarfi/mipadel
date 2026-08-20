@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.315.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.316.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,22 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.316.0 — El orden de la sesión, detrás de un botón (2026-08)
+    (sin migraciones nuevas)
+    · EL PROBLEMA de la v0.315: el tirador ⠿ estaba siempre activo. En el
+      móvil, con la clase empezada, basta rozarlo al hacer scroll para
+      cambiar el orden sin enterarte.
+    · AHORA HAY MODO ORDENAR. Botón «✏️ Ordenar» arriba de la lista; al
+      terminar, «✓ Listo». Fuera de ese modo la lista NO se mueve —el
+      arrastre ni siquiera escucha— y cada fila abre su ejercicio de un
+      toque, como debe ser el 95% del tiempo.
+    · Y AL ENTRAR EN UNA SESIÓN SE EMPIEZA SIEMPRE EN LECTURA. El modo no se
+      queda pegado de la vez anterior.
+    · FLECHAS ▲▼ ADEMÁS DEL ARRASTRE. En pista, con prisa o con la mano
+      sudada, un botón acierta y un arrastre falla. Hacen lo mismo y guardan
+      igual. Mientras se ordena, la miniatura deja su sitio a las flechas.
+    · El orden se sigue guardando solo, en cuanto sueltas.
 
   v0.315.0 — El bloque se abre en árbol · la sesión es una secuencia (2026-08)
     ⚠ EJECUTAR migraciones/migracion_ses_orden.sql ANTES de usar esta versión.
@@ -8003,9 +8019,20 @@
     .seq-cab-tag { font-size:11.5px; font-weight:800; border-radius:999px; padding:3px 9px; }
     .seq-cab-tag.carro { color:#0e7490; background:#ecfeff; }
     .seq-cab-tag.area  { color:#3730a3; background:#eef2ff; }
-    .seq-cab-ayuda { font-size:11px; color:var(--gris); margin-left:auto; }
+    .seq-edit { margin-left:auto; font-family:inherit; font-size:12px; font-weight:700;
+      color:var(--gris); padding:5px 11px; border:1.5px solid var(--borde); border-radius:999px;
+      background:var(--blanco); cursor:pointer; }
+    .seq-edit.on { color:#fff; background:#0891b2; border-color:#0891b2; }
+    .seq-aviso { font-size:11.5px; color:#0e7490; background:#ecfeff; border-radius:8px;
+      padding:6px 10px; margin-bottom:8px; }
+    .seq-flechas { flex-shrink:0; display:flex; flex-direction:column; gap:3px; }
+    .seq-fl { width:38px; height:26px; font-family:inherit; font-size:12px; color:var(--texto);
+      border:1.5px solid var(--borde); border-radius:7px; background:var(--blanco); cursor:pointer; }
+    .seq-fl:disabled { opacity:.3; cursor:default; }
+    .seq-fl:active:not(:disabled) { background:#ecfeff; border-color:#0891b2; }
+    .seq.editando .seq-item { box-shadow:0 1px 3px rgba(14,27,60,.10); }
     .seq { display:flex; flex-direction:column; gap:7px; margin-bottom:14px; }
-    .seq-item { display:flex; align-items:center; gap:8px; padding:7px 9px 7px 0;
+    .seq-item { display:flex; align-items:center; gap:8px; padding:7px 9px 7px 11px;
       border:1.5px solid var(--borde); border-radius:12px; background:var(--blanco);
       border-left-width:6px; }
     .seq-item.carro { border-left-color:#0891b2; background:#ecfeff; }
@@ -8021,6 +8048,8 @@
     .seq-item.carro .seq-num { background:#0891b2; }
     .seq-item.area  .seq-num { background:#4f46e5; }
     .seq-body { flex:1; min-width:0; cursor:pointer; }
+    .seq-item.ed .seq-body { cursor:default; }
+    .seq-item.ed { padding-left:0; }
     .seq-tipo { font-size:10.5px; font-weight:800; letter-spacing:.03em; color:var(--gris); }
     .seq-item.carro .seq-tipo { color:#0e7490; }
     .seq-item.area  .seq-tipo { color:#3730a3; }
@@ -9375,7 +9404,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.315.0';
+    var APP_VERSION = '0.316.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -23841,12 +23870,11 @@
       // mira es el nombre y, debajo, la secuencia de la clase.
       document.getElementById('detalle-sesion-fecha').textContent = '';
 
-      // v0.315: el orden lo manda la app (_sesOrden), no el vault.
-      var ejsEnSesion = _sesEjsOrdenados(sesion, ejs);
-
-      var html = _sesSecuenciaHTML(sesion, ejsEnSesion);
-      html += '<button class="btn btn-rojo" onclick="borrarSesion(' + sesion.id + ')">Borrar sesión</button>';
-      document.getElementById('detalle-sesion-contenido').innerHTML = html;
+      // v0.316: al entrar, SIEMPRE en modo lectura. El orden no se toca por
+      // descuido: hay que pedirlo.
+      _seqEdit  = false;
+      _sesVista = sesion.id;
+      _sesPintarContenido();
 
       document.querySelectorAll('.pantalla').forEach(function(p){ p.classList.remove('activa'); });
       document.getElementById('pantalla-detalle-sesion').classList.add('activa');
@@ -23894,29 +23922,84 @@
       }
       var nC = 0, nA = 0;
       ejsEnSesion.forEach(function(e){ if (_sesTipoEj(e) === 'carro') nC++; else nA++; });
+      var ed = _seqEdit;
       var h = '<div class="seq-cab">' +
         '<span class="seq-cab-tag carro">🛒 Carro · ' + nC + '</span>' +
         '<span class="seq-cab-tag area">🎯 Área · ' + nA + '</span>' +
-        '<span class="seq-cab-ayuda">Arrastra ⠿ para cambiar el orden</span></div>';
-      h += '<div class="seq" id="seq-lista" data-ses="' + sesion.id + '">';
+        '<button type="button" class="seq-edit' + (ed ? ' on' : '') + '" onclick="seqToggleEdit()">' +
+          (ed ? '✓ Listo' : '✏️ Ordenar') + '</button></div>';
+      if (ed) h += '<div class="seq-aviso">Arrastra ⠿ o usa ▲▼. Se guarda solo.</div>';
+      h += '<div class="seq' + (ed ? ' editando' : '') + '" id="seq-lista" data-ses="' + sesion.id + '">';
       ejsEnSesion.forEach(function(e, i){
         var tipo = _sesTipoEj(e);
         var th   = _rutaEjThumb(e);
-        h += '<div class="seq-item ' + tipo + '" data-id="' + e.id + '">' +
-          '<span class="seq-drag" title="Arrastrar para reordenar" aria-label="Reordenar">⠿</span>' +
+        var abre = ed ? '' : ' onclick="verEjercicio(' + e.id + ',\'sesion\')"';
+        h += '<div class="seq-item ' + tipo + (ed ? ' ed' : '') + '" data-id="' + e.id + '">' +
+          (ed ? '<span class="seq-drag" title="Arrastrar para reordenar" aria-label="Reordenar">⠿</span>' : '') +
           '<span class="seq-num">' + (i + 1) + '</span>' +
-          '<div class="seq-body" onclick="verEjercicio(' + e.id + ',\'sesion\')">' +
+          '<div class="seq-body"' + abre + '>' +
             '<div class="seq-tipo">' + (tipo === 'carro' ? '🛒 Carro' : '🎯 Área de trabajo') + '</div>' +
             '<div class="seq-nom">' + _gEsc(e.nombre || ('Ejercicio ' + e.id)) + '</div>' +
           '</div>' +
-          '<span class="seq-thumb" onclick="verEjercicio(' + e.id + ',\'sesion\')">' + (th
-            ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
-            : '<span class="plan-bl-noimg">🎬</span>') + '</span>' +
+          (ed
+            ? '<span class="seq-flechas">' +
+                '<button type="button" class="seq-fl" ' + (i === 0 ? 'disabled ' : '') +
+                  'onclick="seqMover(' + e.id + ',-1)" aria-label="Subir">▲</button>' +
+                '<button type="button" class="seq-fl" ' + (i === ejsEnSesion.length - 1 ? 'disabled ' : '') +
+                  'onclick="seqMover(' + e.id + ',1)" aria-label="Bajar">▼</button>' +
+              '</span>'
+            : '<span class="seq-thumb"' + abre + '>' + (th
+                ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
+                : '<span class="plan-bl-noimg">🎬</span>') + '</span>') +
         '</div>';
       });
       h += '</div>';
       return h;
     }
+    // ── v0.316 — REORDENAR SOLO CUANDO SE PIDE ───────────────────────
+    // En el móvil, un tirador siempre activo es un orden cambiado sin querer:
+    // basta rozarlo al hacer scroll con la clase empezada. Así que el orden
+    // vive detrás de un botón. En lectura —que es el 95% del tiempo— la lista
+    // no se puede mover y cada fila abre su ejercicio de un toque.
+    var _seqEdit  = false;   // ¿modo ordenar?
+    var _sesVista = null;    // id de la sesión que se está viendo
+    function _sesPintarContenido() {
+      var cont = document.getElementById('detalle-sesion-contenido');
+      if (!cont || !_sesVista) return;
+      var sesion = leerClases().filter(function(c){ return c.id === _sesVista; })[0];
+      if (!sesion) return;
+      var html = _sesSecuenciaHTML(sesion, _sesEjsOrdenados(sesion, leerEjercicios()));
+      html += '<button class="btn btn-rojo" onclick="borrarSesion(' + sesion.id + ')">Borrar sesión</button>';
+      cont.innerHTML = html;
+    }
+    function seqToggleEdit() {
+      _seqEdit = !_seqEdit;
+      var y = window.scrollY || 0;
+      _sesPintarContenido();
+      window.scrollTo(0, y);
+      if (typeof planToast === 'function') {
+        planToast(_seqEdit ? '✏️ Arrastra ⠿ o usa ▲▼' : '✓ Orden guardado');
+      }
+    }
+    // Mover con flechas: en pista, con la mano sudada o con prisa, es más
+    // seguro que arrastrar. Hace exactamente lo mismo.
+    function seqMover(id, delta) {
+      var lista = document.getElementById('seq-lista');
+      if (!lista) return;
+      var items = Array.prototype.slice.call(lista.querySelectorAll('.seq-item'));
+      var i = -1;
+      items.forEach(function(x, k){ if (parseInt(x.getAttribute('data-id'), 10) === id) i = k; });
+      var j = i + delta;
+      if (i < 0 || j < 0 || j >= items.length) return;
+      if (delta < 0) lista.insertBefore(items[i], items[j]);
+      else           lista.insertBefore(items[j], items[i]);
+      _seqRenumerar(lista);
+      _seqGuardar(lista);
+      var y = window.scrollY || 0;
+      _sesPintarContenido();
+      window.scrollTo(0, y);
+    }
+
     // ── Arrastrar con el dedo ────────────────────────────────────────
     // Solo desde el tirador ⠿ (touch-action:none), para no pelearse con el
     // scroll de la lista ni con el toque que abre el ejercicio. Con Pointer
@@ -23937,6 +24020,7 @@
     }
     function _seqInit() {
       document.addEventListener('pointerdown', function(e){
+        if (!_seqEdit) return;   // v0.316: en lectura no se mueve nada
         var h = e.target && e.target.closest && e.target.closest('.seq-drag');
         if (!h) return;
         var it = h.closest('.seq-item'); if (!it) return;
