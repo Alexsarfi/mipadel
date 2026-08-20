@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.314.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.315.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,36 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.315.0 — El bloque se abre en árbol · la sesión es una secuencia (2026-08)
+    ⚠ EJECUTAR migraciones/migracion_ses_orden.sql ANTES de usar esta versión.
+    · EL BLOQUE SE DESPLIEGA EN EL SITIO. En Área de trabajo, pulsar un bloque
+      ya no cambia de pantalla: abre debajo sus sesiones, con miniatura y
+      nombre y nada más. Se ve la estructura entera del área de un vistazo,
+      sin ir y volver. El ⚙ se separa a su propio botón y sigue llevando al
+      detalle, que es donde se enlaza y se edita.
+      Esto sustituye a las listas en línea de la v0.287, que en el móvil
+      estaban escondidas y en el ordenador eran chips sin miniatura. Con
+      ellas se va también la regla `plan-inline` que las ocultaba.
+    · LA SESIÓN, COMO SECUENCIA DE CLASE. Fuera la línea de fecha y temática:
+      queda el nombre y, debajo, los ejercicios EN ORDEN, numerados, cada uno
+      teñido de su tipo (🛒 carro en cian · 🎯 área en índigo) y con su
+      miniatura.
+    · UN SOLO HILO, NO DOS ZONAS. Una clase real alterna: carro → carro
+      cruzado → área → juego → área → partido. Agrupar por tipo habría roto
+      justo eso, la secuencia. El color distingue sin separar.
+    · SE REORDENA CON EL DEDO. Se arrastra por el tirador ⠿ y se suelta donde
+      toque. Va por Pointer Events, así que sirve igual el dedo en el móvil
+      que el ratón en el ordenador; el tirador lleva `touch-action:none` para
+      no pelearse con el scroll, y el resto de la fila sigue abriendo el
+      ejercicio de un toque.
+    · EL ORDEN ES DE LA APP. Se guarda en `p.sesOrden` (columna `ses_orden`
+      del plan del grupo) y la sincronización desde Obsidian NO lo pisa: el
+      orden de una clase se decide dándola. Si en el vault se añaden
+      ejercicios a la sesión, los nuevos entran al final; los que se borran se
+      caen solos.
+    · Sin la migración la app funciona igual, pero el orden se queda en el
+      dispositivo donde se hizo (el upsert reintenta sin esa columna).
 
   v0.314.0 — Área: «Ejercicios de juego» a la izquierda (2026-08)
     (sin migraciones nuevas)
@@ -7944,6 +7974,66 @@
     .plan-item-row { display:flex; align-items:stretch; }
     .plan-item-body { flex:1; min-width:0; padding:10px 12px; cursor:pointer; }
     /* Sesiones enlazadas inline dentro de cada apartado */
+    /* v0.315 — el árbol que se despliega dentro del bloque */
+    .plan-item-chev { flex-shrink:0; display:inline-block; font-size:15px; color:var(--gris);
+      transition:transform .15s; margin-right:6px; }
+    .plan-item-chev.abierto { transform:rotate(90deg); color:#0e7490; }
+    .plan-item-cfg { flex-shrink:0; width:34px; height:34px; margin-left:4px; font-family:inherit;
+      font-size:15px; color:var(--gris); border:1.5px solid var(--borde); border-radius:9px;
+      background:var(--blanco); cursor:pointer; }
+    .plan-item-cfg:active { background:var(--arena); }
+    .plan-bl-arbol { border-top:1px solid var(--borde); background:var(--arena); padding:7px; }
+    .plan-bl-fila { display:flex; align-items:center; gap:9px; padding:6px; margin-bottom:5px;
+      border:1.5px solid var(--borde); border-radius:10px; background:var(--blanco); cursor:pointer; }
+    .plan-bl-fila:last-child { margin-bottom:0; }
+    .plan-bl-fila:active { border-color:#0891b2; }
+    .plan-bl-fila.trabajada { border-color:#86efac; background:#f0fdf4; }
+    .plan-bl-thumb { flex-shrink:0; width:64px; aspect-ratio:16/9; border-radius:7px; overflow:hidden;
+      background:#111; display:flex; align-items:center; justify-content:center; }
+    .plan-bl-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+    .plan-bl-noimg { font-size:17px; }
+    .plan-bl-nom { flex:1; min-width:0; font-size:13.5px; font-weight:700; color:var(--texto);
+      line-height:1.3; overflow-wrap:anywhere; }
+    .plan-bl-tag { flex-shrink:0; font-size:10px; font-weight:800; border-radius:999px;
+      padding:1px 7px; color:#3730a3; background:#eef2ff; }
+    .plan-bl-tag.ok { color:#166534; background:#dcfce7; }
+    .plan-bl-vacio { font-size:12px; color:var(--gris); font-style:italic; padding:6px 4px; }
+    /* v0.315 — la sesión, como secuencia de clase */
+    .seq-cab { display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin:0 0 10px; }
+    .seq-cab-tag { font-size:11.5px; font-weight:800; border-radius:999px; padding:3px 9px; }
+    .seq-cab-tag.carro { color:#0e7490; background:#ecfeff; }
+    .seq-cab-tag.area  { color:#3730a3; background:#eef2ff; }
+    .seq-cab-ayuda { font-size:11px; color:var(--gris); margin-left:auto; }
+    .seq { display:flex; flex-direction:column; gap:7px; margin-bottom:14px; }
+    .seq-item { display:flex; align-items:center; gap:8px; padding:7px 9px 7px 0;
+      border:1.5px solid var(--borde); border-radius:12px; background:var(--blanco);
+      border-left-width:6px; }
+    .seq-item.carro { border-left-color:#0891b2; background:#ecfeff; }
+    .seq-item.area  { border-left-color:#4f46e5; background:#eef2ff; }
+    .seq-item.arrastrando { opacity:.9; transform:scale(1.02); box-shadow:0 6px 18px rgba(14,27,60,.22); }
+    .seq-drag { flex-shrink:0; width:38px; align-self:stretch; display:flex; align-items:center;
+      justify-content:center; font-size:19px; color:var(--gris); cursor:grab;
+      touch-action:none; -webkit-user-select:none; user-select:none; }
+    .seq-drag:active { cursor:grabbing; }
+    .seq-num { flex-shrink:0; width:24px; height:24px; border-radius:50%; display:flex;
+      align-items:center; justify-content:center; font-size:12.5px; font-weight:800;
+      color:#fff; background:#64748b; }
+    .seq-item.carro .seq-num { background:#0891b2; }
+    .seq-item.area  .seq-num { background:#4f46e5; }
+    .seq-body { flex:1; min-width:0; cursor:pointer; }
+    .seq-tipo { font-size:10.5px; font-weight:800; letter-spacing:.03em; color:var(--gris); }
+    .seq-item.carro .seq-tipo { color:#0e7490; }
+    .seq-item.area  .seq-tipo { color:#3730a3; }
+    .seq-nom { font-size:15px; font-weight:700; color:var(--texto); line-height:1.3;
+      overflow-wrap:anywhere; }
+    .seq-thumb { flex-shrink:0; width:72px; aspect-ratio:16/9; border-radius:8px; overflow:hidden;
+      background:#111; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+    .seq-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+    @media (max-width:699px){
+      .seq-nom { font-size:16px; }
+      .seq-thumb { width:84px; }
+      .seq-drag { width:42px; font-size:21px; }
+    }
     .plan-item-ses { display:flex; flex-wrap:wrap; gap:6px; padding:8px 10px; border-top:1px solid var(--borde); background:var(--arena); }
     .plan-ses-mini { display:flex; align-items:center; gap:6px; flex:1 1 100%; padding:7px 10px; border:1px solid var(--borde); border-radius:9px; background:var(--blanco); cursor:pointer; -webkit-tap-highlight-color:transparent; }
     .plan-ses-mini:active { background:var(--lila-suave); }
@@ -7953,18 +8043,11 @@
     .plan-ses-mini-nom { flex:1; min-width:0; font-size:12.5px; font-weight:600; color:var(--texto); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .plan-ses-mini.trabajada .plan-ses-mini-nom { color:var(--verde); }
     .plan-item-ses-vacio { font-size:11px; color:var(--gris); font-style:italic; padding:7px 12px; border-top:1px dashed var(--borde); }
-    /* v0.287 — En el MÓVIL, las sesiones enlazadas no se despliegan bajo cada
-       bloque: con seis bloques por apartado la pantalla se hacía interminable.
-       Queda el número a la derecha, y las sesiones se ven al entrar al bloque.
-       En pantalla ancha sí caben, así que ahí no cambia nada.
-       v0.311 (FIX): la regla iba por clase suelta y esa clase la usan TRES
-       sitios. Dentro del bloque, y en el resumen, la lista NO es ruido: es el
-       contenido. En el móvil desaparecía y en el ordenador no, que es
-       exactamente lo que se veía. Ahora solo se esconden las de la fila del
-       catálogo, marcadas con `plan-inline`. */
-    @media (max-width: 699px) {
-      .plan-item-ses.plan-inline, .plan-item-ses-vacio.plan-inline { display:none; }
-    }
+    /* v0.315 — Se cae la regla que escondía en el móvil las listas en línea
+       de la fila del catálogo (v0.287, acotada en la v0.311): esas listas ya
+       no existen, las sustituye el árbol que se despliega dentro del bloque.
+       `.plan-item-ses` sigue usándose en el detalle y en el resumen, y ahí
+       siempre se ha visto en las dos pantallas. */
     /* Ordenador: bloque estrecho a la izquierda, sesiones en rejilla a la derecha */
     @media (min-width:560px) {
       .plan-item { flex-direction:row; align-items:flex-start; }
@@ -9292,7 +9375,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.314.0';
+    var APP_VERSION = '0.315.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -9698,6 +9781,7 @@
           if (planServ.torneos != null) pLocal.torneos = planServ.torneos || [];
           // v0.282: clases tipo del club
           if (planServ.clases_tipo != null) pLocal.clasesTipo = planServ.clases_tipo || [];
+          if (planServ.ses_orden   != null) pLocal.sesOrden   = planServ.ses_orden   || {};   // v0.315
           // compDias NO se lee del plan de grupo (v0.132): es privado por
           // entrenador y se resuelve más abajo con plan_dias_usuario.
           escribirPlan(pLocal, true);
@@ -10013,6 +10097,10 @@
         // lo decide el nivel: cada una lleva el suyo y solo aparece en la
         // pantalla de ese nivel, a la que el rol ya controla el paso.
         clases_tipo:     p.clasesTipo || [],
+        // v0.315: el ORDEN de los ejercicios dentro de cada sesión. Es del
+        // club, como el catálogo: el orden que funciona en pista le sirve a
+        // todo el equipo técnico. Necesita migracion_ses_orden.sql.
+        ses_orden:       p.sesOrden || {},
         updated_by:      uid,
         updated_at:      new Date().toISOString()
       };
@@ -10027,7 +10115,7 @@
             // sincronizando como siempre.
             // v0.282: y lo mismo con clases_tipo — se reintenta sin las dos
             // columnas nuevas para no llevarse por delante el resto del plan.
-            var sinT = {}; for (var k in row) if (k !== 'torneos' && k !== 'clases_tipo') sinT[k] = row[k];
+            var sinT = {}; for (var k in row) if (k !== 'torneos' && k !== 'clases_tipo' && k !== 'ses_orden') sinT[k] = row[k];
             _sb.from('plan_grupo').upsert(sinT, { onConflict: 'scope_id' })
               .then(function(r2){ if (r2.error) console.warn('bg sync plan (2º intento)', r2.error); });
           });
@@ -16933,6 +17021,24 @@
       return _planEjCache.ejs.filter(function(e){ return inc.indexOf(e.id) >= 0; });
     }
 
+    // v0.315 — qué bloques están desplegados en el catálogo de áreas
+    var _planBlAb = {};
+    function planBlToggle(nivel, mes, id) {
+      var k = nivel + '|' + mes + '|' + id;
+      _planBlAb[k] = !_planBlAb[k];
+      _planRepintarCatalogo();
+    }
+    // El catálogo se pinta en Área de trabajo; si algún día vuelve a
+    // Planificación, esto lo cubre sin tocar nada más.
+    function _planRepintarCatalogo() {
+      var act = document.querySelector('.pantalla.activa');
+      var id  = act && act.id;
+      var y   = window.scrollY || 0;
+      if (id === 'pantalla-planificacion' && typeof mostrarPlanificacion === 'function') mostrarPlanificacion();
+      else if (typeof renderClasesNiveles === 'function') renderClasesNiveles();
+      window.scrollTo(0, y);   // que no salte al plegar o desplegar
+    }
+
     function _planItemHTML(nivel, mes, it, hechos, editMode, contadorCurso) {
       // v0.153: fuera el ✓ manual. En los niveles con registro por días
       // (Competición y Avanzado) cada fila muestra las veces que se ha
@@ -16962,8 +17068,15 @@
       }
 
       var h2 = '<div class="plan-item' + (hecho ? ' hecho' : '') + '"><div class="plan-item-row">';
-      h2 += '<div class="plan-item-body" onclick="planAbrirSesionesBloque(\'' + nivel + '\',\'' + mes + '\',\'' + it.id + '\')">';
-      h2 += '<div class="plan-item-top"><span class="plan-item-titulo">' + it.t + '</span><span class="plan-item-flecha">⚙</span></div>';
+      // v0.315: pulsar el bloque ya NO cambia de pantalla: despliega aquí
+      // mismo sus sesiones. Se ve la estructura entera del área de un vistazo
+      // sin ir y volver. El ⚙ se separa a su propio botón y sigue llevando al
+      // detalle, que es donde se enlaza y se edita.
+      var _abBl = !!_planBlAb[nivel + '|' + mes + '|' + it.id];
+      h2 += '<div class="plan-item-body" onclick="planBlToggle(\'' + nivel + '\',\'' + mes + '\',\'' + it.id + '\')">';
+      h2 += '<div class="plan-item-top">' +
+              '<span class="plan-item-chev' + (_abBl ? ' abierto' : '') + '">›</span>' +
+              '<span class="plan-item-titulo">' + it.t + '</span></div>';
       h2 += '</div>'; // chips/foco (intención · zona · golpe) ahora solo dentro del apartado
       if (conDias) {
         // v0.287 — El número cuenta lo que vas a encontrar al pulsar: las
@@ -16984,45 +17097,45 @@
                      (veces ? ' · trabajado ' + veces + '× este curso' : '');
         h2 += '<div class="plan-item-contador' + (nSesB ? ' con' : '') + '" title="' + titSes + '">' + nSesB + '</div>';
       }
+      h2 += '<button type="button" class="plan-item-cfg" title="Enlazar y editar este bloque" ' +
+            'aria-label="Editar bloque" onclick="event.stopPropagation();planAbrirSesionesBloque(\'' +
+            nivel + '\',\'' + mes + '\',\'' + it.id + '\')">⚙</button>';
       h2 += '</div>'; // .plan-item-row
 
-      // ── Enlazados (inline, tocables) ──
-      // v0.119 (POC): en Competición son ejercicios directos; en el resto, sesiones.
-      if (nivel === 'competicion') {
-        // v0.313: los ejercicios enlazados a mano Y las sesiones del bloque.
-        // Antes las sesiones solo salían si NO había ejercicios, y aun así
-        // solo las del enlace manual antiguo.
-        var ejsB = _planEjerciciosDeBloque(nivel, it);
-        var sesC = _sesionesDeBloqueUnion(nivel, mes, it);
-        if (ejsB.length || sesC.length) {
-          h2 += '<div class="plan-item-ses plan-inline">';
-          ejsB.forEach(function(e){
-            h2 += '<div class="plan-ses-mini" onclick="verEjercicio(' + e.id + ',\'planif\')" title="' + e.nombre.replace(/"/g,'') + '">' +
-              '<span class="plan-ses-mini-ic">🎯</span>' +
-              '<span class="plan-ses-mini-nom">' + e.nombre + '</span></div>';
+      // ── v0.315 · EL ÁRBOL DEL BLOQUE ────────────────────────────
+      // Sustituye a las listas en línea de antes, que en el móvil estaban
+      // escondidas (v0.287) y en el ordenador eran chips sin miniatura.
+      // Cada sesión se ve como se pide en pista: miniatura y nombre, nada más.
+      if (_abBl) {
+        h2 += '<div class="plan-bl-arbol">';
+        var _hayAlgo = false;
+        if (nivel === 'competicion') {
+          _planEjerciciosDeBloque(nivel, it).forEach(function(e){
+            _hayAlgo = true;
+            var th = _rutaEjThumb(e);
+            h2 += '<div class="plan-bl-fila ej" onclick="verEjercicio(' + e.id + ',\'planif\')">' +
+              '<span class="plan-bl-thumb">' + (th
+                ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
+                : '<span class="plan-bl-noimg">🎬</span>') + '</span>' +
+              '<span class="plan-bl-nom">' + _gEsc(e.nombre || ('Ejercicio ' + e.id)) + '</span>' +
+              '<span class="plan-bl-tag ej">Ejercicio</span></div>';
           });
-          sesC.forEach(function(c){
-            h2 += '<div class="plan-ses-mini' + (c.trabajada ? ' trabajada' : '') + '" onclick="verSesion(' + c.id + ',\'planif\')" title="' + nombreSesion(c).replace(/"/g,'') + '">' +
-              '<span class="plan-ses-mini-ic">' + (c.trabajada ? '✓' : '🎾') + '</span>' +
-              '<span class="plan-ses-mini-nom">' + nombreSesion(c) + '</span></div>';
-          });
-          h2 += '</div>';
-        } else {
-          h2 += '<div class="plan-item-ses-vacio plan-inline">Sin ejercicios ni sesiones enlazados</div>';
         }
-      } else {
-        var ses = _sesionesDeBloqueUnion(nivel, mes, it);
-        if (ses.length) {
-          h2 += '<div class="plan-item-ses plan-inline">';
-          ses.forEach(function(c){
-            h2 += '<div class="plan-ses-mini' + (c.trabajada ? ' trabajada' : '') + '" onclick="verSesion(' + c.id + ',\'planif\')" title="' + nombreSesion(c).replace(/"/g,'') + '">' +
-              '<span class="plan-ses-mini-ic">' + (c.trabajada ? '✓' : '🎾') + '</span>' +
-              '<span class="plan-ses-mini-nom">' + nombreSesion(c) + '</span></div>';
-          });
-          h2 += '</div>';
-        } else {
-          h2 += '<div class="plan-item-ses-vacio plan-inline">Sin sesiones enlazadas</div>';
+        _sesionesDeBloqueUnion(nivel, mes, it).forEach(function(c){
+          _hayAlgo = true;
+          var th = _rutaSesThumb(c);
+          h2 += '<div class="plan-bl-fila' + (c.trabajada ? ' trabajada' : '') + '" onclick="verSesion(' + c.id + ',\'planif\')">' +
+            '<span class="plan-bl-thumb">' + (th
+              ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
+              : '<span class="plan-bl-noimg">🎾</span>') + '</span>' +
+            '<span class="plan-bl-nom">' + _gEsc(nombreSesion(c)) + '</span>' +
+            (c.trabajada ? '<span class="plan-bl-tag ok">✓</span>' : '') + '</div>';
+        });
+        if (!_hayAlgo) {
+          h2 += '<div class="plan-bl-vacio">Este bloque todavía no tiene nada enlazado. ' +
+                'Pulsa el ⚙ para añadirlo.</div>';
         }
+        h2 += '</div>';
       }
       h2 += '</div>'; // .plan-item
       return h2;
@@ -23724,21 +23837,14 @@
                              : (sesionOrigen === 'planif') ? _rotPlanif : '‹ Sesiones';
 
       document.getElementById('detalle-sesion-titulo').textContent = nombreSesion(sesion);
-      document.getElementById('detalle-sesion-fecha').textContent  = formatearFecha(sesion.fecha) + (sesion.tematica ? '  ·  ' + sesion.tematica : '');
+      // v0.315: fuera la línea de fecha y temática. En pista sobra: lo que se
+      // mira es el nombre y, debajo, la secuencia de la clase.
+      document.getElementById('detalle-sesion-fecha').textContent = '';
 
-      var ejsEnSesion = (sesion.ejercicioIds||[]).map(function(eid){
-        return ejs.filter(function(e){ return e.id === eid; })[0];
-      }).filter(Boolean);
+      // v0.315: el orden lo manda la app (_sesOrden), no el vault.
+      var ejsEnSesion = _sesEjsOrdenados(sesion, ejs);
 
-      // La intención solo se valora en sesiones de Competición.
-      var esCompeticion = nivelDeSesion(sesion, _ejsById()) === 'competicion';
-
-      var html = '';
-      if (!ejsEnSesion.length) {
-        html = '<div class="vacio"><p>No hay ejercicios en esta sesión.</p></div>';
-      } else {
-        ejsEnSesion.forEach(function(ej) { html += ejCardHTML(ej, esCompeticion); });
-      }
+      var html = _sesSecuenciaHTML(sesion, ejsEnSesion);
       html += '<button class="btn btn-rojo" onclick="borrarSesion(' + sesion.id + ')">Borrar sesión</button>';
       document.getElementById('detalle-sesion-contenido').innerHTML = html;
 
@@ -23746,6 +23852,123 @@
       document.getElementById('pantalla-detalle-sesion').classList.add('activa');
       window.scrollTo(0,0);
     }
+
+    // ══ v0.315 — LA SESIÓN COMO SECUENCIA DE CLASE ═══════════════════
+    // Una clase no es una bolsa de ejercicios: es un orden. El de ayer fue
+    // carro → carro cruzado → área → juego → área → partido, alternando las
+    // dos partes. Por eso NO se agrupa en dos zonas: es UN solo hilo, y cada
+    // ejercicio va teñido de su tipo (carro cian · área índigo) para leer la
+    // estructura de un vistazo sin romper la secuencia real.
+    //
+    // EL ORDEN ES DE LA APP, no del vault. Se decide dando la clase, así que
+    // manda quien lo decide: se guarda en p.sesOrden y la sincronización desde
+    // Obsidian no lo pisa. Si en el vault se añaden o quitan ejercicios, los
+    // nuevos entran al final y los que ya no existen se caen solos.
+    function _sesOrdenMapa(p) { return (p && p.sesOrden) || {}; }
+    function _sesEjsOrdenados(sesion, ejsTodos) {
+      var ids  = (sesion.ejercicioIds || []).slice();
+      var guar = _sesOrdenMapa(leerPlan())[sesion.id] || null;
+      if (guar && guar.length) {
+        var enSesion = {}; ids.forEach(function(id){ enSesion[id] = true; });
+        var vistos = {}, out = [];
+        guar.forEach(function(id){ if (enSesion[id] && !vistos[id]) { vistos[id] = true; out.push(id); } });
+        ids.forEach(function(id){ if (!vistos[id]) out.push(id); });   // los nuevos, al final
+        ids = out;
+      }
+      var byId = {};
+      (ejsTodos || leerEjercicios()).forEach(function(e){ byId[e.id] = e; });
+      return ids.map(function(id){ return byId[id]; }).filter(Boolean);
+    }
+    function _sesOrdenGuardar(sesionId, ids) {
+      var p = leerPlan();
+      if (!p.sesOrden) p.sesOrden = {};
+      p.sesOrden[sesionId] = ids.slice();
+      _planGuardar(p);
+    }
+    // Tipo de cada ejercicio dentro de la clase: la misma regla que usa el
+    // resto de la app (`parte:` del vault, con el formato como respaldo).
+    function _sesTipoEj(e) { return _esDeCarro(e) ? 'carro' : 'area'; }
+    function _sesSecuenciaHTML(sesion, ejsEnSesion) {
+      if (!ejsEnSesion.length) {
+        return '<div class="vacio"><p>No hay ejercicios en esta sesión.</p></div>';
+      }
+      var nC = 0, nA = 0;
+      ejsEnSesion.forEach(function(e){ if (_sesTipoEj(e) === 'carro') nC++; else nA++; });
+      var h = '<div class="seq-cab">' +
+        '<span class="seq-cab-tag carro">🛒 Carro · ' + nC + '</span>' +
+        '<span class="seq-cab-tag area">🎯 Área · ' + nA + '</span>' +
+        '<span class="seq-cab-ayuda">Arrastra ⠿ para cambiar el orden</span></div>';
+      h += '<div class="seq" id="seq-lista" data-ses="' + sesion.id + '">';
+      ejsEnSesion.forEach(function(e, i){
+        var tipo = _sesTipoEj(e);
+        var th   = _rutaEjThumb(e);
+        h += '<div class="seq-item ' + tipo + '" data-id="' + e.id + '">' +
+          '<span class="seq-drag" title="Arrastrar para reordenar" aria-label="Reordenar">⠿</span>' +
+          '<span class="seq-num">' + (i + 1) + '</span>' +
+          '<div class="seq-body" onclick="verEjercicio(' + e.id + ',\'sesion\')">' +
+            '<div class="seq-tipo">' + (tipo === 'carro' ? '🛒 Carro' : '🎯 Área de trabajo') + '</div>' +
+            '<div class="seq-nom">' + _gEsc(e.nombre || ('Ejercicio ' + e.id)) + '</div>' +
+          '</div>' +
+          '<span class="seq-thumb" onclick="verEjercicio(' + e.id + ',\'sesion\')">' + (th
+            ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
+            : '<span class="plan-bl-noimg">🎬</span>') + '</span>' +
+        '</div>';
+      });
+      h += '</div>';
+      return h;
+    }
+    // ── Arrastrar con el dedo ────────────────────────────────────────
+    // Solo desde el tirador ⠿ (touch-action:none), para no pelearse con el
+    // scroll de la lista ni con el toque que abre el ejercicio. Con Pointer
+    // Events vale igual el dedo en el móvil que el ratón en el ordenador.
+    var _seqDrag = null;
+    function _seqRenumerar(lista) {
+      var n = 1;
+      Array.prototype.forEach.call(lista.querySelectorAll('.seq-item'), function(x){
+        var b = x.querySelector('.seq-num'); if (b) b.textContent = n++;
+      });
+    }
+    function _seqGuardar(lista) {
+      var ids = Array.prototype.map.call(lista.querySelectorAll('.seq-item'), function(x){
+        return parseInt(x.getAttribute('data-id'), 10);
+      }).filter(function(x){ return !isNaN(x); });
+      var sid = parseInt(lista.getAttribute('data-ses'), 10);
+      if (!isNaN(sid)) _sesOrdenGuardar(sid, ids);
+    }
+    function _seqInit() {
+      document.addEventListener('pointerdown', function(e){
+        var h = e.target && e.target.closest && e.target.closest('.seq-drag');
+        if (!h) return;
+        var it = h.closest('.seq-item'); if (!it) return;
+        e.preventDefault();
+        _seqDrag = { el: it, lista: it.parentNode };
+        it.classList.add('arrastrando');
+        try { h.setPointerCapture(e.pointerId); } catch (x) {}
+      });
+      document.addEventListener('pointermove', function(e){
+        if (!_seqDrag) return;
+        e.preventDefault();
+        var y = e.clientY;
+        Array.prototype.forEach.call(_seqDrag.lista.querySelectorAll('.seq-item'), function(x){
+          if (x === _seqDrag.el) return;
+          var r = x.getBoundingClientRect();
+          if (y > r.top && y < r.bottom) {
+            _seqDrag.lista.insertBefore(_seqDrag.el, (y < r.top + r.height / 2) ? x : x.nextSibling);
+          }
+        });
+      });
+      ['pointerup', 'pointercancel'].forEach(function(ev){
+        document.addEventListener(ev, function(){
+          if (!_seqDrag) return;
+          _seqDrag.el.classList.remove('arrastrando');
+          _seqRenumerar(_seqDrag.lista);
+          _seqGuardar(_seqDrag.lista);
+          if (typeof planToast === 'function') planToast('✓ Orden guardado');
+          _seqDrag = null;
+        });
+      });
+    }
+    _seqInit();
 
     function borrarSesion(id) {
       if (!confirm('¿Borrar esta sesión?')) return;
