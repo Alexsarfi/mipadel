@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.320.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.321.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,24 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.321.0 — La Temporalización es del curso · y el Archivo, debajo (2026-08)
+    (sin migraciones nuevas)
+    · LA TEMPORALIZACIÓN PASA A SER DE UN CURSO: del 1 de septiembre al 31 de
+      agosto. Cada 1 de septiembre empieza en blanco, sin tocar nada: el corte
+      lo da `cursoDeFecha()`, el mismo que usa el resto de la app, así que no
+      hay que archivar a mano ni acordarse de hacerlo.
+    · Y LO ANTERIOR NO SE PIERDE: baja al 📦 ARCHIVO, justo debajo y plegado.
+      Dentro, un curso por fila —también plegado— con el mismo árbol de meses,
+      semanas y días. La cabecera dice cuántos cursos y cuántas clases hay.
+    · Vuelven ahí las acciones de curso que se habían quedado sin sitio en la
+      v0.319: abrir un curso pasado y copiar su planificación.
+    · EL REPOSITORIO SE PLIEGA. Es la caja más alta de Planificación y casi
+      siempre se entra a mirar el calendario, no a buscar una clase. Arranca
+      cerrado y recuerda cómo lo dejaste. El ⚙ de crear sigue funcionando sin
+      abrir la caja.
+    · El árbol de mes/semana/día se escribe una sola vez
+      (_rutaTempCuerpoHTML) y lo usan la Temporalización y el Archivo.
 
   v0.320.0 — El Repositorio también lista sesiones · vídeo sin salir de la clase (2026-08)
     (sin migraciones nuevas)
@@ -7280,7 +7298,12 @@
     .ct-hdr-t { font-size:14px; font-weight:800; color:var(--texto); }
     .ct-hdr-n { font-size:11.5px; color:var(--gris); }
     .ct-hdr-c { margin-left:auto; font-size:10.5px; color:var(--gris); }
-    .ct-hdr { flex-wrap:wrap; }                                  /* v0.305 */
+    .ct-hdr { flex-wrap:wrap; cursor:pointer; }                  /* v0.305 · v0.321 */
+    .ct-hdr-chev { font-size:15px; color:var(--gris); transition:transform .15s; margin-left:6px; }
+    .ct-caja.abierto .ct-hdr-chev { transform:rotate(90deg); }
+    .ct-caja-body { display:none; }
+    .ct-caja.abierto .ct-caja-body { display:block; }
+    .ct-caja:not(.abierto) .ct-hdr { padding-bottom:0; margin-bottom:0; border-bottom:none; }
     .ct-hdr-sub { flex:0 0 100%; font-size:11px; color:var(--gris); line-height:1.35;
       margin-top:5px; }
     /* v0.285 — El árbol dentro del selector del día */
@@ -9559,7 +9582,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.320.0';
+    var APP_VERSION = '0.321.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -19187,7 +19210,7 @@
       var mapEjCT  = _ejsById();
       var todasSCT = leerClases();
 
-      h += '<div class="ct-caja">';
+      h += '<div class="ct-caja' + (_ctCajaOpen ? ' abierto' : '') + '">';
       // v0.305: «Clases tipo» no decía lo que es. REPOSITORIO sí: el almacén
       // de todas las clases ya elaboradas, listas para llevar a un día.
       // v0.320: el total cuenta clases tipo Y sesiones, que es lo que se ve
@@ -19197,12 +19220,13 @@
           totalSesCT += _sesionesDeBloqueUnion(nivelCT, et.key, it).length;
         });
       });
-      h += '<div class="ct-hdr"><span class="ct-hdr-t">📚 Repositorio</span>' +
+      h += '<div class="ct-hdr" onclick="ctCajaToggle()"><span class="ct-hdr-t">📚 Repositorio</span>' +
            '<span class="ct-hdr-n">' + _gEsc(planNivelLabel(nivelCT)) + '</span>' +
            '<span class="ct-hdr-c">' + totalCT + ' clase' + (totalCT !== 1 ? 's' : '') +
              ' · ' + totalSesCT + ' sesion' + (totalSesCT !== 1 ? 'es' : '') + '</span>' +
-           '<button type="button" class="ct-nueva" onclick="ctNueva()" ' +
+           '<button type="button" class="ct-nueva" onclick="event.stopPropagation();ctNueva()" ' +
              'title="Crear una clase desde cero" aria-label="Nueva clase">⚙</button>' +
+           '<span class="ct-hdr-chev">›</span>' +
            '<span class="ct-hdr-sub">Las clases ya preparadas (⭐) y las sesiones del vault (🎾) ' +
              'de este nivel. Ábrelas para verlas en pista o llévalas a un día desde el calendario.</span></div>';
 
@@ -19213,6 +19237,7 @@
       // clases del plan (.plan-etapa, .plan-item, .plan-bl-arbol), así que
       // las dos pantallas se navegan igual y solo cambia lo que cuelga del
       // bloque: allí sesiones y ejercicios, aquí clases tipo.
+      h += '<div class="ct-caja-body">';
       etapasCT.forEach(function(et, iEt){
         var filasCT = contCT[et.key] || [];
         var nEt = 0;
@@ -19287,7 +19312,8 @@
         });
         h += '</div></div>';
       });
-      h += '</div>';
+      h += '</div>';   // .ct-caja-body
+      h += '</div>';   // .ct-caja
 
       h += _rutaTemporalizacionHTML(p, idsNivel);   // v0.319
       h += '<div class="ruta-leyenda">✓ trabajada · ◉ esta semana · ● planificada · ○ vacía</div>';
@@ -19354,6 +19380,11 @@
     var _rutaTempMes  = {};   // qué meses están desplegados
     function rutaTempToggle() { _rutaTempOpen = !_rutaTempOpen; }
     function rutaTempMesToggle(k) { _rutaTempMes[k] = !_rutaTempMes[k]; mostrarPlanificacion(); }
+    // v0.321 — el Repositorio también se pliega: es la caja más alta de la
+    // pantalla y casi siempre se entra a mirar el calendario, no a buscar
+    // una clase. Arranca cerrado y recuerda cómo lo dejaste.
+    var _ctCajaOpen = false;
+    function ctCajaToggle() { _ctCajaOpen = !_ctCajaOpen; mostrarPlanificacion(); }
 
     // Días con algo de ESTE nivel: un bloque de área, una sesión o carro.
     // Nota: las claves de rutaSes/rutaCarro tienen la misma forma para día y
@@ -19394,28 +19425,16 @@
       return { bloques: bloques, ses: ses, nCarro: nCarro };
     }
 
-    function _rutaTemporalizacionHTML(p, idsNivel) {
-      var nivel   = _compNivel();
-      var dias    = _rutaDiasConAlgo(p, nivel, idsNivel);
-      var filas   = _compTodasFilas(p);
-      var todasS  = leerClases();
-      var hoy     = hoyLocal();
-      var mesHoy  = hoy.slice(0, 7);
+    // v0.321 — El cuerpo (mes → semana → día) se pinta igual en la
+    // Temporalización y en el Archivo, así que vive en un solo sitio.
+    // `pref` distingue las claves de plegado de un curso y otro.
+    function _rutaTempCuerpoHTML(p, nivel, dias, pref) {
+      var filas  = _compTodasFilas(p);
+      var todasS = leerClases();
+      var hoy    = hoyLocal();
+      var mesHoy = hoy.slice(0, 7);
+      var h = '';
 
-      var h = '<div class="plan-otros' + (_rutaTempOpen ? ' abierto' : '') + '" style="margin-top:1rem;">';
-      h += '<div class="plan-otros-hdr" onclick="rutaTempToggle();this.parentNode.classList.toggle(\'abierto\')">' +
-        '<span style="flex:1;">🗓️ Temporalización ' +
-        '<span class="ruta-panel-nota">(' + dias.length + (dias.length === 1 ? ' clase' : ' clases') + ')</span></span>' +
-        '<span class="chev">›</span></div>';
-      h += '<div class="plan-otros-body">';
-
-      if (!dias.length) {
-        h += '<div class="plan-bl-vacio">Todavía no hay ninguna clase planificada en este nivel. ' +
-             'Según vayas llenando días, irán apareciendo aquí por meses y semanas.</div>';
-        return h + '</div></div>';
-      }
-
-      // Agrupar por mes y, dentro, por semana. Solo lo que tiene algo.
       var meses = [], porMes = {};
       dias.forEach(function(f){
         var m = f.slice(0, 7);
@@ -19424,17 +19443,16 @@
       });
 
       meses.forEach(function(m){
-        var abierto = (_rutaTempMes[m] === undefined) ? (m === mesHoy) : !!_rutaTempMes[m];
-        var nM = porMes[m].length;
+        var kM = pref + '|' + m;
+        var abierto = (_rutaTempMes[kM] === undefined) ? (m === mesHoy) : !!_rutaTempMes[kM];
         h += '<div class="plan-otros' + (abierto ? ' abierto' : '') + '">';
-        h += '<div class="plan-otros-hdr" onclick="rutaTempMesToggle(\'' + m + '\')">' +
+        h += '<div class="plan-otros-hdr" onclick="rutaTempMesToggle(\'' + kM + '\')">' +
           '<span style="flex:1;">' + _gEsc(MESES_NOMBRES_A[+m.slice(5, 7) - 1]) + ' ' + m.slice(0, 4) +
             (m === mesHoy ? ' <span class="plan-etapa-badge">en curso</span>' : '') + '</span>' +
-          '<span class="plan-etapa-prog">' + nM + '</span>' +
+          '<span class="plan-etapa-prog">' + porMes[m].length + '</span>' +
           '<span class="chev">›</span></div>';
         h += '<div class="plan-otros-body">';
 
-        // Semanas dentro del mes, también solo las que tienen algo
         var sems = [], porSem = {};
         porMes[m].forEach(function(f){
           var lun = _rutaSemanaLibre(f).lunISO;
@@ -19465,8 +19483,63 @@
         });
         h += '</div></div>';
       });
+      return h;
+    }
 
-      return h + '</div></div>';
+    // v0.321 — LA TEMPORALIZACIÓN ES DE UN CURSO: del 1 de septiembre al 31
+    // de agosto. Cada 1 de septiembre empieza en blanco y lo anterior no se
+    // pierde: baja al Archivo, que va justo debajo y arranca plegado.
+    // El corte lo da cursoDeFecha(), el mismo que usa el resto de la app, así
+    // que no hay que archivar nada a mano ni recordar hacerlo en septiembre.
+    function _rutaTemporalizacionHTML(p, idsNivel) {
+      var nivel = _compNivel();
+      var todos = _rutaDiasConAlgo(p, nivel, idsNivel);
+      var cursoAct = _cursoActual();
+      var deEste = [], pasados = {}, cursosPrev = [];
+      todos.forEach(function(f){
+        var c = _cursoDe(f);
+        if (c === cursoAct) { deEste.push(f); return; }
+        if (!pasados[c]) { pasados[c] = []; cursosPrev.push(c); }
+        pasados[c].push(f);
+      });
+      cursosPrev.sort().reverse();   // el más reciente arriba
+
+      var h = '<div class="plan-otros' + (_rutaTempOpen ? ' abierto' : '') + '" style="margin-top:1rem;">';
+      h += '<div class="plan-otros-hdr" onclick="rutaTempToggle();this.parentNode.classList.toggle(\'abierto\')">' +
+        '<span style="flex:1;">🗓️ Temporalización <span class="ruta-panel-nota">· curso ' + cursoAct +
+        ' (' + deEste.length + (deEste.length === 1 ? ' clase' : ' clases') + ')</span></span>' +
+        '<span class="chev">›</span></div>';
+      h += '<div class="plan-otros-body">';
+      h += deEste.length
+        ? _rutaTempCuerpoHTML(p, nivel, deEste, 'act')
+        : '<div class="plan-bl-vacio">El curso ' + cursoAct + ' todavía no tiene ninguna clase en este ' +
+          'nivel. Según vayas llenando días, irán apareciendo aquí por meses y semanas.</div>';
+      h += '</div></div>';
+
+      // ── Archivo: los cursos anteriores, cada uno con su árbol ──
+      if (cursosPrev.length) {
+        var nArch = cursosPrev.reduce(function(n, c){ return n + pasados[c].length; }, 0);
+        h += '<div class="plan-otros' + (_rutaArchivoOpen ? ' abierto' : '') + '" style="margin-top:0.6rem;">';
+        h += '<div class="plan-otros-hdr" onclick="rutaArchivoToggle();this.parentNode.classList.toggle(\'abierto\')">' +
+          '<span style="flex:1;">📦 Archivo <span class="ruta-panel-nota">(' + cursosPrev.length +
+          (cursosPrev.length === 1 ? ' curso · ' : ' cursos · ') + nArch +
+          (nArch === 1 ? ' clase)' : ' clases)') + '</span></span>' +
+          '<span class="chev">›</span></div>';
+        h += '<div class="plan-otros-body">';
+        cursosPrev.forEach(function(c){
+          var abC = !!_rutaArchAbierto[c];
+          h += '<div class="plan-otros' + (abC ? ' abierto' : '') + '">';
+          h += '<div class="plan-otros-hdr" onclick="rutaArchToggle(\'' + c + '\');' +
+            'this.parentNode.classList.toggle(\'abierto\')">' +
+            '<span style="flex:1;">🗓️ Curso ' + c + '</span>' +
+            '<span class="plan-etapa-prog">' + pasados[c].length + '</span>' +
+            '<span class="chev">›</span></div>';
+          h += '<div class="plan-otros-body">' + _rutaArchAccionesHTML(c) +
+               _rutaTempCuerpoHTML(p, nivel, pasados[c], c) + '</div></div>';
+        });
+        h += '</div></div>';
+      }
+      return h;
     }
     // Nombre corto del día de la semana de una fecha
     function _diaSemanaNombre(fechaISO) {
