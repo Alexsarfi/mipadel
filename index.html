@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.316.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.317.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,34 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.317.0 — La sesión se lee como la clase que es (2026-08)
+    (sin migraciones nuevas · sí hace falta volver a sincronizar el vault)
+    · LA SESIÓN PASA A SER UNA ESTRUCTURA. Cada ejercicio es una fila
+      sombreada según su parte —🛒 carro en cian, 🎯 área en índigo— con su
+      número, su CONDICIÓN (continuidad · condicionado · competitivo), sus
+      minutos y cuánta gente hace falta. Leída de arriba abajo cuenta la
+      progresión de la clase sin abrir nada.
+    · BARRA DE REPARTO al pie: qué porcentaje se fue en carro, cuánto en área
+      y el total en pista. Si a algún ejercicio le falta la duración NO se
+      pinta —una proporción a medias miente—, y se dice cuántos minutos hay
+      contados.
+    · NADA DE ESTO SE ESCRIBE A MANO. Sale de facetas que ya rellenas en el
+      vault: `parte`, `condicionantes`, `formato` y `duracion`. El formato se
+      traduce a lo que se dice en pista: `2+A` → «2 + tú», `4J` → «4»,
+      `rotación-capitán` → «grupo».
+    · EL OBJETIVO DE LA SESIÓN, bajo el nombre. Ya viajaba del vault desde
+      siempre y no se enseñaba en ningún sitio.
+    · EL EJERCICIO YA NO PIERDE SU SESIÓN. Abierto desde una clase, arriba
+      lleva una banda del color de su parte que dice de qué clase viene y qué
+      número hace («2 de 4»), con su dosis y su FOCO destacado antes del paso
+      a paso — que es lo que hay que tener en la cabeza al leerlo.
+    · Y ABAJO SE PASA AL SIGUIENTE sin volver a la sesión. En pista, si hay
+      que volver y buscar, no se usa.
+    · EN EL VAULT: `sync_padel.py` sube ahora `duracion` y `repeticiones`
+      dentro de `facetas` (ya jsonb, sin migración). Se escribían desde
+      siempre y se quedaban ahí. Hay que relanzar el sincronizador para que
+      los minutos lleguen; sin ellos la estructura se pinta igual, con «—».
 
   v0.316.0 — El orden de la sesión, detrás de un botón (2026-08)
     (sin migraciones nuevas)
@@ -8055,6 +8083,42 @@
     .seq-item.area  .seq-tipo { color:#3730a3; }
     .seq-nom { font-size:15px; font-weight:700; color:var(--texto); line-height:1.3;
       overflow-wrap:anywhere; }
+    /* v0.317 — dosis a la derecha de cada fila, y barra de reparto */
+    .seq-dosis { flex-shrink:0; min-width:52px; text-align:right; cursor:pointer;
+      display:flex; flex-direction:column; gap:1px; }
+    .seq-dosis b { font-size:15px; font-weight:800; color:var(--texto); }
+    .seq-dosis b.falta { color:var(--gris); font-weight:600; }
+    .seq-dosis span { font-size:11px; color:var(--gris); }
+    .seq-item.carro .seq-dosis span { color:#0e7490; }
+    .seq-item.area  .seq-dosis span { color:#3730a3; }
+    .seq-barra { display:flex; height:9px; border-radius:999px; overflow:hidden; margin-top:12px; gap:1px; }
+    .seq-barra-tr.carro { background:#22b8cf; }
+    .seq-barra-tr.area  { background:#7c74e0; }
+    .seq-barra-pie { display:flex; justify-content:space-between; font-size:11px;
+      color:var(--gris); margin-top:5px; }
+    /* v0.317 — el ejercicio, con su sesión detrás */
+    .ejses { border-radius:12px; padding:11px 13px; margin-bottom:14px; position:relative; }
+    .ejses.carro { background:#ecfeff; border-left:6px solid #0891b2; }
+    .ejses.area  { background:#eef2ff; border-left:6px solid #4f46e5; }
+    .ejses-vol { font-family:inherit; font-size:12.5px; font-weight:700; padding:0;
+      border:none; background:none; cursor:pointer; text-align:left; max-width:75%;
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; }
+    .ejses.carro .ejses-vol { color:#0e7490; }
+    .ejses.area  .ejses-vol { color:#3730a3; }
+    .ejses-n { position:absolute; top:11px; right:13px; font-size:12px; font-weight:800; color:var(--gris); }
+    .ejses-lbl { font-size:10.5px; font-weight:800; letter-spacing:.04em; margin-top:7px; color:var(--gris); }
+    .ejses.carro .ejses-lbl { color:#0e7490; }
+    .ejses.area  .ejses-lbl { color:#3730a3; }
+    .ejses-meta { font-size:12px; color:var(--gris); margin-top:2px; }
+    .ejses-foco { font-size:15px; font-weight:700; color:var(--texto); line-height:1.35;
+      margin-top:8px; overflow-wrap:anywhere; }
+    .ejses-nav { display:flex; gap:8px; margin:16px 0 4px; }
+    .ejses-nav-b { flex:1; min-width:0; font-family:inherit; font-size:12px; color:var(--gris);
+      text-align:left; padding:10px 11px; border:1.5px solid var(--borde); border-radius:10px;
+      background:var(--blanco); cursor:pointer; overflow:hidden; text-overflow:ellipsis;
+      white-space:nowrap; }
+    .ejses-nav-b.der { text-align:right; }
+    .ejses-nav-b.vacio { border:none; background:none; cursor:default; }
     .seq-thumb { flex-shrink:0; width:72px; aspect-ratio:16/9; border-radius:8px; overflow:hidden;
       background:#111; display:flex; align-items:center; justify-content:center; cursor:pointer; }
     .seq-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
@@ -9404,7 +9468,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.316.0';
+    var APP_VERSION = '0.317.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -22766,6 +22830,60 @@
       return h;
     }
 
+    // ── v0.317 — EL EJERCICIO NO PIERDE SU SESIÓN ────────────────────
+    // Abierto desde una clase, arriba se ve de qué clase viene y qué número
+    // hace, con el color de su parte; y abajo se pasa al siguiente sin tener
+    // que volver. En pista, si hay que volver y buscar, no se usa.
+    function _ejSesCtx(origen) {
+      if (origen !== 'sesion' || !_sesVista) return null;
+      var ses = leerClases().filter(function(c){ return c.id === _sesVista; })[0];
+      if (!ses) return null;
+      var ejs = _sesEjsOrdenados(ses, leerEjercicios());
+      return { ses: ses, ejs: ejs };
+    }
+    function _ejCtxSesionHTML(ej, origen) {
+      var c = _ejSesCtx(origen);
+      if (!c) return '';
+      var i = -1;
+      c.ejs.forEach(function(x, k){ if (x.id === ej.id) i = k; });
+      if (i < 0) return '';
+      var tipo = _sesTipoEj(ej), cond = _sesCondTxt(ej);
+      var min = _sesMin(ej), jug = _sesJug(ej), reps = ejFaceta(ej, 'repeticiones');
+      var meta = [];
+      if (min)  meta.push(min + '′');
+      if (jug)  meta.push(jug);
+      if (reps) meta.push(_gEsc(reps));
+      // El FOCO va arriba del todo y resaltado: es lo que hay que tener en la
+      // cabeza antes de leer el paso a paso.
+      var foco = String(ej.descripcion || '').split(' · Táctica:')[0];
+      return '<div class="ejses ' + tipo + '">' +
+        '<button type="button" class="ejses-vol" onclick="irA(\'pantalla-detalle-sesion\')">' +
+          '‹ ' + _gEsc(nombreSesion(c.ses)) + '</button>' +
+        '<span class="ejses-n">' + (i + 1) + ' de ' + c.ejs.length + '</span>' +
+        '<div class="ejses-lbl">' + (tipo === 'carro' ? 'CARRO' : 'ÁREA') + (cond ? ' · ' + cond : '') + '</div>' +
+        (meta.length ? '<div class="ejses-meta">' + meta.join(' · ') + '</div>' : '') +
+        (foco ? '<div class="ejses-foco">' + _gEsc(foco) + '</div>' : '') +
+      '</div>';
+    }
+    function _ejNavSesionHTML(ej, origen) {
+      var c = _ejSesCtx(origen);
+      if (!c) return '';
+      var i = -1;
+      c.ejs.forEach(function(x, k){ if (x.id === ej.id) i = k; });
+      if (i < 0) return '';
+      var ant = c.ejs[i - 1], sig = c.ejs[i + 1];
+      var h = '<div class="ejses-nav">';
+      h += ant
+        ? '<button type="button" class="ejses-nav-b" onclick="verEjercicio(' + ant.id + ',\'sesion\')">' +
+          '‹ ' + i + ' · ' + _gEsc(ant.nombre) + '</button>'
+        : '<span class="ejses-nav-b vacio"></span>';
+      h += sig
+        ? '<button type="button" class="ejses-nav-b der" onclick="verEjercicio(' + sig.id + ',\'sesion\')">' +
+          (i + 2) + ' · ' + _gEsc(sig.nombre) + ' ›</button>'
+        : '<span class="ejses-nav-b vacio"></span>';
+      return h + '</div>';
+    }
+
     function verEjercicio(id, origen) {
       ejActivoId      = id;
       // v0.306: 'area' es la pestaña «Ejercicios de juego» de Área de trabajo.
@@ -22786,7 +22904,7 @@
         (cat ? cat.nombre : 'Sin categoría') + '</span>';
       document.getElementById('volver-detalle-ej').onclick = function(){ irA(origenDetalleEj); };
 
-      var html = '';
+      var html = _ejCtxSesionHTML(ej, origen);
 
       // Imagen (toca para ampliar en globo)
       if (ej.imagen) html += '<img src="' + ej.imagen + '" class="detalle-imagen" alt="' + ej.nombre + '" onclick="abrirLightboxImg(this.src)">';
@@ -22859,6 +22977,9 @@
         });
       }
       html += '</div>';
+
+      // v0.317: dentro de una sesión, pasar al siguiente sin volver atrás
+      html += _ejNavSesionHTML(ej, origen);
 
       // Acciones
       html += '<div class="acciones">' +
@@ -23866,9 +23987,10 @@
                              : (sesionOrigen === 'planif') ? _rotPlanif : '‹ Sesiones';
 
       document.getElementById('detalle-sesion-titulo').textContent = nombreSesion(sesion);
-      // v0.315: fuera la línea de fecha y temática. En pista sobra: lo que se
-      // mira es el nombre y, debajo, la secuencia de la clase.
-      document.getElementById('detalle-sesion-fecha').textContent = '';
+      // v0.315: fuera la línea de fecha y temática. En pista sobra.
+      // v0.317: su sitio lo ocupa el OBJETIVO, que ya viajaba del vault y no
+      // se enseñaba en ninguna parte. Es «la idea» de la clase en una línea.
+      document.getElementById('detalle-sesion-fecha').textContent = sesion.objetivo || '';
 
       // v0.316: al entrar, SIEMPRE en modo lectura. El orden no se toca por
       // descuido: hay que pedirlo.
@@ -23916,29 +24038,76 @@
     // Tipo de cada ejercicio dentro de la clase: la misma regla que usa el
     // resto de la app (`parte:` del vault, con el formato como respaldo).
     function _sesTipoEj(e) { return _esDeCarro(e) ? 'carro' : 'area'; }
+    // ── v0.317 — LO QUE HACE LEGIBLE LA ESTRUCTURA ───────────────────
+    // Tres traducciones de facetas que ya vienen del vault. Ninguna pide
+    // escribir nada nuevo: solo se estaban guardando sin enseñarse.
+    //
+    // Minutos: `duracion` llega como texto libre («12 min», «15», «8 min»),
+    // así que se saca el primer número. Sin número, no hay minutos y la
+    // estructura se pinta igual, sin la barra de reparto.
+    function _sesMin(e) {
+      var m = String(ejFaceta(e, 'duracion') || '').match(/\d+/);
+      return m ? parseInt(m[0], 10) : 0;
+    }
+    // Formato → cuánta gente hace falta, dicho como se dice en pista.
+    var SES_JUG = {
+      '1+a':'1 + tú', '2+a':'2 + tú', '1+m':'1 + tú',
+      '2v0':'2', '1+1':'2', '3j':'3', '4j':'4', '2v2':'4',
+      'rotación-capitán':'grupo', 'rotacion-capitan':'grupo',
+      'todos-con-todos':'grupo', 'round-robin':'grupo', 'equipo':'grupo'
+    };
+    function _sesJug(e) {
+      return SES_JUG[String(ejFaceta(e, 'formato') || '').toLowerCase().trim()] || '';
+    }
+    // Condicionantes → la etiqueta de arriba de cada fila. Es lo que de un
+    // vistazo dice en qué punto de la progresión está ese ejercicio.
+    var SES_COND = { competitivo:'COMPETITIVO', condicionado:'CONDICIONADO', continuidad:'CONTINUIDAD' };
+    function _sesCondTxt(e) {
+      var c = ejFaceta(e, 'condicionantes');
+      if (!c || !c.length) return '';
+      var out = [];
+      ['competitivo','condicionado','continuidad'].forEach(function(k){
+        if (c.indexOf(k) >= 0) out.push(SES_COND[k]);
+      });
+      return out.slice(0, 2).join(' · ');
+    }
+    // ── v0.317 — LA SESIÓN SE LEE COMO UNA ESTRUCTURA DE CLASE ───────
+    // Una fila por ejercicio, sombreada según sea de carro o de área, con su
+    // número, su condición, sus minutos y cuánta gente hace falta. Debajo, la
+    // barra de reparto: de un vistazo se ve si la clase se fue en carro.
+    // Todo sale de facetas que ya viajan; no hay nada que escribir a mano.
     function _sesSecuenciaHTML(sesion, ejsEnSesion) {
       if (!ejsEnSesion.length) {
         return '<div class="vacio"><p>No hay ejercicios en esta sesión.</p></div>';
       }
-      var nC = 0, nA = 0;
-      ejsEnSesion.forEach(function(e){ if (_sesTipoEj(e) === 'carro') nC++; else nA++; });
       var ed = _seqEdit;
+      var minC = 0, minA = 0, nC = 0, nA = 0, sinMin = false;
+      ejsEnSesion.forEach(function(e){
+        var m = _sesMin(e);
+        if (!m) sinMin = true;
+        if (_sesTipoEj(e) === 'carro') { nC++; minC += m; } else { nA++; minA += m; }
+      });
+      var total = minC + minA;
+
+      // Cabecera: reparto carro/área y el botón de ordenar
       var h = '<div class="seq-cab">' +
-        '<span class="seq-cab-tag carro">🛒 Carro · ' + nC + '</span>' +
-        '<span class="seq-cab-tag area">🎯 Área · ' + nA + '</span>' +
+        '<span class="seq-cab-tag carro">🛒 Carro · ' + (total ? minC + ' min' : nC) + '</span>' +
+        '<span class="seq-cab-tag area">🎯 Área · ' + (total ? minA + ' min' : nA) + '</span>' +
         '<button type="button" class="seq-edit' + (ed ? ' on' : '') + '" onclick="seqToggleEdit()">' +
           (ed ? '✓ Listo' : '✏️ Ordenar') + '</button></div>';
       if (ed) h += '<div class="seq-aviso">Arrastra ⠿ o usa ▲▼. Se guarda solo.</div>';
+
       h += '<div class="seq' + (ed ? ' editando' : '') + '" id="seq-lista" data-ses="' + sesion.id + '">';
       ejsEnSesion.forEach(function(e, i){
         var tipo = _sesTipoEj(e);
-        var th   = _rutaEjThumb(e);
         var abre = ed ? '' : ' onclick="verEjercicio(' + e.id + ',\'sesion\')"';
+        var min  = _sesMin(e), jug = _sesJug(e), cond = _sesCondTxt(e);
+        var lbl  = (tipo === 'carro' ? 'CARRO' : 'ÁREA') + (cond ? ' · ' + cond : '');
         h += '<div class="seq-item ' + tipo + (ed ? ' ed' : '') + '" data-id="' + e.id + '">' +
           (ed ? '<span class="seq-drag" title="Arrastrar para reordenar" aria-label="Reordenar">⠿</span>' : '') +
           '<span class="seq-num">' + (i + 1) + '</span>' +
           '<div class="seq-body"' + abre + '>' +
-            '<div class="seq-tipo">' + (tipo === 'carro' ? '🛒 Carro' : '🎯 Área de trabajo') + '</div>' +
+            '<div class="seq-tipo">' + lbl + '</div>' +
             '<div class="seq-nom">' + _gEsc(e.nombre || ('Ejercicio ' + e.id)) + '</div>' +
           '</div>' +
           (ed
@@ -23948,14 +24117,33 @@
                 '<button type="button" class="seq-fl" ' + (i === ejsEnSesion.length - 1 ? 'disabled ' : '') +
                   'onclick="seqMover(' + e.id + ',1)" aria-label="Bajar">▼</button>' +
               '</span>'
-            : '<span class="seq-thumb"' + abre + '>' + (th
-                ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
-                : '<span class="plan-bl-noimg">🎬</span>') + '</span>') +
+            : '<span class="seq-dosis"' + abre + '>' +
+                (min ? '<b>' + min + '′</b>' : '<b class="falta">—</b>') +
+                (jug ? '<span>' + jug + '</span>' : '') + '</span>') +
         '</div>';
       });
       h += '</div>';
+
+      // Barra de reparto: solo si TODOS tienen minutos. Con uno sin poner, la
+      // proporción mentiría, y una barra que miente es peor que ninguna.
+      if (total && !sinMin) {
+        var barra = '';
+        ejsEnSesion.forEach(function(e){
+          var pct = Math.round(_sesMin(e) * 100 / total);
+          barra += '<div class="seq-barra-tr ' + _sesTipoEj(e) + '" style="width:' + pct + '%"></div>';
+        });
+        h += '<div class="seq-barra">' + barra + '</div>' +
+             '<div class="seq-barra-pie">' +
+               '<span>Carro ' + Math.round(minC * 100 / total) + '%</span>' +
+               '<span>' + total + ' min en pista</span>' +
+               '<span>Área ' + Math.round(minA * 100 / total) + '%</span></div>';
+      } else if (total) {
+        h += '<div class="seq-barra-pie" style="justify-content:center;">' +
+             'Faltan minutos en algún ejercicio · ' + total + ' min contados</div>';
+      }
       return h;
     }
+
     // ── v0.316 — REORDENAR SOLO CUANDO SE PIDE ───────────────────────
     // En el móvil, un tirador siempre activo es un orden cambiado sin querer:
     // basta rozarlo al hacer scroll con la clase empezada. Así que el orden
