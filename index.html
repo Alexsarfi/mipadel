@@ -59,7 +59,16 @@
       (mira 21 días hacia atrás, sin salir del curso). Es lo que más se
       escapa y hoy solo se veía entrando al calendario.
     · Y SI HOY NO TOCA, lo dice y adelanta cuándo es la siguiente clase, en
-      vez de dejar el hueco vacío.
+      vez de dejar el hueco vacío. Ese aviso es TOCABLE y lleva al calendario:
+      es la entrada a Asistencia los días que no hay clase.
+    · SE RETIRA LA TARJETA «Control de asistencia» de Inicio. Era la TERCERA
+      puerta al mismo sitio —el botón de la barra (v0.323), el bloque Hoy y
+      ella—, y encima la de en medio. El dato que llevaba (N clases · N
+      alumnos) es de configuración, no de uso diario, y sigue estando en
+      Asistencia › ⚙ Clases.
+    · Inicio se queda con lo que de verdad hace: HOY arriba y ENTRENAMIENTO
+      debajo — el selector de nivel de la planificación, que es justo lo que no
+      está en la barra y por lo que la pantalla sigue teniendo sentido.
 
   v0.323.0 — Barra nueva: Asistencia · Partido · Plan · Área · Carro (2026-08)
     (sin migraciones nuevas)
@@ -8256,7 +8265,8 @@
     .hhoy-fila .hhoy-hora { font-size:13.5px; font-weight:700; color:var(--gris); }
     .hhoy-fila.ok .hhoy-ic { color:#16a34a; }
     .hhoy-ic { width:16px; text-align:center; font-size:12px; color:var(--gris); }
-    .hhoy-vacio { text-align:center; }
+    .hhoy-vacio { text-align:center; cursor:pointer; }
+    .hhoy-ir { font-size:12.5px; font-weight:700; color:#0e7490; margin-top:9px; }
     .hhoy-vacio .hhoy-tit { display:block; margin-bottom:3px; }
     .hhoy-pend { display:flex; align-items:center; gap:9px; font-size:12.5px; color:#92400e;
       background:#fffbeb; border:1.5px solid #fde68a; border-radius:12px;
@@ -8635,13 +8645,10 @@
         </div>
         <!-- v0.324: el bloque HOY. Se pinta en homeHoyRender(). -->
         <div id="home-hoy"></div>
-        <div class="tarjeta-menu" onclick="irA('pantalla-asistencia')">
-          <div class="menu-icono" style="background:var(--navy-suave);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2.5"/><path d="M9 4.5V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v.5"/><path d="M8.5 13l2.2 2.2L15 11"/></svg></div>
-          <div class="menu-texto">
-            <div class="menu-nombre">Control de asistencia</div>
-            <div class="menu-desc" id="home-desc-asist">—</div>
-          </div>
-          <div class="menu-flecha">›</div>
+        <!-- v0.324: la tarjeta «Control de asistencia» se retira. Era la
+             TERCERA puerta al mismo sitio: el botón de la barra, el bloque Hoy
+             de arriba y ella. El dato que llevaba (N clases · N alumnos) es de
+             configuración, no de uso diario, y ya está en Asistencia › ⚙ Clases. -->
         </div>
         <!-- v0.91: acceso claro a "Editar mi perfil" para el EN1 (para que
              ponga su nombre y el gestor lo vea en vez del correo) -->
@@ -22371,10 +22378,8 @@
       clasesA.forEach(function(c){ (c.alumnos||[]).forEach(function(a){ alumnosA[alNom(a)]=true; }); });
       var numAl = Object.keys(alumnosA).length;
       document.getElementById('home-stats-a').textContent = clasesA.length + ' clase' + (clasesA.length !== 1 ? 's' : '');
-      document.getElementById('home-desc-asist').textContent =
-        clasesA.length === 0
-          ? 'Sin clases configuradas'
-          : clasesA.length + ' clase' + (clasesA.length !== 1 ? 's' : '') + ' · ' + numAl + ' alumno' + (numAl !== 1 ? 's' : '');
+      // v0.324: `home-desc-asist` se fue con la tarjeta de Control de
+      // asistencia. El contador de la cabecera de sección (home-stats-a) sigue.
       try { homeHoyRender(); } catch (e) { console.warn('bloque hoy', e); }   // v0.324
     }
 
@@ -22463,13 +22468,16 @@
 
       if (!lista.length) {
         var pr = _homeProxima();
-        h = '<div class="hhoy hhoy-vacio">' +
+        // v0.324: tocable — con la tarjeta de Control retirada, esta es la
+        // entrada al calendario los días que no hay clase.
+        h = '<div class="hhoy hhoy-vacio" onclick="irA(\'pantalla-asistencia\')">' +
             '<div class="hhoy-tit">Hoy no tienes clase</div>' +
             (pr ? '<div class="hhoy-sub">La siguiente, <b>' + _gEsc(_diaSemanaNombre(pr.fecha)) + ' ' +
                   parseInt(pr.fecha.slice(8), 10) + ' a las ' + _gEsc(pr.rango ? '' : '') +
                   _gEsc((pr.x.rango && pr.x.rango.txt) || pr.x.c.franja || '') + '</b>' +
                   (pr.x.c.nombre ? ' · ' + _gEsc(pr.x.c.nombre) : '') + '</div>'
                 : '<div class="hhoy-sub">No hay más clases programadas esta semana.</div>') +
+            '<div class="hhoy-ir">Ver el calendario de asistencia ›</div>' +
             '</div>';
       } else {
         var iToca = _homeQueToca(lista, ahora);
