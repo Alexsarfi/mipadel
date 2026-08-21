@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.326.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.327.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,42 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.327.0 — La piel «Pista», en toda la app (2026-08)
+    (sin migraciones nuevas · solo acabado: ni datos ni comportamiento)
+    · LA PALETA SEMÁNTICA SE APLICA AL RESTO. Los doce colores de la v0.326
+      —carro, área, dada, hoy y sus tonos suaves y de texto— dejan de estar
+      repetidos a mano por todo el archivo y pasan a ser variables: 290 en el
+      CSS y 43 dentro del JavaScript, donde viajan en `style="…"` y `var()`
+      funciona igual.
+    · QUÉ GANA CON ESTO: cambiar el cian del carro es ahora UNA línea, no 84
+      búsquedas. Y las incoherencias que se habían ido colando —tres verdes
+      distintos para «dada», dos ámbares para «pendiente»— se corrigen solas
+      al pasar todas por el mismo sitio.
+    · LOS DOCE COLORES SE MANTIENEN IGUALES a propósito: este paso NO cambia
+      ningún tono. Se ve lo mismo; lo que cambia es de dónde sale.
+    · LA TARJETA, IGUAL EN TODAS LAS PANTALLAS. Convivían radios de 10, 12,
+      14, 15 y 18 px puestos a ojo; ahora todas las familias de tarjeta
+      (menú, gestor, ejercicio, bloque del plan, día, sesión…) comparten
+      radio, transición y el mismo gesto al tocar.
+    · Y EL TOQUE YA NO DEJA el rectángulo gris del navegador en ningún botón.
+    · DE PASO, UN FALLO VIEJO QUE SALIÓ AL REVISAR: dos sitios pedían el color
+      «--tinta» —una variable que no existe: se llama «--texto»—, así que
+      el navegador se quedaba sin color y heredaba el de arriba: el texto que
+      escribes en ese campo y la etiqueta de nivel. Corregido, y ahora hay una
+      comprobación que avisa si se vuelve a usar una variable no declarada.
+    · DOS SITIOS SE DEJARON FUERA DE LA SUSTITUCIÓN A MANO, y esto importa:
+      (1) la paleta de color de cada entrenador —ahí el color solo sirve para
+      distinguir a uno de otro, y no debe moverse si algún día cambio el verde
+      de «clase dada»—; y (2) la hoja que se imprime y las exportaciones, que
+      se abren en OTRA ventana sin las variables de la app: allí var() no
+      resuelve y el texto habría salido sin color.
+    · Lo que NO se ha tocado, a propósito: los colores del marcador y del
+      panel del gestor, que no son de esta paleta y tienen su propio código
+      de significado. En particular _ENT_PAL —el color estable de cada
+      entrenador— se dejó fuera después de que la sustitución automática lo
+      enganchara: si compartiera variable con «dada» o «carro», cambiar el
+      verde de una clase trabajada le cambiaría el color a un entrenador.
 
   v0.326.0 — Piel «Pista»: prueba en Inicio y en la sesión (2026-08)
     (sin migraciones nuevas · PRUEBA ACOTADA, se revierte con el backup)
@@ -5541,8 +5577,8 @@
       --rojo-suave:  #fee2e2;
       --rojo:        #991b1b;
       --ambar:       #fef3c7;
-      --ambar-texto: #92400e;
-      --ambar-borde: #f59e0b;
+      --ambar-texto: var(--ac-hoy-tx);
+      --ambar-borde: var(--ac-hoy);
       --azul-suave:  #dbeafe;
       --azul:        #1e40af;
       --dorado:      #c19a3e;
@@ -5657,8 +5693,8 @@
     /* v0.137/v0.140: Clases por recuperar. El entrenador se despliega en
        línea con el curso (sep→jul) en una fila de meses; el mes en AMARILLO
        tiene clases marcadas para recuperar. Al tocarlo, sus tres números. */
-    .grec-pend-chip { display:inline-block; font-size:10.5px; font-weight:800; color:#92400e; background:#fffbeb;
-      border:1px solid #f59e0b; border-radius:20px; padding:1px 8px; }
+    .grec-pend-chip { display:inline-block; font-size:10.5px; font-weight:800; color:var(--ac-hoy-tx); background:var(--ac-hoy-sv);
+      border:1px solid var(--ac-hoy); border-radius:20px; padding:1px 8px; }
     .gcl-inline { background:var(--arena); border:1.5px solid var(--borde); border-radius:12px;
       padding:0.6rem 0.7rem; margin:-2px 0 8px; }
     .gcl-meses { display:flex; flex-wrap:wrap; gap:5px; }
@@ -5667,10 +5703,10 @@
       font-family:inherit; font-size:11.5px; font-weight:800; cursor:pointer;
       -webkit-tap-highlight-color:transparent; }
     .gcl-mes:active { transform:scale(0.96); }
-    .gcl-mes.debe { background:#fffbeb; border-color:#f59e0b; color:#92400e; }
+    .gcl-mes.debe { background:var(--ac-hoy-sv); border-color:var(--ac-hoy); color:var(--ac-hoy-tx); }
     .gcl-mes.sel  { box-shadow:0 0 0 2px var(--verde); color:var(--texto); }
     .gcl-mes i { display:inline-block; font-style:normal; font-size:9.5px; font-weight:800;
-      background:#f59e0b; color:#fff; border-radius:20px; padding:0 5px; margin-left:4px; }
+      background:var(--ac-hoy); color:#fff; border-radius:20px; padding:0 5px; margin-left:4px; }
     .gcl-nums-tit { font-size:11.5px; font-weight:800; color:var(--texto); margin:0.6rem 0 0.3rem; }
     .gcl-nums { display:flex; gap:6px; }
     .gcl-num { flex:1; text-align:center; background:var(--blanco); border:1.5px solid var(--borde);
@@ -5678,15 +5714,15 @@
     .gcl-num b { display:block; font-size:20px; font-weight:800; line-height:1; }
     .gcl-num span { display:block; font-size:10px; color:var(--gris); margin-top:3px; }
     .gcl-num.dada  b { color:var(--verde); }
-    .gcl-num.pend  { border-color:#f59e0b; background:#fffbeb; }
-    .gcl-num.pend  b { color:#92400e; }
+    .gcl-num.pend  { border-color:var(--ac-hoy); background:var(--ac-hoy-sv); }
+    .gcl-num.pend  b { color:var(--ac-hoy-tx); }
     .gcl-num.recup b { color:#6b21a8; }
     /* v0.143: qué día concreto fue la clase que queda por recuperar */
-    .gcl-dias-tit { font-size:11px; font-weight:800; color:#92400e; margin:0.6rem 0 0.25rem; }
+    .gcl-dias-tit { font-size:11px; font-weight:800; color:var(--ac-hoy-tx); margin:0.6rem 0 0.25rem; }
     .gcl-dias { display:flex; flex-direction:column; gap:4px; }
-    .gcl-dia { display:flex; align-items:center; gap:8px; background:#fffbeb; border:1px solid #f59e0b;
+    .gcl-dia { display:flex; align-items:center; gap:8px; background:var(--ac-hoy-sv); border:1px solid var(--ac-hoy);
       border-radius:9px; padding:5px 9px; font-size:12px; }
-    .gcl-dia-f  { font-weight:800; color:#92400e; flex-shrink:0; }
+    .gcl-dia-f  { font-weight:800; color:var(--ac-hoy-tx); flex-shrink:0; }
     .gcl-dia-fr { color:var(--gris); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     /* v0.107: tarjeta solo informativa (página "Todos"), sin enlace */
     .gestor-card.plana { cursor:default; }
@@ -5710,7 +5746,7 @@
     .gestor-card-pct { flex-shrink:0; font-size:15px; font-weight:800; color:var(--verde); }
     .gestor-card-arr { font-size:20px; color:var(--lila); flex-shrink:0; }
     /* v0.183: aviso "sin franjas" en la lista de entrenadores del club */
-    .gent-sinfr { flex-shrink:0; font-size:11px; font-weight:800; color:#166534;
+    .gent-sinfr { flex-shrink:0; font-size:11px; font-weight:800; color:var(--ac-dada-tx);
                   background:#dcfce7; border:1px solid #86efac; border-radius:999px;
                   padding:3px 9px; white-space:nowrap; }
     /* v0.180: ✕ eliminar alumno, en el sitio que ocupaba el porcentaje */
@@ -5739,12 +5775,12 @@
     .gent-dur b { font-size:21px; font-weight:800; line-height:1.05; }
     .gent-dur span { font-size:10px; font-weight:800; letter-spacing:0.03em; opacity:0.8; }
     .gent-dur.h1  { background:#eff6ff; color:#1e40af; }
-    .gent-dur.h15 { background:#f0fdf4; color:#166534; }
+    .gent-dur.h15 { background:var(--ac-dada-sv); color:var(--ac-dada-tx); }
     .gent-dur.ot  { background:#f3f4f6; color:#6b7280; }
     .gent-dur.tot { background:var(--verde); color:var(--blanco); }
     .gestor-reg-row { display:flex; align-items:center; gap:10px; padding:0.55rem 0; border-bottom:1px solid var(--borde); font-size:13px; }
     .gestor-reg-fecha { font-weight:700; color:var(--texto); min-width:92px; }
-    .gestor-reg-pres { color:#166534; font-weight:700; }
+    .gestor-reg-pres { color:var(--ac-dada-tx); font-weight:700; }
     .gestor-reg-aus { color:#b91c1c; font-weight:700; }
     .gestor-reg-sin { color:var(--gris); font-style:italic; }
     /* Detalle del gestor: navegación de mes, horario y análisis */
@@ -5807,11 +5843,11 @@
     .gta-campo { margin-top:9px; }
     .gta-lbl { display:block; font-size:11px; font-weight:800; color:var(--gris);
       text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; }
-    .gta-edad { font-size:12px; font-weight:700; color:#0e7490; margin-top:5px; }
+    .gta-edad { font-size:12px; font-weight:700; color:var(--ac-carro-tx); margin-top:5px; }
     .gta-obs-in { resize:vertical; min-height:62px; font-family:inherit; line-height:1.4; }
-    .gta-obs { border:1.5px solid var(--borde); border-left:4px solid #f59e0b;
-      border-radius:10px; background:#fffbeb; padding:9px 11px; margin-bottom:0.6rem; }
-    .gta-obs-tit { font-size:11px; font-weight:800; color:#92400e;
+    .gta-obs { border:1.5px solid var(--borde); border-left:4px solid var(--ac-hoy);
+      border-radius:10px; background:var(--ac-hoy-sv); padding:9px 11px; margin-bottom:0.6rem; }
+    .gta-obs-tit { font-size:11px; font-weight:800; color:var(--ac-hoy-tx);
       text-transform:uppercase; letter-spacing:.04em; margin-bottom:3px; }
     .gta-obs-txt { font-size:13px; color:var(--texto); line-height:1.45; white-space:pre-wrap;
       overflow-wrap:anywhere; }
@@ -5823,15 +5859,15 @@
       border:1.5px solid var(--borde); border-radius:999px; background:var(--blanco); cursor:pointer; }
     .gta-nivchip b { font-size:10.5px; color:var(--gris); background:var(--arena);
       border-radius:999px; padding:1px 6px; }
-    .gta-nivchip.on { border-color:#0891b2; background:#ecfeff; color:#0e7490; }
-    .gta-nivchip.on b { color:#0e7490; background:#cffafe; }
+    .gta-nivchip.on { border-color:var(--ac-carro); background:var(--ac-carro-sv); color:var(--ac-carro-tx); }
+    .gta-nivchip.on b { color:var(--ac-carro-tx); background:#cffafe; }
     .gta-nivchip.sin { border-style:dashed; }
     .gta-tags { display:flex; gap:5px; flex-wrap:wrap; margin:2px 0 1px; }
     .gta-tag { font-size:10.5px; font-weight:800; border-radius:999px; padding:1px 7px;
       color:var(--gris); background:var(--arena); }
-    .gta-tag.cat { color:#3730a3; background:#eef2ff; }
-    .gta-tag.niv-iniciacion  { color:#166534; background:#f0fdf4; }
-    .gta-tag.niv-medio       { color:#155e75; background:#ecfeff; }   /* v0.309 */
+    .gta-tag.cat { color:var(--ac-area-tx); background:var(--ac-area-sv); }
+    .gta-tag.niv-iniciacion  { color:var(--ac-dada-tx); background:var(--ac-dada-sv); }
+    .gta-tag.niv-medio       { color:#155e75; background:var(--ac-carro-sv); }   /* v0.309 */
     .gta-tag.niv-avanzado    { color:#9a3412; background:#fff7ed; }
     .gta-tag.niv-competicion { color:#9d174d; background:#fdf2f8; }
     /* Buscador y filtro por clase en Alumnos (gestor) */
@@ -5895,22 +5931,22 @@
                  align-items:center; justify-content:center; gap:2px; }
     .galm-chip-dia { font-size:10px; font-weight:800; letter-spacing:0.04em; opacity:0.75; }
     .galm-chip-num { font-size:20px; font-weight:800; line-height:1; }
-    .galm-chip.pres   { background:#dcfce7; color:#166534; }
+    .galm-chip.pres   { background:#dcfce7; color:var(--ac-dada-tx); }
     .galm-chip.falta  { background:#fee2e2; color:#991b1b; }
-    .galm-chip.faltaj { background:#fef3c7; color:#92400e; }
+    .galm-chip.faltaj { background:#fef3c7; color:var(--ac-hoy-tx); }
     .galm-chip.recup  { background:#dbeafe; color:#1e40af; }
     /* v0.103: vista planificada del mes en la ficha del alumno */
     .galm-chip.pend     { background:#f8fafc; color:#475569; border:1.5px dashed #cbd5e1; }   /* día previsto, aún por dar */
     .galm-chip.sinlista { background:#f8fafc; color:#475569; border:1.5px dashed #cbd5e1; }   /* v0.104.1: sin dar / sin lista, mismo gris que pendiente */
     .galm-chip.sc       { background:#fee2e2; color:#b91c1c; border:1.5px dashed #fca5a5; }   /* ✗ sin clase del club (gestor) */
-    .galm-quedan { margin-left:auto; font-size:11px; font-weight:800; color:#166534; background:#dcfce7; border-radius:20px; padding:2px 9px; white-space:nowrap; }
+    .galm-quedan { margin-left:auto; font-size:11px; font-weight:800; color:var(--ac-dada-tx); background:#dcfce7; border-radius:20px; padding:2px 9px; white-space:nowrap; }
     .galm-quedan.cero { color:#9ca3af; background:#f3f4f6; }
     .galm-leyenda { display:flex; flex-wrap:wrap; align-items:center; gap:5px 10px; margin:2px 0 10px; font-size:11px; }
     .galm-lg { display:inline-flex; align-items:center; justify-content:center; min-width:24px; height:22px; padding:0 5px;
                border-radius:7px; font-size:11px; font-weight:800; vertical-align:middle; }
-    .galm-lg.pres   { background:#dcfce7; color:#166534; }
+    .galm-lg.pres   { background:#dcfce7; color:var(--ac-dada-tx); }
     .galm-lg.falta  { background:#fee2e2; color:#991b1b; }
-    .galm-lg.faltaj { background:#fef3c7; color:#92400e; }
+    .galm-lg.faltaj { background:#fef3c7; color:var(--ac-hoy-tx); }
     .galm-lg.recup  { background:#dbeafe; color:#1e40af; }
     .galm-lg.pend   { background:#f8fafc; color:#475569; border:1.5px dashed #cbd5e1; }
     /* v0.119: leyenda colapsada tras la franja, con icono ? para reducir ruido visual */
@@ -5930,12 +5966,12 @@
     .gad-nom { font-size:12.5px; color:var(--gris); }
     .gad-extra { font-size:10.5px; font-weight:700; color:#b45309; background:#fef3c7; border-radius:6px; padding:1px 6px; }
     .gad-estado { margin-left:auto; font-size:12px; font-weight:700; }
-    .gad-estado.ok { color:#166534; }
+    .gad-estado.ok { color:var(--ac-dada-tx); }
     .gad-estado.sin { color:#64748b; }
     .gad-estado.nolista { color:#9ca3af; font-style:italic; }
     .gad-alumnos { display:flex; flex-wrap:wrap; gap:5px; margin-top:6px; }
     .gad-al { font-size:11.5px; font-weight:700; border-radius:8px; padding:2px 8px; }
-    .gad-al.si   { background:#dcfce7; color:#166534; }
+    .gad-al.si   { background:#dcfce7; color:var(--ac-dada-tx); }
     .gad-al.no   { background:#fee2e2; color:#991b1b; }
     .gad-al.rec  { background:#e0e7ff; color:#16264f; }
     .gad-al.pend { background:#f1f5f9; color:#64748b; }
@@ -6050,7 +6086,7 @@
     .gp-del-item:active { background:#f9fafb; }
     .gp-del-item small { font-weight:600; color:var(--gris); }
     .gp-del-opcion { display:block; width:100%; border-radius:11px; padding:0.65rem; margin-bottom:7px; font-size:13.5px; font-weight:800; cursor:pointer; font-family:inherit; }
-    .gp-del-opcion.fin { border:1.5px solid #bbf7d0; background:#f0fdf4; color:#166534; }
+    .gp-del-opcion.fin { border:1.5px solid #bbf7d0; background:var(--ac-dada-sv); color:var(--ac-dada-tx); }
     .gp-del-opcion.borrar { border:1.5px solid #fecaca; background:#fee2e2; color:#b91c1c; }
     .gp-del-opcion.cancel { border:1.5px solid var(--borde); background:#fff; color:var(--gris); }
     @keyframes gpSheetUp { from { transform:translateY(40px); opacity:.5; } to { transform:translateY(0); opacity:1; } }
@@ -6106,8 +6142,8 @@
     .acal-cell.hoy .acal-num { background:var(--verde); color:var(--blanco); }
     .acal-marks { display:flex; gap:2px; align-items:center; justify-content:center; height:9px; }
     .acal-dot { display:inline-block; width:6px; height:6px; border-radius:50%; }
-    .acal-dot.ok   { background:#22c55e; }
-    .acal-dot.pend { background:#f59e0b; }
+    .acal-dot.ok   { background:var(--ac-dada); }
+    .acal-dot.pend { background:var(--ac-hoy); }
     .acal-dot.sc   { background:#9ca3af; }
     .acal-dot.fut  { background:#d5dbe5; }
     .acal-rec { font-size:9px; font-weight:800; color:#16264f; line-height:1; }
@@ -6129,15 +6165,15 @@
     .asist-recup-row:active { background:var(--lila-suave); border-radius:8px; }
     .asist-recup-fecha { flex-shrink:0; font-size:12.5px; font-weight:800; color:#1e40af; min-width:72px; }
     .asist-recup-nom { flex:1; min-width:0; font-size:13px; color:var(--texto); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .asist-recup-cnt { flex-shrink:0; font-size:12px; font-weight:800; color:#166534; }
-    .asist-recup-cnt.pend { color:#92400e; background:#fef3c7; border-radius:20px; padding:2px 8px; }
+    .asist-recup-cnt { flex-shrink:0; font-size:12px; font-weight:800; color:var(--ac-dada-tx); }
+    .asist-recup-cnt.pend { color:var(--ac-hoy-tx); background:#fef3c7; border-radius:20px; padding:2px 8px; }
     .asist-recup-del { flex-shrink:0; border:none; background:transparent; color:#991b1b; font-size:15px; cursor:pointer; padding:2px 4px; margin-left:2px; border-radius:7px; -webkit-tap-highlight-color:transparent; }
     .asist-recup-del:active { transform:scale(0.9); background:#fef2f2; }
     /* v0.142: cuadro "Clases por recuperar" (pendientes de programar) */
-    .asist-recups-box.pend { border-color:#f59e0b; background:#fffbeb; }
-    .asist-recups-box.pend .asist-recups-tit { color:#92400e; }
+    .asist-recups-box.pend { border-color:var(--ac-hoy); background:var(--ac-hoy-sv); }
+    .asist-recups-box.pend .asist-recups-tit { color:var(--ac-hoy-tx); }
     .asist-recups-box.pend .asist-recup-row:active { background:#fef3c7; }
-    .pendrec-form { padding:8px 6px 10px; border-top:1px dashed #f59e0b; }
+    .pendrec-form { padding:8px 6px 10px; border-top:1px dashed var(--ac-hoy); }
     .pendrec-form .form-label { display:block; font-size:11px; margin-bottom:3px; }
     /* Resumen "Clases dadas por duración" (Resumen del mes) */
     .asist-suma-card { background:var(--blanco); border:1.5px solid var(--borde); border-radius:14px; padding:0.9rem 1rem; margin-bottom:0.85rem; }
@@ -6161,22 +6197,22 @@
     .gpmes-chip.hoy { color:#1e40af; background:#eff6ff; border-color:#bfdbfe; }   /* mes en curso: azul claro */
     .gpmes-chip.sel { color:var(--blanco); background:var(--verde); border-color:var(--verde); }
     .gpmes-chip.hoy.sel { color:#fff; background:#1e40af; border-color:#1e40af; }
-    .gplan-dadas { font-size:9px; font-weight:800; color:#166534; background:#dcfce7; border-radius:6px; padding:0 4px; }
+    .gplan-dadas { font-size:9px; font-weight:800; color:var(--ac-dada-tx); background:#dcfce7; border-radius:6px; padding:0 4px; }
     .ghd-ent-chip { font-size:11px; font-weight:800; color:#1e40af; background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:20px; padding:3px 9px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
     .ghd-ent-chip:active { transform:scale(0.96); }
     .ghd-al { font-size:11px; font-weight:700; color:#1e40af; background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:20px; padding:3px 9px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
     button.ghd-al:active { transform:scale(0.96); }
     /* v0.177: baja — marco discontinuo, como el cambio de grupo: en ambos
        casos el alumno deja de estar en la franja. */
-    .ghd-al.baja { color:#92400e; background:#fef9c3; border:1.5px dashed #f59e0b; }
+    .ghd-al.baja { color:var(--ac-hoy-tx); background:#fef9c3; border:1.5px dashed var(--ac-hoy); }
     /* v0.163: alumno que EMPIEZA en esta franja este mes (alta o traslado) */
-    .ghd-al.alta { color:#166534; background:#dcfce7; border-color:#bbf7d0; }
+    .ghd-al.alta { color:var(--ac-dada-tx); background:#dcfce7; border-color:#bbf7d0; }
     /* v0.176: se le MOVIÓ a otro grupo — aviso solo durante esa semana en la
        franja de origen: marco discontinuo y fondo transparente, para que se
        lea como "ya no está aquí" sin pesar visualmente. */
     .ghd-al.movido { color:var(--gris); background:transparent; border:1.5px dashed var(--borde);
       text-align:left; line-height:1.3; }
-    .ghd-al-mov { display:block; font-size:9.5px; font-weight:700; color:#92400e; margin-top:2px; white-space:normal; }
+    .ghd-al-mov { display:block; font-size:9.5px; font-weight:700; color:var(--ac-hoy-tx); margin-top:2px; white-space:normal; }
     /* v0.149: se retira .ghd-al.fut (⏳ "empieza más adelante"): el alumno
        ya no se lista antes de su fecha de entrada, así que no hace falta. */
     /* Historial del alumno: alta/baja por clase */
@@ -6193,12 +6229,12 @@
     .gal-mes-pct { font-size:11.5px; font-weight:700; }
     .gal-mes-dias { display:flex; flex-wrap:wrap; gap:5px; margin-top:6px; }
     .gal-dia { font-size:11px; font-weight:700; border-radius:8px; padding:3px 7px; white-space:nowrap; }
-    .gal-dia.si { color:#166534; background:#dcfce7; }
+    .gal-dia.si { color:var(--ac-dada-tx); background:#dcfce7; }
     .gal-dia.no { color:#991b1b; background:#fee2e2; }
-    .gal-dia.jj { color:#92400e; background:#fef3c7; }
+    .gal-dia.jj { color:var(--ac-hoy-tx); background:#fef3c7; }
     .ghd-dias { display:flex; flex-wrap:wrap; gap:5px; }
     .ghd-day { min-width:26px; height:26px; padding:0 4px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; border:none; font-family:inherit; cursor:default; }
-    .ghd-day.dada { background:#dcfce7; color:#166534; }
+    .ghd-day.dada { background:#dcfce7; color:var(--ac-dada-tx); }
     .ghd-day.nodada { background:#fee2e2; color:#991b1b; }
     .ghd-day.sinlista { background:#f3f4f6; color:#9ca3af; }
     /* v0.105: día sin clase del club (gestor) → rojo con ✗; si aun así se
@@ -6214,8 +6250,8 @@
        No toca el color de estado (dada/sin lista/anulada…), solo lo resalta. */
     .ghd-day.semana { box-shadow:0 0 0 2.5px var(--dorado); font-weight:900; }
     /* v0.66.1: el día lo dio (o lo dará) un sustituto → destacado ámbar */
-    .ghd-day.sust { background:#fde68a; color:#92400e; }
-    .gdd-det.sust { background:#fffbeb; border-color:#fde68a; }
+    .ghd-day.sust { background:#fde68a; color:var(--ac-hoy-tx); }
+    .gdd-det.sust { background:var(--ac-hoy-sv); border-color:#fde68a; }
     /* v0.110: sustituto INTERNO (otro entrenador del club) → MORADO, el
        ámbar queda reservado a los sustitutos EXTERNOS.
        v0.139: antes usaba un azul grisáceo heredado del cambio de paleta
@@ -6278,7 +6314,7 @@
     .gas-dia-row { display:flex; align-items:center; gap:8px; font-size:11.5px;
       border-left:3px solid var(--borde); padding:4px 8px; background:var(--arena); border-radius:0 8px 8px 0; }
     .gas-dia-row.ok  { border-left-color:var(--verde); }
-    .gas-dia-row.fj  { border-left-color:#f59e0b; }
+    .gas-dia-row.fj  { border-left-color:var(--ac-hoy); }
     .gas-dia-row.fij { border-left-color:#b91c1c; }
     .gas-dia-row.rec { border-left-color:var(--lila); }
     .gas-dia-f { font-weight:800; color:var(--texto); flex-shrink:0; min-width:56px; }
@@ -6324,7 +6360,7 @@
     .gmv-fr:hover { border-color:var(--verde); background:var(--verde-suave); }
     .gmv-fr.actual { background:var(--verde-suave); border-color:var(--verde); color:var(--verde); cursor:default; }
     .gmv-fr.actual:hover { background:var(--verde-suave); }
-    .gmv-fr.movido { background:#fffbeb; border-color:#f59e0b; color:#92400e; }
+    .gmv-fr.movido { background:var(--ac-hoy-sv); border-color:var(--ac-hoy); color:var(--ac-hoy-tx); }
     .gmv-fr.baja   { background:var(--arena); border-color:var(--borde); color:var(--gris); }
     /* v0.166: destino elegido, aún sin confirmar → azul, para distinguir de
        un vistazo la clase de partida (verde) de la de llegada (azul) */
@@ -6335,12 +6371,12 @@
     .gmv-fr.origen { background:var(--verde-suave); border-color:var(--verde); color:var(--verde); border-width:2px; }
     .gmv-fr.sale   { background:#fee2e2; border-color:#b91c1c; color:#b91c1c; border-width:2px; }
     .gmv-fr.sale:hover { background:#fee2e2; border-color:#b91c1c; }
-    .gmv-nota { display:block; font-size:9.5px; font-weight:600; color:#92400e; margin-top:2px; white-space:normal; }
+    .gmv-nota { display:block; font-size:9.5px; font-weight:600; color:var(--ac-hoy-tx); margin-top:2px; white-space:normal; }
     /* v0.164: etiquetas NUEVA / ANTERIOR cuando ha habido traslado */
     .gmv-tag { display:inline-block; font-size:8.5px; font-weight:800; letter-spacing:.03em;
       border-radius:20px; padding:1px 6px; margin-left:5px; vertical-align:middle; }
     .gmv-tag.nueva    { background:var(--verde); color:#fff; }
-    .gmv-tag.anterior { background:#f59e0b; color:#fff; }
+    .gmv-tag.anterior { background:var(--ac-hoy); color:#fff; }
     .gmv-tag.destino  { background:#1e40af; color:#fff; }
     .gmv-tag.origen   { background:var(--verde); color:#fff; }
     .gmv-tag.sale     { background:#b91c1c; color:#fff; }
@@ -6350,7 +6386,7 @@
       border:1.5px solid var(--borde); background:var(--blanco); }
     .gmv-leyenda i.actual  { background:var(--verde-suave); border-color:var(--verde); }
     .gmv-leyenda i.destino { background:#dbeafe; border-color:#1e40af; }
-    .gmv-leyenda i.movido  { background:#fffbeb; border-color:#f59e0b; }
+    .gmv-leyenda i.movido  { background:var(--ac-hoy-sv); border-color:var(--ac-hoy); }
     .gmv-leyenda i.baja    { background:var(--arena); }
     /* v0.155: exportar el mes de todos los entrenadores */
     .gent-export { border:1.5px solid var(--borde); border-radius:12px; padding:0.7rem 0.8rem; margin-top:1rem; background:var(--blanco); }
@@ -6358,14 +6394,14 @@
     .gent-export-btns { display:flex; gap:8px; }
     .gent-export-btns .btn { flex:1; }
     /* v0.109: sustitutos externos en ámbar, a la derecha del "＋" */
-    .gdet-ent-chip.ext { color:#92400e; background:#fffbeb; border-color:#f59e0b; }
+    .gdet-ent-chip.ext { color:var(--ac-hoy-tx); background:var(--ac-hoy-sv); border-color:var(--ac-hoy); }
     /* v0.172: sustituto externo ARCHIVADO (conserva datos, fuera de la lista) */
     .gdet-ent-chip.ext.arch { color:var(--gris); background:var(--arena); border-color:var(--borde); border-style:dashed; }
     .gdet-chip-x { display:inline-block; margin-left:6px; font-size:11px; font-weight:800; opacity:.75; padding:0 2px; }
     .gdet-chip-x:active { opacity:1; }
     /* Panel: archivar o eliminar un sustituto externo */
-    .gsust-del { border:1.5px solid #f59e0b; background:#fffbeb; border-radius:12px; padding:0.7rem 0.8rem; margin:0 0 0.7rem; }
-    .gsust-del-tit { font-size:12.5px; font-weight:800; color:#92400e; margin-bottom:0.5rem; }
+    .gsust-del { border:1.5px solid var(--ac-hoy); background:var(--ac-hoy-sv); border-radius:12px; padding:0.7rem 0.8rem; margin:0 0 0.7rem; }
+    .gsust-del-tit { font-size:12.5px; font-weight:800; color:var(--ac-hoy-tx); margin-bottom:0.5rem; }
     .gsust-opt { display:block; width:100%; text-align:left; border:1.5px solid var(--borde); background:var(--blanco);
       color:var(--texto); font-family:inherit; font-size:12.5px; border-radius:10px; padding:8px 10px;
       margin-bottom:6px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
@@ -6410,7 +6446,7 @@
     .fpill { background:var(--blanco); border:1.5px solid var(--borde); border-radius:20px; padding:5px 14px; font-size:12px; font-weight:600; white-space:nowrap; cursor:pointer; transition:all 0.15s; flex-shrink:0; font-family:'Outfit',sans-serif; color:var(--texto); }
     .fpill.activo { background:var(--verde); color:var(--blanco); border-color:var(--verde); }
     .fpill:active { transform:scale(0.96); }
-    .fpill-dorado { border-color:var(--dorado); color:#92400e; background:var(--ambar); }
+    .fpill-dorado { border-color:var(--dorado); color:var(--ac-hoy-tx); background:var(--ambar); }
     .fpill-dorado.activo { background:var(--dorado); color:var(--blanco); border-color:var(--dorado); }
     /* v0.256 — Subcategorías de Táctica en fila, dentro de la lista */
     .filtros.subcats { margin:0 0 11px; }
@@ -6469,12 +6505,12 @@
     .monitor-banner { display:flex; align-items:center; gap:12px; background:#fef3c7; border:1.5px solid #fbbf24; border-radius:14px; padding:0.9rem 1.1rem; margin-bottom:1.1rem; }
     .monitor-banner-ic { font-size:22px; flex-shrink:0; }
     .monitor-banner-txt { flex:1; display:flex; flex-direction:column; gap:1px; }
-    .monitor-banner-txt strong { font-size:14px; color:#92400e; }
+    .monitor-banner-txt strong { font-size:14px; color:var(--ac-hoy-tx); }
     .monitor-banner-txt span { font-size:12px; color:#b45309; }
-    .monitor-banner-btn { flex-shrink:0; background:#92400e; color:#fff; border:none; border-radius:10px; padding:8px 16px; font-size:13px; font-weight:700; font-family:'Outfit',sans-serif; cursor:pointer; min-height:38px; }
+    .monitor-banner-btn { flex-shrink:0; background:var(--ac-hoy-tx); color:#fff; border:none; border-radius:10px; padding:8px 16px; font-size:13px; font-weight:700; font-family:'Outfit',sans-serif; cursor:pointer; min-height:38px; }
     .monitor-banner-btn:active { transform:scale(0.97); }
     .ajustes-desc { font-size:12.5px; color:var(--gris); line-height:1.55; margin:0; }
-    .monitor-estado-on { display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:700; color:#166534; }
+    .monitor-estado-on { display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:700; color:var(--ac-dada-tx); }
     .monitor-estado-dot { width:9px; height:9px; border-radius:50%; background:#16a34a; }
     /* ── TARJETAS MENÚ ── */
     .tarjeta-menu { background:var(--blanco); border-radius:16px; padding:1.1rem 1.25rem; display:flex; align-items:center; gap:1rem; border:1.5px solid transparent; cursor:pointer; transition:all 0.18s ease; }
@@ -6709,8 +6745,8 @@
     .tarjeta-col .menu-icono { width:40px; height:40px; border-radius:11px; font-size:20px; }
     .tarjeta-col .menu-icono.partido { background:#dbeafe; }
     .tarjeta-col .menu-icono.calentamiento { background:#fef3c7; }
-    .tarjeta-col.calentamiento-card { flex-direction:row; align-items:center; background:linear-gradient(135deg,#fffbeb,#fef9ee); border-color:#fde68a; }
-    .tarjeta-col.calentamiento-card:hover { border-color:#f59e0b; box-shadow:0 6px 20px rgba(245,158,11,0.15); }
+    .tarjeta-col.calentamiento-card { flex-direction:row; align-items:center; background:linear-gradient(135deg,var(--ac-hoy-sv),#fef9ee); border-color:#fde68a; }
+    .tarjeta-col.calentamiento-card:hover { border-color:var(--ac-hoy); box-shadow:0 6px 20px rgba(245,158,11,0.15); }
     .tarjeta-col .menu-nombre { font-size:14px; font-weight:600; }
     .tarjeta-col .menu-desc { font-size:11px; color:var(--gris); margin-top:2px; }
 
@@ -6732,27 +6768,27 @@
     .marc-undo:disabled { opacity:.35; }
     /* Cuenta atrás del descanso reglamentario */
     .marc-desc-bar { display:flex; align-items:center; gap:10px; margin:0 0 8px; padding:8px 12px;
-      border-radius:12px; background:#ecfeff; border:1.5px solid #67e8f9; }
+      border-radius:12px; background:var(--ac-carro-sv); border:1.5px solid #67e8f9; }
     .marc-desc-bar.medico { background:#fef2f2; border-color:#fca5a5; }
-    .marc-desc-bar.fin { background:#fef3c7; border-color:#f59e0b; }
+    .marc-desc-bar.fin { background:#fef3c7; border-color:var(--ac-hoy); }
     .marc-desc-txt { display:flex; flex-direction:column; min-width:0; }
-    .marc-desc-lbl { font-size:12px; font-weight:800; color:#0e7490; }
+    .marc-desc-lbl { font-size:12px; font-weight:800; color:var(--ac-carro-tx); }
     .marc-desc-bar.medico .marc-desc-lbl { color:#991b1b; }
-    .marc-desc-bar.fin .marc-desc-lbl { color:#92400e; }
+    .marc-desc-bar.fin .marc-desc-lbl { color:var(--ac-hoy-tx); }
     .marc-desc-max { font-size:10px; color:var(--gris); }
     .marc-desc-num { margin-left:auto; font-size:26px; font-weight:800; font-variant-numeric:tabular-nums;
-      color:#0e7490; line-height:1; }
+      color:var(--ac-carro-tx); line-height:1; }
     .marc-desc-bar.medico .marc-desc-num { color:#991b1b; }
-    .marc-desc-bar.fin .marc-desc-num { color:#92400e; font-size:18px; }
+    .marc-desc-bar.fin .marc-desc-num { color:var(--ac-hoy-tx); font-size:18px; }
     .marc-desc-x { flex-shrink:0; width:26px; height:26px; border-radius:50%; border:none; cursor:pointer;
       background:rgba(0,0,0,.06); color:var(--texto); font-size:12px; font-family:inherit; }
     /* Presets de formato en la configuración */
     .marc-fmt-grid { display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-bottom:9px; }
     .marc-fmt { display:flex; flex-direction:column; gap:2px; text-align:left; font-family:inherit;
       padding:8px 10px; border:1.5px solid var(--borde); border-radius:11px; background:var(--blanco); cursor:pointer; }
-    .marc-fmt.on { border-color:#0891b2; background:#ecfeff; }
+    .marc-fmt.on { border-color:var(--ac-carro); background:var(--ac-carro-sv); }
     .marc-fmt-t { font-size:12.5px; font-weight:800; color:var(--texto); }
-    .marc-fmt.on .marc-fmt-t { color:#0e7490; }
+    .marc-fmt.on .marc-fmt-t { color:var(--ac-carro-tx); }
     .marc-fmt-d { font-size:10.5px; color:var(--gris); line-height:1.3; }
     /* ══ v0.270 — MARCADOR DE ÁRBITRO (modo análisis) ═══════════════════
        El mismo reparto que usan los árbitros de silla y las retransmisiones:
@@ -6801,8 +6837,8 @@
     /* Tiempos y fisio */
     .marc-tiempos-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; }
     .marc-t-btn { display:flex; flex-direction:column; gap:1px; align-items:center; font-family:inherit;
-      font-size:15px; font-weight:800; color:#0e7490; padding:9px 4px; border:1.5px solid #a5f3fc;
-      border-radius:11px; background:#ecfeff; cursor:pointer; }
+      font-size:15px; font-weight:800; color:var(--ac-carro-tx); padding:9px 4px; border:1.5px solid #a5f3fc;
+      border-radius:11px; background:var(--ac-carro-sv); cursor:pointer; }
     .marc-t-btn span { font-size:9.5px; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.03em; }
     .marc-t-sub { font-size:11px; font-weight:800; color:var(--gris); text-transform:uppercase;
       letter-spacing:.04em; margin:12px 0 6px; }
@@ -6992,13 +7028,13 @@
 
     /* ── Sesiones — pantalla Mis Clases ── */
     .sesion-item { display:flex; align-items:center; gap:10px; background:var(--blanco); border-radius:13px; padding:0.75rem 0.875rem; border:1.5px solid var(--borde); margin-bottom:8px; transition:border-color 0.15s, background 0.15s; }
-    .sesion-item.trabajada { border-color:#bbf7d0; background:#f0fdf4; }
+    .sesion-item.trabajada { border-color:#bbf7d0; background:var(--ac-dada-sv); }
     .sesion-handle { font-size:20px; color:#c0c9d4; flex-shrink:0; user-select:none; -webkit-user-select:none; touch-action:none; padding:2px 6px 2px 2px; line-height:1; cursor:grab; }
     .sesion-body { flex:1; min-width:0; cursor:pointer; }
     .sesion-titulo { font-size:14px; font-weight:600; color:var(--texto); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .sesion-meta { font-size:11px; color:var(--gris); margin-top:2px; }
     .sesion-check-btn { width:32px; height:32px; border-radius:50%; border:2px solid #d1d5db; background:transparent; font-size:16px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; transition:all 0.15s; color:transparent; -webkit-tap-highlight-color:transparent; }
-    .sesion-check-btn.trabajada { border-color:#22c55e; background:#22c55e; color:#fff; }
+    .sesion-check-btn.trabajada { border-color:var(--ac-dada); background:var(--ac-dada); color:#fff; }
     .sesion-drag-clone { position:fixed; pointer-events:none; z-index:9999; box-shadow:0 8px 28px rgba(0,0,0,.18); border-radius:13px; }
     .sesion-tema { display:inline-block; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; background:var(--verde-suave); color:var(--verde); margin-top:3px; letter-spacing:0.03em; }
 
@@ -7101,8 +7137,8 @@
       -webkit-tap-highlight-color:transparent; }
     .asist-plan-ico { font-size:15px; line-height:1; }
     .asist-plan-niv { font-size:9px; font-weight:700; line-height:1.1; }
-    .asist-plan-btn.con { border-style:solid; border-color:#0891b2; background:#ecfeff; color:#0e7490; }
-    .asist-plan-btn:hover { border-color:#0891b2; }
+    .asist-plan-btn.con { border-style:solid; border-color:var(--ac-carro); background:var(--ac-carro-sv); color:var(--ac-carro-tx); }
+    .asist-plan-btn:hover { border-color:var(--ac-carro); }
     /* v0.225: el globo del vídeo (.lightbox) va por ENCIMA de todos estos
        overlays — antes se abría detrás y parecía que no pasaba nada. */
     /* Globo con la clase preparada (sin salir de Asistencia) */
@@ -7162,7 +7198,7 @@
       font-family:inherit; font-size:14px; font-weight:700; color:var(--texto);
       background:var(--arena); border:1.5px solid var(--borde); border-radius:10px;
       padding:9px 11px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
-    .asist-arbol-n1.on { background:#ecfeff; border-color:#0891b2; color:#0e7490; }
+    .asist-arbol-n1.on { background:var(--ac-carro-sv); border-color:var(--ac-carro); color:var(--ac-carro-tx); }
     .asist-arbol-n1 b { margin-left:auto; font-size:11px; font-weight:800; color:var(--gris);
       background:var(--blanco); padding:1px 7px; border-radius:20px; }
     .asist-arbol-chev { font-size:11px; opacity:.7; }
@@ -7171,7 +7207,7 @@
       border:1.5px solid var(--borde); border-radius:9px; padding:9px 11px 9px 26px;
       cursor:pointer; -webkit-tap-highlight-color:transparent; }
     .asist-arbol-n2:active { transform:scale(0.99); }
-    .asist-arbol-n2.on { background:#ecfeff; border-color:#0891b2; color:#0e7490; font-weight:700; }
+    .asist-arbol-n2.on { background:var(--ac-carro-sv); border-color:var(--ac-carro); color:var(--ac-carro-tx); font-weight:700; }
     /* v0.294 — Notas de la clase, dentro de la vista de pista */
     .asist-notas { margin-top:14px; border:1.5px solid var(--borde); border-radius:13px;
       padding:11px 12px 12px; background:var(--arena); }
@@ -7180,7 +7216,7 @@
     .asist-notas-hdr b { font-size:14.5px; color:var(--texto); }
     .asist-notas-estado { margin-left:auto; font-size:11px; font-weight:700; }
     .asist-notas-estado.pend { color:var(--ambar-texto); }
-    .asist-notas-estado.ok   { color:#166534; }
+    .asist-notas-estado.ok   { color:var(--ac-dada-tx); }
     .asist-notas-txt { width:100%; box-sizing:border-box; border:1.5px solid var(--borde);
       border-radius:10px; padding:10px 11px; font-size:15px; font-family:inherit; line-height:1.5;
       background:var(--blanco); color:var(--texto); resize:vertical; outline:none; }
@@ -7203,28 +7239,28 @@
     /* Lo que no es de hoy, apagado de verdad */
     .asist-clase-row.apagada { opacity:.55; }
     .asist-clase-row.apagada:hover { opacity:.8; }
-    .asist-clase-row.hoy { border-color:#f59e0b; border-width:2px; }
+    .asist-clase-row.hoy { border-color:var(--ac-hoy); border-width:2px; }
     .asist-clase-row-info { flex:1; min-width:0; }
     .asist-clase-row-nombre { font-size:13px; font-weight:600; color:var(--texto); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .asist-clase-row-alumnos { font-size:11px; color:var(--gris); margin-top:1px; }
-    .asist-badge-hecha     { font-size:10px; font-weight:700; background:#dcfce7; color:#166534; border-radius:12px; padding:2px 7px; flex-shrink:0; }
+    .asist-badge-hecha     { font-size:10px; font-weight:700; background:#dcfce7; color:var(--ac-dada-tx); border-radius:12px; padding:2px 7px; flex-shrink:0; }
     /* v0.66.1: franja impartida por un sustituto (vista del titular) */
-    .asist-clase-row.sust  { background:#fffbeb; border-color:#fde68a; }
-    .asist-badge-sust      { font-size:10px; font-weight:700; background:#fde68a; color:#92400e; border-radius:12px; padding:2px 7px; flex-shrink:0; max-width:110px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .asist-clase-row.sust  { background:var(--ac-hoy-sv); border-color:#fde68a; }
+    .asist-badge-sust      { font-size:10px; font-weight:700; background:#fde68a; color:var(--ac-hoy-tx); border-radius:12px; padding:2px 7px; flex-shrink:0; max-width:110px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .asist-badge-pendiente { font-size:10px; font-weight:700; background:var(--ambar); color:var(--ambar-texto); border-radius:12px; padding:2px 7px; flex-shrink:0; }
     .asist-badge-futura    { font-size:10px; font-weight:700; background:#f3f4f6; color:var(--gris); border-radius:12px; padding:2px 7px; flex-shrink:0; }
     .asist-badge-sinclase  { font-size:10px; font-weight:700; background:#f1f5f9; color:#64748b; border-radius:12px; padding:2px 7px; flex-shrink:0; }
 
     /* Pasar lista — alumno toggle */
     .asist-al-toggle { display:flex; align-items:center; gap:12px; padding:0.9rem 1rem; border-radius:13px; border:2px solid var(--borde); margin-bottom:8px; cursor:pointer; transition:all 0.15s; background:var(--blanco); -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; }
-    .asist-al-toggle.presente { border-color:#22c55e; background:#f0fdf4; }
+    .asist-al-toggle.presente { border-color:var(--ac-dada); background:var(--ac-dada-sv); }
     .asist-al-toggle.ausente  { border-color:#f87171; background:#fff5f5; }
     .asist-al-icono { width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0; background:#f3f4f6; color:var(--gris); transition:all 0.15s; }
-    .asist-al-toggle.presente .asist-al-icono { background:#22c55e; color:var(--blanco); }
+    .asist-al-toggle.presente .asist-al-icono { background:var(--ac-dada); color:var(--blanco); }
     .asist-al-toggle.ausente  .asist-al-icono { background:#f87171; color:var(--blanco); }
     .asist-al-nombre { font-size:15px; font-weight:600; flex:1; }
     .asist-al-estado { font-size:11px; font-weight:700; flex-shrink:0; }
-    .asist-al-toggle.presente .asist-al-estado { color:#166534; }
+    .asist-al-toggle.presente .asist-al-estado { color:var(--ac-dada-tx); }
     .asist-al-toggle.ausente  .asist-al-estado { color:#991b1b; }
 
     /* Config clases */
@@ -7256,7 +7292,7 @@
     .asist-al-fila-fechas input { font-family:'Outfit',sans-serif; font-size:13px; padding:5px 8px; border:1.5px solid var(--borde); border-radius:8px; background:var(--blanco); color:var(--texto); }
     /* Recuperación en pasar lista */
     .asist-al-toggle.recup { border-style:dashed; }
-    .asist-recup-badge { font-size:9px; font-weight:800; background:#fef3c7; color:#92400e; border-radius:10px; padding:2px 6px; margin-left:6px; letter-spacing:.03em; }
+    .asist-recup-badge { font-size:9px; font-weight:800; background:#fef3c7; color:var(--ac-hoy-tx); border-radius:10px; padding:2px 6px; margin-left:6px; letter-spacing:.03em; }
     .asist-recup-panel { background:var(--blanco); border:1.5px solid var(--lila-claro); border-radius:12px; padding:10px; margin-bottom:8px; }
     .asist-recup-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
     .asist-recup-chip { background:var(--lila-suave); border:1px solid var(--lila-claro); border-radius:20px; padding:5px 11px; font-size:12px; font-weight:600; color:#16264f; cursor:pointer; }
@@ -7296,14 +7332,14 @@
     .asist-hist-clase { flex:1; min-width:0; }
     .asist-hist-clase-nombre { font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .asist-hist-clase-franja { font-size:11px; color:var(--gris); }
-    .asist-hist-presente { font-size:11px; font-weight:700; color:#166534; background:#dcfce7; border-radius:10px; padding:2px 8px; flex-shrink:0; }
+    .asist-hist-presente { font-size:11px; font-weight:700; color:var(--ac-dada-tx); background:#dcfce7; border-radius:10px; padding:2px 8px; flex-shrink:0; }
     .asist-hist-ausente  { font-size:11px; font-weight:700; color:#991b1b; background:var(--rojo-suave); border-radius:10px; padding:2px 8px; flex-shrink:0; }
-    .asist-hist-j        { font-size:11px; font-weight:700; color:#92400e; background:#fef3c7; border-radius:10px; padding:2px 8px; flex-shrink:0; }
+    .asist-hist-j        { font-size:11px; font-weight:700; color:var(--ac-hoy-tx); background:#fef3c7; border-radius:10px; padding:2px 8px; flex-shrink:0; }
 
     /* Toggle J/IJ en la fila de un alumno ausente (pasar lista) */
     .asist-jij { display:flex; gap:4px; margin-left:auto; flex-shrink:0; }
     .asist-jij-btn { border:1.5px solid #e5e7eb; background:var(--blanco); color:#9ca3af; font-size:11px; font-weight:800; border-radius:10px; padding:3px 9px; cursor:pointer; }
-    .asist-jij-btn.j.on  { border-color:#f59e0b; background:#fef3c7; color:#92400e; }
+    .asist-jij-btn.j.on  { border-color:var(--ac-hoy); background:#fef3c7; color:var(--ac-hoy-tx); }
     .asist-jij-btn.ij.on { border-color:#f87171; background:#fee2e2; color:#991b1b; }
 
     /* Stats asistencia en Hub */
@@ -7319,7 +7355,7 @@
     .auth-app-sub { font-size:13px; opacity:.8; font-weight:400; }
     .auth-msg { border-radius:10px; padding:10px 14px; font-size:13px; font-weight:600; margin-bottom:0.75rem; }
     .auth-msg.error { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
-    .auth-msg.ok    { background:#dcfce7; color:#166534; border:1px solid #86efac; }
+    .auth-msg.ok    { background:#dcfce7; color:var(--ac-dada-tx); border:1px solid #86efac; }
     .auth-msg.info  { background:#eff6ff; color:#1e40af; border:1px solid #93c5fd; }
 
     /* ── Badge usuario en INICIO ── */
@@ -7329,14 +7365,14 @@
     .auth-logout-btn { font-size:11px; font-weight:700; color:#ef4444; cursor:pointer; white-space:nowrap; text-decoration:none; background:none; border:none; padding:0; }
 
     /* ── PLANIFICACIÓN ANUAL ── */
-    .home-sec-bar.pl { background:#0891b2; }
+    .home-sec-bar.pl { background:var(--ac-carro); }
     .plan-nivelbar { display:flex; gap:8px; margin-bottom:14px; }
     .plan-intro { font-size:12px; color:var(--gris); line-height:1.55; background:var(--arena); border:1px solid var(--borde); border-radius:12px; padding:10px 13px; margin-bottom:14px; }
     /* Mes actual — bloque destacado arriba */
-    .plan-mes-actual { border:1.5px solid #0891b2; border-radius:16px; background:#ecfeff; padding:13px 13px 5px; margin-bottom:16px; box-shadow:0 4px 16px rgba(8,145,178,.12); }
+    .plan-mes-actual { border:1.5px solid var(--ac-carro); border-radius:16px; background:var(--ac-carro-sv); padding:13px 13px 5px; margin-bottom:16px; box-shadow:0 4px 16px rgba(8,145,178,.12); }
     .plan-mes-actual-hdr { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
-    .plan-mes-actual-tag { font-size:9.5px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; color:#fff; background:#0891b2; border-radius:20px; padding:3px 9px; }
-    .plan-mes-actual-nom { font-size:18px; font-weight:800; color:#0e7490; line-height:1; }
+    .plan-mes-actual-tag { font-size:9.5px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; color:#fff; background:var(--ac-carro); border-radius:20px; padding:3px 9px; }
+    .plan-mes-actual-nom { font-size:18px; font-weight:800; color:var(--ac-carro-tx); line-height:1; }
     /* Desplegable de otros meses */
     .plan-otros { border:1px solid var(--borde); border-radius:14px; overflow:hidden; background:var(--blanco); }
     .plan-otros-hdr { display:flex; align-items:center; gap:8px; padding:12px 14px; cursor:pointer; user-select:none; font-size:13px; font-weight:700; color:var(--texto); }
@@ -7360,13 +7396,13 @@
     .plan-mes.abierto .plan-mes-items { display:flex; }
     /* Etapas (ruta no temporal) */
     .plan-etapa { border:1px solid var(--borde); border-radius:13px; overflow:hidden; background:var(--arena); margin-bottom:10px; }
-    .plan-etapa.actual { border:1.5px solid #0891b2; background:#ecfeff; box-shadow:0 4px 16px rgba(8,145,178,.12); }
+    .plan-etapa.actual { border:1.5px solid var(--ac-carro); background:var(--ac-carro-sv); box-shadow:0 4px 16px rgba(8,145,178,.12); }
     .plan-etapa-cab { display:flex; align-items:center; gap:10px; padding:11px 12px; cursor:pointer; user-select:none; -webkit-tap-highlight-color:transparent; }
     .plan-etapa-num { width:24px; height:24px; flex-shrink:0; border-radius:50%; background:var(--lila); color:#fff; font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; }
-    .plan-etapa.actual .plan-etapa-num { background:#0891b2; }
+    .plan-etapa.actual .plan-etapa-num { background:var(--ac-carro); }
     .plan-etapa-tit { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
     .plan-etapa-nom { font-size:14.5px; font-weight:800; color:var(--texto); }
-    .plan-etapa-badge { font-size:9.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:#fff; background:#0891b2; border-radius:20px; padding:1px 7px; vertical-align:middle; }
+    .plan-etapa-badge { font-size:9.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:#fff; background:var(--ac-carro); border-radius:20px; padding:1px 7px; vertical-align:middle; }
     .plan-etapa-obj { font-size:11.5px; color:var(--gris); line-height:1.35; }
     .plan-etapa-prog { font-size:12px; font-weight:800; color:var(--gris); flex-shrink:0; }
     .plan-etapa-chev { font-size:13px; color:var(--gris); flex-shrink:0; transition:transform .18s; }
@@ -7429,16 +7465,16 @@
     .plan-otros.plan-otros-plano { border:none; background:none; padding:0; }
     .plan-otros.plan-otros-plano > .plan-otros-body { padding:0; }
     /* v0.285 — Notas apuntadas en pista, esperando a que las apliques */
-    .notas-pend { border:1.5px solid #fde68a; background:#fffbeb; border-radius:13px;
+    .notas-pend { border:1.5px solid #fde68a; background:var(--ac-hoy-sv); border-radius:13px;
       padding:9px 11px 10px; margin-bottom:12px; }
-    .notas-pend-hdr { font-size:11px; font-weight:800; color:#92400e; text-transform:uppercase;
+    .notas-pend-hdr { font-size:11px; font-weight:800; color:var(--ac-hoy-tx); text-transform:uppercase;
       letter-spacing:.04em; margin-bottom:7px; }
     .notas-pend-it { display:flex; align-items:stretch; gap:6px; margin-bottom:5px; }
     .notas-pend-it:last-child { margin-bottom:0; }
     .npi-ir { flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; text-align:left;
       font-family:inherit; padding:7px 9px; border:1px solid #fde68a; border-radius:9px;
       background:var(--blanco); cursor:pointer; }
-    .npi-f { font-size:10px; font-weight:800; color:#92400e; text-transform:uppercase; letter-spacing:.03em; }
+    .npi-f { font-size:10px; font-weight:800; color:var(--ac-hoy-tx); text-transform:uppercase; letter-spacing:.03em; }
     .npi-t { font-size:12px; color:var(--texto); line-height:1.4;
       display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
     .npi-ok { flex-shrink:0; width:34px; border:1px solid #fde68a; border-radius:9px;
@@ -7471,7 +7507,7 @@
     .ctu-bl-t { flex:1; min-width:0; font-size:12.5px; font-weight:700; color:var(--texto);
       overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .ctu-bl-n { flex-shrink:0; min-width:20px; text-align:center; font-size:10.5px; font-weight:800;
-      color:#0e7490; background:#ecfeff; border-radius:999px; padding:1px 6px; }
+      color:var(--ac-carro-tx); background:var(--ac-carro-sv); border-radius:999px; padding:1px 6px; }
     .ctu-bl.vacio .ctu-bl-n { color:var(--gris); background:var(--arena); }
     .ctu-bl-c { flex-shrink:0; font-size:16px; color:var(--gris); }
     /* v0.285 — Las clases tipo de un bloque */
@@ -7492,13 +7528,13 @@
     .ctc-area.abierta { border-color:#c7d2fe; }
     .ctc-area-hdr { display:flex; align-items:center; gap:8px; width:100%; box-sizing:border-box;
       font-family:inherit; text-align:left; padding:10px 11px; border:none; background:var(--arena); cursor:pointer; }
-    .ctc-area.abierta .ctc-area-hdr { background:#eef2ff; }
+    .ctc-area.abierta .ctc-area-hdr { background:var(--ac-area-sv); }
     .ctc-area-t { flex:1; min-width:0; font-size:12.5px; font-weight:800; color:var(--texto);
       overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .ctc-area.abierta .ctc-area-t { color:#3730a3; }
+    .ctc-area.abierta .ctc-area-t { color:var(--ac-area-tx); }
     .ctc-area-n { flex-shrink:0; min-width:22px; text-align:center; font-size:10.5px; font-weight:800;
       color:var(--gris); background:var(--blanco); border-radius:999px; padding:1px 7px; }
-    .ctc-area-n.con { color:#3730a3; background:#e0e7ff; }
+    .ctc-area-n.con { color:var(--ac-area-tx); background:#e0e7ff; }
     .ctc-area-body { padding:8px 9px 9px; }
     /* v0.289 — El bloque se pliega (toca el nombre) y el ＋ crea una nueva */
     .ctc-bl-fila { display:flex; align-items:stretch; gap:5px; margin:6px 0 4px; }
@@ -7507,14 +7543,14 @@
       border:1.5px solid var(--borde); border-radius:10px; background:var(--blanco); cursor:pointer; }
     .ctc-bl.ab { border-color:#c7d2fe; background:#f5f7ff; }
     .ctc-bl:active { background:var(--arena); }
-    .ctc-bl-t { flex:1; min-width:0; font-size:12px; font-weight:800; color:#3730a3;
+    .ctc-bl-t { flex:1; min-width:0; font-size:12px; font-weight:800; color:var(--ac-area-tx);
       overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .ctc-bl-n { flex-shrink:0; min-width:20px; text-align:center; font-size:10px; font-weight:800;
       color:var(--gris); background:var(--arena); border-radius:999px; padding:1px 6px; }
-    .ctc-bl-n.con { color:#0e7490; background:#ecfeff; }
-    .ctc-bl-mas { flex-shrink:0; width:34px; font-family:inherit; font-size:16px; color:#3730a3;
+    .ctc-bl-n.con { color:var(--ac-carro-tx); background:var(--ac-carro-sv); }
+    .ctc-bl-mas { flex-shrink:0; width:34px; font-family:inherit; font-size:16px; color:var(--ac-area-tx);
       border:1.5px dashed #c7d2fe; border-radius:10px; background:var(--blanco); cursor:pointer; }
-    .ctc-bl-mas:active { background:#eef2ff; }
+    .ctc-bl-mas:active { background:var(--ac-area-sv); }
     /* La ficha de una clase tipo — v0.305: VISTA DE PISTA.
        Nombre entero arriba y grande, imagen debajo a todo el ancho. Está
        pensada para leerse con el móvil en la mano, en la pista y con sol. */
@@ -7524,7 +7560,7 @@
     .ctf-zlbl { font-size:12px !important; }
     .ctf-item { border:1.5px solid #c7d2fe; border-radius:14px; background:var(--blanco);
       padding:11px 12px 12px; margin-bottom:11px; }
-    .ctf-item.carro { border-color:#0891b2; background:#ecfeff; }
+    .ctf-item.carro { border-color:var(--ac-carro); background:var(--ac-carro-sv); }
     .ctf-item.clicable { cursor:pointer; }
     .ctf-item.borrado { opacity:.6; }
     /* Sin `text-overflow`, sin `nowrap`: el nombre se ve ENTERO, aunque
@@ -7533,8 +7569,8 @@
       overflow-wrap:anywhere; }
     .ctf-num { display:inline-flex; align-items:center; justify-content:center;
       width:26px; height:26px; margin-right:8px; vertical-align:-5px;
-      border-radius:50%; background:#0891b2; color:#fff; font-size:14px; font-weight:800; }
-    .ctf-sub { font-size:14px; font-weight:700; color:#0e7490; margin-top:4px; }
+      border-radius:50%; background:var(--ac-carro); color:#fff; font-size:14px; font-weight:800; }
+    .ctf-sub { font-size:14px; font-weight:700; color:var(--ac-carro-tx); margin-top:4px; }
     .ctf-sub.falta { color:#b91c1c; }
     .ctf-img { position:relative; margin-top:10px; width:100%; aspect-ratio:16/9;
       border-radius:12px; overflow:hidden; background:#111;
@@ -7572,22 +7608,22 @@
     .ctcr-ses { display:flex; align-items:center; gap:9px; width:100%; box-sizing:border-box;
       font-family:inherit; text-align:left; padding:7px 9px; margin-bottom:5px;
       border:1.5px solid var(--borde); border-radius:10px; background:var(--blanco); cursor:pointer; }
-    .ctcr-ses.on { border-color:#0891b2; background:#ecfeff; }
+    .ctcr-ses.on { border-color:var(--ac-carro); background:var(--ac-carro-sv); }
     .ctcr-ses-n { flex:1; min-width:0; font-size:12.5px; font-weight:700; color:var(--texto); }
-    .ctcr-ses.on .ctcr-ses-n { color:#0e7490; }
+    .ctcr-ses.on .ctcr-ses-n { color:var(--ac-carro-tx); }
     .ctcr-nom { font-size:12px; color:var(--gris); text-align:center; margin:10px 0 2px; }
     .ctcr-nom b { color:var(--texto); }
     .ct-barra { display:flex; gap:6px; margin-bottom:9px; }
     .ct-fila { display:flex; align-items:center; gap:8px; width:100%; box-sizing:border-box;
       font-family:inherit; text-align:left; padding:9px 10px; margin-bottom:5px;
       border:1.5px solid var(--borde); border-radius:10px; background:var(--blanco); cursor:pointer; }
-    .ct-fila.ab { border-color:#0891b2; border-radius:10px 10px 0 0; margin-bottom:0; }
+    .ct-fila.ab { border-color:var(--ac-carro); border-radius:10px 10px 0 0; margin-bottom:0; }
     .ct-nom { flex:1; min-width:0; font-size:12.5px; font-weight:700; color:var(--texto);
       overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .ct-gol { flex-shrink:0; font-size:10px; font-weight:800; padding:2px 7px; border-radius:6px;
       background:#e03a3a; color:#fff; }
     .ct-uso { flex-shrink:0; font-size:10.5px; color:var(--gris); }
-    .ct-det { border:1.5px solid #0891b2; border-top:none; border-radius:0 0 10px 10px;
+    .ct-det { border:1.5px solid var(--ac-carro); border-top:none; border-radius:0 0 10px 10px;
       padding:2px 10px 10px; margin-bottom:5px; background:var(--blanco); }
     .ct-det .ruta-wk-ej.borrado, .ct-det .ruta-ses.borrado { background:var(--arena); color:var(--gris);
       border-color:var(--borde); text-decoration:line-through; }
@@ -7602,10 +7638,10 @@
     .ct-usar-op { display:flex; align-items:center; gap:8px; width:100%; box-sizing:border-box;
       font-family:inherit; text-align:left; font-size:12.5px; padding:9px 10px; margin-bottom:5px;
       border:1.5px solid var(--borde); border-radius:10px; background:var(--blanco); cursor:pointer; }
-    .ct-usar-op.on { border-color:#0891b2; background:#ecfeff; }
+    .ct-usar-op.on { border-color:var(--ac-carro); background:var(--ac-carro-sv); }
     .ct-usar-n { flex:1; min-width:0; font-weight:700; color:var(--texto);
       overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .ct-usar-op.on .ct-usar-n { color:#0e7490; }
+    .ct-usar-op.on .ct-usar-n { color:var(--ac-carro-tx); }
     .ct-usar-u { flex-shrink:0; font-size:10.5px; color:var(--gris); }
     /* v0.285: se retiran el «¿a qué días?» y el reemplazar/añadir del selector */
     /* v0.281 — Se retira la vista por COLUMNAS (v0.147–v0.262): las semanas
@@ -7631,7 +7667,7 @@
       text-align:center; }
     /* v0.267: el golpe, en rojo con letra blanca — mismo código que abajo */
     .comp-daytag.carro { background:#e03a3a; color:#fff; border:1px solid #d13232; font-weight:800; }
-    .comp-daytag.area  { background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe; }
+    .comp-daytag.area  { background:var(--ac-area-sv); color:var(--ac-area-tx); border:1px solid #c7d2fe; }
     .comp-diacol-dow { font-size:9.5px; font-weight:800; color:var(--gris); text-transform:uppercase; }
     /* v0.243 — El día se abre en GLOBO.
        v0.274 — En el MÓVIL, a pantalla completa: es la ficha que se mira en
@@ -7666,7 +7702,7 @@
     .comp-bloque-fila:active { background:var(--arena); }
     .cbf-txt { flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
     .cbf-txt b { font-size:13.5px; font-weight:800; color:var(--texto); line-height:1.3; }
-    .cbf-ap { font-size:10.5px; font-weight:700; color:#3730a3; text-transform:uppercase; letter-spacing:.03em; }
+    .cbf-ap { font-size:10.5px; font-weight:700; color:var(--ac-area-tx); text-transform:uppercase; letter-spacing:.03em; }
     .cbf-meta { font-size:11px; color:var(--gris); }
     .cbf-chev { flex-shrink:0; font-size:18px; color:var(--gris); }
     /* La ventana de un bloque va por encima del globo del día */
@@ -7675,26 +7711,26 @@
     #ct-crear-ov { z-index:10045; }
     .ctcr-nom-in { width:100%; box-sizing:border-box; padding:10px 12px; font-size:15px;
       border:2px solid #cbd5e1; border-radius:10px; background:#fff; color:#0f172a; }
-    .ctcr-nom-in:focus { outline:none; border-color:#4f46e5; }
+    .ctcr-nom-in:focus { outline:none; border-color:var(--ac-area); }
     .comp-bloque-modal { max-width:620px; }
     /* v0.274 — Notas de la clase */
-    .comp-nota-btn.hay { background:#fef3c7 !important; color:#92400e !important; }
+    .comp-nota-btn.hay { background:#fef3c7 !important; color:var(--ac-hoy-tx) !important; }
     /* v0.288 — Vaciar el día (te equivocaste al pinchar) */
     .comp-quitar-dia { display:block; width:100%; margin-top:14px; font-family:inherit; font-size:12px;
       font-weight:700; color:#991b1b; background:var(--blanco); border:1.5px solid #fca5a5;
       border-radius:11px; padding:0.65rem; cursor:pointer; }
     .comp-quitar-dia:active { background:#fef2f2; }
-    .comp-nota { border:1.5px solid #fde68a; background:#fffbeb; border-radius:12px;
+    .comp-nota { border:1.5px solid #fde68a; background:var(--ac-hoy-sv); border-radius:12px;
       padding:10px 12px; margin-bottom:12px; cursor:pointer; }
     .comp-nota.abierta { cursor:default; }
-    .comp-nota-hdr { font-size:10.5px; font-weight:800; color:#92400e; text-transform:uppercase;
+    .comp-nota-hdr { font-size:10.5px; font-weight:800; color:var(--ac-hoy-tx); text-transform:uppercase;
       letter-spacing:.04em; margin-bottom:5px; }
     .comp-nota-txt { font-size:13px; color:var(--texto); line-height:1.55; white-space:pre-wrap; }
     .comp-nota-ta { min-height:110px; resize:vertical; line-height:1.5; font-size:14px; }
     .comp-nota-acts { display:flex; gap:8px; justify-content:flex-end; margin-top:8px; }
     .comp-nota-acts .btn { width:auto; margin:0; }
     /* v0.296: retirada — la nota se marca con el tic rojo del círculo */
-    .comp-daytag.nota { background:#fef3c7; color:#92400e; border:1px solid #fcd34d; }
+    .comp-daytag.nota { background:#fef3c7; color:var(--ac-hoy-tx); border:1px solid #fcd34d; }
     .comp-dow-cont { font-size:11.5px; font-weight:600; color:var(--gris); }
     .comp-circ-fila { display:flex; gap:8px; flex-wrap:wrap; }
     .comp-circ { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;
@@ -7780,7 +7816,7 @@
     .ruta-curso-nav { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
     .ruta-curso-nav > button { flex-shrink:0; width:34px; height:34px; border-radius:10px; border:1.5px solid var(--borde);
       background:var(--blanco); color:var(--texto); font-size:17px; font-weight:800; line-height:1; cursor:pointer; }
-    .ruta-curso-nav > button:hover { border-color:#0891b2; color:#0e7490; }
+    .ruta-curso-nav > button:hover { border-color:var(--ac-carro); color:var(--ac-carro-tx); }
     .ruta-curso-lbl { flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
       font-size:13.5px; font-weight:800; color:var(--texto); }
     /* Fila de trimestres — siempre uno al lado de otro */
@@ -7796,32 +7832,32 @@
     .ruta-wk { border:1.5px solid var(--borde); border-radius:11px; padding:8px 10px; margin-bottom:7px;
       background:var(--blanco); cursor:pointer; -webkit-tap-highlight-color:transparent; }
     .ruta-wk:last-child { margin-bottom:0; }
-    .ruta-wk:hover { border-color:#0891b2; }
-    .ruta-wk.now   { border:2px solid #0891b2; background:#f0fdff; }
+    .ruta-wk:hover { border-color:var(--ac-carro); }
+    .ruta-wk.now   { border:2px solid var(--ac-carro); background:#f0fdff; }
     .ruta-wk.done  { background:#f6fefa; }
     .ruta-wk.vacia { border-style:dashed; }
     .ruta-wk-top { display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--gris); }
-    .ruta-wk.now .ruta-wk-top { color:#0e7490; }
+    .ruta-wk.now .ruta-wk-top { color:var(--ac-carro-tx); }
     .ruta-wk-n { font-weight:800; color:var(--texto); }
-    .ruta-wk.now .ruta-wk-n { color:#0e7490; }
+    .ruta-wk.now .ruta-wk-n { color:var(--ac-carro-tx); }
     .ruta-wk-rango { margin-left:auto; }
     .ruta-dot { width:16px; height:16px; border-radius:50%; display:flex; align-items:center; justify-content:center;
                 font-size:10px; font-weight:800; flex-shrink:0; }
-    .ruta-dot.done  { background:#dcfce7; color:#166534; }
-    .ruta-dot.now   { background:var(--blanco); border:2px solid #0891b2; }
+    .ruta-dot.done  { background:#dcfce7; color:var(--ac-dada-tx); }
+    .ruta-dot.now   { background:var(--blanco); border:2px solid var(--ac-carro); }
     .ruta-dot.plan  { background:var(--gris); }
     .ruta-dot.vacia { border:1.5px dashed var(--borde); }
-    .ruta-badge { font-size:9.5px; font-weight:800; background:#cffafe; color:#0e7490; padding:1px 6px; border-radius:999px; }
+    .ruta-badge { font-size:9.5px; font-weight:800; background:#cffafe; color:var(--ac-carro-tx); padding:1px 6px; border-radius:999px; }
     .ruta-chip { display:inline-block; font-size:11px; margin:5px 0 2px; padding:2px 8px; border-radius:999px; background:#eff6ff; color:#1e40af; }
     /* v0.265 — La semana, en tres zonas (solo cuando hay sitio: ver el @media
        de 900 px). Apiladas en el móvil, en fila en el navegador. */
     .ruta-wk-z:empty { display:none; }
     .ruta-wk-zlbl { font-size:9.5px; font-weight:800; letter-spacing:.04em; text-transform:uppercase;
       margin:6px 0 3px; }
-    .ruta-wk-carro .ruta-wk-zlbl { color:#0e7490; }
-    .ruta-wk-area  .ruta-wk-zlbl { color:#3730a3; }
+    .ruta-wk-carro .ruta-wk-zlbl { color:var(--ac-carro-tx); }
+    .ruta-wk-area  .ruta-wk-zlbl { color:var(--ac-area-tx); }
     .ruta-wk-ej { display:inline-block; font-size:11.5px; line-height:1.35; padding:2px 8px;
-      border-radius:6px; margin:0 4px 4px 0; background:#ecfeff; color:#0e7490; border:1px solid #a5f3fc; }
+      border-radius:6px; margin:0 4px 4px 0; background:var(--ac-carro-sv); color:var(--ac-carro-tx); border:1px solid #a5f3fc; }
     /* v0.267 — El GOLPE que se trabaja en el carro, destacado en rojo. Va
        debajo de los ejercicios en la semana del curso, y es el mismo lenguaje
        visual que la etiqueta del mes de arriba. */
@@ -7863,9 +7899,9 @@
     .ruta-parte-hdr span { font-size:10.5px; }
     .ruta-parte-hdr .ruta-area-n { margin-left:auto; }
     .ruta-modal-carro .ruta-parte-hdr,
-    .comp-clase-carro .ruta-parte-hdr { background:#cffafe; color:#0e7490; }
+    .comp-clase-carro .ruta-parte-hdr { background:#cffafe; color:var(--ac-carro-tx); }
     .ruta-modal-carro .ruta-parte-hdr b,
-    .comp-clase-carro .ruta-parte-hdr b { color:#0e7490; }
+    .comp-clase-carro .ruta-parte-hdr b { color:var(--ac-carro-tx); }
     /* v0.239 — Las cabeceras de las dos partes son BOTONES: se pulsa el
        título y la parte entera se pliega. El galón (chevron) dice si está
        abierta o cerrada. */
@@ -7873,7 +7909,7 @@
       border:none; cursor:pointer; }
     button.ruta-parte-hdr:hover { filter:brightness(.97); }
     /* v0.254 — Número de orden del ejercicio dentro del carro */
-    .ruta-carro-num { flex-shrink:0; width:21px; height:21px; border-radius:50%; background:#0891b2;
+    .ruta-carro-num { flex-shrink:0; width:21px; height:21px; border-radius:50%; background:var(--ac-carro);
       color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center;
       justify-content:center; margin-right:1px; }
     /* v0.253 — Lo elegido sigue a la vista con la parte plegada */
@@ -7885,9 +7921,9 @@
     /* v0.239 — Los ejercicios ya metidos en el carro, con su propia barra
        plegable: en pista molestan si ocupan media pantalla. */
     .ruta-carro-selhdr { display:flex; align-items:center; gap:6px; width:100%; box-sizing:border-box;
-      text-align:left; font-family:inherit; font-size:10.5px; font-weight:800; color:#0e7490;
+      text-align:left; font-family:inherit; font-size:10.5px; font-weight:800; color:var(--ac-carro-tx);
       text-transform:uppercase; letter-spacing:.04em; margin:2px 0 7px; padding:5px 7px;
-      border:none; border-radius:8px; background:#ecfeff; cursor:pointer; }
+      border:none; border-radius:8px; background:var(--ac-carro-sv); cursor:pointer; }
     .ruta-carro-selhdr .ruta-area-n { margin-left:auto; }
     /* v0.239 — Debajo de la cabecera del panel: lo que llevas elegido para
        esta clase (carro + área de trabajo), sin tener que bajar a mirarlo. */
@@ -7899,10 +7935,10 @@
     .ruta-eleg-chip { display:inline-flex; align-items:center; font-size:11.5px; font-weight:700;
       padding:3px 9px; border-radius:999px; background:var(--blanco); border:1px solid var(--borde);
       color:var(--texto); }
-    .ruta-eleg-fila.carro .ruta-eleg-chip { background:#ecfeff; border-color:#a5f3fc; color:#0e7490; }
+    .ruta-eleg-fila.carro .ruta-eleg-chip { background:var(--ac-carro-sv); border-color:#a5f3fc; color:var(--ac-carro-tx); }
     .ruta-eleg-nada { font-size:11.5px; color:var(--gris); font-style:italic; }
     /* v0.240: el chip del BLOQUE marcado ese día lleva su ✕ para desmarcarlo */
-    .ruta-eleg-chip.bloque { gap:6px; background:#eef2ff; border-color:#c7d2fe; color:#3730a3; }
+    .ruta-eleg-chip.bloque { gap:6px; background:var(--ac-area-sv); border-color:#c7d2fe; color:var(--ac-area-tx); }
     .ruta-eleg-chip.bloque button { border:none; background:none; color:inherit; font-size:11px;
       font-family:inherit; cursor:pointer; padding:0; line-height:1; opacity:.7; }
     .ruta-eleg-chip.bloque button:hover { opacity:1; }
@@ -7938,11 +7974,11 @@
     .ruta-dia-sel { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:-4px 0 10px; }
     .ruta-dia-sel .ruta-panel-paso { margin:0; }
     .ruta-dia-sel .ruta-dia-chips { padding:0; }
-    .ruta-dia-chip.on { background:#0891b2; color:#fff; }
+    .ruta-dia-chip.on { background:var(--ac-carro); color:#fff; }
     .ruta-dia-chips { display:flex; flex-wrap:wrap; gap:6px; padding:2px 2px 8px; }
     .ruta-dia-chip { font-family:inherit; font-size:12px; font-weight:700; padding:6px 12px; border-radius:999px;
-      border:1.5px solid #0891b2; background:#ecfeff; color:#0e7490; cursor:pointer; }
-    .ruta-dia-chip:hover { background:#0891b2; color:#fff; }
+      border:1.5px solid var(--ac-carro); background:var(--ac-carro-sv); color:var(--ac-carro-tx); cursor:pointer; }
+    .ruta-dia-chip:hover { background:var(--ac-carro); color:#fff; }
     .ruta-panel-paso { display:flex; align-items:center; gap:8px; font-size:11px; font-weight:700; color:var(--gris); margin:0 2px 8px; }
     .ruta-panel-nota { font-size:11px; font-weight:400; color:var(--gris); }
     /* v0.219: los apartados del catálogo se pliegan y despliegan */
@@ -7958,10 +7994,10 @@
     .ruta-area-row { display:flex; align-items:center; gap:8px; width:100%; box-sizing:border-box; text-align:left;
       padding:9px 11px; margin-bottom:5px; border:1.5px solid var(--borde); border-radius:10px; background:var(--blanco);
       font-family:inherit; font-size:12.5px; font-weight:600; color:var(--texto); cursor:pointer; }
-    .ruta-area-row:hover { border-color:#0891b2; }
-    .ruta-area-row.on { border-color:#0891b2; background:#ecfeff; color:#0e7490; }
+    .ruta-area-row:hover { border-color:var(--ac-carro); }
+    .ruta-area-row.on { border-color:var(--ac-carro); background:var(--ac-carro-sv); color:var(--ac-carro-tx); }
     .ruta-area-row.sinses { opacity:.55; }
-    .ruta-area-ico { font-size:13px; color:#0891b2; flex-shrink:0; }
+    .ruta-area-ico { font-size:13px; color:var(--ac-carro); flex-shrink:0; }
     .ruta-area-t { min-width:0; }
     /* v0.204: nº de sesiones que tiene el bloque, al final de su fila */
     .ruta-area-n { margin-left:auto; flex-shrink:0; min-width:20px; text-align:center; font-size:10.5px; font-weight:800;
@@ -7969,13 +8005,13 @@
     .ruta-area-row.sinses .ruta-area-n { color:var(--gris); background:var(--arena); }
     .ruta-chip-x { margin-left:auto; font-family:inherit; font-size:11px; font-weight:700; color:var(--gris);
       background:none; border:1px solid var(--borde); border-radius:999px; padding:2px 9px; cursor:pointer; }
-    .ruta-chip-x:hover { border-color:#0891b2; color:#0e7490; }
+    .ruta-chip-x:hover { border-color:var(--ac-carro); color:var(--ac-carro-tx); }
     /* Tarjetas de sesión con miniatura */
     .ruta-ses-grid { display:grid; grid-template-columns:1fr; gap:8px; }
     .ruta-ses-card { display:flex; align-items:center; gap:10px; width:100%; box-sizing:border-box; text-align:left;
       padding:8px; border:1.5px solid var(--borde); border-radius:12px; background:var(--blanco); font-family:inherit; cursor:pointer; }
-    .ruta-ses-card:hover { border-color:#0891b2; }
-    .ruta-ses-card.on { border-color:#0891b2; background:#ecfeff; }
+    .ruta-ses-card:hover { border-color:var(--ac-carro); }
+    .ruta-ses-card.on { border-color:var(--ac-carro); background:var(--ac-carro-sv); }
     .ruta-ses-thumb { flex-shrink:0; width:84px; aspect-ratio:16/9; border-radius:8px; overflow:hidden; background:#111;
       display:flex; align-items:center; justify-content:center; }
     .ruta-ses-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
@@ -7993,8 +8029,8 @@
     .ruta-carro-g { font-family:inherit; font-size:11px; font-weight:700; color:var(--gris);
       background:var(--blanco); border:1.5px solid var(--borde); border-radius:999px;
       padding:4px 10px; cursor:pointer; }
-    .ruta-carro-g:hover { border-color:#0891b2; color:#0e7490; }
-    .ruta-carro-g.on { border-color:#0891b2; background:#ecfeff; color:#0e7490; }
+    .ruta-carro-g:hover { border-color:var(--ac-carro); color:var(--ac-carro-tx); }
+    .ruta-carro-g.on { border-color:var(--ac-carro); background:var(--ac-carro-sv); color:var(--ac-carro-tx); }
     .ruta-carro-g b { font-weight:800; opacity:.65; margin-left:2px; }
     .ruta-carro-g.mas { border-style:dashed; }
     /* v0.219 — subtítulo de cada golpe cuando hay varios abiertos, y la
@@ -8004,7 +8040,7 @@
     /* v0.250 — Rótulo de la zona de pista sobre cada bloque de golpes */
     /* v0.261: la zona de pista en su propio color (turquesa oscuro), para
        distinguirla de un vistazo de los golpes que cuelgan de ella. */
-    .ruta-carro-zona { font-size:9.5px; font-weight:800; color:#0e7490; text-transform:uppercase;
+    .ruta-carro-zona { font-size:9.5px; font-weight:800; color:var(--ac-carro-tx); text-transform:uppercase;
       letter-spacing:.09em; margin:9px 2px 4px; display:flex; align-items:center; gap:7px; }
     .ruta-carro-zona::after { content:''; flex:1; height:1px; background:#a5f3fc; }
     .ruta-carro-zona:first-child { margin-top:2px; }
@@ -8016,19 +8052,19 @@
     /* v0.221 — ficha del ejercicio del carro: miniatura + nombre + su golpe.
        La misma en el panel de planificar y en la vista del día. */
     .ruta-carro-ficha { display:flex; align-items:center; gap:8px; padding:5px; margin-bottom:5px;
-      border:1.5px solid #0891b2; border-radius:10px; background:#ecfeff; }
+      border:1.5px solid var(--ac-carro); border-radius:10px; background:var(--ac-carro-sv); }
     .ruta-carro-ficha .ruta-carro-thumb { width:62px; cursor:pointer; }
     .ruta-carro-ficha .ejcard-play { position:absolute; inset:0; display:flex; align-items:center;
       justify-content:center; font-size:13px; color:#fff; text-shadow:0 1px 4px rgba(0,0,0,.6); }
     .ruta-carro-ficha-txt { display:flex; flex-direction:column; gap:1px; min-width:0; flex:1; }
     .ruta-carro-ficha-txt b { font-size:12px; font-weight:700; color:var(--texto); line-height:1.3; }
-    .ruta-carro-ficha-txt span { font-size:10.5px; color:#0e7490; font-weight:700; }
+    .ruta-carro-ficha-txt span { font-size:10.5px; color:var(--ac-carro-tx); font-weight:700; }
     /* v0.235 — EJ en progresión (varios vídeos): fila de miniaturas más
        pequeñas en vez de una sola, y aviso de cuántos vídeos tiene. */
     .ruta-carro-thumbs { display:flex; gap:3px; flex-shrink:0; }
     .ruta-carro-ficha .ruta-carro-thumb-mini { width:34px; cursor:pointer; }
     .ruta-carro-nvid { color:var(--gris) !important; font-weight:600 !important; }
-    .ruta-carro-ficha button { flex-shrink:0; border:none; background:none; color:#0e7490; font-size:13px;
+    .ruta-carro-ficha button { flex-shrink:0; border:none; background:none; color:var(--ac-carro-tx); font-size:13px;
       font-family:inherit; cursor:pointer; padding:0 4px; opacity:.75; }
     .ruta-carro-ficha button:hover { opacity:1; }
     /* v0.221 — LA CLASE DEL DÍA, en dos columnas: carro | área de trabajo */
@@ -8064,10 +8100,10 @@
     /* v0.219 — sesiones ya elegidas de la semana, una debajo de otra */
     .ruta-ses-elegidas { margin-bottom:12px; padding-bottom:10px; border-bottom:1px dashed var(--borde); }
     .ruta-ses-eleg { display:flex; align-items:center; gap:8px; padding:5px; margin-bottom:5px;
-      border:1.5px solid #0891b2; border-radius:10px; background:#ecfeff; }
+      border:1.5px solid var(--ac-carro); border-radius:10px; background:var(--ac-carro-sv); }
     .ruta-ses-eleg .ruta-ses-thumb { width:56px; }
     .ruta-ses-eleg .ruta-ses-nom { flex:1; min-width:0; font-size:12px; }
-    .ruta-ses-eleg button { flex-shrink:0; border:none; background:none; color:#0e7490; font-size:13px;
+    .ruta-ses-eleg button { flex-shrink:0; border:none; background:none; color:var(--ac-carro-tx); font-size:13px;
       font-family:inherit; cursor:pointer; padding:0 4px; opacity:.75; }
     .ruta-ses-eleg button:hover { opacity:1; }
     .ruta-carro-busca { padding:7px 11px; font-size:12.5px; margin-bottom:7px; }
@@ -8075,10 +8111,10 @@
     .ruta-carro-it { display:flex; align-items:center; gap:8px; width:100%; box-sizing:border-box; text-align:left;
       padding:6px 8px; border:none; background:none; border-radius:8px; font-family:inherit; cursor:pointer; }
     .ruta-carro-it:hover { background:var(--arena); }
-    .ruta-carro-it.on { background:#ecfeff; }
+    .ruta-carro-it.on { background:var(--ac-carro-sv); }
     .ruta-carro-check { flex-shrink:0; width:17px; height:17px; border:1.5px solid var(--borde); border-radius:5px;
-      display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; color:#0e7490; background:var(--blanco); }
-    .ruta-carro-it.on .ruta-carro-check { border-color:#0891b2; background:#0891b2; color:#fff; }
+      display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; color:var(--ac-carro-tx); background:var(--blanco); }
+    .ruta-carro-it.on .ruta-carro-check { border-color:var(--ac-carro); background:var(--ac-carro); color:#fff; }
     .ruta-carro-txt { display:flex; flex-direction:column; gap:1px; min-width:0; }
     .ruta-carro-txt b { font-size:12.5px; font-weight:600; color:var(--texto); line-height:1.3; }
     .ruta-carro-txt span { font-size:10.5px; color:var(--gris); }
@@ -8102,7 +8138,7 @@
        porque en pantalla estrecha esa segunda columna quedaba lejos. */
     .ruta-area-inline { padding:2px 0 10px 10px; margin-bottom:6px; border-left:2px solid #cffafe; }
     /* v0.235: el «¿qué día?» se ve SIEMPRE, también en pantalla ancha */
-    .ruta-area-dia { padding:4px 0 8px 10px; margin-bottom:6px; border-left:2px solid #0891b2; }
+    .ruta-area-dia { padding:4px 0 8px 10px; margin-bottom:6px; border-left:2px solid var(--ac-carro); }
     /* ORDENADOR: trimestres en fila de 4, meses en columnas, panel centrado
        en dos columnas (áreas | sesiones). Es donde se planifica de verdad. */
     @media (min-width:760px){
@@ -8137,22 +8173,22 @@
     }
     /* ── v0.210 — Calendario de competiciones ── */
     .tor-btn { display:flex; align-items:center; gap:10px; width:100%; box-sizing:border-box; text-align:left;
-      padding:11px 13px; margin-bottom:0.6rem; border:1.5px solid #fcd34d; border-radius:14px; background:#fffbeb;
+      padding:11px 13px; margin-bottom:0.6rem; border:1.5px solid #fcd34d; border-radius:14px; background:var(--ac-hoy-sv);
       font-family:inherit; cursor:pointer; }
-    .tor-btn:hover { border-color:#f59e0b; }
+    .tor-btn:hover { border-color:var(--ac-hoy); }
     .tor-btn-ico { font-size:20px; flex-shrink:0; }
     .tor-btn-txt { display:flex; flex-direction:column; gap:2px; min-width:0; flex:1; }
-    .tor-btn-txt b { font-size:13.5px; font-weight:800; color:#92400e; }
+    .tor-btn-txt b { font-size:13.5px; font-weight:800; color:var(--ac-hoy-tx); }
     .tor-btn-txt span { font-size:11.5px; color:#a16207; line-height:1.4; }
     .tor-mes-chips { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:12px; }
     .tor-mes-chip { position:relative; font-family:inherit; font-size:11.5px; font-weight:700; padding:5px 10px;
       border-radius:999px; border:1.5px solid var(--borde); background:var(--blanco); color:var(--gris); cursor:pointer; }
-    .tor-mes-chip:hover { border-color:#f59e0b; }
+    .tor-mes-chip:hover { border-color:var(--ac-hoy); }
     /* v0.231: el mes en el que estamos, señalado igual que en el tablero */
     .tor-mes-chip.hoy { border-width:2px; border-color:var(--verde); color:var(--texto); }
-    .tor-mes-chip.hoy.on { border-color:#f59e0b; }
-    .tor-mes-chip.on { background:#fffbeb; border-color:#f59e0b; color:#92400e; }
-    .tor-mes-n { display:inline-block; margin-left:5px; font-size:9.5px; font-weight:800; color:#92400e;
+    .tor-mes-chip.hoy.on { border-color:var(--ac-hoy); }
+    .tor-mes-chip.on { background:var(--ac-hoy-sv); border-color:var(--ac-hoy); color:var(--ac-hoy-tx); }
+    .tor-mes-n { display:inline-block; margin-left:5px; font-size:9.5px; font-weight:800; color:var(--ac-hoy-tx);
       background:#fde68a; border-radius:999px; padding:0 5px; }
     .tor-cal-tit { font-size:12px; font-weight:800; color:var(--texto); text-transform:capitalize; margin:0 2px 5px; }
     /* v0.214 — cuadrícula ajustada: números pequeños y, debajo, las barras de
@@ -8176,12 +8212,12 @@
     .tor-barra:hover { filter:brightness(1.12); }
     .tor-barra.sigue-izq { border-top-left-radius:0; border-bottom-left-radius:0; padding-left:3px; }
     .tor-barra.sigue-der { border-top-right-radius:0; border-bottom-right-radius:0; }
-    .tor-add { display:block; width:100%; font-family:inherit; font-size:12.5px; font-weight:700; color:#92400e;
-      background:#fffbeb; border:1.5px dashed #fcd34d; border-radius:10px; padding:9px; margin-bottom:10px; cursor:pointer; }
-    .tor-add:hover { border-color:#f59e0b; }
+    .tor-add { display:block; width:100%; font-family:inherit; font-size:12.5px; font-weight:700; color:var(--ac-hoy-tx);
+      background:var(--ac-hoy-sv); border:1.5px dashed #fcd34d; border-radius:10px; padding:9px; margin-bottom:10px; cursor:pointer; }
+    .tor-add:hover { border-color:var(--ac-hoy); }
     .tor-lista { display:flex; flex-direction:column; gap:7px; }
     .tor-card { border:1.5px solid var(--borde); border-radius:12px; background:var(--blanco); overflow:hidden; }
-    .tor-card.abierta { border-color:#f59e0b; }
+    .tor-card.abierta { border-color:var(--ac-hoy); }
     .tor-card.pasada { opacity:.62; }
     .tor-card-hdr { display:flex; align-items:center; gap:9px; padding:9px 11px; cursor:pointer; }
     .tor-card-ico { flex-shrink:0; width:28px; height:28px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:14px; }
@@ -8221,25 +8257,25 @@
     }
     /* ── v0.211 — Curso cerrado abierto para editar + copia entre cursos ── */
     .ruta-aviso-cerrado { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:12px;
-      padding:9px 12px; border:1.5px solid #fcd34d; border-radius:12px; background:#fffbeb;
-      font-size:12px; line-height:1.45; color:#92400e; }
+      padding:9px 12px; border:1.5px solid #fcd34d; border-radius:12px; background:var(--ac-hoy-sv);
+      font-size:12px; line-height:1.45; color:var(--ac-hoy-tx); }
     .ruta-aviso-cerrado span { flex:1; min-width:180px; }
-    .ruta-aviso-cerrado button { font-family:inherit; font-size:11.5px; font-weight:700; color:#92400e;
+    .ruta-aviso-cerrado button { font-family:inherit; font-size:11.5px; font-weight:700; color:var(--ac-hoy-tx);
       background:var(--blanco); border:1.5px solid #fcd34d; border-radius:999px; padding:5px 12px; cursor:pointer; }
     .ruta-aviso-cerrado button:hover { background:#fde68a; }
     .ruta-arch-acc { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
     .ruta-arch-acc button { flex:1; min-width:150px; font-family:inherit; font-size:11.5px; font-weight:700;
       color:var(--texto); background:var(--blanco); border:1.5px solid var(--borde); border-radius:10px;
       padding:8px 10px; cursor:pointer; }
-    .ruta-arch-acc button:hover { border-color:#0891b2; color:#0e7490; }
-    .ruta-arch-acc button.on { border-color:#0891b2; background:#ecfeff; color:#0e7490; }
+    .ruta-arch-acc button:hover { border-color:var(--ac-carro); color:var(--ac-carro-tx); }
+    .ruta-arch-acc button.on { border-color:var(--ac-carro); background:var(--ac-carro-sv); color:var(--ac-carro-tx); }
     .ruta-copia { border:1.5px solid #cffafe; border-radius:12px; background:#f0fdff; padding:11px; margin-bottom:12px; }
-    .ruta-copia-tit { font-size:12.5px; font-weight:800; color:#0e7490; margin-bottom:9px; }
+    .ruta-copia-tit { font-size:12.5px; font-weight:800; color:var(--ac-carro-tx); margin-bottom:9px; }
     .ruta-copia-fila { display:flex; flex-direction:column; gap:5px; margin-bottom:9px; }
     .ruta-copia-nota { font-size:11px; line-height:1.55; color:var(--gris); margin-bottom:10px; }
     .ruta-copia-btns { display:flex; gap:7px; }
     .ruta-copia-res { margin-top:9px; padding-top:8px; border-top:1px dashed #a5f3fc;
-      font-size:11.5px; line-height:1.5; color:#0e7490; }
+      font-size:11.5px; line-height:1.5; color:var(--ac-carro-tx); }
     .comp-resumen-videos { display:flex; flex-wrap:nowrap; gap:6px; align-items:flex-start; }
     .comp-resumen-videos .ejcard { flex:1 1 0; min-width:0; }
     .comp-resumen-videos .ejcard-titulo { font-size:11px; }
@@ -8256,7 +8292,7 @@
     /* v0.315 — el árbol que se despliega dentro del bloque */
     .plan-item-chev { flex-shrink:0; display:inline-block; font-size:15px; color:var(--gris);
       transition:transform .15s; margin-right:6px; }
-    .plan-item-chev.abierto { transform:rotate(90deg); color:#0e7490; }
+    .plan-item-chev.abierto { transform:rotate(90deg); color:var(--ac-carro-tx); }
     .plan-item-cfg { flex-shrink:0; width:34px; height:34px; margin-left:4px; font-family:inherit;
       font-size:15px; color:var(--gris); border:1.5px solid var(--borde); border-radius:9px;
       background:var(--blanco); cursor:pointer; }
@@ -8265,8 +8301,8 @@
     .plan-bl-fila { display:flex; align-items:center; gap:9px; padding:6px; margin-bottom:5px;
       border:1.5px solid var(--borde); border-radius:10px; background:var(--blanco); cursor:pointer; }
     .plan-bl-fila:last-child { margin-bottom:0; }
-    .plan-bl-fila:active { border-color:#0891b2; }
-    .plan-bl-fila.trabajada { border-color:#86efac; background:#f0fdf4; }
+    .plan-bl-fila:active { border-color:var(--ac-carro); }
+    .plan-bl-fila.trabajada { border-color:#86efac; background:var(--ac-dada-sv); }
     .plan-bl-thumb { flex-shrink:0; width:64px; aspect-ratio:16/9; border-radius:7px; overflow:hidden;
       background:#111; display:flex; align-items:center; justify-content:center; }
     .plan-bl-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
@@ -8274,8 +8310,8 @@
     .plan-bl-nom { flex:1; min-width:0; font-size:13.5px; font-weight:700; color:var(--texto);
       line-height:1.3; overflow-wrap:anywhere; }
     .plan-bl-tag { flex-shrink:0; font-size:10px; font-weight:800; border-radius:999px;
-      padding:1px 7px; color:#3730a3; background:#eef2ff; }
-    .plan-bl-tag.ok { color:#166534; background:#dcfce7; }
+      padding:1px 7px; color:var(--ac-area-tx); background:var(--ac-area-sv); }
+    .plan-bl-tag.ok { color:var(--ac-dada-tx); background:#dcfce7; }
     /* v0.322 — Temporalización en rejilla. La columna de semanas se queda
        fija al deslizar: sin ella, tres días a la derecha ya no sabes qué
        semana estás mirando. */
@@ -8283,13 +8319,13 @@
       border:1.5px solid var(--borde); border-radius:9px; overflow:hidden; }
     .temp-vista-b { font-family:inherit; font-size:12px; font-weight:700; color:var(--gris);
       padding:5px 12px; border:none; background:var(--blanco); cursor:pointer; }
-    .temp-vista-b.on { color:#fff; background:#0891b2; }
+    .temp-vista-b.on { color:#fff; background:var(--ac-carro); }
     .temp-rej-wrap { overflow-x:auto; border:1.5px solid var(--borde); border-radius:10px;
       background:var(--blanco); -webkit-overflow-scrolling:touch; }
     .temp-rej { border-collapse:separate; border-spacing:0; font-size:12px; width:100%; }
     .temp-rej th { font-size:11px; font-weight:800; color:var(--gris); padding:7px 6px;
       border-bottom:1px solid var(--borde); min-width:112px; text-align:center; }
-    .temp-rej th.hoy { color:#0e7490; }
+    .temp-rej th.hoy { color:var(--ac-carro-tx); }
     .temp-rej-sem { position:sticky; left:0; z-index:1; background:var(--blanco);
       width:52px; min-width:52px; font-size:10.5px; color:var(--gris); text-align:right;
       padding:4px 7px; border-right:1px solid var(--borde); }
@@ -8298,8 +8334,8 @@
     .temp-rej-c { padding:3px; vertical-align:top; }
     .temp-rej-no { text-align:center; color:var(--borde); font-weight:800; }
     .temp-cel { border-left:4px solid var(--borde); padding:6px 7px; cursor:pointer; line-height:1.25; }
-    .temp-cel.dada { border-left-color:#22c55e; background:#f0fdf4; }
-    .temp-cel.hoy  { border-left-color:#f59e0b; background:#fffbeb; }
+    .temp-cel.dada { border-left-color:var(--ac-dada); background:var(--ac-dada-sv); }
+    .temp-cel.hoy  { border-left-color:var(--ac-hoy); background:var(--ac-hoy-sv); }
     .temp-cel.prog { border:1.5px dashed var(--borde); border-left-width:4px; }
     .temp-cel-n { display:block; font-size:12.5px; font-weight:700; color:var(--texto);
       overflow-wrap:anywhere; }
@@ -8307,8 +8343,8 @@
     .temp-leyenda { display:flex; gap:12px; flex-wrap:wrap; align-items:center;
       font-size:10.5px; color:var(--gris); margin-top:8px; }
     .temp-lg { display:inline-block; width:8px; height:8px; margin-right:4px; vertical-align:0; }
-    .temp-lg.dada { background:#22c55e; }
-    .temp-lg.hoy  { background:#f59e0b; }
+    .temp-lg.dada { background:var(--ac-dada); }
+    .temp-lg.hoy  { background:var(--ac-hoy); }
     .temp-lg.prog { border:1px dashed var(--gris); }
     .temp-lg-scroll { margin-left:auto; }
     /* v0.324 — El bloque HOY de Inicio */
@@ -8331,7 +8367,7 @@
       border-radius:999px; padding:2px 10px; text-transform:uppercase; letter-spacing:.05em; }
     .hhoy-toca.urge .hhoy-badge { color:#fff; background:var(--ac-hoy); }
     .hhoy-cuando { font-size:11.5px; color:var(--gris); }
-    .hhoy-ok { font-size:11px; font-weight:700; color:#166534; }
+    .hhoy-ok { font-size:11px; font-weight:700; color:var(--ac-dada-tx); }
     .hhoy-linea { display:flex; align-items:baseline; gap:9px; flex-wrap:wrap; }
     .hhoy-hora { font-size:22px; font-weight:800; color:var(--texto); font-variant-numeric:tabular-nums;
       letter-spacing:-.02em; }
@@ -8354,7 +8390,7 @@
     .hhoy-ic { width:16px; text-align:center; font-size:12px; color:var(--gris); }
     .hhoy-vacio { text-align:center; cursor:pointer; padding:16px 13px; }
     .hhoy-vacio .hhoy-tit { color:var(--texto); text-transform:none; letter-spacing:0; font-size:15px; }
-    .hhoy-ir { font-size:12.5px; font-weight:700; color:#0e7490; margin-top:9px; }
+    .hhoy-ir { font-size:12.5px; font-weight:700; color:var(--ac-carro-tx); margin-top:9px; }
     .hhoy-vacio .hhoy-tit { display:block; margin-bottom:3px; }
     .hhoy-pend { display:flex; align-items:center; gap:9px; font-size:12.5px; color:var(--ac-hoy-tx);
       background:var(--ac-hoy-sv); border:1px solid var(--ac-hoy); border-left-width:5px;
@@ -8367,20 +8403,20 @@
       letter-spacing:.04em; margin:10px 2px 5px; }
     .temp-dia { display:flex; align-items:center; gap:9px; padding:8px 9px; margin-bottom:5px;
       border:1.5px solid var(--borde); border-radius:10px; background:var(--blanco); cursor:pointer; }
-    .temp-dia:active { border-color:#0891b2; }
-    .temp-dia.dada { border-left:5px solid #22c55e; }
-    .temp-dia.hoy  { border-left:5px solid #f59e0b; background:#fffbeb; }
+    .temp-dia:active { border-color:var(--ac-carro); }
+    .temp-dia.dada { border-left:5px solid var(--ac-dada); }
+    .temp-dia.hoy  { border-left:5px solid var(--ac-hoy); background:var(--ac-hoy-sv); }
     .temp-dia.prog { border-left:5px solid var(--borde); }
     .temp-ico { flex-shrink:0; width:19px; text-align:center; font-size:13px; color:var(--gris); }
     .temp-dia.dada .temp-ico { color:#16a34a; }
     .temp-dia.hoy  .temp-ico { color:#d97706; }
     .temp-cuerpo { flex:1; min-width:0; }
     .temp-fecha { font-size:12px; font-weight:800; color:var(--texto); text-transform:capitalize; }
-    .temp-carro { font-size:10.5px; font-weight:700; color:#0e7490; }
+    .temp-carro { font-size:10.5px; font-weight:700; color:var(--ac-carro-tx); }
     .temp-chips { display:flex; flex-wrap:wrap; gap:4px; margin-top:3px; }
     .temp-chip { font-size:11px; font-weight:700; border-radius:999px; padding:1px 8px; }
-    .temp-chip.ses  { color:#0e7490; background:#ecfeff; }
-    .temp-chip.area { color:#3730a3; background:#eef2ff; }
+    .temp-chip.ses  { color:var(--ac-carro-tx); background:var(--ac-carro-sv); }
+    .temp-chip.area { color:var(--ac-area-tx); background:var(--ac-area-sv); }
     .temp-vacio { font-size:11px; color:var(--gris); font-style:italic; margin-top:2px; }
     .plan-bl-vacio { font-size:12px; color:var(--gris); font-style:italic; padding:6px 4px; }
     /* v0.315 — la sesión, como secuencia de clase */
@@ -8393,13 +8429,13 @@
       background:var(--blanco); cursor:pointer; }
     .seq-edit { transition:all var(--tr); }
     .seq-edit.on { color:#fff; background:var(--ac-carro); border-color:var(--ac-carro); }
-    .seq-aviso { font-size:11.5px; color:#0e7490; background:#ecfeff; border-radius:8px;
+    .seq-aviso { font-size:11.5px; color:var(--ac-carro-tx); background:var(--ac-carro-sv); border-radius:8px;
       padding:6px 10px; margin-bottom:8px; }
     .seq-flechas { flex-shrink:0; display:flex; flex-direction:column; gap:3px; }
     .seq-fl { width:38px; height:26px; font-family:inherit; font-size:12px; color:var(--texto);
       border:1.5px solid var(--borde); border-radius:7px; background:var(--blanco); cursor:pointer; }
     .seq-fl:disabled { opacity:.3; cursor:default; }
-    .seq-fl:active:not(:disabled) { background:#ecfeff; border-color:#0891b2; }
+    .seq-fl:active:not(:disabled) { background:var(--ac-carro-sv); border-color:var(--ac-carro); }
     .seq.editando .seq-item { box-shadow:0 1px 3px rgba(14,27,60,.10); }
     .seq { display:flex; flex-direction:column; gap:7px; margin-bottom:14px; }
     .seq-item { display:flex; align-items:center; gap:8px; padding:8px 10px 8px 11px;
@@ -8454,17 +8490,17 @@
       color:var(--gris); margin-top:5px; }
     /* v0.317 — el ejercicio, con su sesión detrás */
     .ejses { border-radius:12px; padding:11px 13px; margin-bottom:14px; position:relative; }
-    .ejses.carro { background:#ecfeff; border-left:6px solid #0891b2; }
-    .ejses.area  { background:#eef2ff; border-left:6px solid #4f46e5; }
+    .ejses.carro { background:var(--ac-carro-sv); border-left:6px solid var(--ac-carro); }
+    .ejses.area  { background:var(--ac-area-sv); border-left:6px solid var(--ac-area); }
     .ejses-vol { font-family:inherit; font-size:12.5px; font-weight:700; padding:0;
       border:none; background:none; cursor:pointer; text-align:left; max-width:75%;
       overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; }
-    .ejses.carro .ejses-vol { color:#0e7490; }
-    .ejses.area  .ejses-vol { color:#3730a3; }
+    .ejses.carro .ejses-vol { color:var(--ac-carro-tx); }
+    .ejses.area  .ejses-vol { color:var(--ac-area-tx); }
     .ejses-n { position:absolute; top:11px; right:13px; font-size:12px; font-weight:800; color:var(--gris); }
     .ejses-lbl { font-size:10.5px; font-weight:800; letter-spacing:.04em; margin-top:7px; color:var(--gris); }
-    .ejses.carro .ejses-lbl { color:#0e7490; }
-    .ejses.area  .ejses-lbl { color:#3730a3; }
+    .ejses.carro .ejses-lbl { color:var(--ac-carro-tx); }
+    .ejses.area  .ejses-lbl { color:var(--ac-area-tx); }
     .ejses-meta { font-size:12px; color:var(--gris); margin-top:2px; }
     .ejses-foco { font-size:15px; font-weight:700; color:var(--texto); line-height:1.35;
       margin-top:8px; overflow-wrap:anywhere; }
@@ -8486,7 +8522,7 @@
     .plan-item-ses { display:flex; flex-wrap:wrap; gap:6px; padding:8px 10px; border-top:1px solid var(--borde); background:var(--arena); }
     .plan-ses-mini { display:flex; align-items:center; gap:6px; flex:1 1 100%; padding:7px 10px; border:1px solid var(--borde); border-radius:9px; background:var(--blanco); cursor:pointer; -webkit-tap-highlight-color:transparent; }
     .plan-ses-mini:active { background:var(--lila-suave); }
-    .plan-ses-mini.trabajada { background:#f0fdf4; border-color:#bbf7d0; }
+    .plan-ses-mini.trabajada { background:var(--ac-dada-sv); border-color:#bbf7d0; }
     .plan-ses-mini-ic { font-size:12.5px; flex-shrink:0; }
     .plan-ses-mini.trabajada .plan-ses-mini-ic { color:var(--verde); }
     .plan-ses-mini-nom { flex:1; min-width:0; font-size:12.5px; font-weight:600; color:var(--texto); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -8508,12 +8544,12 @@
     .plan-item.hecho .plan-item-body { opacity:.6; }
     .plan-item-top { display:flex; align-items:center; gap:7px; }
     .plan-item-titulo { flex:1; font-size:13.5px; font-weight:700; color:var(--texto); line-height:1.25; }
-    .plan-item-flecha { font-size:15px; color:#0891b2; font-weight:700; flex-shrink:0; }
+    .plan-item-flecha { font-size:15px; color:var(--ac-carro); font-weight:700; flex-shrink:0; }
     .plan-item-foco { font-size:11.5px; color:var(--gris); line-height:1.5; margin-top:5px; }
     .plan-item-chips { display:flex; flex-wrap:wrap; gap:5px; margin-top:7px; }
     .plan-chip { font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; line-height:1.4; }
     .plan-chip.int { color:var(--blanco); }
-    .plan-chip.zona { background:#e0e7ff; color:#3730a3; }
+    .plan-chip.zona { background:#e0e7ff; color:var(--ac-area-tx); }
     .plan-chip.golpe { background:#f1f5f9; color:#475569; }
     /* v0.153: se retira .plan-item-check (el ✓ manual "trabajado") */
     /* v0.129: contador "veces trabajada este curso" — sustituye al tick
@@ -8526,7 +8562,7 @@
     .plan-toast.show { opacity:1; }
     /* Botón editar */
     .plan-edit-toggle { width:100%; border:1.5px solid var(--borde); background:var(--blanco); color:var(--texto); font-family:inherit; font-size:13px; font-weight:700; padding:9px; border-radius:11px; cursor:pointer; margin-bottom:12px; -webkit-tap-highlight-color:transparent; }
-    .plan-edit-toggle.on { background:#0891b2; border-color:#0891b2; color:#fff; }
+    .plan-edit-toggle.on { background:var(--ac-carro); border-color:var(--ac-carro); color:#fff; }
     /* Edición (Editar plan · Añadir/quitar sesiones) SOLO en pantalla ancha (ordenador).
        En móvil la app es de consulta; la edición se hace desde la web en el ordenador. */
     .plan-edit-toggle { display:none; }
@@ -8545,7 +8581,7 @@
     /* Fila de añadir */
     .plan-add-row { display:flex; gap:7px; margin-top:8px; }
     .plan-add-btn { flex:1; border:1.5px dashed var(--borde); background:var(--blanco); color:var(--gris); font-family:inherit; font-size:12px; font-weight:700; padding:9px; border-radius:10px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
-    .plan-add-btn.lib { border-style:solid; border-color:#a5b4fc; color:#4338ca; background:#eef2ff; }
+    .plan-add-btn.lib { border-style:solid; border-color:#a5b4fc; color:#4338ca; background:var(--ac-area-sv); }
     .plan-add-btn:active { transform:scale(.98); }
     /* Modales del plan */
     .plan-modal-ov { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:10000; display:flex; align-items:flex-end; justify-content:center; padding:0; }
@@ -8554,7 +8590,7 @@
     .plan-modal-sub { font-size:12px; color:var(--gris); margin-bottom:12px; }
     .plan-modal-lbl { display:block; font-size:11px; font-weight:700; color:var(--gris); margin:11px 2px 4px; }
     .plan-modal-inp { width:100%; box-sizing:border-box; font-family:inherit; font-size:14px; color:var(--texto); border:1.5px solid var(--borde); border-radius:10px; padding:9px 11px; background:var(--arena); }
-    .plan-modal-inp:focus { outline:none; border-color:#0891b2; background:var(--blanco); }
+    .plan-modal-inp:focus { outline:none; border-color:var(--ac-carro); background:var(--blanco); }
     .plan-modal-acts { display:flex; gap:8px; margin-top:16px; }
     .plan-modal-acts .btn { flex:1; }
     .plan-lib-list { display:flex; flex-direction:column; gap:6px; }
@@ -8564,7 +8600,7 @@
     .plan-lib-info { flex:1; min-width:0; }
     .plan-lib-t { font-size:13px; font-weight:700; color:var(--texto); }
     .plan-lib-chips { display:flex; gap:5px; margin-top:5px; }
-    .plan-lib-add { font-size:24px; font-weight:700; color:#0891b2; flex-shrink:0; width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:10px; }
+    .plan-lib-add { font-size:24px; font-weight:700; color:var(--ac-carro); flex-shrink:0; width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:10px; }
     .plan-lib-add:active { background:#cffafe; }
     /* Cabecera fija del modal con aspa de cerrar */
     .plan-modal-hdr { position:sticky; top:0; z-index:5; background:var(--blanco); margin:-18px -16px 10px; padding:16px 16px 10px; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; border-bottom:1px solid var(--borde); }
@@ -8601,9 +8637,9 @@
     /* Tarjetas de sesiones enlazadas a un bloque */
     .plan-ses-intro { font-size:12.5px; color:var(--gris); margin-bottom:12px; }
     .plan-ses-card { display:flex; align-items:center; gap:10px; background:var(--blanco); border:1.5px solid var(--borde); border-radius:13px; padding:0.9rem 1.1rem; margin-bottom:9px; cursor:pointer; transition:all .15s; }
-    .plan-ses-card.plansel.on { border-color:#bbf7d0; background:#f0fdf4; }
+    .plan-ses-card.plansel.on { border-color:#bbf7d0; background:var(--ac-dada-sv); }
     .plansel-check { width:25px; height:25px; flex-shrink:0; border-radius:7px; border:2px solid var(--borde); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; color:#fff; }
-    .plan-ses-card.plansel.on .plansel-check { background:#22c55e; border-color:#22c55e; }
+    .plan-ses-card.plansel.on .plansel-check { background:var(--ac-dada); border-color:var(--ac-dada); }
     /* Análisis de planificación */
     .pa-row { display:flex; align-items:center; gap:9px; padding:0.5rem 0.1rem; border-bottom:1px solid var(--borde); }
     .pa-nom { flex:1; min-width:0; font-size:13.5px; font-weight:700; color:var(--texto); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -8640,7 +8676,7 @@
     .home-plan-btn:active { transform:scale(0.97); box-shadow:none; }
     .home-plan-btn .ico { font-size:24px; line-height:1; }
     .home-plan-btn .lbl { font-size:12px; font-weight:800; color:var(--texto); }
-    .home-plan-btn.niv-ini  { border-color:#bbf7d0; background:#f0fdf4; }
+    .home-plan-btn.niv-ini  { border-color:#bbf7d0; background:var(--ac-dada-sv); }
     .home-plan-btn.niv-avz  { border-color:#fed7aa; background:#fff7ed; }
     .home-plan-btn.niv-comp { border-color:#bfdbfe; background:#eff6ff; }
     /* Sesiones: botón con desplegable */
@@ -8658,10 +8694,10 @@
     .clase-grupo-arr { font-size:20px; color:var(--lila); flex-shrink:0; }
     /* Variantes EBL en el detalle del ejercicio */
     .ebl-var { font-size:13.5px; line-height:1.5; color:var(--texto); border-radius:11px; padding:0.6rem 0.8rem; margin-bottom:7px; }
-    .ebl-facil { background:#f0fdf4; border:1.5px solid #bbf7d0; }
+    .ebl-facil { background:var(--ac-dada-sv); border:1.5px solid #bbf7d0; }
     .ebl-dificil { background:#fef2f2; border:1.5px solid #fecaca; }
     .ebl-tag { display:inline-block; font-size:11px; font-weight:800; margin-right:6px; }
-    .ebl-facil .ebl-tag { color:#166534; }
+    .ebl-facil .ebl-tag { color:var(--ac-dada-tx); }
     .ebl-dificil .ebl-tag { color:#b91c1c; }
     .plan-ses-card:active { border-color:var(--lila-claro); background:var(--lila-suave); }
     .plan-ses-card-body { flex:1; min-width:0; }
@@ -8710,8 +8746,8 @@
 
       <!-- Sin Supabase configurado -->
       <div id="auth-sin-config" class="form-card" style="display:none;gap:0.5rem;background:#fff8e1;border-color:#fbbf24;">
-        <p style="font-size:13px;color:#92400e;margin:0;font-weight:600;">⚠️ Supabase no configurado</p>
-        <p style="font-size:12px;color:#92400e;margin:0;">Rellena <code>SUPABASE_URL</code> y <code>SUPABASE_KEY</code> en el código para activar las cuentas. Mientras tanto puedes usar la app sin login.</p>
+        <p style="font-size:13px;color:var(--ac-hoy-tx);margin:0;font-weight:600;">⚠️ Supabase no configurado</p>
+        <p style="font-size:12px;color:var(--ac-hoy-tx);margin:0;">Rellena <code>SUPABASE_URL</code> y <code>SUPABASE_KEY</code> en el código para activar las cuentas. Mientras tanto puedes usar la app sin login.</p>
         <button class="btn btn-sec btn-sm" onclick="authSaltarLogin()" style="margin-top:4px;">Continuar sin cuenta →</button>
       </div>
 
@@ -9087,7 +9123,7 @@
       <div id="filtros-tipo-ej"></div>
       <input id="busqueda-ej" type="search" inputmode="search" autocomplete="off"
              placeholder="🔍 Buscar por nombre o código…" oninput="buscarEjercicios(this.value)"
-             style="width:100%;box-sizing:border-box;border:1px solid var(--borde,#d8d8d2);border-radius:10px;padding:9px 12px;font-size:14px;font-family:inherit;background:#fff;color:var(--tinta);outline:none;margin-bottom:2px;">
+             style="width:100%;box-sizing:border-box;border:1px solid var(--borde,#d8d8d2);border-radius:10px;padding:9px 12px;font-size:14px;font-family:inherit;background:#fff;color:var(--texto);outline:none;margin-bottom:2px;">
       <div class="filtros" id="filtros-golpe-ej"></div>
     </div>
     <div class="contenido">
@@ -9755,6 +9791,29 @@
   <style>
     /* Borde general más sutil en toda la app */
     :root{ --borde:#ecedf1; }
+    /* ── v0.327 · LA TARJETA, IGUAL EN TODAS LAS PANTALLAS ────────────
+       Hasta ahora cada familia de tarjeta tenía su radio y su sombra puestos
+       a ojo: 10, 12, 14, 15 y 18 px conviviendo en la misma pantalla. Esto
+       las alinea a la escala (--r-*, --el-*) y les da el mismo gesto al
+       tocar. No cambia ni una estructura: solo el acabado. */
+    .tarjeta-menu, .gestor-card, .ejcard, .plan-item, .plan-otros,
+    .ct-caja, .temp-dia, .plan-bl-fila, .hhoy, .seq-item, .ruta-ses-card {
+      border-radius:var(--r-md);
+      transition:transform var(--tr), box-shadow var(--tr), border-color var(--tr);
+    }
+    .tarjeta-menu:active, .gestor-card:active, .ejcard:active,
+    .temp-dia:active, .plan-bl-fila:active, .ruta-ses-card:active {
+      transform:scale(0.985);
+    }
+    /* El toque nunca deja el rectángulo gris del navegador */
+    button, .tarjeta-menu, .gestor-card, .ejcard, .plan-item-body,
+    .temp-dia, .plan-bl-fila, .seq-item, .hhoy-fila {
+      -webkit-tap-highlight-color:transparent;
+    }
+    /* Los acordeones se abren, no aparecen de golpe */
+    .plan-otros-body, .plan-etapa-body, .ct-caja-body {
+      transition:opacity var(--tr);
+    }
     /* Sombras suaves en las superficies (sustituyen al borde marcado) */
     .tarjeta-menu,.item,.stat-box,.form-card,.gestor-kpi,.gestor-card,
     .ghd-clase,.gas-clase,.ej-check,.sesion-ej{
@@ -9835,7 +9894,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.326.0';
+    var APP_VERSION = '0.327.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -11199,6 +11258,11 @@
     // v0.92: color estable por entrenador para identificarlo de un vistazo.
     // Se asigna por el orden alfabético de los uids del club (distinto para
     // cada uno) y se mantiene mientras no cambie el conjunto de entrenadores.
+    // v0.327: esta paleta NO usa las variables semánticas a propósito. Aquí el
+    // color solo sirve para distinguir a un entrenador de otro; si compartiera
+    // variable con «dada» o «carro», cambiar el verde de una clase trabajada
+    // le cambiaría el color a un entrenador. Son dos significados distintos y
+    // tienen que poder moverse por separado.
     var _ENT_PAL = [
       { bg:'#eff6ff', bar:'#3b82f6', tx:'#1e40af' },  // azul
       { bg:'#f0fdf4', bar:'#22c55e', tx:'#166534' },  // verde
@@ -11219,7 +11283,7 @@
     }
     function _entColor(uid) {
       // v0.112: los externos siempre en ÁMBAR (convención de la app)
-      if (_esExtUid(uid)) return { bg:'#fffbeb', bar:'#f59e0b', tx:'#92400e' };
+      if (_esExtUid(uid)) return { bg:'var(--ac-hoy-sv)', bar:'var(--ac-hoy)', tx:'var(--ac-hoy-tx)' };
       if (!_entColorCache) _entColorReset();
       return _entColorCache[uid] || _ENT_PAL[0];
     }
@@ -11929,9 +11993,9 @@
           var e = porSust[nom];
           e.items.sort(function(a,b){ return (b.fecha||'').localeCompare(a.fecha||''); });
           // v0.110: avatar ámbar SOLO para externos; lila para internos
-          h += '<details class="gsust-det"' + (e.ext ? ' style="background:#fffbeb;border-color:#fde68a;"' : '') + '>' +
+          h += '<details class="gsust-det"' + (e.ext ? ' style="background:var(--ac-hoy-sv);border-color:#fde68a;"' : '') + '>' +
             '<summary class="gsust-sum">' +
-              '<div class="gestor-card-ava" style="' + (e.ext ? 'background:#fef3c7;color:#92400e;' : 'background:var(--lila-suave);color:var(--lila);') + '">🔁</div>' +
+              '<div class="gestor-card-ava" style="' + (e.ext ? 'background:#fef3c7;color:var(--ac-hoy-tx);' : 'background:var(--lila-suave);color:var(--lila);') + '">🔁</div>' +
               '<div class="gestor-card-body">' +
                 '<div class="gestor-card-nom">' + _gEsc(nom) + '</div>' +
                 '<div class="gestor-card-meta">cubrió a ' + _gEsc(Object.keys(e.tits).join(', ')) + '</div>' +
@@ -12150,7 +12214,7 @@
           h += '</div>';
         }
       } else {
-        h += '<p class="ajustes-desc" style="margin:0.35rem 0 0;">Toca un mes para ver sus números. En <b style="color:#92400e;">amarillo</b>, los meses con clases por recuperar.</p>';
+        h += '<p class="ajustes-desc" style="margin:0.35rem 0 0;">Toca un mes para ver sus números. En <b style="color:var(--ac-hoy-tx);">amarillo</b>, los meses con clases por recuperar.</p>';
       }
       h += '</div>';
       return h;
@@ -12231,13 +12295,13 @@
           var minP = _minutos(f.propias), minC = _minutos(f.cub);
           // Desglose: propias en gris, sustituciones en ámbar
           var meta = _cntTxt(f.propias) || (f.ext ? '' : '—');
-          if (f.cub.total) meta += (meta ? ' ' : '') + '<span style="color:#92400e;font-weight:700;">🔁 ' + _cntTxt(f.cub) + ' sust.</span>';
+          if (f.cub.total) meta += (meta ? ' ' : '') + '<span style="color:var(--ac-hoy-tx);font-weight:700;">🔁 ' + _cntTxt(f.cub) + ' sust.</span>';
           // HORAS del entrenador EN GRANDE (es la función de esta ventana);
           // debajo, en ámbar, las de sustitución incluidas en ese total
           var horas = f.ext
-            ? '<div style="font-size:26px;font-weight:800;line-height:1;color:#92400e;">' + _hTxt(minC) + '</div>'
+            ? '<div style="font-size:26px;font-weight:800;line-height:1;color:var(--ac-hoy-tx);">' + _hTxt(minC) + '</div>'
             : '<div style="font-size:26px;font-weight:800;line-height:1;color:var(--verde);">' + _hTxt(minP + minC) + '</div>' +
-              (minC ? '<div style="font-size:12px;font-weight:800;color:#92400e;margin-top:3px;">🔁 ' + _hTxt(minC) + '</div>' : '');
+              (minC ? '<div style="font-size:12px;font-weight:800;color:var(--ac-hoy-tx);margin-top:3px;">🔁 ' + _hTxt(minC) + '</div>' : '');
           // v0.137: los entrenadores del club son clicables y llevan el
           // saldo de clases por recuperar; los externos siguen sin detalle.
           var pendChip = f.saldo
@@ -12245,10 +12309,10 @@
             : '';
           h += '<div class="gestor-card"' +
               (f.ext ? ' style="cursor:default;"' : ' onclick="gclAbrirEnt(\'' + f.uid + '\')"') + '>' +
-            '<div class="gestor-card-ava"' + (f.ext ? ' style="background:#fef3c7;color:#92400e;"' : '') + '>' +
+            '<div class="gestor-card-ava"' + (f.ext ? ' style="background:#fef3c7;color:var(--ac-hoy-tx);"' : '') + '>' +
               (f.ext ? '🔁' : _gEsc(f.nom.charAt(0).toUpperCase())) + '</div>' +
             '<div class="gestor-card-body">' +
-              '<div class="gestor-card-nom">' + _gEsc(f.nom) + (f.ext ? ' <span style="font-size:10px;font-weight:700;color:#92400e;">EXTERNO</span>' : '') + '</div>' +
+              '<div class="gestor-card-nom">' + _gEsc(f.nom) + (f.ext ? ' <span style="font-size:10px;font-weight:700;color:var(--ac-hoy-tx);">EXTERNO</span>' : '') + '</div>' +
               '<div class="gestor-card-meta">' + meta + '</div>' +
               (pendChip ? '<div style="margin-top:4px;">' + pendChip + '</div>' : '') +
             '</div>' +
@@ -12258,7 +12322,7 @@
           // entrenador, en vez de abrir otra vista con calendario.
           if (!f.ext && _gclUid === f.uid) h += _gclInlineHTML(f.uid);
         });
-        if (_gEsSeptiembre(mesISO)) h += '<p class="ajustes-desc" style="margin-top:0.4rem;">Las horas en <span style="color:#92400e;font-weight:700;">ámbar 🔁</span> son sustituciones: ya están incluidas en el total de quien las dio y descontadas del titular.</p>';
+        if (_gEsSeptiembre(mesISO)) h += '<p class="ajustes-desc" style="margin-top:0.4rem;">Las horas en <span style="color:var(--ac-hoy-tx);font-weight:700;">ámbar 🔁</span> son sustituciones: ya están incluidas en el total de quien las dio y descontadas del titular.</p>';
       }
       cont.innerHTML = h;
     }
@@ -12736,14 +12800,14 @@
       var filasEnt = _gEntDatosMes(mesISO);
       filasEnt.forEach(function(f){
         h += '<div class="gestor-card plana">' +
-          '<div class="gestor-card-ava"' + (f.ext ? ' style="background:#fef3c7;color:#92400e;"' : '') + '>' +
+          '<div class="gestor-card-ava"' + (f.ext ? ' style="background:#fef3c7;color:var(--ac-hoy-tx);"' : '') + '>' +
             (f.ext ? '🔁' : _gEsc(f.nombre.charAt(0).toUpperCase())) + '</div>' +
           '<div class="gestor-card-body">' +
             '<div class="gestor-card-nom">' + _gEsc(f.nombre) +
-              (f.ext ? ' <span style="font-size:10px;font-weight:700;color:#92400e;">EXTERNO</span>' : '') + '</div>' +
+              (f.ext ? ' <span style="font-size:10px;font-weight:700;color:var(--ac-hoy-tx);">EXTERNO</span>' : '') + '</div>' +
             '<div class="gestor-card-meta">' +
               (f.total ? f.total + ' clase' + (f.total !== 1 ? 's' : '') + ' dada' + (f.total !== 1 ? 's' : '') +
-                         (f.sust ? ' · <span style="color:#92400e;font-weight:700;">🔁 ' + f.sust + ' sust.</span>' : '')
+                         (f.sust ? ' · <span style="color:var(--ac-hoy-tx);font-weight:700;">🔁 ' + f.sust + ' sust.</span>' : '')
                        : 'Sin clases dadas') + '</div>' +
           '</div>' +
           '<div class="gent-mes">' +
@@ -12982,7 +13046,7 @@
       // Sin sesión de Supabase no hay sustituciones: como mucho, aviso.
       if (!_sb || !_sbUser) {
         zona.innerHTML = asistImpartida
-          ? '<p class="ajustes-desc" style="margin:0.5rem 0 0;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:6px 10px;">🔁 Esta clase la imparte <b>' + _gEsc(asistImpartida.nombre) + '</b>.</p>'
+          ? '<p class="ajustes-desc" style="margin:0.5rem 0 0;background:var(--ac-hoy-sv);border:1px solid #fde68a;border-radius:8px;padding:6px 10px;">🔁 Esta clase la imparte <b>' + _gEsc(asistImpartida.nombre) + '</b>.</p>'
           : '';
         return;
       }
@@ -13428,7 +13492,7 @@
       });
 
       if (_gEsSeptiembre(mesISO)) h += '<div class="asist-matriz-leyenda" style="margin-top:0.5rem;">' +
-        '<span style="color:#166534;font-weight:700">✓</span> asistió &nbsp; ' +
+        '<span style="color:var(--ac-dada-tx);font-weight:700">✓</span> asistió &nbsp; ' +
         '<span style="color:#991b1b;font-weight:700">✗</span> faltó (<b>J</b> justificada · <b>IJ</b> injustificada) &nbsp; ' +
         '<span style="color:#16264f;font-weight:700">↩</span> recup &nbsp; ' +
         '<span style="color:#9ca3af;font-weight:700">—</span> sin lista</div>';
@@ -13708,7 +13772,7 @@
         }
         // (El sumatorio 1h/1h30 vive en el KPI "Clases dadas" de arriba)
         if (_gEsSeptiembre(mesISO)) h += '<div class="asist-matriz-leyenda" style="margin-top:0.5rem;">' +
-          '<span style="color:#166534;font-weight:700">✓</span> asistió &nbsp; ' +
+          '<span style="color:var(--ac-dada-tx);font-weight:700">✓</span> asistió &nbsp; ' +
           '<span style="color:#991b1b;font-weight:700">✗</span> faltó (<b>J</b> justificada · <b>IJ</b> injustificada) &nbsp; ' +
           '<span style="color:#16264f;font-weight:700">↩</span> recup &nbsp; ' +
           '<span style="color:#9ca3af;font-weight:700">—</span> sin lista</div>';
@@ -13974,7 +14038,7 @@
       var btnsExtra = hist ? '' :
         '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;">' +
           '<button type="button" class="ghd-edit-btn" title="Recuperación" aria-label="Recuperación" onclick="gestorListaPanelU(\'' + uid + '\',' + clase.id + ',\'' + f + '\',\'recup\',\'' + vol + '\')">↩</button>' +
-          '<button type="button" class="ghd-edit-btn" style="border-color:#fde68a;color:#92400e;background:#fffbeb;" title="Sustitución" aria-label="Sustitución" onclick="var p=document.getElementById(\'' + pid + '\');p.style.display=p.style.display===\'none\'?\'\':\'none\';">🔁</button>' +
+          '<button type="button" class="ghd-edit-btn" style="border-color:#fde68a;color:var(--ac-hoy-tx);background:var(--ac-hoy-sv);" title="Sustitución" aria-label="Sustitución" onclick="var p=document.getElementById(\'' + pid + '\');p.style.display=p.style.display===\'none\'?\'\':\'none\';">🔁</button>' +
         '</div>' +
         '<div id="' + pid + '" style="display:none;margin-top:7px;">' +
           '<label class="form-label" style="display:block;margin-bottom:3px;">¿Quién imparte esta clase el ' + parseInt(f.split('-')[2],10) + '/' + f.slice(5,7) + '?</label>' +
@@ -13987,7 +14051,7 @@
       // ámbar si es un sustituto EXTERNO.
       var sustChip = (reg && reg.impartidaPor)
         ? ' <span style="font-size:12px;font-weight:700;' +
-          (reg.impartidaPor.uid ? 'background:#e9d5ff;color:#6b21a8;' : 'background:#fde68a;color:#92400e;') +
+          (reg.impartidaPor.uid ? 'background:#e9d5ff;color:#6b21a8;' : 'background:#fde68a;color:var(--ac-hoy-tx);') +
           'border-radius:10px;padding:1px 7px;">🔁 ' + _gEsc(reg.impartidaPor.nombre || '') + '</span>'
         : '';
       // Recuperaciones PREVISTAS del día (v0.60): solo el nombre, sin asistencia
@@ -14654,7 +14718,7 @@
                fJ:fJ, fIJ:fIJ,
                pct: propias.length ? Math.round(pres*100/propias.length) : null };
     }
-    function _pctColor(p) { return p==null ? '#9ca3af' : (p>=80 ? '#166534' : (p>=60 ? '#b45309' : '#991b1b')); }
+    function _pctColor(p) { return p==null ? '#9ca3af' : (p>=80 ? 'var(--ac-dada-tx)' : (p>=60 ? '#b45309' : '#991b1b')); }
 
     // ── Vista del mes en la ficha del alumno: chips GRANDES por día,
     //    agrupados por clase (franja), al estilo "Clases dadas" pero con
@@ -15812,7 +15876,7 @@
                 : 'No tiene clases registradas. ') +
           '¿Qué quieres hacer con sus datos?</div>' +
         '<div class="gta-del-btns">' +
-          '<button type="button" class="btn btn-sec btn-sm" style="border-color:#fde68a;color:#92400e;background:#fffbeb;font-weight:700;" ' +
+          '<button type="button" class="btn btn-sec btn-sm" style="border-color:#fde68a;color:var(--ac-hoy-tx);background:var(--ac-hoy-sv);font-weight:700;" ' +
             'onclick="gtaArchivarAlumno(\'' + nEsc + '\')">📦 Sacar del club<br><small>conserva sus datos</small></button>' +
           '<button type="button" class="btn btn-sec btn-sm" style="border-color:#fecaca;color:#b91c1c;background:#fef2f2;font-weight:700;" ' +
             'onclick="gtaBorrarAlumnoTodo(\'' + nEsc + '\')">🗑 Borrar del todo<br><small>sin vuelta atrás</small></button>' +
@@ -20125,7 +20189,7 @@
       // con el móvil en la mano y a contraluz, no se leía.
       // Ahora cada cosa es un bloque: NOMBRE ENTERO ARRIBA, grande y sin
       // cortar, y debajo la imagen a todo el ancho.
-      h += '<div class="ruta-wk-zlbl ctf-zlbl" style="color:#3730a3;">🎯 Área de trabajo</div>';
+      h += '<div class="ruta-wk-zlbl ctf-zlbl" style="color:var(--ac-area-tx);">🎯 Área de trabajo</div>';
       bloqNom.forEach(function(t){ h += '<span class="ruta-chip">' + _gEsc(t) + '</span>'; });
       (c.sesiones || []).forEach(function(id){
         var x = todasS.filter(function(t){ return t.id === id; })[0];
@@ -20144,7 +20208,7 @@
         h += '<div class="ct-aviso">Alguna sesión ya no existe — se borró del catálogo</div>';
 
       // ── Carro: cada ejercicio, con su nombre entero y su vídeo grande ──
-      h += '<div class="ruta-wk-zlbl ctf-zlbl" style="color:#0e7490;margin-top:14px;">🛒 Carro</div>';
+      h += '<div class="ruta-wk-zlbl ctf-zlbl" style="color:var(--ac-carro-tx);margin-top:14px;">🛒 Carro</div>';
       if (!(c.carro || []).length) h += '<div class="ruta-panel-nota">Sin ejercicios de carro.</div>';
       var faltanE = 0;
       (c.carro || []).forEach(function(id, i){
@@ -21175,7 +21239,7 @@
     // (los días con competición se pintan) y, debajo, la lista de ese mes con
     // la ficha desplegable de cada una.
     var TOR_TIPOS = [
-      { key:'torneo',     label:'Torneo',           ico:'🏆', col:'#f59e0b' },
+      { key:'torneo',     label:'Torneo',           ico:'🏆', col:'var(--ac-hoy)' },
       { key:'campeonato', label:'Campeonato',       ico:'🥇', col:'#dc2626' },
       { key:'liga',       label:'Liga',             ico:'📋', col:'#2563eb' },
       { key:'interno',    label:'Interno del club', ico:'🏟️', col:'#7c3aed' },
@@ -22043,7 +22107,7 @@
           s += '<div class="plan-otros-hdr" onclick="planToggleCiclo();this.parentNode.classList.toggle(\'abierto\')">🏆 Ciclo · competir y evaluar<span class="chev">›</span></div>';
           s += '<div class="plan-otros-body">';
           cicloEtapas.forEach(function(et){
-            s += _planEtapaCard(et, { ico:'🏆', icoBg:'#0891b2', noProg:true });
+            s += _planEtapaCard(et, { ico:'🏆', icoBg:'var(--ac-carro)', noProg:true });
           });
           s += '</div></div>';
         }
@@ -23035,7 +23099,7 @@
 
       var chips = [];
       function chip(txt) {
-        return '<span style="font-size:12px;background:var(--arena);color:var(--tinta);padding:3px 10px;border-radius:20px;">' + txt + '</span>';
+        return '<span style="font-size:12px;background:var(--arena);color:var(--texto);padding:3px 10px;border-radius:20px;">' + txt + '</span>';
       }
       if (golpe)   chips.push(chip((GOLPE_ICONO[golpe] || '🏓') + ' ' + (GOLPE_LABEL[golpe] || golpeRaw)));
       if (situacion) chips.push(chip((SITUACION_ICONO[situacion] || '🎯') + ' ' + (SITUACION_LABEL[situacion] || situacion)));
@@ -28229,12 +28293,12 @@
         if (_sb && _sbUser && _esGestor) {
           var sustOn = !!asistImpartida;
           sustBtn =
-            '<button class="btn btn-sec btn-sm asist-acc-btn" style="border-color:#fde68a;color:#92400e;' +
-              (sustOn ? 'background:#fffbeb;font-weight:700;' : '') + '" onclick="asistToggleSustPanel()">🔁 <span class="asist-acc-txt">' +
+            '<button class="btn btn-sec btn-sm asist-acc-btn" style="border-color:#fde68a;color:var(--ac-hoy-tx);' +
+              (sustOn ? 'background:var(--ac-hoy-sv);font-weight:700;' : '') + '" onclick="asistToggleSustPanel()">🔁 <span class="asist-acc-txt">' +
               (sustOn ? _gEsc(asistImpartida.nombre) : 'Entrenador sustituto') + '</span></button>';
         }
         var altaBtn = _esGestor
-          ? '<button class="btn btn-sec btn-sm asist-acc-btn" style="border-color:#bbf7d0;color:#166534;" onclick="asistToggleAltaPanel()">＋ <span class="asist-acc-txt">Añadir alumno</span></button>'
+          ? '<button class="btn btn-sec btn-sm asist-acc-btn" style="border-color:#bbf7d0;color:var(--ac-dada-tx);" onclick="asistToggleAltaPanel()">＋ <span class="asist-acc-txt">Añadir alumno</span></button>'
           : '';
         zona.innerHTML =
           '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
@@ -28252,7 +28316,7 @@
             '<div style="font-size:12px;font-weight:700;color:var(--texto);margin-bottom:2px;">🚫 Sin clase este día</div>' +
             '<div class="ajustes-desc" style="margin:0 0 8px;">¿Qué pasa con esta clase? No se registrará asistencia.</div>' +
             '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
-              '<button class="btn btn-sec btn-sm" style="border-color:#fde68a;color:#92400e;background:#fffbeb;font-weight:700;" onclick="asistSinClaseConfirm(true)">↩ Se recupera</button>' +
+              '<button class="btn btn-sec btn-sm" style="border-color:#fde68a;color:var(--ac-hoy-tx);background:var(--ac-hoy-sv);font-weight:700;" onclick="asistSinClaseConfirm(true)">↩ Se recupera</button>' +
               '<button class="btn btn-sec btn-sm" style="border-color:#e2e8f0;color:#64748b;" onclick="asistSinClaseConfirm(false)">✖ Se pierde</button>' +
             '</div>' +
             '<button class="btn btn-sec btn-sm" style="margin-top:8px;" onclick="asistToggleSinClasePanel()">Cancelar</button>' +
