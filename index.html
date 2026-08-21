@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.325.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.326.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,29 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.326.0 — Piel «Pista»: prueba en Inicio y en la sesión (2026-08)
+    (sin migraciones nuevas · PRUEBA ACOTADA, se revierte con el backup)
+    · PALETA SEMÁNTICA CON NOMBRE. El color deja de ser decoración: carro es
+      cian, área índigo, dado verde, hoy/pendiente ámbar, programada gris. Ya
+      era así en la ficha de la sesión (v0.315) y en la rejilla (v0.322); esto
+      lo convierte en regla y le pone nombre (--ac-*), que es lo que permite
+      aplicarlo al resto sin repartir hexadecimales por 3.000 líneas.
+    · Y UNA ESCALA DE ELEVACIÓN Y RADIOS (--el-*, --r-*, --tr) para que las
+      tarjetas de toda la app se parezcan sin copiar sombras a ojo.
+    · EL BLOQUE HOY estrena cabecera navy con el dorado de la marca. Es el
+      único sitio de Inicio que lo lleva, así que hace de ancla: la vista
+      empieza siempre ahí. La hora sube a 22 px, la tarjeta se tiñe del color
+      de su estado y el botón principal toma ese mismo color.
+    · LOS TRES NIVELES llevan una banda de color arriba (iniciación verde ·
+      avanzado ámbar · competición índigo). Antes eran tres cajas blancas
+      iguales y el emoji era lo único que las distinguía.
+    · FEEDBACK AL TOCAR en botones y filas, y transiciones cortas. Es lo que
+      más hace que una app se sienta cuidada, y no cuesta nada.
+    · ALCANCE: SOLO Inicio y la ficha de la sesión. Las otras 38 pantallas se
+      quedan como estaban, a propósito — esto es para verlo en el móvil y
+      decidir. Los colores de la sesión pasan a variables sin cambiar de tono:
+      se ve igual, pero ya es la paleta nueva la que manda.
 
   v0.325.0 — FIX: Inicio se descuadró al quitar la tarjeta de Asistencia (2026-08)
     (sin migraciones nuevas)
@@ -5526,6 +5549,39 @@
       --lila:        #16264f;
       --lila-suave:  #e9ecf5;
       --lila-claro:  #c19a3e;
+
+      /* ── v0.326 · PALETA SEMÁNTICA (dirección «Pista») ──────────────
+         El color deja de ser decoración y pasa a significar SIEMPRE lo
+         mismo, en toda la app:
+             carro → cian · área → índigo
+             dada  → verde · hoy/pendiente → ámbar · programada → gris
+         Ya era así en la ficha de la sesión (v0.315) y en la rejilla de la
+         temporalización (v0.322); esto lo convierte en regla y le da nombre,
+         que es lo que hace falta para poder aplicarlo al resto sin repetir
+         hexadecimales sueltos por 3.000 líneas de CSS. */
+      --ac-carro:      #0891b2;
+      --ac-carro-sv:   #ecfeff;
+      --ac-carro-tx:   #0e7490;
+      --ac-area:       #4f46e5;
+      --ac-area-sv:    #eef2ff;
+      --ac-area-tx:    #3730a3;
+      --ac-dada:       #22c55e;
+      --ac-dada-sv:    #f0fdf4;
+      --ac-dada-tx:    #166534;
+      --ac-hoy:        #f59e0b;
+      --ac-hoy-sv:     #fffbeb;
+      --ac-hoy-tx:     #92400e;
+      --ac-prog:       #cbd5e1;
+
+      /* Elevación y ritmo: una sola escala, para que las tarjetas de toda
+         la app se parezcan entre sí sin copiar sombras a ojo. */
+      --el-1: 0 1px 2px rgba(14,27,60,.05);
+      --el-2: 0 2px 10px rgba(14,27,60,.08);
+      --el-3: 0 6px 22px rgba(14,27,60,.13);
+      --r-sm: 10px;
+      --r-md: 14px;
+      --r-lg: 18px;
+      --tr:   .16s cubic-bezier(.4,0,.2,1);
     }
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family:'Outfit',sans-serif; background:var(--arena); color:var(--texto); min-height:100vh; }
@@ -6635,8 +6691,10 @@
     --navy-suave: #dbeafe;
 
     .home-sec { display:flex; flex-direction:column; gap:8px; }
-    .home-sec-hdr { display:flex; align-items:center; gap:8px; }
-    .home-sec-bar { width:3px; border-radius:2px; height:20px; flex-shrink:0; }
+    /* v0.326: la cabecera de sección respira más y la barrita crece: es lo
+       que separa los dos bloques de Inicio sin necesidad de una línea. */
+    .home-sec-hdr { display:flex; align-items:center; gap:9px; margin-bottom:2px; }
+    .home-sec-bar { width:4px; border-radius:3px; height:22px; flex-shrink:0; }
     .home-sec-bar.e { background:var(--verde); }
     .home-sec-bar.p { background:#1e3a8a; }
     .home-sec-label { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.12em; color:var(--texto); }
@@ -8254,40 +8312,55 @@
     .temp-lg.prog { border:1px dashed var(--gris); }
     .temp-lg-scroll { margin-left:auto; }
     /* v0.324 — El bloque HOY de Inicio */
-    .hhoy { border:1.5px solid var(--borde); border-radius:14px; background:var(--blanco);
-      padding:12px 13px; margin-bottom:0.7rem; }
-    .hhoy-cab { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
-    .hhoy-tit { font-size:16px; font-weight:800; color:var(--texto); }
-    .hhoy-sub { font-size:12.5px; color:var(--gris); }
-    .hhoy-cont { margin-left:auto; font-size:11.5px; color:var(--gris); }
-    .hhoy-toca { border:2px solid #0891b2; border-radius:12px; padding:11px; margin-bottom:8px; }
-    .hhoy-toca.urge { border-color:#f59e0b; background:#fffbeb; }
+    /* v0.326 — La cabecera de HOY pasa a ser una banda navy con el dorado
+       de la marca. Es el único sitio de Inicio que lo lleva, así que hace de
+       ancla: la vista siempre empieza ahí. */
+    .hhoy { border:1px solid var(--borde); border-radius:var(--r-md); background:var(--blanco);
+      margin-bottom:0.7rem; box-shadow:var(--el-2); overflow:hidden; }
+    .hhoy-cab { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap;
+      background:var(--verde); color:#fff; padding:11px 13px; }
+    .hhoy-tit { font-size:12px; font-weight:800; color:var(--dorado);
+      text-transform:uppercase; letter-spacing:.09em; }
+    .hhoy-cab .hhoy-sub { font-size:13px; color:rgba(255,255,255,.82); }
+    .hhoy-cont { margin-left:auto; font-size:11.5px; color:rgba(255,255,255,.6); }
+    .hhoy-toca { border-radius:var(--r-sm); padding:12px; margin:11px 12px 8px;
+      background:var(--ac-carro-sv); border-left:5px solid var(--ac-carro); }
+    .hhoy-toca.urge { background:var(--ac-hoy-sv); border-left-color:var(--ac-hoy); }
     .hhoy-badges { display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-bottom:6px; }
-    .hhoy-badge { font-size:11px; font-weight:800; color:#0e7490; background:#ecfeff;
-      border-radius:999px; padding:2px 9px; }
-    .hhoy-toca.urge .hhoy-badge { color:#92400e; background:#fef3c7; }
+    .hhoy-badge { font-size:10.5px; font-weight:800; color:#fff; background:var(--ac-carro);
+      border-radius:999px; padding:2px 10px; text-transform:uppercase; letter-spacing:.05em; }
+    .hhoy-toca.urge .hhoy-badge { color:#fff; background:var(--ac-hoy); }
     .hhoy-cuando { font-size:11.5px; color:var(--gris); }
     .hhoy-ok { font-size:11px; font-weight:700; color:#166534; }
     .hhoy-linea { display:flex; align-items:baseline; gap:9px; flex-wrap:wrap; }
-    .hhoy-hora { font-size:17px; font-weight:800; color:var(--texto); font-variant-numeric:tabular-nums; }
+    .hhoy-hora { font-size:22px; font-weight:800; color:var(--texto); font-variant-numeric:tabular-nums;
+      letter-spacing:-.02em; }
     .hhoy-nom { flex:1; min-width:0; font-size:14px; color:var(--texto); }
     .hhoy-al { font-size:12px; color:var(--gris); }
     .hhoy-btns { display:flex; gap:8px; margin-top:11px; }
-    .hhoy-b { flex:1; font-family:inherit; font-size:13.5px; font-weight:700; padding:11px 8px;
-      border:1.5px solid var(--borde); border-radius:10px; background:var(--blanco);
-      color:var(--texto); cursor:pointer; }
-    .hhoy-b.prim { color:#fff; background:#0891b2; border-color:#0891b2; }
-    .hhoy-fila { display:flex; align-items:center; gap:9px; padding:8px 4px;
-      border-top:1px solid var(--borde); cursor:pointer; }
+    .hhoy-b { flex:1; font-family:inherit; font-size:14px; font-weight:700; padding:12px 8px;
+      border:1px solid var(--borde); border-radius:var(--r-sm); background:var(--blanco);
+      color:var(--texto); cursor:pointer; transition:transform var(--tr), box-shadow var(--tr);
+      -webkit-tap-highlight-color:transparent; }
+    .hhoy-b:active { transform:scale(0.97); }
+    .hhoy-b.prim { color:#fff; background:var(--ac-carro); border-color:var(--ac-carro);
+      box-shadow:var(--el-2); }
+    .hhoy-toca.urge .hhoy-b.prim { background:var(--ac-hoy); border-color:var(--ac-hoy); }
+    .hhoy-fila { display:flex; align-items:center; gap:9px; padding:10px 13px;
+      border-top:1px solid var(--borde); cursor:pointer; transition:background var(--tr); }
+    .hhoy-fila:active { background:var(--arena); }
     .hhoy-fila .hhoy-hora { font-size:13.5px; font-weight:700; color:var(--gris); }
-    .hhoy-fila.ok .hhoy-ic { color:#16a34a; }
+    .hhoy-fila.ok .hhoy-ic { color:var(--ac-dada-tx); }
     .hhoy-ic { width:16px; text-align:center; font-size:12px; color:var(--gris); }
-    .hhoy-vacio { text-align:center; cursor:pointer; }
+    .hhoy-vacio { text-align:center; cursor:pointer; padding:16px 13px; }
+    .hhoy-vacio .hhoy-tit { color:var(--texto); text-transform:none; letter-spacing:0; font-size:15px; }
     .hhoy-ir { font-size:12.5px; font-weight:700; color:#0e7490; margin-top:9px; }
     .hhoy-vacio .hhoy-tit { display:block; margin-bottom:3px; }
-    .hhoy-pend { display:flex; align-items:center; gap:9px; font-size:12.5px; color:#92400e;
-      background:#fffbeb; border:1.5px solid #fde68a; border-radius:12px;
-      padding:10px 12px; margin-bottom:0.7rem; cursor:pointer; }
+    .hhoy-pend { display:flex; align-items:center; gap:9px; font-size:12.5px; color:var(--ac-hoy-tx);
+      background:var(--ac-hoy-sv); border:1px solid var(--ac-hoy); border-left-width:5px;
+      border-radius:var(--r-sm); padding:11px 12px; margin-bottom:0.7rem; cursor:pointer;
+      transition:transform var(--tr); }
+    .hhoy-pend:active { transform:scale(0.99); }
     .hhoy-pend span:nth-child(2) { flex:1; }
     /* v0.319 — Temporalización: el log de clases por mes y semana */
     .temp-sem { font-size:10.5px; font-weight:800; color:var(--gris); text-transform:uppercase;
@@ -8313,12 +8386,13 @@
     /* v0.315 — la sesión, como secuencia de clase */
     .seq-cab { display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin:0 0 10px; }
     .seq-cab-tag { font-size:11.5px; font-weight:800; border-radius:999px; padding:3px 9px; }
-    .seq-cab-tag.carro { color:#0e7490; background:#ecfeff; }
-    .seq-cab-tag.area  { color:#3730a3; background:#eef2ff; }
+    .seq-cab-tag.carro { color:var(--ac-carro-tx); background:var(--ac-carro-sv); }
+    .seq-cab-tag.area  { color:var(--ac-area-tx);  background:var(--ac-area-sv); }
     .seq-edit { margin-left:auto; font-family:inherit; font-size:12px; font-weight:700;
       color:var(--gris); padding:5px 11px; border:1.5px solid var(--borde); border-radius:999px;
       background:var(--blanco); cursor:pointer; }
-    .seq-edit.on { color:#fff; background:#0891b2; border-color:#0891b2; }
+    .seq-edit { transition:all var(--tr); }
+    .seq-edit.on { color:#fff; background:var(--ac-carro); border-color:var(--ac-carro); }
     .seq-aviso { font-size:11.5px; color:#0e7490; background:#ecfeff; border-radius:8px;
       padding:6px 10px; margin-bottom:8px; }
     .seq-flechas { flex-shrink:0; display:flex; flex-direction:column; gap:3px; }
@@ -8328,11 +8402,13 @@
     .seq-fl:active:not(:disabled) { background:#ecfeff; border-color:#0891b2; }
     .seq.editando .seq-item { box-shadow:0 1px 3px rgba(14,27,60,.10); }
     .seq { display:flex; flex-direction:column; gap:7px; margin-bottom:14px; }
-    .seq-item { display:flex; align-items:center; gap:8px; padding:7px 9px 7px 11px;
-      border:1.5px solid var(--borde); border-radius:12px; background:var(--blanco);
-      border-left-width:6px; }
-    .seq-item.carro { border-left-color:#0891b2; background:#ecfeff; }
-    .seq-item.area  { border-left-color:#4f46e5; background:#eef2ff; }
+    .seq-item { display:flex; align-items:center; gap:8px; padding:8px 10px 8px 11px;
+      border:1px solid var(--borde); border-radius:var(--r-md); background:var(--blanco);
+      border-left-width:6px; box-shadow:var(--el-1);
+      transition:transform var(--tr), box-shadow var(--tr); }
+    .seq-item:active { transform:scale(0.995); }
+    .seq-item.carro { border-left-color:var(--ac-carro); background:var(--ac-carro-sv); }
+    .seq-item.area  { border-left-color:var(--ac-area);  background:var(--ac-area-sv); }
     .seq-item.arrastrando { opacity:.9; transform:scale(1.02); box-shadow:0 6px 18px rgba(14,27,60,.22); }
     .seq-drag { flex-shrink:0; width:38px; align-self:stretch; display:flex; align-items:center;
       justify-content:center; font-size:19px; color:var(--gris); cursor:grab;
@@ -8341,14 +8417,14 @@
     .seq-num { flex-shrink:0; width:24px; height:24px; border-radius:50%; display:flex;
       align-items:center; justify-content:center; font-size:12.5px; font-weight:800;
       color:#fff; background:#64748b; }
-    .seq-item.carro .seq-num { background:#0891b2; }
-    .seq-item.area  .seq-num { background:#4f46e5; }
+    .seq-item.carro .seq-num { background:var(--ac-carro); }
+    .seq-item.area  .seq-num { background:var(--ac-area); }
     .seq-body { flex:1; min-width:0; cursor:pointer; }
     .seq-item.ed .seq-body { cursor:default; }
     .seq-item.ed { padding-left:0; }
     .seq-tipo { font-size:10.5px; font-weight:800; letter-spacing:.03em; color:var(--gris); }
-    .seq-item.carro .seq-tipo { color:#0e7490; }
-    .seq-item.area  .seq-tipo { color:#3730a3; }
+    .seq-item.carro .seq-tipo { color:var(--ac-carro-tx); }
+    .seq-item.area  .seq-tipo { color:var(--ac-area-tx); }
     .seq-nom { font-size:15px; font-weight:700; color:var(--texto); line-height:1.3;
       overflow-wrap:anywhere; }
     /* v0.317 — dosis a la derecha de cada fila, y barra de reparto */
@@ -8369,11 +8445,11 @@
     .seq-dosis b { font-size:15px; font-weight:800; color:var(--texto); }
     .seq-dosis b.falta { color:var(--gris); font-weight:600; }
     .seq-dosis span { font-size:11px; color:var(--gris); }
-    .seq-item.carro .seq-dosis span { color:#0e7490; }
-    .seq-item.area  .seq-dosis span { color:#3730a3; }
+    .seq-item.carro .seq-dosis span { color:var(--ac-carro-tx); }
+    .seq-item.area  .seq-dosis span { color:var(--ac-area-tx); }
     .seq-barra { display:flex; height:9px; border-radius:999px; overflow:hidden; margin-top:12px; gap:1px; }
-    .seq-barra-tr.carro { background:#22b8cf; }
-    .seq-barra-tr.area  { background:#7c74e0; }
+    .seq-barra-tr.carro { background:var(--ac-carro); }
+    .seq-barra-tr.area  { background:var(--ac-area); }
     .seq-barra-pie { display:flex; justify-content:space-between; font-size:11px;
       color:var(--gris); margin-top:5px; }
     /* v0.317 — el ejercicio, con su sesión detrás */
@@ -8549,8 +8625,19 @@
     .home-niv-cnt { font-size:12px; font-weight:800; color:var(--gris); background:var(--arena); border-radius:20px; padding:1px 9px; flex-shrink:0; }
     /* Planificación: botones de nivel atractivos */
     .home-plan-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:10px; }
-    .home-plan-btn { display:flex; flex-direction:column; align-items:center; gap:6px; padding:0.95rem 0.4rem; border-radius:15px; border:1.5px solid var(--borde); background:var(--blanco); cursor:pointer; font-family:'Outfit',sans-serif; -webkit-tap-highlight-color:transparent; }
-    .home-plan-btn:active { transform:scale(0.97); }
+    /* v0.326 — Los tres niveles, con su color propio en una banda superior.
+       Antes eran tres cajas blancas iguales y el emoji era lo único que las
+       distinguía; ahora se reconocen por el color antes de leer nada. */
+    .home-plan-btn { position:relative; display:flex; flex-direction:column; align-items:center;
+      gap:6px; padding:1.05rem 0.4rem 0.85rem; border-radius:var(--r-md);
+      border:1px solid var(--borde); background:var(--blanco); cursor:pointer;
+      font-family:'Outfit',sans-serif; -webkit-tap-highlight-color:transparent;
+      box-shadow:var(--el-1); overflow:hidden; transition:transform var(--tr), box-shadow var(--tr); }
+    .home-plan-btn::before { content:''; position:absolute; top:0; left:0; right:0; height:4px; }
+    .home-plan-btn.niv-ini::before  { background:var(--ac-dada); }
+    .home-plan-btn.niv-avz::before  { background:var(--ac-hoy); }
+    .home-plan-btn.niv-comp::before { background:var(--ac-area); }
+    .home-plan-btn:active { transform:scale(0.97); box-shadow:none; }
     .home-plan-btn .ico { font-size:24px; line-height:1; }
     .home-plan-btn .lbl { font-size:12px; font-weight:800; color:var(--texto); }
     .home-plan-btn.niv-ini  { border-color:#bbf7d0; background:#f0fdf4; }
@@ -9748,7 +9835,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.325.0';
+    var APP_VERSION = '0.326.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
