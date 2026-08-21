@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.324.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.325.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,23 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.325.0 — FIX: Inicio se descuadró al quitar la tarjeta de Asistencia (2026-08)
+    (sin migraciones nuevas)
+    · EL FALLO: en el móvil, Inicio salía roto — el badge de Supabase arriba
+      descolocado, un hueco enorme entre Asistencia y Entrenamiento, y el
+      bloque de niveles pegado al borde izquierdo, sin márgenes.
+    · LA CAUSA: al retirar la tarjeta «Control de asistencia» en la v0.324 se
+      quedó un `</div>` HUÉRFANO. Ese cierre partía la sección de Asistencia
+      antes de tiempo y el siguiente cerraba `.contenido`, así que
+      Entrenamiento acababa FUERA del contenedor y perdía su padding. Un solo
+      carácter de más, tres síntomas distintos.
+    · ARREGLADO, y verificado contando etiquetas: la pantalla de Inicio vuelve
+      a cerrar en equilibrio (37 `<div>` y 37 `</div>`), con Asistencia y
+      Entrenamiento dentro de `.contenido`.
+    · Y para que no vuelva a pasar: chk.js comprueba ahora que cada pantalla
+      cierra sus `<div>`. El fallo era invisible para las pruebas de sintaxis
+      de JavaScript, porque el HTML mal cerrado no rompe el script.
 
   v0.324.0 — Inicio: el bloque HOY, para pasar lista al salir de pista (2026-08)
     (sin migraciones nuevas)
@@ -8649,7 +8666,6 @@
              TERCERA puerta al mismo sitio: el botón de la barra, el bloque Hoy
              de arriba y ella. El dato que llevaba (N clases · N alumnos) es de
              configuración, no de uso diario, y ya está en Asistencia › ⚙ Clases. -->
-        </div>
         <!-- v0.91: acceso claro a "Editar mi perfil" para el EN1 (para que
              ponga su nombre y el gestor lo vea en vez del correo) -->
         <button class="btn btn-sec" id="home-en1-perfil" style="display:none;width:100%;margin-top:10px;" onclick="irA('pantalla-ajustes')">👤 Editar mi perfil</button>
@@ -9732,7 +9748,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.324.0';
+    var APP_VERSION = '0.325.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
