@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.323.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.324.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,28 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.324.0 — Inicio: el bloque HOY, para pasar lista al salir de pista (2026-08)
+    (sin migraciones nuevas)
+    · La tarjeta de Asistencia de Inicio solo decía cuántas clases tenías
+      configuradas. Ahora encima va el bloque HOY, con lo que hace falta de
+      verdad al abrir la app.
+    · LA CLASE QUE TOCA, DESTACADA. Y «la que toca» NO es la siguiente: la
+      lista se pasa AL TERMINAR. El orden es: la que está en marcha → la
+      última que ya terminó y sigue sin lista → y solo entonces la siguiente.
+      Así, al salir de pista a las 19:35, lo primero que ves es el botón de
+      pasar la lista de la clase que acabas de dar. Si está recién terminada y
+      sin pasar, la tarjeta se pone en ámbar.
+    · DOS BOTONES Y NADA MÁS: «Pasar lista» entra directo a esa franja de hoy
+      («Ver la lista» si ya está pasada), y «Ver el plan del día» abre el día
+      en la planificación del NIVEL de esa franja.
+    · EL RESTO DEL DÍA, una línea por franja con su estado y su resultado
+      (6/6 · sin pasar · sin clase). Se toca y se abre.
+    · AVISO DE LO QUE SE QUEDÓ ATRÁS: listas sin pasar de días anteriores
+      (mira 21 días hacia atrás, sin salir del curso). Es lo que más se
+      escapa y hoy solo se veía entrando al calendario.
+    · Y SI HOY NO TOCA, lo dice y adelanta cuándo es la siguiente clase, en
+      vez de dejar el hueco vacío.
 
   v0.323.0 — Barra nueva: Asistencia · Partido · Plan · Área · Carro (2026-08)
     (sin migraciones nuevas)
@@ -8205,6 +8227,41 @@
     .temp-lg.hoy  { background:#f59e0b; }
     .temp-lg.prog { border:1px dashed var(--gris); }
     .temp-lg-scroll { margin-left:auto; }
+    /* v0.324 — El bloque HOY de Inicio */
+    .hhoy { border:1.5px solid var(--borde); border-radius:14px; background:var(--blanco);
+      padding:12px 13px; margin-bottom:0.7rem; }
+    .hhoy-cab { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+    .hhoy-tit { font-size:16px; font-weight:800; color:var(--texto); }
+    .hhoy-sub { font-size:12.5px; color:var(--gris); }
+    .hhoy-cont { margin-left:auto; font-size:11.5px; color:var(--gris); }
+    .hhoy-toca { border:2px solid #0891b2; border-radius:12px; padding:11px; margin-bottom:8px; }
+    .hhoy-toca.urge { border-color:#f59e0b; background:#fffbeb; }
+    .hhoy-badges { display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-bottom:6px; }
+    .hhoy-badge { font-size:11px; font-weight:800; color:#0e7490; background:#ecfeff;
+      border-radius:999px; padding:2px 9px; }
+    .hhoy-toca.urge .hhoy-badge { color:#92400e; background:#fef3c7; }
+    .hhoy-cuando { font-size:11.5px; color:var(--gris); }
+    .hhoy-ok { font-size:11px; font-weight:700; color:#166534; }
+    .hhoy-linea { display:flex; align-items:baseline; gap:9px; flex-wrap:wrap; }
+    .hhoy-hora { font-size:17px; font-weight:800; color:var(--texto); font-variant-numeric:tabular-nums; }
+    .hhoy-nom { flex:1; min-width:0; font-size:14px; color:var(--texto); }
+    .hhoy-al { font-size:12px; color:var(--gris); }
+    .hhoy-btns { display:flex; gap:8px; margin-top:11px; }
+    .hhoy-b { flex:1; font-family:inherit; font-size:13.5px; font-weight:700; padding:11px 8px;
+      border:1.5px solid var(--borde); border-radius:10px; background:var(--blanco);
+      color:var(--texto); cursor:pointer; }
+    .hhoy-b.prim { color:#fff; background:#0891b2; border-color:#0891b2; }
+    .hhoy-fila { display:flex; align-items:center; gap:9px; padding:8px 4px;
+      border-top:1px solid var(--borde); cursor:pointer; }
+    .hhoy-fila .hhoy-hora { font-size:13.5px; font-weight:700; color:var(--gris); }
+    .hhoy-fila.ok .hhoy-ic { color:#16a34a; }
+    .hhoy-ic { width:16px; text-align:center; font-size:12px; color:var(--gris); }
+    .hhoy-vacio { text-align:center; }
+    .hhoy-vacio .hhoy-tit { display:block; margin-bottom:3px; }
+    .hhoy-pend { display:flex; align-items:center; gap:9px; font-size:12.5px; color:#92400e;
+      background:#fffbeb; border:1.5px solid #fde68a; border-radius:12px;
+      padding:10px 12px; margin-bottom:0.7rem; cursor:pointer; }
+    .hhoy-pend span:nth-child(2) { flex:1; }
     /* v0.319 — Temporalización: el log de clases por mes y semana */
     .temp-sem { font-size:10.5px; font-weight:800; color:var(--gris); text-transform:uppercase;
       letter-spacing:.04em; margin:10px 2px 5px; }
@@ -8576,6 +8633,8 @@
           <span class="home-sec-label">Asistencia</span>
           <span class="home-sec-stats" id="home-stats-a">—</span>
         </div>
+        <!-- v0.324: el bloque HOY. Se pinta en homeHoyRender(). -->
+        <div id="home-hoy"></div>
         <div class="tarjeta-menu" onclick="irA('pantalla-asistencia')">
           <div class="menu-icono" style="background:var(--navy-suave);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2.5"/><path d="M9 4.5V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v.5"/><path d="M8.5 13l2.2 2.2L15 11"/></svg></div>
           <div class="menu-texto">
@@ -9666,7 +9725,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.323.0';
+    var APP_VERSION = '0.324.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -22316,6 +22375,167 @@
         clasesA.length === 0
           ? 'Sin clases configuradas'
           : clasesA.length + ' clase' + (clasesA.length !== 1 ? 's' : '') + ' · ' + numAl + ' alumno' + (numAl !== 1 ? 's' : '');
+      try { homeHoyRender(); } catch (e) { console.warn('bloque hoy', e); }   // v0.324
+    }
+
+    // ══ v0.324 — EL BLOQUE «HOY» DE INICIO ═══════════════════════════
+    // La lista se pasa AL TERMINAR la clase, no al empezarla. Por eso la
+    // tarjeta grande no enseña «la siguiente» sino LA QUE TOCA AHORA, en este
+    // orden:
+    //   1. la que está en marcha (estás dentro de su horario),
+    //   2. la última que ya terminó y aún no tiene lista — que es lo que
+    //      buscas al salir de pista a las 19:35,
+    //   3. si no hay nada de eso, la siguiente del día.
+    // Así, al abrir la app después de dar clase, lo primero que ves es el
+    // botón de pasar SU lista.
+    function _horaMin(hhmm) {
+      var m = String(hhmm || '').match(/(\d{1,2})[:.](\d{2})/);
+      return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : null;
+    }
+    function _franjaRango(fr) {
+      var m = String(fr || '').match(/(\d{1,2}[:.]\d{2})\D+?(\d{1,2}[:.]\d{2})/);
+      if (!m) return null;
+      var a = _horaMin(m[1]), b = _horaMin(m[2]);
+      return (a == null || b == null) ? null : { ini: a, fin: b, txt: m[1].replace('.', ':') };
+    }
+    function _ahoraMin() { var d = new Date(); return d.getHours() * 60 + d.getMinutes(); }
+    // Las franjas de un día, ordenadas por hora, con su registro y su estado.
+    function _homeClasesDe(fISO) {
+      var dow  = new Date(+fISO.slice(0,4), +fISO.slice(5,7) - 1, +fISO.slice(8,10)).getDay();
+      var regs = leerAsistRegistros();
+      return (leerAsistConfig().clases || [])
+        .filter(function(c){ return Number(c.diaSemana) === dow && _claseEnFecha(c, fISO); })
+        .map(function(c){
+          var reg = regs.filter(function(r){ return r.claseId === c.id && r.fecha === fISO; })[0] || null;
+          var r   = _franjaRango(c.franja);
+          return { c: c, reg: reg, rango: r, ini: r ? r.ini : 9999,
+                   pasada: _regPasada(reg), sinClase: !!(reg && reg.sinClase) };
+        })
+        .sort(function(a, b){ return a.ini - b.ini; });
+    }
+    // ¿Cuál es «la que toca»?  (devuelve el índice, o -1)
+    function _homeQueToca(lista, ahora) {
+      var i;
+      for (i = 0; i < lista.length; i++) {
+        var x = lista[i];
+        if (x.sinClase || !x.rango) continue;
+        if (ahora >= x.rango.ini && ahora <= x.rango.fin) return i;   // en marcha
+      }
+      for (i = lista.length - 1; i >= 0; i--) {                        // terminada sin lista
+        if (lista[i].sinClase || !lista[i].rango) continue;
+        if (ahora > lista[i].rango.fin && !lista[i].pasada) return i;
+      }
+      for (i = 0; i < lista.length; i++) {                             // la siguiente
+        if (lista[i].sinClase || !lista[i].rango) continue;
+        if (ahora < lista[i].rango.ini) return i;
+      }
+      return -1;
+    }
+    // Días pasados de este curso con alguna lista sin pasar (máx. 21 días atrás)
+    function _homePendientes() {
+      var hoy = hoyLocal(), n = 0, ultimo = '';
+      for (var d = 1; d <= 21; d++) {
+        var f = addDiasISO(hoy, -d);
+        if (_cursoDe(f) !== _cursoActual()) break;
+        _homeClasesDe(f).forEach(function(x){
+          if (!x.sinClase && !x.pasada) { n++; if (!ultimo) ultimo = f; }
+        });
+      }
+      return { n: n, ultimo: ultimo };
+    }
+    // La siguiente clase de otro día, cuando hoy no toca
+    function _homeProxima() {
+      var hoy = hoyLocal();
+      for (var d = 1; d <= 14; d++) {
+        var f = addDiasISO(hoy, d);
+        var l = _homeClasesDe(f).filter(function(x){ return !x.sinClase; });
+        if (l.length) return { fecha: f, x: l[0] };
+      }
+      return null;
+    }
+    function homeHoyRender() {
+      var cont = document.getElementById('home-hoy');
+      if (!cont) return;
+      var hoy   = hoyLocal();
+      var lista = _homeClasesDe(hoy);
+      var ahora = _ahoraMin();
+      var h = '';
+
+      if (!lista.length) {
+        var pr = _homeProxima();
+        h = '<div class="hhoy hhoy-vacio">' +
+            '<div class="hhoy-tit">Hoy no tienes clase</div>' +
+            (pr ? '<div class="hhoy-sub">La siguiente, <b>' + _gEsc(_diaSemanaNombre(pr.fecha)) + ' ' +
+                  parseInt(pr.fecha.slice(8), 10) + ' a las ' + _gEsc(pr.rango ? '' : '') +
+                  _gEsc((pr.x.rango && pr.x.rango.txt) || pr.x.c.franja || '') + '</b>' +
+                  (pr.x.c.nombre ? ' · ' + _gEsc(pr.x.c.nombre) : '') + '</div>'
+                : '<div class="hhoy-sub">No hay más clases programadas esta semana.</div>') +
+            '</div>';
+      } else {
+        var iToca = _homeQueToca(lista, ahora);
+        var nPas  = lista.filter(function(x){ return x.pasada; }).length;
+        h = '<div class="hhoy">';
+        h += '<div class="hhoy-cab"><span class="hhoy-tit">Hoy</span>' +
+             '<span class="hhoy-sub">' + _gEsc(_diaSemanaNombre(hoy)) + ' ' +
+             parseInt(hoy.slice(8), 10) + ' de ' + _gEsc(MESES_NOMBRES_A[+hoy.slice(5,7)-1].toLowerCase()) + '</span>' +
+             '<span class="hhoy-cont">' + nPas + ' de ' + lista.length + ' pasadas</span></div>';
+
+        if (iToca >= 0) {
+          var x = lista[iToca], r = x.rango;
+          var enMarcha = r && ahora >= r.ini && ahora <= r.fin;
+          var acabada  = r && ahora > r.fin;
+          var etiq = enMarcha ? 'En marcha' : (acabada ? 'Recién terminada' : 'La siguiente');
+          var cuando = '';
+          if (enMarcha)      cuando = 'termina en ' + Math.max(0, r.fin - ahora) + ' min';
+          else if (acabada)  cuando = 'terminó hace ' + (ahora - r.fin) + ' min';
+          else if (r)        cuando = 'empieza en ' + (r.ini - ahora) + ' min';
+          var nAl = (x.c.alumnos || []).filter(function(a){ return alActivo(a, hoy); }).length;
+          h += '<div class="hhoy-toca' + (acabada && !x.pasada ? ' urge' : '') + '">';
+          h += '<div class="hhoy-badges"><span class="hhoy-badge">' + etiq + '</span>' +
+               (cuando ? '<span class="hhoy-cuando">' + cuando + '</span>' : '') +
+               (x.pasada ? '<span class="hhoy-ok">✓ lista pasada</span>' : '') + '</div>';
+          h += '<div class="hhoy-linea"><span class="hhoy-hora">' +
+               _gEsc((r && r.txt) || x.c.franja || '') + '</span>' +
+               '<span class="hhoy-nom">' + _gEsc(x.c.nombre || 'Clase') + '</span>' +
+               '<span class="hhoy-al">' + nAl + ' alumno' + (nAl !== 1 ? 's' : '') + '</span></div>';
+          h += '<div class="hhoy-btns">' +
+            '<button type="button" class="hhoy-b prim" onclick="asistAbrirLista(' + x.c.id + ',\'' + hoy + '\')">' +
+              (x.pasada ? 'Ver la lista' : 'Pasar lista') + '</button>' +
+            '<button type="button" class="hhoy-b" onclick="rutaAbrirDia(\'' + hoy + '\'' +
+              (x.c.nivel ? ',\'' + x.c.nivel + '\'' : '') + ')">Ver el plan del día</button>' +
+          '</div></div>';
+        }
+
+        // El resto del día, una línea cada una
+        lista.forEach(function(x, i){
+          if (i === iToca) return;
+          var ic = x.sinClase ? '✗' : (x.pasada ? '✓' : '○');
+          h += '<div class="hhoy-fila' + (x.pasada ? ' ok' : '') + '" onclick="asistAbrirLista(' +
+            x.c.id + ',\'' + hoy + '\')">' +
+            '<span class="hhoy-ic">' + ic + '</span>' +
+            '<span class="hhoy-hora">' + _gEsc((x.rango && x.rango.txt) || x.c.franja || '') + '</span>' +
+            '<span class="hhoy-nom">' + _gEsc(x.c.nombre || 'Clase') + '</span>' +
+            '<span class="hhoy-al">' + _homeResumenReg(x) + '</span></div>';
+        });
+        h += '</div>';
+      }
+
+      // Aviso de lo que se quedó atrás
+      var pend = _homePendientes();
+      if (pend.n) {
+        h += '<div class="hhoy-pend" onclick="irA(\'pantalla-asistencia\')">' +
+          '<span class="hhoy-pend-ic">⚠️</span>' +
+          '<span>' + pend.n + ' lista' + (pend.n !== 1 ? 's' : '') + ' sin pasar' +
+          (pend.ultimo ? ' · desde el ' + parseInt(pend.ultimo.slice(8), 10) : '') + '</span>' +
+          '<span class="ct-chev">›</span></div>';
+      }
+      cont.innerHTML = h;
+    }
+    function _homeResumenReg(x) {
+      if (x.sinClase) return 'sin clase';
+      if (!x.pasada)  return 'sin pasar';
+      var p = (x.reg.presentes || []).length, a = (x.reg.ausentes || []).length;
+      return p + '/' + (p + a);
     }
 
     // ══════════════════════════════════════════
