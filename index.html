@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.327.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.328.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,20 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.328.0 — «Importar desde Obsidian», dentro del Perfil (2026-08)
+    (sin migraciones · nada cambia en los datos ni en cómo se importa)
+    · SALE DE LA PANTALLA PRINCIPAL. Estaba en el pie de Inicio, debajo de las
+      federaciones, y era lo último que se veía al abrir la app. Ahora vive en
+      Perfil, en un apartado propio «Desde Obsidian».
+    · POR QUÉ: importar a mano es el PLAN B. Lo normal es `sync_padel.py`, que
+      hace el camino entero (vault → JSON → Supabase) sin tocar la app. Tenerlo
+      en la portada lo hacía parecer la vía principal.
+    · La pantalla de Importar vuelve ahora al Perfil, no a Inicio.
+    · QUIÉN LO VE: igual que antes. El EN1 y el monitor con PIN no, porque
+      escribe en el plan compartido. Antes se ocultaba escondiendo el pie de
+      Inicio entero; ahora se decide en `mostrarAjustes()`.
+    · En el pie de Inicio se queda solo la versión, que sí conviene a la vista.
 
   v0.327.0 — La piel «Pista», en toda la app (2026-08)
     (sin migraciones nuevas · solo acabado: ni datos ni comportamiento)
@@ -8855,8 +8869,9 @@
       </div>
 
     </div>
+    <!-- v0.328: «Importar desde Obsidian» se fue al Perfil. Aquí abajo solo
+         queda la versión, que sí conviene tener a la vista en Inicio. -->
     <div class="pie" id="inicio-pie" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
-      <button class="btn btn-sec btn-sm" onclick="irA('pantalla-importar')" style="width:auto;gap:5px;">📥 Importar desde Obsidian</button>
       <span id="inicio-version">Versión 0.43.0 · Solo para mí</span>
     </div>
   </div>
@@ -8918,6 +8933,21 @@
         </div>
         <button class="btn btn-verde" onclick="guardarPerfil()" style="width:100%;">Guardar datos</button>
         <p class="ajustes-desc">Estos datos se usan en la exportación del PDF de asistencia.</p>
+      </div>
+
+      <!-- v0.328: la importación manual vive aquí, no en Inicio. Es el plan B
+           de la sincronización (sync_padel.py hace el camino entero); tenerla
+           en la pantalla principal invitaba a usarla como si fuera la vía
+           normal. Se oculta para el EN1 y el monitor local: escribe en el plan
+           compartido y no es cosa suya. -->
+      <div id="perf-importar-caja" style="display:none;">
+        <div class="grupo-titulo">Desde Obsidian</div>
+        <div class="form-card" style="gap:0.6rem;">
+          <button class="btn btn-sec" onclick="irA('pantalla-importar')" style="width:100%;">📥 Importar padel-sync.json</button>
+          <p class="ajustes-desc">Carga a mano el archivo que genera <b>sync_padel.py</b>. Normalmente
+            no hace falta: el script sube los ejercicios y las sesiones él solo. Úsalo si el script
+            no puede iniciar sesión y tienes el JSON ya generado.</p>
+        </div>
       </div>
 
       <!-- v0.181: limpiar la copia local del dispositivo -->
@@ -9456,7 +9486,8 @@
   <!-- ══ IMPORTAR DESDE OBSIDIAN ══════════════════ -->
   <div id="pantalla-importar" class="pantalla">
     <div class="cabecera">
-      <button class="btn-volver" onclick="irA('pantalla-inicio')">‹ Inicio</button>
+      <!-- v0.328: se entra desde el Perfil, así que ahí vuelve -->
+      <button class="btn-volver" onclick="irA('pantalla-ajustes')">‹ Perfil</button>
       <div class="cab-titulo">Importar</div>
       <div class="cab-sub">Desde padel-sync.json</div>
     </div>
@@ -9894,7 +9925,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.327.0';
+    var APP_VERSION = '0.328.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -11107,6 +11138,14 @@
         var en1 = false;
         try { en1 = esEN1Cuenta() && !_gEditUid; } catch (e) {}
         vb.textContent = en1 ? '‹ Asistencia' : '‹ Inicio';
+      }
+      // v0.328: importar escribe en el plan compartido; el EN1 y el monitor
+      // local no lo ven, igual que no lo veían en el pie de Inicio.
+      var imp = document.getElementById('perf-importar-caja');
+      if (imp) {
+        var soloConsulta = false;
+        try { soloConsulta = esEN1Cuenta() || monitorActivo(); } catch (e) {}
+        imp.style.display = soloConsulta ? 'none' : 'block';
       }
     }
 
