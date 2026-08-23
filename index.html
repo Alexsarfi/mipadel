@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.330.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.331.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,25 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.331.0 — El Recorrido, en columnas cuando hay sitio (2026-08)
+    (sin migraciones · el mismo marcado: solo cambia el contenedor)
+    · EN EL ORDENADOR LOS BLOQUES VAN EN REJILLA, no en una tira hacia abajo:
+      4 columnas a partir de 900 px de ancho, 2 entre 600 y 899, y la columna
+      vertical de siempre por debajo. Se lee como un texto: izquierda a
+      derecha y luego abajo.
+    · POR QUÉ 4 FIJAS Y NO «LAS QUE QUEPAN»: las etapas van de 3 a 9 bloques
+      (Dominio de la red tiene 9, Definición 8). Una fila única de 9 pediría
+      unos 1.350 px, o sea scroll horizontal. Y con un número variable de
+      columnas el navegador decide dónde rompe la fila, así que las líneas
+      que unen los nodos quedarían colgando al final de cada línea. Con 4 y 2
+      sé cuál es el último de cada fila y le quito la línea.
+    · UN NODO DESPLEGADO OCUPA EL ANCHO ENTERO. Dentro van miniaturas y
+      nombres de sesión, que en una columna de 200 px no se leen.
+    · Y MIENTRAS HAY ALGO DESPLEGADO, LAS LÍNEAS NO SE PINTAN: al abrir un
+      nodo los demás cambian de columna y las líneas dejarían de cuadrar.
+    · El «siguiente» conserva su ámbar, su ＋ y su etiqueta «La siguiente»:
+      en una rejilla de nueve, el hueco ya no salta a la vista solo.
 
   v0.330.0 — El Recorrido, en lugar del Repositorio (2026-08)
     (sin migraciones · los mismos datos, contados de otra manera)
@@ -7600,6 +7619,42 @@
     .rec-aviso-det code { font-family:ui-monospace,Menlo,monospace; font-size:11.5px;
       background:var(--arena); padding:1px 5px; border-radius:4px; color:var(--texto); }
     .rec-aviso-ses { margin:6px 0 0; padding-left:16px; }
+    /* ══ v0.331 — EN PANTALLA GRANDE, EL CAMINO VA EN COLUMNAS ═══════
+       El mismo marcado; solo cambia el contenedor. Las columnas son un
+       número FIJO a propósito: con `auto-fit` el navegador decide cuántas
+       caben, yo no sé dónde rompe la fila, y las líneas que unen los nodos
+       quedarían colgando en el aire al final de cada línea. Con 4 y 2 sé
+       exactamente cuál es el último de cada fila y le quito la línea. */
+    @media (min-width:600px) {
+      /* Ojo con el selector: `.rec-et.abierta .rec-et-body` ya pone
+         display:block y pesa más que `.rec-et-body` a secas. Las media
+         queries NO añaden especificidad, así que hay que igualarla o el
+         grid no llega a aplicarse nunca. */
+      .rec-et.abierta .rec-et-body { display:grid; gap:10px 22px; padding-left:0; }
+      .rec-n { padding:8px 9px 9px; border:1.5px solid var(--borde);
+        border-radius:var(--r-sm); background:var(--blanco); }
+      .rec-n.hecho { border-color:var(--ac-dada); background:var(--ac-dada-sv); }
+      .rec-n.sig   { border-color:var(--ac-hoy);  background:var(--ac-hoy-sv); }
+      .rec-n.vacio { border-style:dashed; }
+      .rec-sq { position:static; margin-bottom:5px; }
+      /* La línea deja de bajar y pasa a unir con el nodo de la derecha */
+      .rec-n::before { left:auto; right:-22px; top:22px; bottom:auto;
+        width:22px; height:2px; }
+      /* Un nodo desplegado ocupa el ancho entero: dentro van miniaturas y
+         nombres de sesión, que en una columna de 200 px no se leen. */
+      .rec-n.abierto { grid-column:1 / -1; }
+      /* Al desplegar uno, los demás cambian de columna y las líneas dejarían
+         de cuadrar. Mientras haya algo abierto, no se pintan. */
+      .rec-et.abierta .rec-et-body.con-abierto .rec-n::before { display:none; }
+    }
+    @media (min-width:600px) and (max-width:899px) {
+      .rec-et.abierta .rec-et-body { grid-template-columns:repeat(2, minmax(0,1fr)); }
+      .rec-n:nth-child(2n)::before { display:none; }
+    }
+    @media (min-width:900px) {
+      .rec-et.abierta .rec-et-body { grid-template-columns:repeat(4, minmax(0,1fr)); }
+      .rec-n:nth-child(4n)::before { display:none; }
+    }
     .ct-hdr-sub { flex:0 0 100%; font-size:11px; color:var(--gris); line-height:1.35;
       margin-top:5px; }
     /* v0.285 — El árbol dentro del selector del día */
@@ -10025,7 +10080,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.330.0';
+    var APP_VERSION = '0.331.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -19713,7 +19768,8 @@
             _gEsc(e.et.nombre) + '</span>' +
           '<span class="rec-et-c">' + e.hechos + ' de ' + e.total + (completa ? ' \u2713' : '') + '</span>' +
           '<span class="rec-et-chev">\u203A</span></div>';
-        h += '<div class="rec-et-body">';
+        var algunoAb = e.nodos.some(function(nd){ return !!_ctBlAbierto[nd.it.id]; });
+        h += '<div class="rec-et-body' + (algunoAb ? ' con-abierto' : '') + '">';
         if (!e.nodos.length) {
           h += '<div class="plan-bl-vacio">Este apartado no tiene bloques todavía.</div>';
         }
@@ -19737,7 +19793,7 @@
           } else {
             sub = (iN === idxSig) ? 'La siguiente' : 'Sin sesión todavía';
           }
-          h += '<div class="rec-n ' + cls + '">';
+          h += '<div class="rec-n ' + cls + (abBl ? ' abierto' : '') + '">';
           h += '<div class="rec-sq">' + marca + '</div>';
           h += '<div class="rec-fila">';
           h += '<div class="rec-cuerpo" onclick="ctBlToggle(\'' + nd.it.id + '\')">' +
