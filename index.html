@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.331.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.332.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,39 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.332.0 — Preparada no es lo mismo que dada (2026-08)
+    (⚠️ MIGRACIÓN: migraciones/migracion_sesion_sin_fecha.sql, ejecutar ANTES
+     de sincronizar una sesión sin fecha)
+    · UNA SESIÓN YA NO NECESITA FECHA. Hasta ahora `sync_padel.py` descartaba
+      en silencio cualquier nota sin fecha, porque una sesión era el REGISTRO
+      de una clase dada. El uso ha cambiado: ahora se diseñan guiones ANTES de
+      darlos y se dan cuando el grupo lo pide, a veces uno de la Etapa 2
+      estando en la Etapa 1. Obligar a inventarse un día en Obsidian era pedir
+      un dato que en realidad se decide en pista.
+    · SON DOS COSAS Y AHORA SE DISTINGUEN: el GUION pertenece a un bloque y no
+      tiene fecha; la CLASE DADA tiene día y nace en la app. Cada dato, un
+      dueño.
+    · EL VERDE DEL RECORRIDO CAMBIA DE SIGNIFICADO. Antes quería decir «este
+      bloque tiene material» —lo cual valía cuando las sesiones se escribían
+      después de darlas—. Ahora hay tres estados:
+        · verde ✓  = DADA (el bloque aparece en un día ya pasado del
+                     calendario, o alguna de sus sesiones está trabajada)
+        · cian ●   = PREPARADA (hay guion, todavía no se ha dado)
+        · punteada = sin sesión
+      El ámbar de «la siguiente» se suma encima de cualquiera de las tres.
+    · Y «LA SIGUIENTE» PASA A SER el primer bloque SIN DAR, tenga guion o no.
+      Antes era el primero sin material, que con los guiones escritos por
+      adelantado señalaba siempre más allá de donde de verdad vas.
+    · EL CONTADOR DE LA ETAPA cuenta DADAS: «2 de 4 · +1» son dos dadas y una
+      preparada esperando. Y hay leyenda, para no tener que adivinar el color.
+    · NO HAY INTERRUPTOR PARA MARCAR UN BLOQUE COMO DADO, a propósito: se
+      deriva de lo que ya marcas en el calendario. Si hubiera un botón, el
+      mismo hecho tendría dos dueños y acabarían diciendo cosas distintas.
+    · EN EL SCRIPT, DE PASO, UN FALLO QUE HABRÍA ENTRADO CON ESTO: al dejar de
+      exigir fecha, los 23 «00 Índice - …» del vault pasaban a colarse como
+      sesiones. Ahora se filtra por `categoría: sesión`, que es lo que había
+      que mirar desde el principio.
 
   v0.331.0 — El Recorrido, en columnas cuando hay sitio (2026-08)
     (sin migraciones · el mismo marcado: solo cambia el contenedor)
@@ -7599,6 +7632,9 @@
       border:1.5px solid var(--borde); background:var(--blanco); color:var(--gris); }
     .rec-n.hecho .rec-sq { border-color:var(--ac-dada); background:var(--ac-dada-sv);
       color:var(--ac-dada-tx); }
+    /* v0.332: «preparada» — hay guion escrito pero todavía no se ha dado */
+    .rec-n.listo .rec-sq { border-color:var(--ac-carro); background:var(--ac-carro-sv);
+      color:var(--ac-carro-tx); }
     .rec-n.sig .rec-sq  { border-style:dashed; border-color:var(--ac-hoy);
       background:var(--ac-hoy-sv); color:var(--ac-hoy-tx); }
     .rec-n.vacio .rec-sq { border-style:dashed; }
@@ -7619,6 +7655,14 @@
     .rec-aviso-det code { font-family:ui-monospace,Menlo,monospace; font-size:11.5px;
       background:var(--arena); padding:1px 5px; border-radius:4px; color:var(--texto); }
     .rec-aviso-ses { margin:6px 0 0; padding-left:16px; }
+    .rec-leyenda { display:flex; gap:12px; flex-wrap:wrap; align-items:center;
+      font-size:10.5px; color:var(--gris); margin:0 0 10px; }
+    .rec-lg { display:inline-block; width:9px; height:9px; border-radius:3px;
+      margin-right:4px; vertical-align:0; border:1.5px solid var(--borde); }
+    .rec-lg.hecho { border-color:var(--ac-dada); background:var(--ac-dada-sv); }
+    .rec-lg.listo { border-color:var(--ac-carro); background:var(--ac-carro-sv); }
+    .rec-lg.sig   { border-color:var(--ac-hoy); background:var(--ac-hoy-sv); border-style:dashed; }
+    .rec-lg.vacio { border-style:dashed; }
     /* ══ v0.331 — EN PANTALLA GRANDE, EL CAMINO VA EN COLUMNAS ═══════
        El mismo marcado; solo cambia el contenedor. Las columnas son un
        número FIJO a propósito: con `auto-fit` el navegador decide cuántas
@@ -7634,6 +7678,7 @@
       .rec-n { padding:8px 9px 9px; border:1.5px solid var(--borde);
         border-radius:var(--r-sm); background:var(--blanco); }
       .rec-n.hecho { border-color:var(--ac-dada); background:var(--ac-dada-sv); }
+      .rec-n.listo { border-color:var(--ac-carro); background:var(--ac-carro-sv); }
       .rec-n.sig   { border-color:var(--ac-hoy);  background:var(--ac-hoy-sv); }
       .rec-n.vacio { border-style:dashed; }
       .rec-sq { position:static; margin-bottom:5px; }
@@ -10080,7 +10125,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.331.0';
+    var APP_VERSION = '0.332.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -19738,6 +19783,11 @@
              'hay dentro o preparar la siguiente.</span></div>';
 
       h += '<div class="ct-caja-body">';
+      h += '<div class="rec-leyenda">' +
+        '<span><i class="rec-lg hecho"></i>dada</span>' +
+        '<span><i class="rec-lg listo"></i>preparada</span>' +
+        '<span><i class="rec-lg sig"></i>la siguiente</span>' +
+        '<span><i class="rec-lg vacio"></i>sin sesión</span></div>';
 
       // ── Aviso: sesiones de este nivel que no caen en ningún bloque ──
       if (huerf.length) {
@@ -19766,29 +19816,40 @@
         h += '<div class="rec-et-cab" onclick="ctApToggle(\'' + e.et.key + '\')">' +
           '<span class="rec-et-t">' + (nivelCT === 'competicion' ? '' : 'Etapa ' + (iEt + 1) + ' · ') +
             _gEsc(e.et.nombre) + '</span>' +
-          '<span class="rec-et-c">' + e.hechos + ' de ' + e.total + (completa ? ' \u2713' : '') + '</span>' +
+          '<span class="rec-et-c">' + e.hechos + ' de ' + e.total + (completa ? ' \u2713' : '') +
+            (e.listos ? ' · +' + e.listos : '') + '</span>' +
           '<span class="rec-et-chev">\u203A</span></div>';
         var algunoAb = e.nodos.some(function(nd){ return !!_ctBlAbierto[nd.it.id]; });
         h += '<div class="rec-et-body' + (algunoAb ? ' con-abierto' : '') + '">';
         if (!e.nodos.length) {
           h += '<div class="plan-bl-vacio">Este apartado no tiene bloques todavía.</div>';
         }
-        // El «siguiente» es el primer bloque en blanco de la etapa en curso:
-        // solo hay uno en toda la pantalla, para que no haya dos sitios por
-        // los que seguir.
+        // v0.332: el «siguiente» es el primer bloque SIN DAR de la etapa en
+        // curso — tenga guion preparado o no. Antes era el primero sin
+        // material, que con los guiones escritos por adelantado señalaba
+        // siempre más allá de donde de verdad vas.
         var idxSig = -1;
         if (e.et.key === etActual) {
-          for (var k = 0; k < e.nodos.length; k++) { if (!e.nodos[k].n) { idxSig = k; break; } }
+          for (var k = 0; k < e.nodos.length; k++) { if (!e.nodos[k].dado) { idxSig = k; break; } }
         }
         e.nodos.forEach(function(nd, iN){
-          var cls = nd.n ? 'hecho' : (iN === idxSig ? 'sig' : 'vacio');
+          // dada (verde) · preparada (cian) · vacía (punteada). El ámbar de
+          // «la siguiente» se suma encima de cualquiera de las tres.
+          var cls = nd.dado ? 'hecho' : (nd.n ? 'listo' : 'vacio');
+          if (iN === idxSig) cls += ' sig';
           var abBl = !!_ctBlAbierto[nd.it.id];
-          var marca = nd.n ? (nd.n > 1 ? String(nd.n) : '\u2713') : (iN === idxSig ? '\uFF0B' : '');
+          var marca;
+          if (nd.n > 1)     marca = String(nd.n);
+          else if (nd.dado) marca = '\u2713';
+          else if (nd.n)    marca = '\u25CF';
+          else              marca = (iN === idxSig) ? '\uFF0B' : '';
           var sub;
           if (nd.n) {
             var tro = [];
             if (nd.ses.length) tro.push(nd.ses.length + (nd.ses.length !== 1 ? ' sesiones' : ' sesión'));
             if (nd.cts.length) tro.push(nd.cts.length + (nd.cts.length !== 1 ? ' clases' : ' clase'));
+            tro.push(nd.dado ? 'dada' : 'preparada');
+            if (iN === idxSig) tro.push('la siguiente');
             sub = tro.join(' · ');
           } else {
             sub = (iN === idxSig) ? 'La siguiente' : 'Sin sesión todavía';
@@ -20321,21 +20382,45 @@
     var _recAvisoOpen = false;
     function recAvisoToggle() { _recAvisoOpen = !_recAvisoOpen; mostrarPlanificacion(); }
 
+    // v0.332 — QUÉ SIGNIFICA QUE UN NODO ESTÉ VERDE
+    // Hasta la v0.331 el verde quería decir «este bloque tiene material».
+    // Eso valía cuando las sesiones se escribían DESPUÉS de darlas: si
+    // existía, es que la habías dado. Ya no: ahora se preparan guiones por
+    // adelantado, así que «tener sesión» y «haberla dado» son cosas
+    // distintas y el nodo tiene que distinguirlas.
+    //
+    // DADO se deriva de lo que ya marcas en el calendario: el bloque aparece
+    // en p.compDias en un día que ya pasó. No hay un interruptor nuevo a
+    // propósito — si lo hubiera, el mismo hecho tendría dos dueños y
+    // acabarían diciendo cosas distintas.
+    function _recDados(p) {
+      var hoy = hoyLocal(), set = {};
+      Object.keys(p.compDias || {}).forEach(function(f){
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(f) || f > hoy) return;
+        (p.compDias[f] || []).forEach(function(id){ set[id] = true; });
+      });
+      return set;
+    }
+
     // Estado del recorrido: etapas → nodos, y qué sesiones han encontrado
     // sitio en algún bloque.
     function _recEstado(p, nivel) {
       var etapas = (PLAN_ETAPAS[nivel] || []).filter(function(et){ return et.tipo !== 'ciclo'; });
       var cont   = planContenido(p)[nivel] || {};
       var colocadas = {};
+      var dados = _recDados(p);
       var out = etapas.map(function(et){
         var nodos = (cont[et.key] || []).map(function(it){
           var cts = _ctDeBloque(p, nivel, it.id);
           var ses = _sesionesDeBloqueUnion(nivel, et.key, it);
           ses.forEach(function(c){ colocadas[c.id] = true; });
-          return { it:it, cts:cts, ses:ses, n:cts.length + ses.length };
+          var dado = !!dados[it.id] ||
+                     ses.some(function(c){ return !!c.trabajada; });
+          return { it:it, cts:cts, ses:ses, n:cts.length + ses.length, dado:dado };
         });
-        var hechos = nodos.filter(function(x){ return x.n > 0; }).length;
-        return { et:et, nodos:nodos, hechos:hechos, total:nodos.length };
+        var hechos = nodos.filter(function(x){ return x.dado; }).length;
+        var listos = nodos.filter(function(x){ return !x.dado && x.n > 0; }).length;
+        return { et:et, nodos:nodos, hechos:hechos, listos:listos, total:nodos.length };
       });
       return { etapas:out, colocadas:colocadas };
     }
