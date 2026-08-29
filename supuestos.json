@@ -1,0 +1,288 @@
+{
+  "generado": "2026-08-29 18:18",
+  "aviso": "GENERADO desde el vault (09 NORMATIVA/supuestos). No editar a mano: se pierde en la siguiente generación.",
+  "niveles": [
+    "iniciacion",
+    "avanzado",
+    "competicion"
+  ],
+  "supuestos": [
+    {
+      "id": "sale-por-la-puerta",
+      "tema": "Límites de la pista",
+      "nivel": [
+        "iniciacion",
+        "avanzado",
+        "competicion"
+      ],
+      "arbitro": "ambos",
+      "regla": "FIP · Reglas 13.d, 13.e, 14.d y 16",
+      "revisado": "2026-08-26",
+      "opciones": [
+        "Es mala: la bola ha salido de la pista",
+        "Se repite el punto",
+        "El punto es del rival"
+      ],
+      "correcta": 2,
+      "titulo": "Bota en mi campo y se va por la puerta",
+      "situacion": [
+        "La bola bota bien en tu campo, sale disparada y se va **por la puerta** o por encima del cristal. Tú dices «ha salido, es mala»."
+      ],
+      "porque": [
+        "Se pierde el tanto cuando la pelota, **después de botar correctamente en el campo propio**, sale por encima de los límites de la pista o por la puerta (Regla 13.d). Que se vaya fuera no la convierte en mala: **ya había botado dentro**. Y para el que golpeó es devolución correcta (Regla 14.d).",
+        "**Con juego exterior autorizado** cambia (Regla 13.e y Regla 16): si sale por el lateral o por la puerta y la pista tiene zona de seguridad, puedes salir a buscarla y solo pierdes al segundo bote. Por encima de la **pared del fondo**, no: ahí se pierde igual."
+      ],
+      "protocolo": [
+        "Esto **no se canta**: se juega. Cantarlo es pararte tú solo el punto.",
+        "Antes de empezar el partido, mira si la pista permite juego exterior. Cambia",
+        "la respuesta y es lo primero que se discute cuando pasa.",
+        "Sin acuerdo, juez árbitro principal."
+      ],
+      "coach": [
+        "Si veo que el grupo no lo tiene claro, lo aviso **antes** del partido, no durante. Es el caso que más puntos regala por desconocimiento."
+      ],
+      "error": [
+        "Cantar «fuera» al ver salir la bola de la pista, sin haber mirado dónde botó. El bote es lo único que cuenta."
+      ]
+    },
+    {
+      "id": "tiempos-entre-puntos",
+      "tema": "Tiempos",
+      "nivel": [
+        "iniciacion",
+        "avanzado",
+        "competicion"
+      ],
+      "arbitro": "con",
+      "regla": "FIP · Regla 2, puntos 4 a 10",
+      "revisado": "2026-08-26",
+      "opciones": [
+        "20 s entre puntos, 90 s en el cambio de lado y 120 s al final del set",
+        "25 s entre puntos y 60 s en todos los descansos",
+        "No hay tiempo fijo mientras el juego sea continuo"
+      ],
+      "correcta": 0,
+      "titulo": "Cuánto tiempo tengo entre punto y punto",
+      "situacion": [
+        "Vas perdiendo, quieres bajar el ritmo, y el rival empieza a meterte prisa. ¿Cuánto puedes tardar de verdad?"
+      ],
+      "porque": [
+        "Los tiempos son fijos y se cuentan desde que acaba un punto hasta que se inicia el saque del siguiente:",
+        "**20 segundos** entre puntos.",
+        "**90 segundos** al cambiar de lado.",
+        "**120 segundos** al final de cada set.",
+        "**20 segundos** para los cambios de campo dentro del tie-break.",
+        "Y hay dos momentos **sin descanso ninguno**: después del **primer juego de cada set** y **durante todo el tie-break** — ahí se cambia de lado y se sigue.",
+        "Entre el primer y el segundo servicio **no hay pausa**: el juego debe ser continuo."
+      ],
+      "protocolo": [
+        "Los 20 segundos son un máximo, no un derecho a agotarlos siempre: demorar sin",
+        "causa razonable es sancionable.",
+        "Con árbitro, él los cuenta. Sin árbitro, se aplica el sentido común y la",
+        "cortesía; si el rival se demora sistemáticamente, se avisa una vez y después se llama al juez árbitro."
+      ],
+      "coach": [
+        "Los descansos son el único momento en que puedo hablar con ellos. Saber cuáles son de verdad —y cuáles no existen, como el del primer juego del set— cambia cómo preparo lo que les voy a decir."
+      ],
+      "error": [
+        "Contar con un descanso después del primer juego del set. No existe: se cambia de lado y se juega."
+      ]
+    },
+    {
+      "id": "consejos-coach",
+      "tema": "Conducta",
+      "nivel": [
+        "avanzado",
+        "competicion"
+      ],
+      "arbitro": "con",
+      "regla": "FIP · Normas de etiqueta y conducta; Tabla de penalizaciones",
+      "revisado": "2026-08-26",
+      "opciones": [
+        "El técnico puede dar instrucciones en cualquier momento del partido",
+        "Solo en los descansos, y sus sanciones se suman a las de la pareja",
+        "No puede hablar en ningún momento del partido"
+      ],
+      "correcta": 1,
+      "titulo": "El coach me habla desde fuera",
+      "situacion": [
+        "Estás dirigiendo a tu pareja desde fuera de la pista. En mitad de un punto les cantas la táctica y la pareja rival protesta al árbitro."
+      ],
+      "porque": [
+        "Cada pareja puede recibir consejos e instrucciones de un **técnico acreditado**, pero **solo en los tiempos de descanso**. Fuera de ahí, no.",
+        "Y lo que casi nadie sabe: **las infracciones del técnico se acumulan con las de los jugadores**. Con la tabla de penalizaciones en la mano, eso significa que la segunda infracción es **advertencia con pérdida de punto** y la tercera, **descalificación** — aunque las tres las haya cometido el coach."
+      ],
+      "protocolo": [
+        "Hablar solo en el cambio de lado y al final del set.",
+        "Estar acreditado. Si no lo estás, no puedes dar instrucciones en absoluto.",
+        "Ante una protesta, callarse y dejar que decida el árbitro. Discutirlo es la",
+        "segunda infracción."
+      ],
+      "coach": [
+        "Este supuesto va sobre mí. Merece la pena leerlo entero antes de cada torneo: mi entusiasmo puede costarle un punto a mi pareja, y en un tercer set eso es el partido."
+      ],
+      "error": [
+        "Dar una indicación «rápida» durante el punto pensando que no cuenta, y sumar una infracción que se acumula con las que ya tengan los jugadores."
+      ]
+    },
+    {
+      "id": "huevo-vs-pared",
+      "tema": "Devolución correcta",
+      "nivel": [
+        "avanzado",
+        "competicion"
+      ],
+      "arbitro": "ambos",
+      "regla": "FIP · Reglas 14.i y 13.g",
+      "revisado": "2026-08-26",
+      "opciones": [
+        "Las dos son buenas: la pared es parte de la pista",
+        "Las dos son punto perdido",
+        "La del ángulo es buena; la que da en la pared sin botar, no"
+      ],
+      "correcta": 2,
+      "titulo": "El huevo contra la pared sin botar",
+      "situacion": [
+        "Dos jugadas que se parecen muchísimo y acaban al revés:",
+        "**A)** Tu bola bota en el campo contrario justo en el ángulo que forman la pared y el suelo — el famoso **huevo**.",
+        "**B)** Tu bola llega a la pared del campo contrario **sin haber botado antes en el suelo**, aunque haya rebotado primero en tu propia pared."
+      ],
+      "porque": [
+        "**A es buena.** Si la pelota bota en el ángulo (esquina) formado por una pared y el suelo del campo contrario, la devolución es correcta (Regla 14.i — el reglamento la llama «huevo» con ese nombre).",
+        "**B es punto perdido.** Se pierde el tanto si devuelves la pelota, directamente o tras golpear en las paredes de tu campo, de forma que **sin botar** golpee cualquier pared del campo contrario o la malla (Regla 13.g).",
+        "**La diferencia es una sola:** si botó en el suelo del campo contrario antes de tocar la pared. Todo lo demás se ve igual desde el otro lado de la red, y por eso es el caso que más se discute."
+      ],
+      "protocolo": [
+        "Lo canta **la pareja en cuyo campo ocurre**: son los que ven si hubo bote.",
+        "Si dudas, **es buena** — la duda va a favor del rival.",
+        "Sin acuerdo, juez árbitro principal.",
+        "Con árbitro: se juega y se reclama al terminar el punto."
+      ],
+      "coach": [
+        "Es el caso perfecto para entrenar el ojo: en una clase, poner a los de fondo a cantar «bote» o «pared» en voz alta durante unos minutos. Se aprende mirando, no explicando."
+      ],
+      "error": [
+        "Dar por buena B porque «ha ido a la pared, como el huevo». La pared del campo contrario solo entra en juego **después** del bote."
+      ]
+    },
+    {
+      "id": "bola-parada",
+      "tema": "Bote y bola dudosa",
+      "nivel": [
+        "iniciacion",
+        "avanzado",
+        "competicion"
+      ],
+      "arbitro": "ambos",
+      "regla": "FIP · Reglas 8.5, 13 y 14",
+      "revisado": "2026-08-26",
+      "opciones": [
+        "Se repite el punto, porque hay desacuerdo",
+        "El punto es de los rivales",
+        "El punto es tuyo: se iba fuera"
+      ],
+      "correcta": 1,
+      "titulo": "La paró porque iba fuera",
+      "situacion": [
+        "Tu rival golpea largo. Tu compañero **para la bola con la pala** antes de que bote, convencido de que se iba fuera. Los rivales dicen que entraba."
+      ],
+      "porque": [
+        "Una bola que **no ha botado** no se puede juzgar: todavía no ha pasado nada. Al tocarla con la pala la estás **devolviendo**, y si esa devolución no cumple la Regla 14 el punto se pierde.",
+        "En el resto es aún más claro: si el restador o su compañero tocan la pelota con la pala **antes de que bote**, el tanto es del sacador (Regla 8.5, explícito)."
+      ],
+      "protocolo": [
+        "Sin árbitro: cada pareja canta **solo su campo**. Una bola que iba a tu campo",
+        "y no botó, no la canta nadie: no existe.",
+        "Si dudas de una bola que sí botó en tu campo, **es buena**. La duda va a",
+        "favor del rival.",
+        "Se canta **al instante**, no después de ver dónde cae tu golpe.",
+        "Sin acuerdo, se llama al **juez árbitro principal**, que decide tras oír a",
+        "las dos partes.",
+        "Con árbitro: no se discute durante el punto. Se juega y se reclama al final."
+      ],
+      "coach": [
+        "No entro a discutir la bola: no es mi campo ni mi decisión. Recuerdo el criterio en voz neutra, corto la discusión y mando seguir. Solo puedo dar instrucciones **en los descansos**, y mis sanciones **se suman a las de la pareja**: meterme en la discusión les puede costar el punto."
+      ],
+      "error": [
+        "Parar la bola «para demostrar» que iba fuera. Es la forma más rápida de regalar un punto que era tuyo."
+      ]
+    },
+    {
+      "id": "llegar-tarde",
+      "tema": "Tiempos",
+      "nivel": [
+        "avanzado",
+        "competicion"
+      ],
+      "arbitro": "con",
+      "regla": "FIP · Regla 2, puntos 1 y 2",
+      "revisado": "2026-08-26",
+      "opciones": [
+        "Se pierde el partido a los 10 minutos de la hora prevista",
+        "Se pierde un juego por cada 5 minutos de retraso",
+        "Se puede llegar tarde mientras el rival acepte esperar"
+      ],
+      "correcta": 0,
+      "titulo": "Llego tarde al partido",
+      "situacion": [
+        "Tu pareja va con el tiempo justo. El partido anterior ha terminado antes de lo previsto y os están llamando por megafonía."
+      ],
+      "porque": [
+        "El Juez Árbitro da el partido por perdido (**W.O.**) a la pareja que no esté en pista y lista para jugar **10 minutos después de la hora prevista** — salvo que él considere que hay fuerza mayor (Regla 2.1).",
+        "Y ojo con «la hora prevista»: cuando el torneo va **por turnos**, la hora prevista es **cinco minutos después de que acabe el partido anterior**. Es decir, el reloj puede empezar a correr antes de lo que pone en el cuadro.",
+        "Además, el **peloteo de cortesía de 5 minutos es obligatorio** y va dentro del partido: no es tiempo tuyo para calentar tranquilo."
+      ],
+      "protocolo": [
+        "En torneos por turnos, estar en la instalación mucho antes y seguir el",
+        "partido de delante.",
+        "Si hay un problema real de camino, avisar al juez árbitro **antes** de que se",
+        "agote el plazo, no después."
+      ],
+      "coach": [
+        "Es mi responsabilidad avisar del formato por turnos el día antes. Los jugadores miran la hora del cuadro y se confían."
+      ],
+      "error": [
+        "Calcular la llegada con la hora del cuadro en un torneo por turnos, y presentarse cuando ya han pasado los 10 minutos desde que acabó el anterior."
+      ]
+    },
+    {
+      "id": "asistencia-medica",
+      "tema": "Tiempos",
+      "nivel": [
+        "competicion"
+      ],
+      "arbitro": "con",
+      "regla": "FIP · Regla 2, puntos 17 a 20",
+      "revisado": "2026-08-26",
+      "opciones": [
+        "Tres minutos, y puede pedirlos otra vez más adelante en el partido",
+        "Tres minutos, una sola vez, y no se los puede ceder a su compañero",
+        "El tiempo que decida el fisio",
+        "Cinco minutos, como en el peloteo de cortesía"
+      ],
+      "correcta": 1,
+      "titulo": "Los tres minutos de asistencia médica",
+      "situacion": [
+        "Tu jugador se hace daño en el gemelo a mitad del segundo set y pide asistencia. Su compañero, que estaba tocado de antes, dice: «pídela tú, que yo ya la usé»."
+      ],
+      "porque": [
+        "Con una lesión o una condición médica tratable se conceden **3 minutos** de atención. Esa atención **solo se dispensa una vez por jugador** y **no se puede ceder al compañero** (Regla 2.18).",
+        "Después puede volver a recibir atención en **los dos descansos siguientes**, pero dentro del tiempo reglamentario de esos descansos — no son tres minutos nuevos.",
+        "Y hay un límite que no depende de nadie: **si hay una herida sangrante, no se puede continuar** hasta que deje de sangrar (Regla 2.20)."
+      ],
+      "protocolo": [
+        "Se pide al juez árbitro, no al fisio directamente.",
+        "Antes de pedirla, decidir si merece la pena: es el único turno del jugador en",
+        "todo el partido.",
+        "Si el problema es de calor o calambres y quedan pocos juegos, muchas veces",
+        "compensa esperar al descanso de cambio de campo, que es gratis."
+      ],
+      "coach": [
+        "Es donde más se pierden partidos por desconocimiento. Lo repaso **antes** del torneo, no en mitad de un partido: en ese momento el jugador no está para escuchar reglas."
+      ],
+      "error": [
+        "Gastar el turno en el primer set por algo menor, y quedarse sin él cuando de verdad hace falta. Y creer que se puede «prestar» al compañero."
+      ]
+    }
+  ]
+}
