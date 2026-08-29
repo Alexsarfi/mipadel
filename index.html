@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.332.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.333.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,31 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.333.0 — Normativa: los supuestos de pista (2026-08)
+    (sin migraciones · no toca ningún dato existente)
+    · SECCIÓN NUEVA, DENTRO DE PARTIDO. Tercera tarjeta junto a Marcador y
+      Actas. Va ahí porque es donde nace la duda: cuando la tienes, estás en un
+      partido. Y así la barra de abajo se queda con sus cinco botones — un
+      sexto la aprieta y esto no compite con Asistencia ni con Plan.
+    · DOS VISTAS DE LOS MISMOS CASOS:
+        · Resuélvelo — el caso, tres opciones, eliges y sale la respuesta con
+          el protocolo del jugador y qué hace el coach. Para la escuela. Con
+          botón de caso al azar, para plantearlo en un descanso.
+        · Consulta — la lista, directa a la respuesta. Para el partido.
+    · LOS CASOS NO SE ESCRIBEN EN LA APP. Viven en el vault, en
+      09 NORMATIVA/supuestos/, y llegan con `python3 gen_supuestos.py`, que
+      reescribe el bloque SUPUESTOS de este archivo entre sus dos marcas. El
+      bloque está generado y lo avisa: lo que se edite ahí se pierde.
+      Un solo dueño — el vault escribe, la app enseña.
+    · POR QUÉ NO PASA POR SUPABASE: un supuesto no cambia cada semana y no lo
+      edita nadie más. No necesita tabla, ni migración, ni tocar
+      sync_padel.py. Si algún día lo editan otros entrenadores, entonces sí.
+    · CADA CASO LLEVA SU REGLA Y SU FECHA DE REVISIÓN, y la pantalla avisa de
+      que es un resumen y de que manda el texto oficial de la FIP y la FEP. No
+      se copia el reglamento dentro de la app: es de ellos y además cambia.
+    · Empieza con tres casos: la bola parada «porque iba fuera», la que bota en
+      tu campo y sale por la puerta, y el «huevo» contra la pared sin botar.
 
   v0.332.0 — Preparada no es lo mismo que dada (2026-08)
     (⚠️ MIGRACIÓN: migraciones/migracion_sesion_sin_fecha.sql, ejecutar ANTES
@@ -7655,6 +7680,56 @@
     .rec-aviso-det code { font-family:ui-monospace,Menlo,monospace; font-size:11.5px;
       background:var(--arena); padding:1px 5px; border-radius:4px; color:var(--texto); }
     .rec-aviso-ses { margin:6px 0 0; padding-left:16px; }
+    /* ══ v0.333 — NORMATIVA ══════════════════════════════════════════ */
+    .nrm-vista { display:flex; gap:0; margin:0 auto 12px 0; width:max-content;
+      border:1.5px solid var(--borde); border-radius:9px; overflow:hidden; }
+    .nrm-vista-b { font-family:inherit; font-size:12px; font-weight:700; color:var(--gris);
+      padding:6px 14px; border:none; background:var(--blanco); cursor:pointer; }
+    .nrm-vista-b.on { color:#fff; background:var(--ac-carro); }
+    .nrm-card { border:1.5px solid var(--borde); border-radius:var(--r-md);
+      background:var(--blanco); padding:14px 15px; margin-bottom:12px; }
+    .nrm-tags { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:9px; }
+    .nrm-tag { font-size:11px; font-weight:700; border-radius:999px; padding:2px 9px;
+      color:var(--ac-carro-tx); background:var(--ac-carro-sv); }
+    .nrm-tag.arb { color:var(--gris); background:var(--arena); }
+    .nrm-cuenta { margin-left:auto; font-size:11.5px; color:var(--gris); font-weight:700; }
+    .nrm-sit { font-size:15px; line-height:1.5; color:var(--texto); margin-bottom:12px; }
+    .nrm-preg { font-size:10.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase;
+      color:var(--gris); margin-bottom:7px; }
+    .nrm-op { width:100%; text-align:left; font-family:inherit; font-size:13.5px; line-height:1.35;
+      color:var(--texto); background:var(--blanco); border:1.5px solid var(--borde);
+      border-radius:var(--r-sm); padding:10px 12px; margin-bottom:7px; cursor:pointer;
+      transition:border-color var(--tr), background var(--tr); }
+    .nrm-op:active { transform:scale(0.99); }
+    .nrm-op.bien { border-color:var(--ac-dada); background:var(--ac-dada-sv); color:var(--ac-dada-tx); }
+    .nrm-op.mal  { border-color:#ef4444; background:#fef2f2; color:#991b1b; }
+    .nrm-op[disabled] { cursor:default; }
+    .nrm-res { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:800;
+      color:var(--texto); margin:4px 0 10px; }
+    .nrm-sec { border-top:1.5px solid var(--borde); padding-top:11px; margin-top:11px; }
+    .nrm-sec-t { font-size:10.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase;
+      color:var(--gris); margin-bottom:7px; }
+    .nrm-p { font-size:13.5px; line-height:1.55; color:var(--texto); margin-bottom:7px; }
+    .nrm-p:last-child { margin-bottom:0; }
+    .nrm-paso { display:flex; gap:9px; font-size:13.5px; line-height:1.5; margin-bottom:6px; }
+    .nrm-num { flex-shrink:0; width:19px; height:19px; border-radius:6px; margin-top:2px;
+      background:var(--ac-carro-sv); color:var(--ac-carro-tx); font-size:11px; font-weight:800;
+      display:flex; align-items:center; justify-content:center; }
+    .nrm-error { border:1.5px solid var(--ac-hoy); background:var(--ac-hoy-sv);
+      border-radius:var(--r-sm); padding:10px 12px; margin-top:11px;
+      font-size:13px; line-height:1.5; color:var(--ac-hoy-tx); }
+    .nrm-pie { display:flex; align-items:center; gap:8px; margin-top:12px; }
+    .nrm-regla { font-size:11px; color:var(--gris); }
+    .nrm-fila { display:flex; align-items:center; gap:10px; padding:11px 12px; cursor:pointer;
+      border:1.5px solid var(--borde); border-radius:var(--r-md); background:var(--blanco);
+      margin-bottom:8px; }
+    .nrm-fila-t { flex:1; min-width:0; }
+    .nrm-fila-n { font-size:14px; font-weight:700; color:var(--texto); line-height:1.3; }
+    .nrm-fila-m { font-size:11.5px; color:var(--gris); margin-top:2px; }
+    .nrm-aviso { font-size:11px; line-height:1.5; color:var(--gris); margin-top:14px; }
+    .nrm-aviso a { color:var(--ac-carro-tx); }
+    .nrm-vacio { font-size:13px; color:var(--gris); line-height:1.55; padding:14px;
+      border:1.5px dashed var(--borde); border-radius:var(--r-md); }
     .rec-leyenda { display:flex; gap:12px; flex-wrap:wrap; align-items:center;
       font-size:10.5px; color:var(--gris); margin:0 0 10px; }
     .rec-lg { display:inline-block; width:9px; height:9px; border-radius:3px;
@@ -9103,8 +9178,40 @@
             </div>
             <div class="menu-flecha">›</div>
           </div>
+          <!-- v0.333: la normativa vive en Partido porque es donde nace la
+               duda: cuando la tienes, estás en un partido. Y así la barra de
+               abajo se queda con sus cinco botones. -->
+          <div class="tarjeta-menu" onclick="irA('pantalla-normativa')">
+            <div class="menu-icono partido"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M9 7.5h6M9 11h4"/></svg></div>
+            <div class="menu-texto">
+              <div class="menu-nombre">Normativa</div>
+              <div class="menu-desc" id="home-desc-nm">Supuestos de pista y reglamento</div>
+            </div>
+            <div class="menu-flecha">›</div>
+          </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ══ NORMATIVA — SUPUESTOS DE PISTA ═══════════ -->
+  <div id="pantalla-normativa" class="pantalla">
+    <div class="cabecera">
+      <button class="btn-volver" onclick="irA('pantalla-partido')">‹ Partido</button>
+      <div class="cab-titulo">Normativa</div>
+      <div class="cab-sub">Lo que se discute en pista, resuelto</div>
+    </div>
+    <div class="contenido">
+      <div class="nrm-vista">
+        <button type="button" class="nrm-vista-b" id="nrm-vb-jugar" onclick="nrmVista('jugar')">Resuélvelo</button>
+        <button type="button" class="nrm-vista-b" id="nrm-vb-lista" onclick="nrmVista('lista')">Consulta</button>
+      </div>
+      <div id="normativa-cuerpo"></div>
+      <p class="nrm-aviso">Resumen con mis palabras, no el reglamento. Ante cualquier duda
+        manda el texto oficial de la <a href="https://www.padelfip.com/wp-content/uploads/2023/09/2-Reglamento-Juego.pdf"
+        target="_blank" rel="noopener">FIP</a> y el
+        <a href="https://www.padelfederacion.es/refs/docs/REGLAMENTO%20T%C3%89CNICO%20GENERAL%202025%20COMISI%C3%93N%20GESTORA%2016.01.25.pdf"
+        target="_blank" rel="noopener">Reglamento Técnico de la FEP</a>.</p>
     </div>
   </div>
 
@@ -10125,7 +10232,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.332.0';
+    var APP_VERSION = '0.333.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -20373,6 +20480,182 @@
     // Viven en el plan del grupo (son del club) y cada una lleva su nivel:
     // solo aparecen en la pantalla de planificación de ese nivel.
     var _ctAbierta = null;   // v0.286: sin buscador ni orden — mandan área y bloque
+
+    // ══════════════════════════════════════════════════════════════
+    // v0.333 — NORMATIVA: SUPUESTOS DE PISTA
+    // ══════════════════════════════════════════════════════════════
+    // Los casos NO se escriben aquí: viven en el vault, en
+    // 09 NORMATIVA/supuestos/, y llegan con `python3 gen_supuestos.py`.
+    // El bloque de abajo está generado y lleva su propio aviso.
+    // Un solo dueño: el vault escribe, la app enseña.
+    //
+    // Dos vistas de los mismos datos: «Resuélvelo» (el caso, eliges, y sale
+    // el protocolo) para la escuela, y «Consulta» (la lista, directa a la
+    // respuesta) para cuando la duda la tienes en mitad de un partido.
+
+    /* ══ SUPUESTOS — GENERADO, NO EDITAR A MANO ══════════════════
+       Se genera con gen_supuestos.py desde el vault:
+       09 NORMATIVA/supuestos/*.md — ahí se escriben y se corrigen.
+       Lo que se edite AQUÍ se pierde en la siguiente generación. */
+    var SUPUESTOS = [
+      {"id": "sale-por-la-puerta", "tema": "Límites de la pista", "arbitro": "ambos", "regla": "FIP · Reglas 13.d, 13.e, 14.d y 16", "revisado": "2026-08-26", "opciones": ["Es mala: la bola ha salido de la pista", "Se repite el punto", "El punto es del rival"], "correcta": 2, "titulo": "Bota en mi campo y se va por la puerta", "situacion": ["La bola bota bien en tu campo, sale disparada y se va **por la puerta** o por encima del cristal. Tú dices «ha salido, es mala»."], "porque": ["Se pierde el tanto cuando la pelota, **después de botar correctamente en el campo propio**, sale por encima de los límites de la pista o por la puerta (Regla 13.d). Que se vaya fuera no la convierte en mala: **ya había botado dentro**. Y para el que golpeó es devolución correcta (Regla 14.d).", "**Con juego exterior autorizado** cambia (Regla 13.e y Regla 16): si sale por el lateral o por la puerta y la pista tiene zona de seguridad, puedes salir a buscarla y solo pierdes al segundo bote. Por encima de la **pared del fondo**, no: ahí se pierde igual."], "protocolo": ["Esto **no se canta**: se juega. Cantarlo es pararte tú solo el punto.", "Antes de empezar el partido, mira si la pista permite juego exterior. Cambia", "la respuesta y es lo primero que se discute cuando pasa.", "Sin acuerdo, juez árbitro principal."], "coach": ["Si veo que el grupo no lo tiene claro, lo aviso **antes** del partido, no durante. Es el caso que más puntos regala por desconocimiento."], "error": ["Cantar «fuera» al ver salir la bola de la pista, sin haber mirado dónde botó. El bote es lo único que cuenta."]},
+      {"id": "huevo-vs-pared", "tema": "Devolución correcta", "arbitro": "ambos", "regla": "FIP · Reglas 14.i y 13.g", "revisado": "2026-08-26", "opciones": ["Las dos son buenas: la pared es parte de la pista", "Las dos son punto perdido", "La del ángulo es buena; la que da en la pared sin botar, no"], "correcta": 2, "titulo": "El huevo contra la pared sin botar", "situacion": ["Dos jugadas que se parecen muchísimo y acaban al revés:", "**A)** Tu bola bota en el campo contrario justo en el ángulo que forman la pared y el suelo — el famoso **huevo**.", "**B)** Tu bola llega a la pared del campo contrario **sin haber botado antes en el suelo**, aunque haya rebotado primero en tu propia pared."], "porque": ["**A es buena.** Si la pelota bota en el ángulo (esquina) formado por una pared y el suelo del campo contrario, la devolución es correcta (Regla 14.i — el reglamento la llama «huevo» con ese nombre).", "**B es punto perdido.** Se pierde el tanto si devuelves la pelota, directamente o tras golpear en las paredes de tu campo, de forma que **sin botar** golpee cualquier pared del campo contrario o la malla (Regla 13.g).", "**La diferencia es una sola:** si botó en el suelo del campo contrario antes de tocar la pared. Todo lo demás se ve igual desde el otro lado de la red, y por eso es el caso que más se discute."], "protocolo": ["Lo canta **la pareja en cuyo campo ocurre**: son los que ven si hubo bote.", "Si dudas, **es buena** — la duda va a favor del rival.", "Sin acuerdo, juez árbitro principal.", "Con árbitro: se juega y se reclama al terminar el punto."], "coach": ["Es el caso perfecto para entrenar el ojo: en una clase, poner a los de fondo a cantar «bote» o «pared» en voz alta durante unos minutos. Se aprende mirando, no explicando."], "error": ["Dar por buena B porque «ha ido a la pared, como el huevo». La pared del campo contrario solo entra en juego **después** del bote."]},
+      {"id": "bola-parada", "tema": "Bote y bola dudosa", "arbitro": "ambos", "regla": "FIP · Reglas 8.5, 13 y 14", "revisado": "2026-08-26", "opciones": ["Se repite el punto, porque hay desacuerdo", "El punto es de los rivales", "El punto es tuyo: se iba fuera"], "correcta": 1, "titulo": "La paró porque iba fuera", "situacion": ["Tu rival golpea largo. Tu compañero **para la bola con la pala** antes de que bote, convencido de que se iba fuera. Los rivales dicen que entraba."], "porque": ["Una bola que **no ha botado** no se puede juzgar: todavía no ha pasado nada. Al tocarla con la pala la estás **devolviendo**, y si esa devolución no cumple la Regla 14 el punto se pierde.", "En el resto es aún más claro: si el restador o su compañero tocan la pelota con la pala **antes de que bote**, el tanto es del sacador (Regla 8.5, explícito)."], "protocolo": ["Sin árbitro: cada pareja canta **solo su campo**. Una bola que iba a tu campo", "y no botó, no la canta nadie: no existe.", "Si dudas de una bola que sí botó en tu campo, **es buena**. La duda va a", "favor del rival.", "Se canta **al instante**, no después de ver dónde cae tu golpe.", "Sin acuerdo, se llama al **juez árbitro principal**, que decide tras oír a", "las dos partes.", "Con árbitro: no se discute durante el punto. Se juega y se reclama al final."], "coach": ["No entro a discutir la bola: no es mi campo ni mi decisión. Recuerdo el criterio en voz neutra, corto la discusión y mando seguir. Solo puedo dar instrucciones **en los descansos**, y mis sanciones **se suman a las de la pareja**: meterme en la discusión les puede costar el punto."], "error": ["Parar la bola «para demostrar» que iba fuera. Es la forma más rápida de regalar un punto que era tuyo."]},
+    ];
+    /* ══ FIN SUPUESTOS ═══════════════════════════════════════════ */
+
+    var _nrmVista   = 'jugar';   // 'jugar' | 'lista'
+    var _nrmIdx     = 0;         // qué caso se está jugando
+    var _nrmElegida = -1;        // qué opción se ha tocado (-1 = ninguna)
+    var _nrmAbierto = {};        // en Consulta, qué fichas están desplegadas
+
+    function nrmVista(v) {
+      _nrmVista = (v === 'lista') ? 'lista' : 'jugar';
+      try { localStorage.setItem('padel-nrm-vista', _nrmVista); } catch (e) {}
+      mostrarNormativa();
+    }
+    (function(){
+      try { var v = localStorage.getItem('padel-nrm-vista'); if (v) _nrmVista = v; } catch (e) {}
+    })();
+
+    function nrmResponder(i) {
+      if (_nrmElegida >= 0) return;   // ya respondida: no se cambia
+      _nrmElegida = i;
+      mostrarNormativa();
+    }
+    function nrmSiguiente() {
+      if (!SUPUESTOS.length) return;
+      _nrmIdx = (_nrmIdx + 1) % SUPUESTOS.length;
+      _nrmElegida = -1;
+      mostrarNormativa();
+    }
+    function nrmAlAzar() {
+      if (SUPUESTOS.length < 2) return nrmSiguiente();
+      var n = _nrmIdx;
+      while (n === _nrmIdx) n = Math.floor(Math.random() * SUPUESTOS.length);
+      _nrmIdx = n; _nrmElegida = -1;
+      mostrarNormativa();
+    }
+    function nrmFichaToggle(id) { _nrmAbierto[id] = !_nrmAbierto[id]; mostrarNormativa(); }
+    function nrmJugarEste(id) {
+      for (var i = 0; i < SUPUESTOS.length; i++) {
+        if (SUPUESTOS[i].id === id) { _nrmIdx = i; break; }
+      }
+      _nrmElegida = -1; _nrmVista = 'jugar';
+      mostrarNormativa();
+    }
+
+    var _NRM_ARB = { ambos:'Con y sin árbitro', sin:'Solo sin árbitro', con:'Solo con árbitro' };
+
+    // Los cinco apartados de la ficha, tal como los da el generador.
+    function _nrmSecciones(sp, conProtocolo) {
+      var h = '';
+      if (sp.porque && sp.porque.length) {
+        h += '<div class="nrm-sec"><div class="nrm-sec-t">Por qué</div>';
+        sp.porque.forEach(function(t){ h += '<p class="nrm-p">' + _nrmTexto(t) + '</p>'; });
+        h += '</div>';
+      }
+      if (conProtocolo && sp.protocolo && sp.protocolo.length) {
+        h += '<div class="nrm-sec"><div class="nrm-sec-t">Protocolo del jugador</div>';
+        sp.protocolo.forEach(function(t, i){
+          h += '<div class="nrm-paso"><span class="nrm-num">' + (i + 1) + '</span>' +
+               '<span>' + _nrmTexto(t) + '</span></div>';
+        });
+        h += '</div>';
+      }
+      if (conProtocolo && sp.coach && sp.coach.length) {
+        h += '<div class="nrm-sec"><div class="nrm-sec-t">Qué hago yo como coach</div>';
+        sp.coach.forEach(function(t){ h += '<p class="nrm-p">' + _nrmTexto(t) + '</p>'; });
+        h += '</div>';
+      }
+      if (sp.error && sp.error.length) {
+        h += '<div class="nrm-error"><b>El error típico:</b> ' +
+             sp.error.map(_nrmTexto).join(' ') + '</div>';
+      }
+      return h;
+    }
+
+    // Markdown mínimo: **negrita**. Se escapa ANTES, así que no entra HTML.
+    function _nrmTexto(t) {
+      return _gEsc(String(t || '')).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+    }
+
+    function _nrmCabecera(sp, extra) {
+      return '<div class="nrm-tags">' +
+        '<span class="nrm-tag">' + _gEsc(sp.tema) + '</span>' +
+        '<span class="nrm-tag arb">' + _gEsc(_NRM_ARB[sp.arbitro] || sp.arbitro) + '</span>' +
+        (extra ? '<span class="nrm-cuenta">' + extra + '</span>' : '') + '</div>';
+    }
+
+    function mostrarNormativa() {
+      var cont = document.getElementById('normativa-cuerpo');
+      if (!cont) return;
+      ['jugar','lista'].forEach(function(v){
+        var b = document.getElementById('nrm-vb-' + v);
+        if (b) b.className = 'nrm-vista-b' + (_nrmVista === v ? ' on' : '');
+      });
+
+      if (!SUPUESTOS.length) {
+        cont.innerHTML = '<div class="nrm-vacio">Todavía no hay supuestos. Se escriben en el ' +
+          'vault, en <b>09 NORMATIVA/supuestos/</b>, y llegan aquí ejecutando ' +
+          '<b>python3 gen_supuestos.py</b>.</div>';
+        return;
+      }
+
+      var h = '';
+      if (_nrmVista === 'jugar') {
+        if (_nrmIdx >= SUPUESTOS.length) _nrmIdx = 0;
+        var sp = SUPUESTOS[_nrmIdx];
+        var resuelto = _nrmElegida >= 0;
+        h += '<div class="nrm-card">';
+        h += _nrmCabecera(sp, (_nrmIdx + 1) + ' de ' + SUPUESTOS.length);
+        h += '<div class="nrm-sit">' + sp.situacion.map(_nrmTexto).join(' ') + '</div>';
+        h += '<div class="nrm-preg">¿Qué pasa con el punto?</div>';
+        sp.opciones.forEach(function(op, i){
+          var cls = 'nrm-op';
+          if (resuelto && i === sp.correcta)      cls += ' bien';
+          else if (resuelto && i === _nrmElegida) cls += ' mal';
+          h += '<button type="button" class="' + cls + '"' + (resuelto ? ' disabled' : '') +
+               ' onclick="nrmResponder(' + i + ')">' + _gEsc(op) + '</button>';
+        });
+        if (resuelto) {
+          var ok = _nrmElegida === sp.correcta;
+          h += '<div class="nrm-res"><span>' + (ok ? '✓' : '✕') + '</span>' +
+               '<span>' + (ok ? '¡Correcto!' : _gEsc(sp.opciones[sp.correcta])) + '</span></div>';
+          h += _nrmSecciones(sp, true);
+          h += '<div class="nrm-pie">' +
+               '<span class="nrm-regla">' + _gEsc(sp.regla || '') +
+                 (sp.revisado ? ' · revisado ' + _gEsc(sp.revisado) : '') + '</span></div>';
+        }
+        h += '</div>';
+        h += '<div style="display:flex;gap:8px;">' +
+          '<button class="btn btn-sec" style="flex:1;" onclick="nrmSiguiente()">Siguiente caso ›</button>' +
+          '<button class="btn btn-sec" style="width:auto;" onclick="nrmAlAzar()" ' +
+            'title="Un caso al azar" aria-label="Al azar">🎲</button></div>';
+      } else {
+        SUPUESTOS.forEach(function(sp){
+          var ab = !!_nrmAbierto[sp.id];
+          h += '<div class="nrm-card" style="padding:0;">';
+          h += '<div class="nrm-fila" style="border:none;margin:0;" onclick="nrmFichaToggle(\'' + sp.id + '\')">' +
+            '<div class="nrm-fila-t"><div class="nrm-fila-n">' + _gEsc(sp.titulo) + '</div>' +
+            '<div class="nrm-fila-m">' + _gEsc(sp.tema) + ' · ' + _gEsc(sp.regla || '') + '</div></div>' +
+            '<span class="ct-chev">' + (ab ? '✕' : '›') + '</span></div>';
+          if (ab) {
+            h += '<div style="padding:0 15px 14px;">';
+            h += '<div class="nrm-sit">' + sp.situacion.map(_nrmTexto).join(' ') + '</div>';
+            h += '<div class="nrm-res"><span>✓</span><span>' +
+                 _gEsc(sp.opciones[sp.correcta]) + '</span></div>';
+            h += _nrmSecciones(sp, true);
+            h += '<button class="btn btn-sec" style="width:100%;margin-top:12px;" ' +
+                 'onclick="event.stopPropagation();nrmJugarEste(\'' + sp.id + '\')">Plantearlo en pista ›</button>';
+            h += '</div>';
+          }
+          h += '</div>';
+        });
+      }
+      cont.innerHTML = h;
+    }
+
     // ══ v0.330 — EL RECORRIDO ══════════════════════════════════════
     // Un nodo por BLOQUE de la ruta, no por sesión dada. Es lo que hace que
     // exista «la siguiente en blanco»: si los nodos fueran las clases dadas
@@ -22754,6 +23037,7 @@
       if (id === 'pantalla-stats-jugador')   renderStatsJugador();
       if (id === 'pantalla-actas')           mostrarActas();
       if (id === 'pantalla-importar')        resetImport();
+      if (id === 'pantalla-normativa')       mostrarNormativa();
 
       if (id === 'pantalla-gestor')                 cargarDatosGestor();
       if (id === 'pantalla-gestor-detalle')         renderGestorDetalle();
