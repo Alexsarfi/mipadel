@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.333.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.335.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,49 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.335.0 — La chuleta de normativa (2026-08)
+    (sin migraciones · no toca ningún dato existente)
+    · VUELVE NORMATIVA A PARTIDO, pero solo la mitad que sirve aquí. Es
+      CONSULTA: pregunta corta, respuesta corta y el artículo debajo. Los casos
+      con opciones —los supuestos— NO están: esos son de los alumnos y viven en
+      Google Forms. Mismo origen en el vault, dos destinatarios distintos.
+    · POR QUÉ ASÍ Y NO COMO LA v0.333: aquella eran fichas para LEER, y en un
+      partido no se lee. Tienes una duda concreta y treinta segundos. Ahora se
+      entra por buscador o por bloque, y la respuesta está en la primera línea.
+    · TRES BLOQUES para empezar, 35 entradas: Tiempos (los 20″, 90″, 120″, el
+      fisio, el W.O., cuánto puede durar una discusión), Sorteo, campos y
+      pistas (qué se sortea, quién manda sin árbitro, si te pueden cambiar de
+      pista) y Cuadros y competición (cabezas de serie, exentos, previa).
+    · EL BUSCADOR IGNORA ACENTOS Y PUNTOS, porque en pista se teclea «wo» y no
+      «W.O.», y «arbitro» sin tilde. Y al buscar, los bloques se abren solos:
+      si has escrito algo, quieres el resultado, no abrir cajones.
+    · LAS ENTRADAS NO SE ESCRIBEN AQUÍ. Vienen del vault, de
+      09 NORMATIVA/chuletas/, con `python3 _SCRIPTS/gen_chuletas.py`, que
+      reescribe el bloque CHULETAS entre sus dos marcas. El bloque está
+      generado y lo avisa: lo que se edite ahí se pierde.
+    · CADA BLOQUE LLEVA SU FECHA DE REVISIÓN y cada entrada su artículo. La
+      pantalla avisa de que es un resumen y enlaza los textos oficiales de la
+      FIP y la FEP. No se copia el reglamento dentro de la app.
+
+  v0.334.0 — La normativa se va a Google (2026-08)
+    (sin migraciones · se retira lo añadido en la v0.333, un día después)
+    · FUERA LA SECCIÓN DE NORMATIVA. Se quita entera: la tarjeta de Partido, la
+      pantalla, el JavaScript y el bloque SUPUESTOS generado.
+    · POR QUÉ, UN DÍA DESPUÉS: porque el destinatario no era el de la app. El
+      cuestionario es para los ALUMNOS —que hacen el test, reciben la
+      corrección y comentan las respuestas en clase— y esta app es del
+      entrenador. Meterlo aquí obligaba a darles algo que no es suyo.
+    · DÓNDE VIVE AHORA: los casos siguen escribiéndose en el vault
+      (09 NORMATIVA/supuestos), y `_SCRIPTS/gen_supuestos.py` genera un
+      `supuestos.json` que se sube a GitHub. Un Apps Script
+      (`_SCRIPTS/formularios_normativa.gs`) lo lee y mantiene un formulario de
+      Google POR NIVEL, en modo cuestionario, con la explicación de cada caso
+      como retroalimentación. Las respuestas caen en una hoja de cálculo.
+    · EL DUEÑO NO CAMBIA: sigue siendo el vault. Solo cambia a dónde va.
+    · Lo aprendido, que vale para lo próximo: antes de meter algo en la app,
+      preguntarse PARA QUIÉN es. Si no es para el entrenador en pista, no va
+      aquí aunque el contenido sea bueno.
 
   v0.333.0 — Normativa: los supuestos de pista (2026-08)
     (sin migraciones · no toca ningún dato existente)
@@ -7680,56 +7723,36 @@
     .rec-aviso-det code { font-family:ui-monospace,Menlo,monospace; font-size:11.5px;
       background:var(--arena); padding:1px 5px; border-radius:4px; color:var(--texto); }
     .rec-aviso-ses { margin:6px 0 0; padding-left:16px; }
-    /* ══ v0.333 — NORMATIVA ══════════════════════════════════════════ */
-    .nrm-vista { display:flex; gap:0; margin:0 auto 12px 0; width:max-content;
-      border:1.5px solid var(--borde); border-radius:9px; overflow:hidden; }
-    .nrm-vista-b { font-family:inherit; font-size:12px; font-weight:700; color:var(--gris);
-      padding:6px 14px; border:none; background:var(--blanco); cursor:pointer; }
-    .nrm-vista-b.on { color:#fff; background:var(--ac-carro); }
-    .nrm-card { border:1.5px solid var(--borde); border-radius:var(--r-md);
-      background:var(--blanco); padding:14px 15px; margin-bottom:12px; }
-    .nrm-tags { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:9px; }
-    .nrm-tag { font-size:11px; font-weight:700; border-radius:999px; padding:2px 9px;
-      color:var(--ac-carro-tx); background:var(--ac-carro-sv); }
-    .nrm-tag.arb { color:var(--gris); background:var(--arena); }
-    .nrm-cuenta { margin-left:auto; font-size:11.5px; color:var(--gris); font-weight:700; }
-    .nrm-sit { font-size:15px; line-height:1.5; color:var(--texto); margin-bottom:12px; }
-    .nrm-preg { font-size:10.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase;
-      color:var(--gris); margin-bottom:7px; }
-    .nrm-op { width:100%; text-align:left; font-family:inherit; font-size:13.5px; line-height:1.35;
-      color:var(--texto); background:var(--blanco); border:1.5px solid var(--borde);
-      border-radius:var(--r-sm); padding:10px 12px; margin-bottom:7px; cursor:pointer;
-      transition:border-color var(--tr), background var(--tr); }
-    .nrm-op:active { transform:scale(0.99); }
-    .nrm-op.bien { border-color:var(--ac-dada); background:var(--ac-dada-sv); color:var(--ac-dada-tx); }
-    .nrm-op.mal  { border-color:#ef4444; background:#fef2f2; color:#991b1b; }
-    .nrm-op[disabled] { cursor:default; }
-    .nrm-res { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:800;
-      color:var(--texto); margin:4px 0 10px; }
-    .nrm-sec { border-top:1.5px solid var(--borde); padding-top:11px; margin-top:11px; }
-    .nrm-sec-t { font-size:10.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase;
-      color:var(--gris); margin-bottom:7px; }
-    .nrm-p { font-size:13.5px; line-height:1.55; color:var(--texto); margin-bottom:7px; }
-    .nrm-p:last-child { margin-bottom:0; }
-    .nrm-paso { display:flex; gap:9px; font-size:13.5px; line-height:1.5; margin-bottom:6px; }
-    .nrm-num { flex-shrink:0; width:19px; height:19px; border-radius:6px; margin-top:2px;
-      background:var(--ac-carro-sv); color:var(--ac-carro-tx); font-size:11px; font-weight:800;
-      display:flex; align-items:center; justify-content:center; }
-    .nrm-error { border:1.5px solid var(--ac-hoy); background:var(--ac-hoy-sv);
-      border-radius:var(--r-sm); padding:10px 12px; margin-top:11px;
-      font-size:13px; line-height:1.5; color:var(--ac-hoy-tx); }
-    .nrm-pie { display:flex; align-items:center; gap:8px; margin-top:12px; }
-    .nrm-regla { font-size:11px; color:var(--gris); }
-    .nrm-fila { display:flex; align-items:center; gap:10px; padding:11px 12px; cursor:pointer;
+    /* ══ v0.335 — CHULETAS DE NORMATIVA ══════════════════════════════
+       Consulta pura: pregunta corta, respuesta corta, artículo debajo.
+       Pensada para mirarla en pista, con prisa y sin gafas. */
+    .chu-bl { border:1.5px solid var(--borde); border-radius:var(--r-md);
+      background:var(--blanco); margin-bottom:10px; overflow:hidden; }
+    .chu-bl-cab { display:flex; align-items:center; gap:9px; padding:13px 14px;
+      cursor:pointer; }
+    .chu-bl-cab:active { background:var(--arena); }
+    .chu-bl-t { flex:1; font-size:15px; font-weight:800; color:var(--texto); line-height:1.25; }
+    .chu-bl-n { font-size:11.5px; font-weight:700; color:var(--gris); white-space:nowrap; }
+    .chu-bl-chev { color:var(--gris); font-weight:800; transition:transform var(--tr); }
+    .chu-bl.abierto .chu-bl-chev { transform:rotate(90deg); }
+    .chu-bl-body { display:none; padding:0 14px 12px; }
+    .chu-bl.abierto .chu-bl-body { display:block; }
+    .chu-intro { font-size:12.5px; line-height:1.5; color:var(--gris);
+      border-bottom:1.5px solid var(--borde); padding-bottom:10px; margin-bottom:12px; }
+    .chu-e { border-bottom:1px solid var(--borde); padding:11px 0; }
+    .chu-e:last-child { border-bottom:none; padding-bottom:2px; }
+    .chu-e-t { font-size:13px; font-weight:800; color:var(--ac-carro-tx);
+      line-height:1.3; margin-bottom:5px; }
+    .chu-e-r { font-size:15px; line-height:1.5; color:var(--texto); margin-bottom:5px; }
+    .chu-e-r:last-of-type { margin-bottom:0; }
+    .chu-e-f { font-size:11px; color:var(--gris); margin-top:6px; }
+    .chu-buscar { width:100%; font-family:inherit; font-size:15px; padding:11px 13px;
       border:1.5px solid var(--borde); border-radius:var(--r-md); background:var(--blanco);
-      margin-bottom:8px; }
-    .nrm-fila-t { flex:1; min-width:0; }
-    .nrm-fila-n { font-size:14px; font-weight:700; color:var(--texto); line-height:1.3; }
-    .nrm-fila-m { font-size:11.5px; color:var(--gris); margin-top:2px; }
-    .nrm-aviso { font-size:11px; line-height:1.5; color:var(--gris); margin-top:14px; }
-    .nrm-aviso a { color:var(--ac-carro-tx); }
-    .nrm-vacio { font-size:13px; color:var(--gris); line-height:1.55; padding:14px;
+      color:var(--texto); margin-bottom:12px; box-sizing:border-box; }
+    .chu-nada { font-size:13px; color:var(--gris); line-height:1.55; padding:14px;
       border:1.5px dashed var(--borde); border-radius:var(--r-md); }
+    .chu-pie { font-size:11px; line-height:1.5; color:var(--gris); margin-top:14px; }
+    .chu-pie a { color:var(--ac-carro-tx); }
     .rec-leyenda { display:flex; gap:12px; flex-wrap:wrap; align-items:center;
       font-size:10.5px; color:var(--gris); margin:0 0 10px; }
     .rec-lg { display:inline-block; width:9px; height:9px; border-radius:3px;
@@ -9178,14 +9201,13 @@
             </div>
             <div class="menu-flecha">›</div>
           </div>
-          <!-- v0.333: la normativa vive en Partido porque es donde nace la
-               duda: cuando la tienes, estás en un partido. Y así la barra de
-               abajo se queda con sus cinco botones. -->
+          <!-- v0.335: la chuleta de normativa vive en Partido porque es donde
+               nace la duda: cuando la tienes, estás en un partido. -->
           <div class="tarjeta-menu" onclick="irA('pantalla-normativa')">
             <div class="menu-icono partido"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M9 7.5h6M9 11h4"/></svg></div>
             <div class="menu-texto">
               <div class="menu-nombre">Normativa</div>
-              <div class="menu-desc" id="home-desc-nm">Supuestos de pista y reglamento</div>
+              <div class="menu-desc" id="home-desc-nm">Tiempos, sorteo, cuadros</div>
             </div>
             <div class="menu-flecha">›</div>
           </div>
@@ -9194,24 +9216,22 @@
     </div>
   </div>
 
-  <!-- ══ NORMATIVA — SUPUESTOS DE PISTA ═══════════ -->
+  <!-- ══ NORMATIVA — LA CHULETA ═══════════════════ -->
   <div id="pantalla-normativa" class="pantalla">
     <div class="cabecera">
       <button class="btn-volver" onclick="irA('pantalla-partido')">‹ Partido</button>
       <div class="cab-titulo">Normativa</div>
-      <div class="cab-sub">Lo que se discute en pista, resuelto</div>
+      <div class="cab-sub">La chuleta, para salir de dudas en pista</div>
     </div>
     <div class="contenido">
-      <div class="nrm-vista">
-        <button type="button" class="nrm-vista-b" id="nrm-vb-jugar" onclick="nrmVista('jugar')">Resuélvelo</button>
-        <button type="button" class="nrm-vista-b" id="nrm-vb-lista" onclick="nrmVista('lista')">Consulta</button>
-      </div>
+      <input type="search" id="chu-buscar" class="chu-buscar" placeholder="Buscar: fisio, sorteo, W.O.…"
+             oninput="chuBuscar(this.value)" autocomplete="off">
       <div id="normativa-cuerpo"></div>
-      <p class="nrm-aviso">Resumen con mis palabras, no el reglamento. Ante cualquier duda
-        manda el texto oficial de la <a href="https://www.padelfip.com/wp-content/uploads/2023/09/2-Reglamento-Juego.pdf"
-        target="_blank" rel="noopener">FIP</a> y el
+      <p class="chu-pie">Resumen con mis palabras, no el reglamento. Ante cualquier duda manda el
+        texto oficial: <a href="https://www.padelfip.com/wp-content/uploads/2023/09/2-Reglamento-Juego.pdf"
+        target="_blank" rel="noopener">Reglamento de Juego FIP</a> ·
         <a href="https://www.padelfederacion.es/refs/docs/REGLAMENTO%20T%C3%89CNICO%20GENERAL%202025%20COMISI%C3%93N%20GESTORA%2016.01.25.pdf"
-        target="_blank" rel="noopener">Reglamento Técnico de la FEP</a>.</p>
+        target="_blank" rel="noopener">Reglamento Técnico FEP</a>.</p>
     </div>
   </div>
 
@@ -10232,7 +10252,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.333.0';
+    var APP_VERSION = '0.335.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -20482,176 +20502,101 @@
     var _ctAbierta = null;   // v0.286: sin buscador ni orden — mandan área y bloque
 
     // ══════════════════════════════════════════════════════════════
-    // v0.333 — NORMATIVA: SUPUESTOS DE PISTA
+
     // ══════════════════════════════════════════════════════════════
-    // Los casos NO se escriben aquí: viven en el vault, en
-    // 09 NORMATIVA/supuestos/, y llegan con `python3 gen_supuestos.py`.
-    // El bloque de abajo está generado y lleva su propio aviso.
-    // Un solo dueño: el vault escribe, la app enseña.
+    // v0.335 — LA CHULETA DE NORMATIVA
+    // ══════════════════════════════════════════════════════════════
+    // Consulta pura, para el entrenador y en pista. Los CASOS con opciones
+    // (los supuestos) NO están aquí: esos son de los alumnos y viven en
+    // Google Forms. Misma carpeta del vault, dos destinatarios distintos.
     //
-    // Dos vistas de los mismos datos: «Resuélvelo» (el caso, eliges, y sale
-    // el protocolo) para la escuela, y «Consulta» (la lista, directa a la
-    // respuesta) para cuando la duda la tienes en mitad de un partido.
+    // Las entradas no se escriben aquí: vienen de 09 NORMATIVA/chuletas/ con
+    // `python3 _SCRIPTS/gen_chuletas.py`. El bloque de abajo está generado.
 
-    /* ══ SUPUESTOS — GENERADO, NO EDITAR A MANO ══════════════════
-       Se genera con gen_supuestos.py desde el vault:
-       09 NORMATIVA/supuestos/*.md — ahí se escriben y se corrigen.
+    /* ══ CHULETAS — GENERADO, NO EDITAR A MANO ═══════════════════
+       Se genera con gen_chuletas.py desde el vault:
+       09 NORMATIVA/chuletas/*.md — ahí se escriben y se corrigen.
        Lo que se edite AQUÍ se pierde en la siguiente generación. */
-    var SUPUESTOS = [
-      {"id": "sale-por-la-puerta", "tema": "Límites de la pista", "arbitro": "ambos", "regla": "FIP · Reglas 13.d, 13.e, 14.d y 16", "revisado": "2026-08-26", "opciones": ["Es mala: la bola ha salido de la pista", "Se repite el punto", "El punto es del rival"], "correcta": 2, "titulo": "Bota en mi campo y se va por la puerta", "situacion": ["La bola bota bien en tu campo, sale disparada y se va **por la puerta** o por encima del cristal. Tú dices «ha salido, es mala»."], "porque": ["Se pierde el tanto cuando la pelota, **después de botar correctamente en el campo propio**, sale por encima de los límites de la pista o por la puerta (Regla 13.d). Que se vaya fuera no la convierte en mala: **ya había botado dentro**. Y para el que golpeó es devolución correcta (Regla 14.d).", "**Con juego exterior autorizado** cambia (Regla 13.e y Regla 16): si sale por el lateral o por la puerta y la pista tiene zona de seguridad, puedes salir a buscarla y solo pierdes al segundo bote. Por encima de la **pared del fondo**, no: ahí se pierde igual."], "protocolo": ["Esto **no se canta**: se juega. Cantarlo es pararte tú solo el punto.", "Antes de empezar el partido, mira si la pista permite juego exterior. Cambia", "la respuesta y es lo primero que se discute cuando pasa.", "Sin acuerdo, juez árbitro principal."], "coach": ["Si veo que el grupo no lo tiene claro, lo aviso **antes** del partido, no durante. Es el caso que más puntos regala por desconocimiento."], "error": ["Cantar «fuera» al ver salir la bola de la pista, sin haber mirado dónde botó. El bote es lo único que cuenta."]},
-      {"id": "huevo-vs-pared", "tema": "Devolución correcta", "arbitro": "ambos", "regla": "FIP · Reglas 14.i y 13.g", "revisado": "2026-08-26", "opciones": ["Las dos son buenas: la pared es parte de la pista", "Las dos son punto perdido", "La del ángulo es buena; la que da en la pared sin botar, no"], "correcta": 2, "titulo": "El huevo contra la pared sin botar", "situacion": ["Dos jugadas que se parecen muchísimo y acaban al revés:", "**A)** Tu bola bota en el campo contrario justo en el ángulo que forman la pared y el suelo — el famoso **huevo**.", "**B)** Tu bola llega a la pared del campo contrario **sin haber botado antes en el suelo**, aunque haya rebotado primero en tu propia pared."], "porque": ["**A es buena.** Si la pelota bota en el ángulo (esquina) formado por una pared y el suelo del campo contrario, la devolución es correcta (Regla 14.i — el reglamento la llama «huevo» con ese nombre).", "**B es punto perdido.** Se pierde el tanto si devuelves la pelota, directamente o tras golpear en las paredes de tu campo, de forma que **sin botar** golpee cualquier pared del campo contrario o la malla (Regla 13.g).", "**La diferencia es una sola:** si botó en el suelo del campo contrario antes de tocar la pared. Todo lo demás se ve igual desde el otro lado de la red, y por eso es el caso que más se discute."], "protocolo": ["Lo canta **la pareja en cuyo campo ocurre**: son los que ven si hubo bote.", "Si dudas, **es buena** — la duda va a favor del rival.", "Sin acuerdo, juez árbitro principal.", "Con árbitro: se juega y se reclama al terminar el punto."], "coach": ["Es el caso perfecto para entrenar el ojo: en una clase, poner a los de fondo a cantar «bote» o «pared» en voz alta durante unos minutos. Se aprende mirando, no explicando."], "error": ["Dar por buena B porque «ha ido a la pared, como el huevo». La pared del campo contrario solo entra en juego **después** del bote."]},
-      {"id": "bola-parada", "tema": "Bote y bola dudosa", "arbitro": "ambos", "regla": "FIP · Reglas 8.5, 13 y 14", "revisado": "2026-08-26", "opciones": ["Se repite el punto, porque hay desacuerdo", "El punto es de los rivales", "El punto es tuyo: se iba fuera"], "correcta": 1, "titulo": "La paró porque iba fuera", "situacion": ["Tu rival golpea largo. Tu compañero **para la bola con la pala** antes de que bote, convencido de que se iba fuera. Los rivales dicen que entraba."], "porque": ["Una bola que **no ha botado** no se puede juzgar: todavía no ha pasado nada. Al tocarla con la pala la estás **devolviendo**, y si esa devolución no cumple la Regla 14 el punto se pierde.", "En el resto es aún más claro: si el restador o su compañero tocan la pelota con la pala **antes de que bote**, el tanto es del sacador (Regla 8.5, explícito)."], "protocolo": ["Sin árbitro: cada pareja canta **solo su campo**. Una bola que iba a tu campo", "y no botó, no la canta nadie: no existe.", "Si dudas de una bola que sí botó en tu campo, **es buena**. La duda va a", "favor del rival.", "Se canta **al instante**, no después de ver dónde cae tu golpe.", "Sin acuerdo, se llama al **juez árbitro principal**, que decide tras oír a", "las dos partes.", "Con árbitro: no se discute durante el punto. Se juega y se reclama al final."], "coach": ["No entro a discutir la bola: no es mi campo ni mi decisión. Recuerdo el criterio en voz neutra, corto la discusión y mando seguir. Solo puedo dar instrucciones **en los descansos**, y mis sanciones **se suman a las de la pareja**: meterme en la discusión les puede costar el punto."], "error": ["Parar la bola «para demostrar» que iba fuera. Es la forma más rápida de regalar un punto que era tuyo."]},
+    var CHULETAS = [
+      {"id": "tiempos", "bloque": "Tiempos", "orden": 10, "fuente": "FIP Regla 2 · FEP RTG 2.3.3.3 y 2.3.3.5", "revisado": "2026-08-27", "intro": "# CHU — Tiempos Lo que más se consulta en un partido. Todos los tiempos se cuentan desde que acaba un punto hasta que se inicia el saque del siguiente.", "entradas": [{"t": "Entre puntos", "r": ["**20 segundos.**"], "f": "FIP · Regla 2.4"}, {"t": "Cambio de lado (descanso)", "r": ["**90 segundos.** Pero **no hay descanso** después del primer juego de cada set ni durante el tie-break: se cambia y se sigue jugando."], "f": "FIP · Regla 2.5"}, {"t": "Final de set", "r": ["**120 segundos.**"], "f": "FIP · Regla 2.6"}, {"t": "Cambio de campo en el tie-break", "r": ["**20 segundos.**"], "f": "FIP · Regla 2.10"}, {"t": "Entre el primer y el segundo servicio", "r": ["**Ninguno.** El juego debe ser continuo."], "f": "FIP · Regla 2, Caso 3"}, {"t": "Peloteo de cortesía", "r": ["**5 minutos, y es obligatorio.**"], "f": "FIP · Regla 2.2"}, {"t": "Retraso al empezar (W.O.)", "r": ["**10 minutos** desde la hora prevista y es W.O., salvo que el juez árbitro aprecie fuerza mayor. En torneos por turnos, «la hora prevista» es **cinco minutos después de que acabe el partido anterior**."], "f": "FIP · Regla 2.1 y Caso 1 · FEP RTG 2.10.7"}, {"t": "Asistencia médica (el fisio)", "r": ["**3 minutos.** Una sola vez por jugador y **no se puede ceder al compañero**. Después puede recibir atención en los dos descansos siguientes, pero dentro del tiempo de esos descansos. Con **herida sangrante no se puede continuar**."], "f": "FIP · Regla 2.17, 2.18 y 2.20"}, {"t": "Accidente ajeno al juego", "r": ["Hasta **15 minutos** a criterio del juez árbitro, y **no gasta** el turno de asistencia del jugador."], "f": "FIP · Regla 2.19 y Caso 2"}, {"t": "Si se suspende el partido", "r": ["Se reanuda **exactamente donde se quedó**: mismo juego, tanteo, sacador y lados. El peloteo al volver depende de lo que haya durado la parada: hasta 5 min, ninguno · de 5 a 20 min, 3 minutos · más de 20 min, 5 minutos. Si se para por falta de luz, se hace **con la suma de juegos par**, para que las dos parejas queden en el mismo lado."], "f": "FIP · Regla 2.11 a 2.16"}, {"t": "Cuánto puede durar una discusión", "r": ["**20 segundos.** Pasados, el juez de silla decide y el juego continúa, aunque nadie le haya pedido que intervenga."], "f": "FEP RTG · 2.3.3.3 y 2.10.4 (función 17)"}, {"t": "Cambio de pelotas", "r": ["Por defecto: **el primer cambio tras 9 juegos y después cada 11**. Hay otras tres modalidades posibles y se anuncian antes de la competición."], "f": "FEP RTG · 2.3.3.5"}]},
+      {"id": "sorteo-campos", "bloque": "Sorteo, campos y pistas", "orden": 20, "fuente": "FIP Reglas 4 y 5 · FEP RTG 2.3.3.1, 2.3.3.3, 2.10.4 y 2.10.6", "revisado": "2026-08-27", "intro": "# CHU — Sorteo, campos y pistas", "entradas": [{"t": "Qué se sortea al empezar", "r": ["**El campo y el saque.** Quien gana el sorteo elige **una** de las dos cosas y el rival elige la otra. También puede pedir que elijan ellos primero."], "f": "FIP · Regla 4.1"}, {"t": "¿Me pueden cambiar de pista?", "r": ["**Sí.** Decidir en qué pista se juega cada partido, y **cambiar un partido de pista**, es función del juez árbitro principal. También decide si una pista reúne condiciones para jugar. Antes de empezar la competición tiene que decir **qué criterio va a seguir** para asignar pistas cuando sean de distinto tipo de construcción."], "f": "FEP RTG · 2.10.4, funciones 4 y 8"}, {"t": "Se ha parado el calentamiento y hemos salido de la pista", "r": ["**Se puede volver a elegir.** El resultado del sorteo se mantiene, pero las dos parejas hacen elecciones nuevas."], "f": "FIP · Regla 4, Caso 1"}, {"t": "¿Cuándo se cambia de lado?", "r": ["Cuando la **suma de juegos disputados del set es impar**. En el tie-break, **cada 6 puntos**."], "f": "FIP · Regla 5.1 y 5.2"}, {"t": "Nos hemos olvidado de cambiar de lado", "r": ["Se corrige **en cuanto se descubre** y se sigue el orden correcto. **Todos los puntos jugados valen.** Si al darse cuenta ya se había hecho un primer saque en falta, solo queda derecho a un servicio más."], "f": "FIP · Regla 5.3"}, {"t": "¿Y al empezar el set siguiente?", "r": ["Se cambia **solo si la suma de juegos del set que acaba es impar**. Si es par, no."], "f": "FIP · Regla 5, Caso 1"}, {"t": "Sin juez de silla, ¿quién manda?", "r": ["**Cada pareja arbitra su propio campo.** Si no hay acuerdo, se pide la presencia del **juez árbitro principal**, que decide tras escuchar a las dos partes."], "f": "FEP RTG · 2.3.3.1"}, {"t": "¿Puede el juez árbitro hacer de juez de silla?", "r": ["**Sí.** En ausencia de juez de silla puede desempeñar funciones suyas, como comprobar la vestimenta o **sortear campos y saque**."], "f": "FEP RTG · 2.10.4, función 16"}, {"t": "¿Se puede recurrir su decisión?", "r": ["**No, en lo que toca a las reglas técnicas del juego: es inapelable** —sin perjuicio de recursos posteriores ante el Comité de Competición—. Y puede decidir sobre cualquier incidencia, incluso si el reglamento no la contempla."], "f": "FEP RTG · 2.10.6"}, {"t": "¿Cuándo es obligatorio el juez de silla?", "r": ["En las **finales** de los campeonatos de España por parejas (salvo veteranos y menores) y de los internacionales; en las **semifinales** del Absoluto y de los internacionales; y en **cuartos** de los internacionales que se jueguen en la pista central."], "f": "FEP RTG · 2.3.3.2"}, {"t": "Arbitraje activo y pasivo", "r": ["**Activo:** el equipo arbitral canta todas las infracciones y para el juego. **Pasivo:** solo interviene si se lo piden, salvo en faltas de saque, red, doble bote, bola a través, golpe antirreglamentario, let y molestias — eso lo canta siempre. Cuál de los dos se usa lo decide la FEP y **se anuncia antes de empezar**."], "f": "FEP RTG · 2.3.3.3"}]},
+      {"id": "cuadros", "bloque": "Cuadros y competición", "orden": 30, "fuente": "FEP RTG 3.2, 3.3 y 2.10.7", "revisado": "2026-08-27", "intro": "# CHU — Cuadros y competición Cómo se monta un cuadro y por qué te ha tocado quien te ha tocado.", "entradas": [{"t": "¿Quién hace el sorteo?", "r": ["**La FEP, y los sorteos son públicos.** El juez árbitro solo sortea las consolaciones, y únicamente cuando no lo hace la FEP."], "f": "FEP RTG · 3.3.1 y 2.10.4 (función 10)"}, {"t": "¿Quién NO entra en el sorteo?", "r": ["Quien tenga **deudas** con la FEP, no tenga **licencia en vigor**, esté **sancionado o descalificado**, cuya **edad o nacionalidad** no corresponda a la categoría, o cuya **inscripción llegue fuera de plazo**."], "f": "FEP RTG · 3.3.2"}, {"t": "Cuadro final, previa y pre-previa", "r": ["En **cuadros abiertos**, las mejores del ranking van al **cuadro final**; las ocho siguientes juegan la **previa**; el resto, la **pre-previa**. Suben: las **cuatro semifinalistas de la previa** al cuadro final, y las **ocho cuartofinalistas de la pre-previa** a la previa. En un cuadro final de 16, por ejemplo: las 12 mejores del ranking más las 4 que salen de la previa."], "f": "FEP RTG · 3.3.4.1"}, {"t": "Cuadros cerrados", "r": ["Las parejas se agrupan en **primera, segunda o tercera categoría** según el ranking. **No se puede abrir una categoría sin haber llenado la anterior.** La tercera la forman todas las no clasificadas para las otras dos."], "f": "FEP RTG · 3.3.4.2"}, {"t": "¿Cómo se decide quién es cabeza de serie?", "r": ["Por el **Ranking Único FEP**. El valor de una pareja es la **suma de los puntos de sus dos jugadores**. Si dos parejas empatan, va delante la del **jugador mejor clasificado**; si sigue el empate, **se sortea**. Quien no aparece en ninguna clasificación cuenta **cero puntos**."], "f": "FEP RTG · 3.3.6.1, 3.3.6.2, 3.3.6.3 y 3.3.6.6"}, {"t": "¿Cuántos cabezas de serie hay?", "r": ["**El número de parejas dividido entre cuatro**, redondeado a la **potencia de dos más cercana** (si queda a la misma distancia, la más baja). En los **Campeonatos de España por parejas ese número se multiplica por 2**."], "f": "FEP RTG · 3.3.6.7 y 3.3.6.8"}, {"t": "¿Y en categorías de edad?", "r": ["Manda la **clasificación de esa categoría**. Solo si no existe se usa la absoluta."], "f": "FEP RTG · 3.3.6.5"}, {"t": "Los exentos", "r": ["Cuando las parejas no son potencia de dos, hay **exentos**: los que no juegan la primera ronda, para que en la segunda ya sí lo sean. Se cuentan restando los inscritos de la potencia de dos inmediatamente superior. **El primer exento es el cabeza de serie nº 1**, el segundo el nº 2, y así. Si aún sobran exentos, se reparten mitad arriba y mitad abajo del cuadro; si son impares, **uno más abajo**."], "f": "FEP RTG · 3.3.7.1"}, {"t": "Se cae un cabeza de serie", "r": ["**No se recoloca todo el cuadro.** El siguiente cabeza de serie ocupa su posición según un orden fijado, y entra en el cuadro la primera pareja por puntuación que estaba fuera."], "f": "FEP RTG · 3.3.7"}, {"t": "El W.O.", "r": ["Lo aplica el **juez árbitro principal**, y es responsable de darlo cuando la pareja no está en pista **preparada para jugar 10 minutos** después de la hora establecida — salvo que él aprecie fuerza mayor."], "f": "FEP RTG · 2.10.7 y 2.10.4 (función 9)"}, {"t": "Lesión antes de empezar el cuadro", "r": ["Quien tenga una lesión **anterior al calentamiento de su primer partido** no puede iniciarlo: **pierde por W.O.**"], "f": "FEP RTG · 3.2"}, {"t": "Avisar de una ausencia", "r": ["Se notifica **urgentemente a la FEP**, por un medio que deje constancia, con nombre, apellidos, número de licencia, DNI y el motivo."], "f": "FEP RTG · 3.3.7.2"}]},
     ];
-    /* ══ FIN SUPUESTOS ═══════════════════════════════════════════ */
+    /* ══ FIN CHULETAS ═══════════════════════════════════════════ */
 
-    var _nrmVista   = 'jugar';   // 'jugar' | 'lista'
-    var _nrmIdx     = 0;         // qué caso se está jugando
-    var _nrmElegida = -1;        // qué opción se ha tocado (-1 = ninguna)
-    var _nrmAbierto = {};        // en Consulta, qué fichas están desplegadas
+    var _chuAbierto = {};   // qué bloques están desplegados
+    var _chuFiltro  = '';
 
-    function nrmVista(v) {
-      _nrmVista = (v === 'lista') ? 'lista' : 'jugar';
-      try { localStorage.setItem('padel-nrm-vista', _nrmVista); } catch (e) {}
-      mostrarNormativa();
-    }
-    (function(){
-      try { var v = localStorage.getItem('padel-nrm-vista'); if (v) _nrmVista = v; } catch (e) {}
-    })();
+    function chuToggle(id) { _chuAbierto[id] = !_chuAbierto[id]; mostrarNormativa(); }
 
-    function nrmResponder(i) {
-      if (_nrmElegida >= 0) return;   // ya respondida: no se cambia
-      _nrmElegida = i;
-      mostrarNormativa();
-    }
-    function nrmSiguiente() {
-      if (!SUPUESTOS.length) return;
-      _nrmIdx = (_nrmIdx + 1) % SUPUESTOS.length;
-      _nrmElegida = -1;
-      mostrarNormativa();
-    }
-    function nrmAlAzar() {
-      if (SUPUESTOS.length < 2) return nrmSiguiente();
-      var n = _nrmIdx;
-      while (n === _nrmIdx) n = Math.floor(Math.random() * SUPUESTOS.length);
-      _nrmIdx = n; _nrmElegida = -1;
-      mostrarNormativa();
-    }
-    function nrmFichaToggle(id) { _nrmAbierto[id] = !_nrmAbierto[id]; mostrarNormativa(); }
-    function nrmJugarEste(id) {
-      for (var i = 0; i < SUPUESTOS.length; i++) {
-        if (SUPUESTOS[i].id === id) { _nrmIdx = i; break; }
-      }
-      _nrmElegida = -1; _nrmVista = 'jugar';
+    function chuBuscar(t) {
+      _chuFiltro = String(t || '').trim().toLowerCase();
       mostrarNormativa();
     }
 
-    var _NRM_ARB = { ambos:'Con y sin árbitro', sin:'Solo sin árbitro', con:'Solo con árbitro' };
-
-    // Los cinco apartados de la ficha, tal como los da el generador.
-    function _nrmSecciones(sp, conProtocolo) {
-      var h = '';
-      if (sp.porque && sp.porque.length) {
-        h += '<div class="nrm-sec"><div class="nrm-sec-t">Por qué</div>';
-        sp.porque.forEach(function(t){ h += '<p class="nrm-p">' + _nrmTexto(t) + '</p>'; });
-        h += '</div>';
-      }
-      if (conProtocolo && sp.protocolo && sp.protocolo.length) {
-        h += '<div class="nrm-sec"><div class="nrm-sec-t">Protocolo del jugador</div>';
-        sp.protocolo.forEach(function(t, i){
-          h += '<div class="nrm-paso"><span class="nrm-num">' + (i + 1) + '</span>' +
-               '<span>' + _nrmTexto(t) + '</span></div>';
-        });
-        h += '</div>';
-      }
-      if (conProtocolo && sp.coach && sp.coach.length) {
-        h += '<div class="nrm-sec"><div class="nrm-sec-t">Qué hago yo como coach</div>';
-        sp.coach.forEach(function(t){ h += '<p class="nrm-p">' + _nrmTexto(t) + '</p>'; });
-        h += '</div>';
-      }
-      if (sp.error && sp.error.length) {
-        h += '<div class="nrm-error"><b>El error típico:</b> ' +
-             sp.error.map(_nrmTexto).join(' ') + '</div>';
-      }
-      return h;
+    // Sin acentos, sin puntos y en minúsculas: en pista nadie escribe «demás»
+    // con tilde ni «W.O.» con los puntos. Quitar el punto hace que «wo»
+    // encuentre «W.O.», que es como se teclea de verdad.
+    function _chuNorm(t) {
+      return String(t || '').toLowerCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/\./g, '');
     }
 
-    // Markdown mínimo: **negrita**. Se escapa ANTES, así que no entra HTML.
-    function _nrmTexto(t) {
+    function _chuCasa(ent, q) {
+      return _chuNorm(ent.t + ' ' + ent.r.join(' ') + ' ' + (ent.f || '')).indexOf(q) >= 0;
+    }
+
+    // Markdown mínimo: **negrita**. Se escapa ANTES, así no entra HTML.
+    function _chuTexto(t) {
       return _gEsc(String(t || '')).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
     }
 
-    function _nrmCabecera(sp, extra) {
-      return '<div class="nrm-tags">' +
-        '<span class="nrm-tag">' + _gEsc(sp.tema) + '</span>' +
-        '<span class="nrm-tag arb">' + _gEsc(_NRM_ARB[sp.arbitro] || sp.arbitro) + '</span>' +
-        (extra ? '<span class="nrm-cuenta">' + extra + '</span>' : '') + '</div>';
+    function _chuEntradaHTML(e) {
+      var h = '<div class="chu-e"><div class="chu-e-t">' + _gEsc(e.t) + '</div>';
+      e.r.forEach(function(p){ h += '<div class="chu-e-r">' + _chuTexto(p) + '</div>'; });
+      if (e.f) h += '<div class="chu-e-f">' + _gEsc(e.f) + '</div>';
+      return h + '</div>';
     }
 
     function mostrarNormativa() {
       var cont = document.getElementById('normativa-cuerpo');
       if (!cont) return;
-      ['jugar','lista'].forEach(function(v){
-        var b = document.getElementById('nrm-vb-' + v);
-        if (b) b.className = 'nrm-vista-b' + (_nrmVista === v ? ' on' : '');
-      });
 
-      if (!SUPUESTOS.length) {
-        cont.innerHTML = '<div class="nrm-vacio">Todavía no hay supuestos. Se escriben en el ' +
-          'vault, en <b>09 NORMATIVA/supuestos/</b>, y llegan aquí ejecutando ' +
-          '<b>python3 gen_supuestos.py</b>.</div>';
+      if (!CHULETAS.length) {
+        cont.innerHTML = '<div class="chu-nada">Todavía no hay chuletas. Se escriben en el ' +
+          'vault, en <b>09 NORMATIVA/chuletas/</b>, y llegan aquí ejecutando ' +
+          '<b>python3 _SCRIPTS/gen_chuletas.py</b>.</div>';
         return;
       }
 
-      var h = '';
-      if (_nrmVista === 'jugar') {
-        if (_nrmIdx >= SUPUESTOS.length) _nrmIdx = 0;
-        var sp = SUPUESTOS[_nrmIdx];
-        var resuelto = _nrmElegida >= 0;
-        h += '<div class="nrm-card">';
-        h += _nrmCabecera(sp, (_nrmIdx + 1) + ' de ' + SUPUESTOS.length);
-        h += '<div class="nrm-sit">' + sp.situacion.map(_nrmTexto).join(' ') + '</div>';
-        h += '<div class="nrm-preg">¿Qué pasa con el punto?</div>';
-        sp.opciones.forEach(function(op, i){
-          var cls = 'nrm-op';
-          if (resuelto && i === sp.correcta)      cls += ' bien';
-          else if (resuelto && i === _nrmElegida) cls += ' mal';
-          h += '<button type="button" class="' + cls + '"' + (resuelto ? ' disabled' : '') +
-               ' onclick="nrmResponder(' + i + ')">' + _gEsc(op) + '</button>';
-        });
-        if (resuelto) {
-          var ok = _nrmElegida === sp.correcta;
-          h += '<div class="nrm-res"><span>' + (ok ? '✓' : '✕') + '</span>' +
-               '<span>' + (ok ? '¡Correcto!' : _gEsc(sp.opciones[sp.correcta])) + '</span></div>';
-          h += _nrmSecciones(sp, true);
-          h += '<div class="nrm-pie">' +
-               '<span class="nrm-regla">' + _gEsc(sp.regla || '') +
-                 (sp.revisado ? ' · revisado ' + _gEsc(sp.revisado) : '') + '</span></div>';
+      var q = _chuNorm(_chuFiltro), h = '', nEnc = 0;
+
+      CHULETAS.forEach(function(c){
+        var ents = q ? c.entradas.filter(function(e){ return _chuCasa(e, q); }) : c.entradas;
+        if (!ents.length) return;
+        nEnc += ents.length;
+        // Buscando, los bloques se abren solos: si has escrito algo es que
+        // quieres ver el resultado, no abrir cajones uno por uno.
+        var ab = q ? true : !!_chuAbierto[c.id];
+        h += '<div class="chu-bl' + (ab ? ' abierto' : '') + '">';
+        h += '<div class="chu-bl-cab" onclick="chuToggle(\'' + c.id + '\')">' +
+             '<span class="chu-bl-t">' + _gEsc(c.bloque) + '</span>' +
+             '<span class="chu-bl-n">' + ents.length + '</span>' +
+             '<span class="chu-bl-chev">›</span></div>';
+        h += '<div class="chu-bl-body">';
+        if (!q && c.intro) h += '<div class="chu-intro">' + _chuTexto(c.intro) + '</div>';
+        ents.forEach(function(e){ h += _chuEntradaHTML(e); });
+        if (c.revisado) {
+          h += '<div class="chu-e-f" style="margin-top:10px;">Revisado ' +
+               _gEsc(c.revisado) + '</div>';
         }
-        h += '</div>';
-        h += '<div style="display:flex;gap:8px;">' +
-          '<button class="btn btn-sec" style="flex:1;" onclick="nrmSiguiente()">Siguiente caso ›</button>' +
-          '<button class="btn btn-sec" style="width:auto;" onclick="nrmAlAzar()" ' +
-            'title="Un caso al azar" aria-label="Al azar">🎲</button></div>';
-      } else {
-        SUPUESTOS.forEach(function(sp){
-          var ab = !!_nrmAbierto[sp.id];
-          h += '<div class="nrm-card" style="padding:0;">';
-          h += '<div class="nrm-fila" style="border:none;margin:0;" onclick="nrmFichaToggle(\'' + sp.id + '\')">' +
-            '<div class="nrm-fila-t"><div class="nrm-fila-n">' + _gEsc(sp.titulo) + '</div>' +
-            '<div class="nrm-fila-m">' + _gEsc(sp.tema) + ' · ' + _gEsc(sp.regla || '') + '</div></div>' +
-            '<span class="ct-chev">' + (ab ? '✕' : '›') + '</span></div>';
-          if (ab) {
-            h += '<div style="padding:0 15px 14px;">';
-            h += '<div class="nrm-sit">' + sp.situacion.map(_nrmTexto).join(' ') + '</div>';
-            h += '<div class="nrm-res"><span>✓</span><span>' +
-                 _gEsc(sp.opciones[sp.correcta]) + '</span></div>';
-            h += _nrmSecciones(sp, true);
-            h += '<button class="btn btn-sec" style="width:100%;margin-top:12px;" ' +
-                 'onclick="event.stopPropagation();nrmJugarEste(\'' + sp.id + '\')">Plantearlo en pista ›</button>';
-            h += '</div>';
-          }
-          h += '</div>';
-        });
+        h += '</div></div>';
+      });
+
+      if (!nEnc) {
+        h = '<div class="chu-nada">Nada con «' + _gEsc(_chuFiltro) + '». Prueba con una ' +
+            'palabra suelta: <b>fisio</b>, <b>sorteo</b>, <b>pista</b>, <b>exentos</b>.</div>';
       }
       cont.innerHTML = h;
     }
