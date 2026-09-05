@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.335.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.336.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,22 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.336.0 — Vuelve la salida de Asistencia (2026-09)
+    (sin migraciones · no toca ningún dato existente)
+    · EL BOTÓN «‹ Inicio» VUELVE A LA CABECERA DE ASISTENCIA. La v0.323 lo
+      escondió al convertir Asistencia en la pantalla de entrada, y con él se
+      fue la única salida: la barra de abajo ya no tiene Inicio, así que desde
+      Asistencia solo se podía llegar a Inicio dando un rodeo por Partido o
+      Plan y usando SU botón de volver.
+    · Y ARREGLA UNA PUERTA CERRADA MÁS GRAVE: cuando el GESTOR entraba a la
+      asistencia de otro entrenador, ese mismo botón era su «‹ Panel» — y el
+      gestor no tiene barra inferior. Al esconderse, se quedaba encerrado en
+      la pantalla hasta recargar. Ahora vuelve a salir, y dice «‹ Panel»
+      cuando estás gestionando a otro.
+    · SIGUE OCULTO PARA EL EN1 Y EL MONITOR LOCAL (PIN), a propósito: para
+      ellos la app ES Asistencia, no hay Inicio al que volver. Su puerta a
+      perfil y ajustes es el 👤 de esta misma cabecera, como desde la v0.277.
 
   v0.335.0 — La chuleta de normativa (2026-08)
     (sin migraciones · no toca ningún dato existente)
@@ -9878,6 +9894,8 @@
   <!-- ══ ASISTENCIA — HUB ══════════════════════════ -->
   <div id="pantalla-asistencia" class="pantalla">
     <div class="cabecera">
+      <!-- Arranca oculto y lo enciende mostrarAsistencia() según el rol: hasta
+           que no se sabe quién eres no se sabe si hay adónde volver. -->
       <button class="btn-volver" id="asist-volver-btn" style="display:none" onclick="asistVolverHub()">‹ Inicio</button>
       <!-- v0.277: el EN1 no pasa por Inicio, así que su acceso al perfil vive aquí.
            v0.323: y ahora TODOS entran por la barra, así que el 👤 se ve siempre:
@@ -10252,7 +10270,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.335.0';
+    var APP_VERSION = '0.336.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -28111,8 +28129,21 @@
       document.getElementById('asist-sub').textContent =
         (_gEditUid ? '✏️ Gestionando a ' + _gEditNombre() + ' · ' : '') +
         clasesCursoAct.length + ' clase' + (clasesCursoAct.length !== 1 ? 's' : '') + ' configuradas';
+      // v0.336 — La salida. La v0.323 escondió este botón al hacer de
+      // Asistencia la pantalla de entrada, pero la barra de abajo ya no lleva
+      // Inicio y el gestor ni siquiera tiene barra: quien entraba aquí se
+      // quedaba dentro. Vuelve para quien tiene adónde volver.
+      //   · gestionando a otro entrenador → «‹ Panel»
+      //   · entrenador (EN2/EN3)          → «‹ Inicio»
+      //   · EN1 y monitor local (PIN)     → oculto: su app ES Asistencia, y su
+      //     puerta a perfil/ajustes es el 👤 de esta misma cabecera.
       var volverBtn = document.getElementById('asist-volver-btn');
-      if (volverBtn) volverBtn.textContent = _gEditUid ? '‹ Panel' : '‹ Inicio';
+      if (volverBtn) {
+        var _soloAsistencia = false;
+        try { _soloAsistencia = esEN1Cuenta() || monitorActivo(); } catch (e) {}
+        volverBtn.textContent = _gEditUid ? '‹ Panel' : '‹ Inicio';
+        volverBtn.style.display = (_gEditUid || !_soloAsistencia) ? '' : 'none';
+      }
       // v0.277 — El botón de Perfil solo para el EN1: es el único que no pasa
       // por Inicio, que es donde lo tienen los demás. Y si está gestionando a
       // otro entrenador, tampoco: ahí el perfil que se editaría es el propio.
