@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.336.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.337.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,40 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.337.0 — El Recorrido, dinámico (2026-09)
+    ⚠ EJECUTAR migraciones/migracion_et_orden.sql ANTES de usar esta versión.
+    · LAS ETAPAS SE REORDENAN CON FLECHAS. El catálogo (PLAN_ETAPAS) dice qué
+      etapas hay; en qué orden se recorren lo decide quien da la clase, según
+      cómo vaya el grupo. Ese orden es dato de la app (p.etOrden, columna
+      et_orden) y se sincroniza como el orden de ejercicios de la v0.315: el
+      vault puede subir sesiones las veces que haga falta y no lo pisa.
+    · LA ETAPA SE ABRE EN VENTANA, no debajo. Tocarla la enseña entera encima
+      de todo —sus bloques y, dentro, sus clases tipo y sesiones— y al cerrar
+      el Recorrido sigue donde estaba. Se van las columnas de la v0.331: con
+      la ventana ya no hay nada que repartir en columnas.
+    · FUERA LOS COLORES DE ESTADO (dada / preparada / la siguiente, v0.332).
+      No aportaban una información que se usara; se vuelven a valorar más
+      adelante. El cuadrado de cada etapa dice ahora CUÁNTAS SESIONES tiene.
+      El estado se sigue calculando (_recEstado); solo no se pinta.
+    · «ELEGIR SEMANA», desde la sesión. Cada sesión de la ventana lleva un
+      botón para colocarla en una semana del curso. Es la puerta contraria
+      de la que ya existía: antes se llegaba desde el DÍA (calendario →
+      abrir el día → elegir sesión); ahora también desde la SESIÓN. Las dos
+      escriben en p.rutaSes con los mismos helpers, así que la
+      Temporalización la pinta sola y el historial por cursos se hace solo.
+      No hay dato nuevo: hay una entrada nueva al de siempre.
+    · La sesión entra en CADA DÍA DE CLASE de ese nivel dentro de la semana
+      («la misma para toda la semana»), sumándose a lo que hubiera, sin
+      duplicar. Sin días configurados, se guarda por semana. Y se puede
+      quitar desde el mismo sitio.
+    · NO LINEAL A PROPÓSITO. El dato es «sesión → semana», no «semana →
+      siguiente sesión»: se puede dar el bloque 5 en la semana 3, o probar
+      una sesión recién escrita cuando toque. El Recorrido no impone orden;
+      solo enseña qué hay. El selector no ofrece semanas pasadas: lo dado se
+      ajusta desde el calendario, que es donde nace.
+    · Se retiran _recEtapaActual, ctApToggle y ctBlToggle (ya no hay nada
+      que desplegar en el sitio).
 
   v0.336.0 — Vuelve la salida de Asistencia (2026-09)
     (sin migraciones · no toca ningún dato existente)
@@ -7690,46 +7724,60 @@
     .ct-caja-body { display:none; }
     .ct-caja.abierto .ct-caja-body { display:block; }
     .ct-caja:not(.abierto) .ct-hdr { padding-bottom:0; margin-bottom:0; border-bottom:none; }
-    /* ══ v0.330 — EL RECORRIDO ══════════════════════════════════════
-       El repositorio era una lista de cajones: se veía lo que había, no por
-       dónde ibas. Los mismos datos —apartado → bloque → lo que cuelga— se
-       pintan ahora como un camino: un cuadradito por bloque, unidos por una
-       línea, y el que todavía no tiene sesión se queda en blanco. */
-    .rec-et-cab { display:flex; align-items:center; gap:8px; padding:8px 9px; cursor:pointer;
-      border-radius:var(--r-sm); }
-    .rec-et-cab:active { background:var(--arena); }
-    .rec-et-t { flex:1; font-size:13px; font-weight:800; color:var(--texto); line-height:1.25; }
-    .rec-et-c { font-size:11px; font-weight:800; color:var(--gris); white-space:nowrap; }
-    .rec-et.hecha .rec-et-t { color:var(--gris); }
-    .rec-et.hecha .rec-et-c { color:var(--ac-dada-tx); }
-    .rec-et-chev { color:var(--gris); font-weight:800; transition:transform var(--tr); }
-    .rec-et.abierta .rec-et-chev { transform:rotate(90deg); }
-    .rec-et-body { display:none; padding:2px 0 12px 5px; }
-    .rec-et.abierta .rec-et-body { display:block; }
-    .rec-n { position:relative; padding-left:38px; padding-bottom:11px; }
-    .rec-n:last-child { padding-bottom:2px; }
-    .rec-n::before { content:''; position:absolute; left:12px; top:28px; bottom:0; width:2px;
-      background:var(--borde); }
-    .rec-n:last-child::before { display:none; }
-    .rec-sq { position:absolute; left:0; top:0; width:26px; height:26px; border-radius:7px;
-      display:flex; align-items:center; justify-content:center; font-size:12.5px; font-weight:800;
-      border:1.5px solid var(--borde); background:var(--blanco); color:var(--gris); }
-    .rec-n.hecho .rec-sq { border-color:var(--ac-dada); background:var(--ac-dada-sv);
+    /* ══ v0.337 — EL RECORRIDO, DINÁMICO ══════════════════════════════
+       Cerrado es una lista de etapas: flechas para reordenarlas y un
+       cuadrado con el número de sesiones. Abierta, la etapa va en VENTANA
+       (#rec-ov) con sus bloques y sesiones. Los colores de estado de la
+       v0.332 (dada / preparada / la siguiente) se retiraron: no aportaban
+       una información que se usara. Se volverá a valorar más adelante. */
+    .rec-fila-et { display:flex; align-items:center; gap:6px; padding:3px 0;
+      border-top:1px solid var(--borde); }
+    .rec-fila-et:first-of-type { border-top:none; }
+    .rec-mover { display:flex; flex-direction:column; gap:1px; flex-shrink:0; }
+    .rec-fl { width:26px; height:18px; border:none; background:transparent; color:var(--gris);
+      font-size:11px; line-height:1; cursor:pointer; border-radius:5px; font-family:inherit;
+      padding:0; -webkit-tap-highlight-color:transparent; }
+    .rec-fl:active { background:var(--arena); }
+    .rec-fl:disabled { opacity:.25; cursor:default; }
+    .rec-et-toca { flex:1; min-width:0; display:flex; align-items:center; gap:9px;
+      padding:7px 6px; cursor:pointer; border-radius:var(--r-sm); }
+    .rec-et-toca:active { background:var(--arena); }
+    .rec-sq { flex-shrink:0; width:28px; height:28px; border-radius:7px; display:flex;
+      align-items:center; justify-content:center; font-size:12.5px; font-weight:800;
+      border:1.5px solid var(--borde); background:var(--blanco); color:var(--texto); }
+    .rec-et-t { flex:1; min-width:0; font-size:13.5px; font-weight:800; color:var(--texto);
+      line-height:1.25; overflow-wrap:anywhere; }
+    .rec-et-c { font-size:11px; font-weight:700; color:var(--gris); white-space:nowrap; }
+    .rec-et-chev { color:var(--gris); font-weight:800; }
+    /* — la ventana de la etapa — */
+    .rec-obj { font-size:12.5px; color:var(--gris); line-height:1.5; margin:-4px 0 12px; }
+    .rec-bl { border:1.5px solid var(--borde); border-radius:var(--r-sm); padding:8px 9px;
+      margin-bottom:8px; }
+    .rec-bl-cab { display:flex; align-items:center; gap:8px; }
+    .rec-bl-t { flex:1; min-width:0; font-size:13.5px; font-weight:800; color:var(--texto);
+      line-height:1.3; overflow-wrap:anywhere; }
+    .rec-bl-vacio { font-size:12px; color:var(--gris); line-height:1.45; margin-top:6px; }
+    .rec-arbol { margin:8px 0 2px; }
+    .rec-sem-pill { flex-shrink:0; font-family:inherit; font-size:11px; font-weight:700;
+      padding:4px 9px; border-radius:999px; border:1.5px solid var(--borde);
+      background:var(--blanco); color:var(--texto); cursor:pointer; white-space:nowrap;
+      -webkit-tap-highlight-color:transparent; }
+    .rec-sem-pill.puesta { border-color:var(--ac-dada); background:var(--ac-dada-sv);
       color:var(--ac-dada-tx); }
-    /* v0.332: «preparada» — hay guion escrito pero todavía no se ha dado */
-    .rec-n.listo .rec-sq { border-color:var(--ac-carro); background:var(--ac-carro-sv);
-      color:var(--ac-carro-tx); }
-    .rec-n.sig .rec-sq  { border-style:dashed; border-color:var(--ac-hoy);
-      background:var(--ac-hoy-sv); color:var(--ac-hoy-tx); }
-    .rec-n.vacio .rec-sq { border-style:dashed; }
-    .rec-fila { display:flex; align-items:flex-start; gap:6px; min-height:26px; }
-    .rec-cuerpo { flex:1; min-width:0; cursor:pointer; padding:2px 0; }
-    .rec-tit { font-size:13.5px; font-weight:700; color:var(--texto); line-height:1.3;
-      overflow-wrap:anywhere; }
-    .rec-n.vacio .rec-tit { color:var(--gris); font-weight:700; }
-    .rec-sub { font-size:11px; color:var(--gris); margin-top:1px; }
-    .rec-n.sig .rec-sub { color:var(--ac-hoy-tx); font-weight:700; }
-    .rec-arbol { margin:7px 0 2px; }
+    /* — elegir semana — */
+    .rec-sem-grp { font-size:10.5px; font-weight:800; letter-spacing:.06em;
+      text-transform:uppercase; color:var(--gris); margin:12px 0 5px; }
+    .rec-sem-fila { display:flex; align-items:center; gap:8px; padding:10px;
+      border:1.5px solid var(--borde); border-radius:var(--r-sm); margin-bottom:6px; cursor:pointer; }
+    .rec-sem-fila:active { background:var(--arena); }
+    .rec-sem-fila.hoy { border-color:var(--ac-hoy); background:var(--ac-hoy-sv); }
+    .rec-sem-fila.puesta { border-color:var(--ac-dada); background:var(--ac-dada-sv); cursor:default; }
+    .rec-sem-t { flex:1; font-size:13.5px; font-weight:700; color:var(--texto); }
+    .rec-sem-s { font-size:11px; color:var(--gris); white-space:nowrap; }
+    .rec-sem-btn { font-family:inherit; font-size:11px; font-weight:700; padding:5px 10px;
+      border-radius:999px; border:1.5px solid var(--borde); background:var(--blanco);
+      color:var(--texto); cursor:pointer; }
+    .rec-sem-btn.quitar { color:var(--rojo); border-color:var(--rojo-suave); background:var(--rojo-suave); }
     .rec-aviso { display:flex; align-items:center; gap:8px; padding:8px 10px; margin-bottom:10px;
       border:1.5px solid var(--ac-hoy); border-radius:var(--r-sm); background:var(--ac-hoy-sv);
       color:var(--ac-hoy-tx); font-size:12px; font-weight:700; cursor:pointer; }
@@ -7769,51 +7817,6 @@
       border:1.5px dashed var(--borde); border-radius:var(--r-md); }
     .chu-pie { font-size:11px; line-height:1.5; color:var(--gris); margin-top:14px; }
     .chu-pie a { color:var(--ac-carro-tx); }
-    .rec-leyenda { display:flex; gap:12px; flex-wrap:wrap; align-items:center;
-      font-size:10.5px; color:var(--gris); margin:0 0 10px; }
-    .rec-lg { display:inline-block; width:9px; height:9px; border-radius:3px;
-      margin-right:4px; vertical-align:0; border:1.5px solid var(--borde); }
-    .rec-lg.hecho { border-color:var(--ac-dada); background:var(--ac-dada-sv); }
-    .rec-lg.listo { border-color:var(--ac-carro); background:var(--ac-carro-sv); }
-    .rec-lg.sig   { border-color:var(--ac-hoy); background:var(--ac-hoy-sv); border-style:dashed; }
-    .rec-lg.vacio { border-style:dashed; }
-    /* ══ v0.331 — EN PANTALLA GRANDE, EL CAMINO VA EN COLUMNAS ═══════
-       El mismo marcado; solo cambia el contenedor. Las columnas son un
-       número FIJO a propósito: con `auto-fit` el navegador decide cuántas
-       caben, yo no sé dónde rompe la fila, y las líneas que unen los nodos
-       quedarían colgando en el aire al final de cada línea. Con 4 y 2 sé
-       exactamente cuál es el último de cada fila y le quito la línea. */
-    @media (min-width:600px) {
-      /* Ojo con el selector: `.rec-et.abierta .rec-et-body` ya pone
-         display:block y pesa más que `.rec-et-body` a secas. Las media
-         queries NO añaden especificidad, así que hay que igualarla o el
-         grid no llega a aplicarse nunca. */
-      .rec-et.abierta .rec-et-body { display:grid; gap:10px 22px; padding-left:0; }
-      .rec-n { padding:8px 9px 9px; border:1.5px solid var(--borde);
-        border-radius:var(--r-sm); background:var(--blanco); }
-      .rec-n.hecho { border-color:var(--ac-dada); background:var(--ac-dada-sv); }
-      .rec-n.listo { border-color:var(--ac-carro); background:var(--ac-carro-sv); }
-      .rec-n.sig   { border-color:var(--ac-hoy);  background:var(--ac-hoy-sv); }
-      .rec-n.vacio { border-style:dashed; }
-      .rec-sq { position:static; margin-bottom:5px; }
-      /* La línea deja de bajar y pasa a unir con el nodo de la derecha */
-      .rec-n::before { left:auto; right:-22px; top:22px; bottom:auto;
-        width:22px; height:2px; }
-      /* Un nodo desplegado ocupa el ancho entero: dentro van miniaturas y
-         nombres de sesión, que en una columna de 200 px no se leen. */
-      .rec-n.abierto { grid-column:1 / -1; }
-      /* Al desplegar uno, los demás cambian de columna y las líneas dejarían
-         de cuadrar. Mientras haya algo abierto, no se pintan. */
-      .rec-et.abierta .rec-et-body.con-abierto .rec-n::before { display:none; }
-    }
-    @media (min-width:600px) and (max-width:899px) {
-      .rec-et.abierta .rec-et-body { grid-template-columns:repeat(2, minmax(0,1fr)); }
-      .rec-n:nth-child(2n)::before { display:none; }
-    }
-    @media (min-width:900px) {
-      .rec-et.abierta .rec-et-body { grid-template-columns:repeat(4, minmax(0,1fr)); }
-      .rec-n:nth-child(4n)::before { display:none; }
-    }
     .ct-hdr-sub { flex:0 0 100%; font-size:11px; color:var(--gris); line-height:1.35;
       margin-top:5px; }
     /* v0.285 — El árbol dentro del selector del día */
@@ -10103,6 +10106,10 @@
   <div id="ct-crear-ov" class="ruta-modal-ov comp-bloque-ov" style="display:none" onclick="ctCrearCerrar()"></div>
   <!-- v0.289: la ficha de una clase tipo, con miniaturas -->
   <div id="ct-ficha-ov" class="ruta-modal-ov comp-bloque-ov" style="display:none" onclick="ctFichaCerrar()"></div>
+  <!-- v0.337: la etapa del Recorrido, en ventana. Va DEBAJO de la ficha y del
+       compositor (comp-bloque-ov) a propósito: desde aquí se abren los dos
+       y tienen que quedar encima. -->
+  <div id="rec-ov" class="ruta-modal-ov" style="display:none" onclick="recEtapaCerrar()"></div>
 
   <!-- ══ CLASE PREPARADA DE UNA FRANJA (v0.224) ══════════
        Globo con el carro y el área de trabajo de esa franja y ese día, para
@@ -10270,7 +10277,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.336.0';
+    var APP_VERSION = '0.337.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -10677,6 +10684,7 @@
           // v0.282: clases tipo del club
           if (planServ.clases_tipo != null) pLocal.clasesTipo = planServ.clases_tipo || [];
           if (planServ.ses_orden   != null) pLocal.sesOrden   = planServ.ses_orden   || {};   // v0.315
+          if (planServ.et_orden    != null) pLocal.etOrden    = planServ.et_orden    || {};   // v0.337
           // compDias NO se lee del plan de grupo (v0.132): es privado por
           // entrenador y se resuelve más abajo con plan_dias_usuario.
           escribirPlan(pLocal, true);
@@ -10996,6 +11004,11 @@
         // club, como el catálogo: el orden que funciona en pista le sirve a
         // todo el equipo técnico. Necesita migracion_ses_orden.sql.
         ses_orden:       p.sesOrden || {},
+        // v0.337: el ORDEN de las etapas del Recorrido, por nivel. El
+        // catálogo (PLAN_ETAPAS) dice qué etapas hay; en qué orden se
+        // recorren lo decide el entrenador con las flechas, y eso es dato de
+        // la app. Necesita migracion_et_orden.sql.
+        et_orden:        p.etOrden || {},
         updated_by:      uid,
         updated_at:      new Date().toISOString()
       };
@@ -11010,7 +11023,7 @@
             // sincronizando como siempre.
             // v0.282: y lo mismo con clases_tipo — se reintenta sin las dos
             // columnas nuevas para no llevarse por delante el resto del plan.
-            var sinT = {}; for (var k in row) if (k !== 'torneos' && k !== 'clases_tipo' && k !== 'ses_orden') sinT[k] = row[k];
+            var sinT = {}; for (var k in row) if (k !== 'torneos' && k !== 'clases_tipo' && k !== 'ses_orden' && k !== 'et_orden') sinT[k] = row[k];
             _sb.from('plan_grupo').upsert(sinT, { onConflict: 'scope_id' })
               .then(function(r2){ if (r2.error) console.warn('bg sync plan (2º intento)', r2.error); });
           });
@@ -19904,42 +19917,46 @@
       // número de clases tipo que guardan, y debajo cada clase con su golpe.
       // Tocar un BLOQUE crea una clase tipo de ahí mismo: eliges sesión y
       // carro, y se llama como la sesión.
+      // ══════════════════════════════════════════════════════════
+      // v0.337 — EL RECORRIDO, DINÁMICO
+      // ══════════════════════════════════════════════════════════
+      // Cerrado es una LISTA DE ETAPAS que se pueden reordenar con flechas
+      // (el orden es del entrenador: p.etOrden). Tocar una etapa la abre en
+      // una VENTANA encima de todo con sus bloques y sesiones; ya no se
+      // despliega debajo ni se pinta en columnas (v0.331). Los COLORES de
+      // estado (dada / preparada / la siguiente, v0.332) se retiran: no
+      // aportaban una información que se usara. El cuadrado de cada etapa
+      // dice cuántas sesiones tiene. El estado se sigue calculando en
+      // _recEstado por si se vuelve a valorar más adelante; solo no se pinta.
       var nivelCT  = _compNivel();
-      var mapEjCT  = _ejsById();
-      var todasSCT = leerClases();
       var estRec   = _recEstado(p, nivelCT);
-      var etActual = _recEtapaActual(estRec);
       var huerf    = _recHuerfanas(nivelCT, estRec.colocadas);
-      var nHechos  = 0, nBloques = 0;
-      estRec.etapas.forEach(function(e){ nHechos += e.hechos; nBloques += e.total; });
-      // La etapa en curso se abre sola la primera vez. Si la cierras a mano,
-      // se queda cerrada: a partir de ahí manda tu decisión.
-      if (etActual && _ctApAbierto[etActual] === undefined) _ctApAbierto[etActual] = true;
+      var nSesTot  = 0, nBloques = 0;
+      estRec.etapas.forEach(function(e){
+        nBloques += e.total;
+        e.nodos.forEach(function(nd){ nSesTot += nd.n; });
+      });
 
       h += '<div class="ct-caja' + (_ctCajaOpen ? ' abierto' : '') + '">';
       h += '<div class="ct-hdr" onclick="ctCajaToggle()"><span class="ct-hdr-t">\u{1F4CD} Recorrido</span>' +
            '<span class="ct-hdr-n">' + _gEsc(planNivelLabel(nivelCT)) + '</span>' +
-           '<span class="ct-hdr-c">' + nHechos + ' de ' + nBloques + '</span>' +
+           '<span class="ct-hdr-c">' + nSesTot + (nSesTot === 1 ? ' sesión' : ' sesiones') +
+             ' · ' + nBloques + ' bloques</span>' +
            '<button type="button" class="ct-nueva" onclick="event.stopPropagation();ctNueva()" ' +
-             'title="Crear una clase desde cero" aria-label="Nueva clase">\u2699</button>' +
-           '<span class="ct-hdr-chev">\u203A</span>' +
-           '<span class="ct-hdr-sub">Por dónde va este nivel. Cada cuadradito es un bloque de la ' +
-             'ruta: relleno cuando ya tiene clase, en blanco cuando no. Ábrelo para ver lo que ' +
-             'hay dentro o preparar la siguiente.</span></div>';
+             'title="Crear una clase desde cero" aria-label="Nueva clase">⚙</button>' +
+           '<span class="ct-hdr-chev">›</span>' +
+           '<span class="ct-hdr-sub">Las etapas de este nivel, en el orden en que las vas a dar: ' +
+             'muévelas con las flechas. Toca una para ver sus bloques y sesiones, y desde ahí ' +
+             'elige en qué semana se trabaja cada una.</span></div>';
 
       h += '<div class="ct-caja-body">';
-      h += '<div class="rec-leyenda">' +
-        '<span><i class="rec-lg hecho"></i>dada</span>' +
-        '<span><i class="rec-lg listo"></i>preparada</span>' +
-        '<span><i class="rec-lg sig"></i>la siguiente</span>' +
-        '<span><i class="rec-lg vacio"></i>sin sesión</span></div>';
 
       // ── Aviso: sesiones de este nivel que no caen en ningún bloque ──
       if (huerf.length) {
         h += '<div class="rec-aviso" onclick="recAvisoToggle()">' +
-             '<span>\u26A0\uFE0F</span><span style="flex:1;">' + huerf.length +
+             '<span>⚠️</span><span style="flex:1;">' + huerf.length +
              (huerf.length === 1 ? ' sesión sin bloque' : ' sesiones sin bloque') +
-             '</span><span>' + (_recAvisoOpen ? '\u2715' : '\u203A') + '</span></div>';
+             '</span><span>' + (_recAvisoOpen ? '✕' : '›') + '</span></div>';
         if (_recAvisoOpen) {
           h += '<div class="rec-aviso-det">Estas sesiones son de este nivel pero no dicen a qué ' +
                'bloque pertenecen, así que no tienen sitio en el recorrido:' +
@@ -19953,91 +19970,28 @@
         }
       }
 
-      // ── El camino: una etapa detrás de otra ─────────────────────────
+      // ── La lista de etapas, en el orden del entrenador ──────────────
+      if (!estRec.etapas.length) {
+        h += '<div class="plan-bl-vacio">Este nivel no tiene etapas en el catálogo.</div>';
+      }
       estRec.etapas.forEach(function(e, iEt){
-        var abEt = !!_ctApAbierto[e.et.key];
-        var completa = e.total > 0 && e.hechos === e.total;
-        h += '<div class="rec-et' + (abEt ? ' abierta' : '') + (completa ? ' hecha' : '') + '">';
-        h += '<div class="rec-et-cab" onclick="ctApToggle(\'' + e.et.key + '\')">' +
+        var nSes = 0;
+        e.nodos.forEach(function(nd){ nSes += nd.n; });
+        var esPrimera = iEt === 0, esUltima = iEt === estRec.etapas.length - 1;
+        h += '<div class="rec-fila-et">';
+        h += '<span class="rec-mover">' +
+          '<button type="button" class="rec-fl"' + (esPrimera ? ' disabled' : '') +
+            ' onclick="event.stopPropagation();recEtapaMover(\'' + e.et.key + '\',-1)" aria-label="Subir">▲</button>' +
+          '<button type="button" class="rec-fl"' + (esUltima ? ' disabled' : '') +
+            ' onclick="event.stopPropagation();recEtapaMover(\'' + e.et.key + '\',1)" aria-label="Bajar">▼</button>' +
+          '</span>';
+        h += '<div class="rec-et-toca" onclick="recEtapaAbrir(\'' + e.et.key + '\')">' +
+          '<span class="rec-sq">' + nSes + '</span>' +
           '<span class="rec-et-t">' + (nivelCT === 'competicion' ? '' : 'Etapa ' + (iEt + 1) + ' · ') +
             _gEsc(e.et.nombre) + '</span>' +
-          '<span class="rec-et-c">' + e.hechos + ' de ' + e.total + (completa ? ' \u2713' : '') +
-            (e.listos ? ' · +' + e.listos : '') + '</span>' +
-          '<span class="rec-et-chev">\u203A</span></div>';
-        var algunoAb = e.nodos.some(function(nd){ return !!_ctBlAbierto[nd.it.id]; });
-        h += '<div class="rec-et-body' + (algunoAb ? ' con-abierto' : '') + '">';
-        if (!e.nodos.length) {
-          h += '<div class="plan-bl-vacio">Este apartado no tiene bloques todavía.</div>';
-        }
-        // v0.332: el «siguiente» es el primer bloque SIN DAR de la etapa en
-        // curso — tenga guion preparado o no. Antes era el primero sin
-        // material, que con los guiones escritos por adelantado señalaba
-        // siempre más allá de donde de verdad vas.
-        var idxSig = -1;
-        if (e.et.key === etActual) {
-          for (var k = 0; k < e.nodos.length; k++) { if (!e.nodos[k].dado) { idxSig = k; break; } }
-        }
-        e.nodos.forEach(function(nd, iN){
-          // dada (verde) · preparada (cian) · vacía (punteada). El ámbar de
-          // «la siguiente» se suma encima de cualquiera de las tres.
-          var cls = nd.dado ? 'hecho' : (nd.n ? 'listo' : 'vacio');
-          if (iN === idxSig) cls += ' sig';
-          var abBl = !!_ctBlAbierto[nd.it.id];
-          var marca;
-          if (nd.n > 1)     marca = String(nd.n);
-          else if (nd.dado) marca = '\u2713';
-          else if (nd.n)    marca = '\u25CF';
-          else              marca = (iN === idxSig) ? '\uFF0B' : '';
-          var sub;
-          if (nd.n) {
-            var tro = [];
-            if (nd.ses.length) tro.push(nd.ses.length + (nd.ses.length !== 1 ? ' sesiones' : ' sesión'));
-            if (nd.cts.length) tro.push(nd.cts.length + (nd.cts.length !== 1 ? ' clases' : ' clase'));
-            tro.push(nd.dado ? 'dada' : 'preparada');
-            if (iN === idxSig) tro.push('la siguiente');
-            sub = tro.join(' · ');
-          } else {
-            sub = (iN === idxSig) ? 'La siguiente' : 'Sin sesión todavía';
-          }
-          h += '<div class="rec-n ' + cls + (abBl ? ' abierto' : '') + '">';
-          h += '<div class="rec-sq">' + marca + '</div>';
-          h += '<div class="rec-fila">';
-          h += '<div class="rec-cuerpo" onclick="ctBlToggle(\'' + nd.it.id + '\')">' +
-                 '<div class="rec-tit">' + _gEsc(nd.it.t) + '</div>' +
-                 '<div class="rec-sub">' + _gEsc(sub) + '</div></div>';
-          h += '<button type="button" class="plan-item-cfg" title="Preparar una clase de este bloque" ' +
-               'aria-label="Nueva clase" onclick="event.stopPropagation();ctCrearAbrir(\'' + nd.it.id + '\')">\uFF0B</button>';
-          h += '</div>';
-          if (abBl) {
-            h += '<div class="plan-bl-arbol rec-arbol">';
-            if (!nd.n) {
-              h += '<div class="plan-bl-vacio">Este bloque no tiene nada todavía. ' +
-                   'Pulsa \uFF0B para preparar una clase con las sesiones de este bloque.</div>';
-            }
-            nd.cts.forEach(function(c){
-              var th = _ctThumb(c, mapEjCT, todasSCT);
-              h += '<div class="plan-bl-fila" onclick="ctFichaAbrir(\'' + c.id + '\')">' +
-                '<span class="plan-bl-thumb">' + (th
-                  ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
-                  : '<span class="plan-bl-noimg">\u2B50</span>') + '</span>' +
-                '<span class="plan-bl-nom">' + _gEsc(c.nombre) + '</span>' +
-                '<span class="plan-bl-tag">\u2B50' + (c.usos ? ' ' + c.usos + '\u00D7' : '') + '</span></div>';
-            });
-            nd.ses.forEach(function(c){
-              var th = _rutaSesThumb(c);
-              h += '<div class="plan-bl-fila' + (c.trabajada ? ' trabajada' : '') +
-                '" onclick="verSesion(' + c.id + ',\'planif\')">' +
-                '<span class="plan-bl-thumb">' + (th
-                  ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
-                  : '<span class="plan-bl-noimg">\u{1F3BE}</span>') + '</span>' +
-                '<span class="plan-bl-nom">' + _gEsc(nombreSesion(c)) + '</span>' +
-                (c.trabajada ? '<span class="plan-bl-tag ok">\u2713</span>' : '') + '</div>';
-            });
-            h += '</div>';
-          }
-          h += '</div>';
-        });
-        h += '</div></div>';
+          '<span class="rec-et-c">' + e.total + (e.total === 1 ? ' bloque' : ' bloques') + '</span>' +
+          '<span class="rec-et-chev">›</span></div>';
+        h += '</div>';
       });
       h += '</div>';   // .ct-caja-body
       h += '</div>';   // .ct-caja
@@ -20648,10 +20602,39 @@
       return set;
     }
 
+    // ── v0.337 — EL ORDEN DE LAS ETAPAS ES DEL ENTRENADOR ──────────────
+    // El catálogo (PLAN_ETAPAS) dice qué etapas hay; en qué orden se
+    // recorren lo decide quien da la clase, con las flechas, y se guarda en
+    // p.etOrden[nivel] (columna et_orden, sincronizada como ses_orden).
+    // Lo que no esté en la lista va al final en su orden de catálogo; una
+    // clave que ya no exista se ignora sola.
+    function _recEtapasOrdenadas(p, nivel) {
+      var base = (PLAN_ETAPAS[nivel] || []).filter(function(et){ return et.tipo !== 'ciclo'; });
+      var ord = (p && p.etOrden && p.etOrden[nivel]) || [];
+      if (!ord.length) return base;
+      var pos = {}; ord.forEach(function(k, i){ pos[k] = i; });
+      return base.slice().sort(function(a, b){
+        var ia = (pos[a.key] !== undefined) ? pos[a.key] : 1000 + base.indexOf(a);
+        var ib = (pos[b.key] !== undefined) ? pos[b.key] : 1000 + base.indexOf(b);
+        return ia - ib;
+      });
+    }
+    function recEtapaMover(key, delta) {
+      var p = leerPlan(), nivel = _compNivel();
+      var keys = _recEtapasOrdenadas(p, nivel).map(function(et){ return et.key; });
+      var i = keys.indexOf(key), j = i + delta;
+      if (i < 0 || j < 0 || j >= keys.length) return;
+      keys.splice(i, 1); keys.splice(j, 0, key);
+      p.etOrden = p.etOrden || {};
+      p.etOrden[nivel] = keys;
+      escribirPlan(p);
+      mostrarPlanificacion();
+    }
+
     // Estado del recorrido: etapas → nodos, y qué sesiones han encontrado
     // sitio en algún bloque.
     function _recEstado(p, nivel) {
-      var etapas = (PLAN_ETAPAS[nivel] || []).filter(function(et){ return et.tipo !== 'ciclo'; });
+      var etapas = _recEtapasOrdenadas(p, nivel);
       var cont   = planContenido(p)[nivel] || {};
       var colocadas = {};
       var dados = _recDados(p);
@@ -20682,20 +20665,202 @@
       });
     }
 
-    // La etapa en curso: la primera que aún tiene algún bloque en blanco.
-    // Si están todas completas, la última.
-    function _recEtapaActual(est) {
-      for (var i = 0; i < est.etapas.length; i++) {
-        if (est.etapas[i].hechos < est.etapas[i].total) return est.etapas[i].et.key;
-      }
-      var u = est.etapas[est.etapas.length - 1];
-      return u ? u.et.key : '';
+    // ══════════════════════════════════════════════════════════════
+    // v0.337 — LA VENTANA DE LA ETAPA y «ELEGIR SEMANA»
+    // ══════════════════════════════════════════════════════════════
+    // Tocar una etapa del Recorrido la abre en una ventana encima de todo,
+    // con sus bloques y, dentro de cada uno, sus clases tipo y sesiones. Ya
+    // no se despliega debajo: se ve entera, se cierra, y el Recorrido sigue
+    // donde estaba.
+    //
+    // Cada SESIÓN lleva su botón de semana. Es la puerta contraria de la que
+    // ya existía: hasta ahora se llegaba desde el DÍA (calendario → abrir el
+    // día → elegir sesión); aquí se llega desde la SESIÓN (bloque → sesión →
+    // ¿qué semana?). Las dos escriben en el mismo sitio, p.rutaSes, con los
+    // mismos helpers, así que la Temporalización la pinta sola. No hay un
+    // dato nuevo: hay una entrada nueva al de siempre.
+    //
+    // Es deliberadamente NO lineal: el dato es «sesión → semana», no «semana
+    // → siguiente sesión». Se puede dar el bloque 5 en la semana 3, o probar
+    // una sesión recién escrita cuando toque. El Recorrido no impone orden;
+    // solo enseña qué hay.
+    var _recEtapaAbierta = null;   // key de la etapa abierta en ventana
+    var _recSemPara      = null;   // id de sesión a la que se le está eligiendo semana
+
+    function recEtapaAbrir(key) { _recEtapaAbierta = key; _recSemPara = null; _recVentanaPintar(); }
+    function recEtapaCerrar() {
+      _recEtapaAbierta = null; _recSemPara = null;
+      var ov = document.getElementById('rec-ov');
+      if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; }
+    }
+    function recSemanaElegir(sesId) { _recSemPara = sesId; _recVentanaPintar(); }
+    function recSemanaVolver()      { _recSemPara = null;  _recVentanaPintar(); }
+
+    // En qué semanas está ya colocada una sesión (lunes ISO, de la más
+    // reciente a la más antigua). Recorre las claves de rutaSes: con nivel
+    // («avanzado|2026-09-14») o sin él (formato viejo, solo Competición).
+    function _recSemanasDe(p, nivel, sesId) {
+      var mapa = p.rutaSes || {}, niv = _rutaNivelSem(nivel), out = {};
+      Object.keys(mapa).forEach(function(k){
+        var partes = k.split('|'), kn, fecha;
+        if (partes.length === 2) { kn = partes[0]; fecha = partes[1]; }
+        else { kn = 'competicion'; fecha = k; }
+        if (kn !== niv) return;
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return;
+        if (_rutaSesArr(mapa[k]).indexOf(sesId) < 0) return;
+        out[_rutaSemanaLibre(fecha).lunISO] = true;
+      });
+      return Object.keys(out).sort().reverse();
     }
 
-    var _ctApAbierto = {};   // v0.287: qué áreas están desplegadas
-    var _ctBlAbierto = {};   // v0.289: y qué bloques dentro de ellas
-    function ctApToggle(key) { _ctApAbierto[key] = !_ctApAbierto[key]; mostrarPlanificacion(); }
-    function ctBlToggle(id) { _ctBlAbierto[id] = !_ctBlAbierto[id]; mostrarPlanificacion(); }
+    // Coloca (o quita) la sesión en una semana: en cada día de clase de ese
+    // nivel dentro de la semana, sumándola a lo que ya hubiera. Si el club
+    // aún no tiene días configurados, se guarda por semana, que es lo que
+    // _rutaSemanaUnion también lee.
+    function _recSemanaEscribir(sesId, lunISO, quitar) {
+      var p = leerPlan(); p.rutaSes = p.rutaSes || {};
+      var nivel = _compNivel();
+      var w = _rutaSemanas(cursoDeFecha(lunISO)).filter(function(x){ return x.lunISO === lunISO; })[0]
+              || _rutaSemanaLibre(lunISO);
+      var dias = _rutaDiasDeNivel(w, nivel);
+      function ajusta(arr) {
+        arr = _rutaSesArr(arr);
+        var i = arr.indexOf(sesId);
+        if (quitar) { if (i >= 0) arr.splice(i, 1); }
+        else if (i < 0) arr.push(sesId);
+        return arr;
+      }
+      if (dias.length) {
+        dias.forEach(function(d){
+          _rutaEscribeDia(p.rutaSes, nivel, d.fecha,
+            ajusta(_rutaLeeDia(p.rutaSes, nivel, d.fecha, w.lunISO)), w);
+        });
+      } else {
+        _rutaEscribeSem(p.rutaSes, nivel, w.lunISO, ajusta(_rutaLeeSem(p.rutaSes, nivel, w.lunISO)));
+      }
+      // al quitar, si la semana guardaba la clave vieja con la sesión, fuera también
+      if (quitar) {
+        var vs = _rutaLeeSem(p.rutaSes, nivel, w.lunISO);
+        if (vs !== undefined) _rutaEscribeSem(p.rutaSes, nivel, w.lunISO, ajusta(vs));
+      }
+      escribirPlan(p);
+      _recSemPara = null;
+      mostrarPlanificacion();   // repinta el tablero, la Temporalización y la ventana
+    }
+    function recSemanaPoner(sesId, lunISO)  { _recSemanaEscribir(sesId, lunISO, false); }
+    function recSemanaQuitar(sesId, lunISO) { _recSemanaEscribir(sesId, lunISO, true); }
+
+    function _recSemLabel(lunISO) { return 'Semana del ' + formatFechaDiaMes(lunISO); }
+
+    function _recVentanaPintar() {
+      var ov = document.getElementById('rec-ov');
+      if (!ov) return;
+      if (!_recEtapaAbierta) { ov.style.display = 'none'; ov.innerHTML = ''; return; }
+      var p = leerPlan(), nivel = _compNivel();
+      var est = _recEstado(p, nivel);
+      var iEt = -1, e = null;
+      est.etapas.forEach(function(x, i){ if (x.et.key === _recEtapaAbierta) { e = x; iEt = i; } });
+      if (!e) { recEtapaCerrar(); return; }
+      var mapEj = _ejsById(), todasS = leerClases();
+      var nSes = 0; e.nodos.forEach(function(nd){ nSes += nd.n; });
+
+      var h = '<div class="ruta-modal rec-modal" onclick="event.stopPropagation()">';
+
+      // ── Modo «¿qué semana?» ─────────────────────────────────────
+      if (_recSemPara != null) {
+        var ses = todasS.filter(function(c){ return c.id === _recSemPara; })[0];
+        var yaEn = _recSemanasDe(p, nivel, _recSemPara);
+        h += '<div class="ruta-modal-hdr"><div>' +
+          '<div class="ruta-modal-tit">¿Qué semana?</div>' +
+          '<div class="ruta-modal-sub">' + _gEsc(ses ? nombreSesion(ses) : 'Sesión') + '</div></div>' +
+          '<button class="plan-modal-x" onclick="recSemanaVolver()" aria-label="Volver">‹</button></div>';
+        if (yaEn.length) {
+          h += '<div class="rec-sem-grp">Ya está en</div>';
+          yaEn.forEach(function(l){
+            h += '<div class="rec-sem-fila puesta">' +
+              '<span class="rec-sem-t">' + _gEsc(_recSemLabel(l)) + '</span>' +
+              '<button type="button" class="rec-sem-btn quitar" onclick="recSemanaQuitar(' + _recSemPara + ',\'' + l + '\')">Quitar</button></div>';
+          });
+        }
+        var curso = _cursoActual();
+        var sems = _rutaSemanas(curso);
+        var hoyW = _rutaSemanaLibre(hoyLocal()).lunISO;
+        h += '<div class="rec-sem-grp">Curso ' + _gEsc(curso) + '</div>';
+        var alguna = false;
+        sems.forEach(function(w){
+          if (w.lunISO < hoyW) return;   // lo pasado se ajusta desde el calendario, no desde aquí
+          if (yaEn.indexOf(w.lunISO) >= 0) return;
+          alguna = true;
+          var dias = _rutaDiasDeNivel(w, nivel);
+          var sub = w.lunISO === hoyW ? 'esta semana' :
+                    (dias.length ? dias.length + (dias.length === 1 ? ' día de clase' : ' días de clase') : 'sin días configurados');
+          h += '<div class="rec-sem-fila' + (w.lunISO === hoyW ? ' hoy' : '') + '" onclick="recSemanaPoner(' + _recSemPara + ',\'' + w.lunISO + '\')">' +
+            '<span class="rec-sem-t">' + _gEsc(_recSemLabel(w.lunISO)) + '</span>' +
+            '<span class="rec-sem-s">' + _gEsc(sub) + '</span></div>';
+        });
+        if (!alguna) h += '<div class="plan-bl-vacio">No quedan semanas por delante en este curso.</div>';
+        h += '</div>';
+        _ovPintarConScroll(ov, h);   // conserva el scroll al repintar, como el resto de paneles
+        return;
+      }
+
+      // ── La etapa: bloques y, dentro, clases tipo y sesiones ─────
+      h += '<div class="ruta-modal-hdr"><div>' +
+        '<div class="ruta-modal-tit">' + (nivel === 'competicion' ? '' : 'Etapa ' + (iEt + 1) + ' · ') + _gEsc(e.et.nombre) + '</div>' +
+        '<div class="ruta-modal-sub">' + e.total + (e.total === 1 ? ' bloque' : ' bloques') + ' · ' +
+          nSes + (nSes === 1 ? ' sesión' : ' sesiones') + '</div></div>' +
+        '<button class="plan-modal-x" onclick="recEtapaCerrar()" aria-label="Cerrar">✕</button></div>';
+      if (e.et.obj) h += '<div class="rec-obj">' + _gEsc(e.et.obj) + '</div>';
+      if (!e.nodos.length) h += '<div class="plan-bl-vacio">Este apartado no tiene bloques todavía.</div>';
+
+      e.nodos.forEach(function(nd){
+        h += '<div class="rec-bl">';
+        h += '<div class="rec-bl-cab">' +
+          '<span class="rec-sq">' + nd.n + '</span>' +
+          '<span class="rec-bl-t">' + _gEsc(nd.it.t) + '</span>' +
+          '<button type="button" class="plan-item-cfg" title="Preparar una clase de este bloque" ' +
+            'aria-label="Nueva clase" onclick="ctCrearAbrir(\'' + nd.it.id + '\')">＋</button></div>';
+        if (!nd.n) {
+          h += '<div class="rec-bl-vacio">Sin sesión todavía. Escríbela en el vault con este bloque, o pulsa ＋ para preparar una clase.</div>';
+        }
+        // Las mismas filas que en Área (plan-bl-fila, con miniatura): una
+        // clase tipo abre su ficha; una sesión se abre, y además lleva su
+        // botón de semana — que para el click no abra la sesión.
+        if (nd.n) h += '<div class="plan-bl-arbol rec-arbol">';
+        nd.cts.forEach(function(c){
+          var th = _ctThumb(c, mapEj, todasS);
+          h += '<div class="plan-bl-fila" onclick="ctFichaAbrir(\'' + c.id + '\')">' +
+            '<span class="plan-bl-thumb">' + (th
+              ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
+              : '<span class="plan-bl-noimg">\u2B50</span>') + '</span>' +
+            '<span class="plan-bl-nom">' + _gEsc(c.nombre) + '</span>' +
+            '<span class="plan-bl-tag">\u2B50' + (c.usos ? ' ' + c.usos + '\u00D7' : '') + '</span></div>';
+        });
+        nd.ses.forEach(function(c){
+          var th = _rutaSesThumb(c);
+          var en = _recSemanasDe(p, nivel, c.id);
+          h += '<div class="plan-bl-fila' + (c.trabajada ? ' trabajada' : '') +
+            '" onclick="verSesion(' + c.id + ',\'planif\')">' +
+            '<span class="plan-bl-thumb">' + (th
+              ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
+              : '<span class="plan-bl-noimg">\u{1F3BE}</span>') + '</span>' +
+            '<span class="plan-bl-nom">' + _gEsc(nombreSesion(c)) + '</span>' +
+            (en.length
+              ? '<button type="button" class="rec-sem-pill puesta" onclick="event.stopPropagation();recSemanaElegir(' + c.id + ')">' +
+                  _gEsc(_recSemLabel(en[0])) + (en.length > 1 ? ' +' + (en.length - 1) : '') + '</button>'
+              : '<button type="button" class="rec-sem-pill" onclick="event.stopPropagation();recSemanaElegir(' + c.id + ')">\u{1F4C5} Semana</button>') +
+            '</div>';
+        });
+        if (nd.n) h += '</div>';
+        h += '</div>';
+      });
+      h += '</div>';
+      _ovPintarConScroll(ov, h);
+    }
+
+    // v0.337: _recEtapaActual, ctApToggle y ctBlToggle se retiran. La etapa
+    // ya no se despliega en el sitio (va en ventana: recEtapaAbrir) y «la
+    // siguiente» dejó de pintarse con los colores de estado.
 
     // ── v0.289 — LA FICHA DE UNA CLASE TIPO ─────────────────────────
     // Se abre al tocarla en el repositorio. En vez de desplegarse en la lista
@@ -22788,6 +22953,7 @@
 
       cont.innerHTML = h;
       _compDiaOvPintar();   // v0.243: el día abierto va en globo, no aquí dentro
+      _recVentanaPintar();  // v0.337: la etapa abierta va en ventana, y se refresca con el plan
     }
 
     // ══════════════════════════════════════════
