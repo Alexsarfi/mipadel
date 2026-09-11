@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.337.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.338.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,20 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.338.0 — El Recorrido: arrastrar, galería y golpe estrella (2026-09)
+    (sin migraciones nuevas · usa la et_orden de la v0.337)
+    · LAS ETAPAS SE MUEVEN ARRASTRANDO desde el tirador ⠿, con el dedo o con
+      el ratón. Es el mismo gesto que ya tenía la secuencia de una sesión
+      (v0.315): solo desde el tirador, para que el toque siga abriendo la
+      etapa. Al soltar se guarda el orden. Las flechas ▲▼ se retiran.
+    · LOS BLOQUES, EN GALERÍA. Dentro de la ventana de la etapa, los bloques
+      van en una rejilla de tarjetas —una columna en el móvil, dos y tres en
+      pantalla grande— como las columnas de la v0.331. Columnas fijas por
+      ancho, no auto-fit, para saber dónde rompe la fila.
+    · CADA SESIÓN ENSEÑA SU GOLPE ESTRELLA: el dominante entre sus ejercicios
+      (golpeDeSesion, que ya usaba el catálogo), con su icono. De un vistazo
+      se ve qué se trabaja en cada bloque sin abrir nada.
 
   v0.337.0 — El Recorrido, dinámico (2026-09)
     ⚠ EJECUTAR migraciones/migracion_et_orden.sql ANTES de usar esta versión.
@@ -7733,12 +7747,14 @@
     .rec-fila-et { display:flex; align-items:center; gap:6px; padding:3px 0;
       border-top:1px solid var(--borde); }
     .rec-fila-et:first-of-type { border-top:none; }
-    .rec-mover { display:flex; flex-direction:column; gap:1px; flex-shrink:0; }
-    .rec-fl { width:26px; height:18px; border:none; background:transparent; color:var(--gris);
-      font-size:11px; line-height:1; cursor:pointer; border-radius:5px; font-family:inherit;
-      padding:0; -webkit-tap-highlight-color:transparent; }
-    .rec-fl:active { background:var(--arena); }
-    .rec-fl:disabled { opacity:.25; cursor:default; }
+    /* v0.338: tirador para arrastrar (touch-action:none, como .seq-drag) */
+    .rec-drag { flex-shrink:0; width:34px; align-self:stretch; display:flex; align-items:center;
+      justify-content:center; color:var(--gris); font-size:18px; cursor:grab; touch-action:none;
+      user-select:none; -webkit-user-select:none; border-radius:6px; }
+    .rec-drag:active { cursor:grabbing; }
+    .rec-fila-et.arrastrando { opacity:.9; transform:scale(1.02); background:var(--blanco);
+      box-shadow:0 6px 18px rgba(14,27,60,.22); border-radius:var(--r-sm); border-top-color:transparent; }
+    .rec-et-num { color:var(--gris); }
     .rec-et-toca { flex:1; min-width:0; display:flex; align-items:center; gap:9px;
       padding:7px 6px; cursor:pointer; border-radius:var(--r-sm); }
     .rec-et-toca:active { background:var(--arena); }
@@ -7751,8 +7767,18 @@
     .rec-et-chev { color:var(--gris); font-weight:800; }
     /* — la ventana de la etapa — */
     .rec-obj { font-size:12.5px; color:var(--gris); line-height:1.5; margin:-4px 0 12px; }
+    /* v0.338: los bloques en galería. Columnas FIJAS por ancho, como en la
+       v0.331: con auto-fit no se sabe dónde rompe la fila. */
+    .rec-gal { display:grid; grid-template-columns:1fr; gap:8px; }
+    @media (min-width:600px) { .rec-gal { grid-template-columns:repeat(2, minmax(0,1fr)); } }
+    @media (min-width:900px) { .rec-gal { grid-template-columns:repeat(3, minmax(0,1fr)); } }
     .rec-bl { border:1.5px solid var(--borde); border-radius:var(--r-sm); padding:8px 9px;
-      margin-bottom:8px; }
+      margin:0; min-width:0; }
+    .rec-ses { align-items:flex-start; }
+    .rec-ses-txt { flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
+    .rec-ses-pie { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+    .rec-golpe { font-size:10.5px; font-weight:800; color:var(--ac-area-tx); background:var(--ac-area-sv);
+      border-radius:999px; padding:2px 7px; white-space:nowrap; }
     .rec-bl-cab { display:flex; align-items:center; gap:8px; }
     .rec-bl-t { flex:1; min-width:0; font-size:13.5px; font-weight:800; color:var(--texto);
       line-height:1.3; overflow-wrap:anywhere; }
@@ -10277,7 +10303,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.337.0';
+    var APP_VERSION = '0.338.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -19946,7 +19972,7 @@
              'title="Crear una clase desde cero" aria-label="Nueva clase">⚙</button>' +
            '<span class="ct-hdr-chev">›</span>' +
            '<span class="ct-hdr-sub">Las etapas de este nivel, en el orden en que las vas a dar: ' +
-             'muévelas con las flechas. Toca una para ver sus bloques y sesiones, y desde ahí ' +
+             'arrástralas desde ⠿. Toca una para ver sus bloques y sesiones, y desde ahí ' +
              'elige en qué semana se trabaja cada una.</span></div>';
 
       h += '<div class="ct-caja-body">';
@@ -19974,25 +20000,23 @@
       if (!estRec.etapas.length) {
         h += '<div class="plan-bl-vacio">Este nivel no tiene etapas en el catálogo.</div>';
       }
+      // v0.338: se reordenan ARRASTRANDO desde el tirador ⠿ (mismo gesto que
+      // la secuencia de una sesión, v0.315). Las flechas se retiran.
+      h += '<div id="rec-lista">';
       estRec.etapas.forEach(function(e, iEt){
         var nSes = 0;
         e.nodos.forEach(function(nd){ nSes += nd.n; });
-        var esPrimera = iEt === 0, esUltima = iEt === estRec.etapas.length - 1;
-        h += '<div class="rec-fila-et">';
-        h += '<span class="rec-mover">' +
-          '<button type="button" class="rec-fl"' + (esPrimera ? ' disabled' : '') +
-            ' onclick="event.stopPropagation();recEtapaMover(\'' + e.et.key + '\',-1)" aria-label="Subir">▲</button>' +
-          '<button type="button" class="rec-fl"' + (esUltima ? ' disabled' : '') +
-            ' onclick="event.stopPropagation();recEtapaMover(\'' + e.et.key + '\',1)" aria-label="Bajar">▼</button>' +
-          '</span>';
+        h += '<div class="rec-fila-et" data-key="' + _gEsc(e.et.key) + '">';
+        h += '<span class="rec-drag" title="Arrastrar para reordenar" aria-label="Reordenar">⠿</span>';
         h += '<div class="rec-et-toca" onclick="recEtapaAbrir(\'' + e.et.key + '\')">' +
           '<span class="rec-sq">' + nSes + '</span>' +
-          '<span class="rec-et-t">' + (nivelCT === 'competicion' ? '' : 'Etapa ' + (iEt + 1) + ' · ') +
+          '<span class="rec-et-t">' + (nivelCT === 'competicion' ? '' : '<span class="rec-et-num">' + (iEt + 1) + '</span> · ') +
             _gEsc(e.et.nombre) + '</span>' +
           '<span class="rec-et-c">' + e.total + (e.total === 1 ? ' bloque' : ' bloques') + '</span>' +
           '<span class="rec-et-chev">›</span></div>';
         h += '</div>';
       });
+      h += '</div>';
       h += '</div>';   // .ct-caja-body
       h += '</div>';   // .ct-caja
 
@@ -20619,17 +20643,55 @@
         return ia - ib;
       });
     }
-    function recEtapaMover(key, delta) {
+    function recEtapaOrdenGuardar(keys) {
       var p = leerPlan(), nivel = _compNivel();
-      var keys = _recEtapasOrdenadas(p, nivel).map(function(et){ return et.key; });
-      var i = keys.indexOf(key), j = i + delta;
-      if (i < 0 || j < 0 || j >= keys.length) return;
-      keys.splice(i, 1); keys.splice(j, 0, key);
+      if (!keys || !keys.length) return;
       p.etOrden = p.etOrden || {};
-      p.etOrden[nivel] = keys;
+      p.etOrden[nivel] = keys.slice();
       escribirPlan(p);
       mostrarPlanificacion();
     }
+    // v0.338 — Arrastrar la etapa desde su tirador ⠿. Mismo mecanismo que la
+    // secuencia de ejercicios (_seqInit): solo desde el tirador, para no
+    // pelearse con el toque que abre la etapa; Pointer Events para que valga
+    // igual el dedo que el ratón. Al soltar se guarda el orden de la lista.
+    var _recDrag = null;
+    function _recDragInit() {
+      document.addEventListener('pointerdown', function(e){
+        var h = e.target && e.target.closest && e.target.closest('.rec-drag');
+        if (!h) return;
+        var it = h.closest('.rec-fila-et'); if (!it) return;
+        e.preventDefault();
+        _recDrag = { el: it, lista: it.parentNode };
+        it.classList.add('arrastrando');
+        try { h.setPointerCapture(e.pointerId); } catch (x) {}
+      });
+      document.addEventListener('pointermove', function(e){
+        if (!_recDrag) return;
+        e.preventDefault();
+        var y = e.clientY;
+        Array.prototype.forEach.call(_recDrag.lista.querySelectorAll('.rec-fila-et'), function(x){
+          if (x === _recDrag.el) return;
+          var r = x.getBoundingClientRect();
+          if (y > r.top && y < r.bottom) {
+            _recDrag.lista.insertBefore(_recDrag.el, (y < r.top + r.height / 2) ? x : x.nextSibling);
+          }
+        });
+      });
+      ['pointerup', 'pointercancel'].forEach(function(ev){
+        document.addEventListener(ev, function(){
+          if (!_recDrag) return;
+          _recDrag.el.classList.remove('arrastrando');
+          var keys = Array.prototype.map.call(_recDrag.lista.querySelectorAll('.rec-fila-et'), function(x){
+            return x.getAttribute('data-key');
+          }).filter(Boolean);
+          _recDrag = null;
+          recEtapaOrdenGuardar(keys);
+          if (typeof planToast === 'function') planToast('✓ Orden guardado');
+        });
+      });
+    }
+    _recDragInit();
 
     // Estado del recorrido: etapas → nodos, y qué sesiones han encontrado
     // sitio en algún bloque.
@@ -20813,6 +20875,11 @@
       if (e.et.obj) h += '<div class="rec-obj">' + _gEsc(e.et.obj) + '</div>';
       if (!e.nodos.length) h += '<div class="plan-bl-vacio">Este apartado no tiene bloques todavía.</div>';
 
+      // v0.338: los bloques van en GALERÍA —una rejilla de tarjetas, como las
+      // columnas de la v0.331 que gustaban— y cada sesión enseña su GOLPE
+      // ESTRELLA: el dominante entre sus ejercicios (golpeDeSesion), con su
+      // icono. Así de un vistazo se ve qué se trabaja en cada bloque.
+      h += '<div class="rec-gal">';
       e.nodos.forEach(function(nd){
         h += '<div class="rec-bl">';
         h += '<div class="rec-bl-cab">' +
@@ -20839,21 +20906,28 @@
         nd.ses.forEach(function(c){
           var th = _rutaSesThumb(c);
           var en = _recSemanasDe(p, nivel, c.id);
-          h += '<div class="plan-bl-fila' + (c.trabajada ? ' trabajada' : '') +
+          var g  = golpeDeSesion(c, mapEj);
+          var golpe = (g && g !== '_sin')
+            ? '<span class="rec-golpe">' + (GOLPE_ICONO[g] || '') + ' ' + _gEsc(GOLPE_LABEL[g] || g) + '</span>' : '';
+          h += '<div class="plan-bl-fila rec-ses' + (c.trabajada ? ' trabajada' : '') +
             '" onclick="verSesion(' + c.id + ',\'planif\')">' +
             '<span class="plan-bl-thumb">' + (th
               ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
               : '<span class="plan-bl-noimg">\u{1F3BE}</span>') + '</span>' +
-            '<span class="plan-bl-nom">' + _gEsc(nombreSesion(c)) + '</span>' +
-            (en.length
-              ? '<button type="button" class="rec-sem-pill puesta" onclick="event.stopPropagation();recSemanaElegir(' + c.id + ')">' +
-                  _gEsc(_recSemLabel(en[0])) + (en.length > 1 ? ' +' + (en.length - 1) : '') + '</button>'
-              : '<button type="button" class="rec-sem-pill" onclick="event.stopPropagation();recSemanaElegir(' + c.id + ')">\u{1F4C5} Semana</button>') +
+            '<span class="rec-ses-txt">' +
+              '<span class="plan-bl-nom">' + _gEsc(nombreSesion(c)) + '</span>' +
+              '<span class="rec-ses-pie">' + golpe +
+              (en.length
+                ? '<button type="button" class="rec-sem-pill puesta" onclick="event.stopPropagation();recSemanaElegir(' + c.id + ')">' +
+                    _gEsc(_recSemLabel(en[0])) + (en.length > 1 ? ' +' + (en.length - 1) : '') + '</button>'
+                : '<button type="button" class="rec-sem-pill" onclick="event.stopPropagation();recSemanaElegir(' + c.id + ')">\u{1F4C5} Semana</button>') +
+              '</span></span>' +
             '</div>';
         });
         if (nd.n) h += '</div>';
         h += '</div>';
       });
+      h += '</div>';   // .rec-gal
       h += '</div>';
       _ovPintarConScroll(ov, h);
     }
