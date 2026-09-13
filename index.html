@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.348.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.349.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,19 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.349.0 — Al abrir la etapa, la galería de sesiones por golpes (2026-09)
+    (sin migraciones · solo lee)
+    · EL RESUMEN CON CIFRAS DE LA v0.348 SE VA. En su sitio, al abrir la etapa
+      sin ninguna sesión elegida, una GALERÍA de sus sesiones agrupadas por
+      lo que dice su `golpes:` del vault.
+    · LOS GOLPES NO SE PARTEN. «Derecha + bandeja» es una categoría propia:
+      esa sesión no sale ni en «Derecha» ni en «Bandeja». Cada texto distinto
+      es un grupo, tal cual lo escribió el entrenador. Sin `golpes:`, al final
+      en «Sin golpes».
+    · Cada sesión es una tarjeta: miniatura, nombre, bloque, minutos y la
+      semana en que está colocada. Se toca y se abre esa sesión.
+    · Dos tarjetas por fila en el móvil, tres desde 600px, cuatro desde 900.
 
   v0.348.0 — La etapa se abre con su resumen, no con una sesión (2026-09)
     (sin migraciones · solo lee)
@@ -7975,47 +7988,28 @@
     /* v0.347: la ventana del ejercicio reutiliza los estilos de la pantalla */
     .ej-modal-body { display:flex; flex-direction:column; gap:14px; }
     .ej-modal-body .detalle-imagen { width:100%; border-radius:10px; }
-    /* v0.348: el resumen de la etapa */
-    .rec-res { border-top:1.5px solid var(--borde); padding-top:12px; }
-    .rec-res-kpis { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; margin-bottom:14px; }
-    @media (min-width:600px) { .rec-res-kpis { grid-template-columns:repeat(4, minmax(0,1fr)); } }
-    .rec-kpi { background:var(--arena); border-radius:var(--r-sm); padding:10px 11px; }
-    .rec-kpi b { display:block; font-size:22px; font-weight:800; color:var(--texto); line-height:1; }
-    .rec-kpi b span { font-size:13px; color:var(--gris); font-weight:700; }
-    .rec-kpi i { display:block; font-style:normal; font-size:11px; color:var(--gris); margin-top:4px; }
-    .rec-res-t { font-size:10.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
-      color:var(--gris); margin:14px 0 6px; }
-    .rec-res-t small { font-weight:700; letter-spacing:0; text-transform:none; }
-    .rec-res-bl { border:1.5px solid var(--borde); border-radius:var(--r-sm); padding:8px 9px; margin-bottom:7px; }
-    .rec-res-bl.vacio { border-style:dashed; }
-    .rec-res-bl-t { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:800; color:var(--texto); }
-    .rec-res-bl-t span { margin-left:auto; font-size:11px; font-weight:700; color:var(--gris); white-space:nowrap; }
-    .rec-res-bl.vacio .rec-res-bl-t { color:var(--gris); }
-    .rec-res-ses { display:flex; align-items:center; gap:10px; padding:7px 0 2px; cursor:pointer; }
-    .rec-res-ses + .rec-res-ses { border-top:1px solid var(--borde); }
-    .rec-res-ses-l { flex:1; min-width:0; }
-    .rec-res-ses-l b { display:block; font-size:13px; font-weight:800; color:var(--texto); line-height:1.25; overflow-wrap:anywhere; }
-    .rec-res-ses-l small { display:block; font-size:11px; color:var(--gris); margin-top:1px; overflow-wrap:anywhere; }
-    .rec-res-ses-r { flex:0 0 132px; }
-    .rec-res-ses-d { font-size:10.5px; color:var(--gris); margin-top:3px; white-space:nowrap; }
-    .rec-res-ses-d em { font-style:normal; color:var(--ac-dada-tx); font-weight:700; }
-    .rec-mini { display:flex; height:8px; border-radius:999px; overflow:hidden; background:var(--borde); gap:1px; }
-    .rec-mini.grande { height:14px; }
-    .rec-mini i { display:block; height:100%; }
-    .rec-mini i.carro { background:var(--ac-carro); }
-    .rec-mini i.area { background:var(--ac-area); }
-    .rec-mini i.sin { width:100%; background:transparent; }
-    .rec-res-golpes { display:flex; flex-direction:column; gap:5px; }
-    .rec-res-g { display:flex; align-items:center; gap:8px; font-size:12px; }
-    .rec-res-g-l { flex:0 0 118px; font-weight:700; color:var(--texto); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .rec-res-g-b { flex:1; height:10px; border-radius:999px; background:var(--arena); overflow:hidden; }
-    .rec-res-g-b i { display:block; height:100%; background:var(--ac-area); border-radius:999px; }
-    .rec-res-g-n { flex:0 0 24px; text-align:right; font-weight:800; color:var(--gris); font-size:11px; }
-    .rec-res-bal { padding:2px 0 4px; }
-    .rec-res-bal-pie { display:flex; justify-content:space-between; font-size:11.5px; font-weight:700; color:var(--gris); margin-top:6px; }
-    .rec-res-cond { display:flex; gap:12px; flex-wrap:wrap; margin-top:8px; font-size:12px; color:var(--texto); }
-    .rec-res-cond b { font-size:14px; font-weight:800; }
-    .rec-res-cond small { color:var(--gris); }
+    /* v0.349: la galería de sesiones por golpes */
+    .rec-gal { border-top:1.5px solid var(--borde); padding-top:12px; }
+    .rec-gal-grp { margin-bottom:14px; }
+    .rec-gal-t { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:800; color:var(--texto);
+      padding-bottom:6px; margin-bottom:8px; border-bottom:1.5px solid var(--borde); }
+    .rec-gal-t span { margin-left:auto; font-size:11px; font-weight:700; color:var(--gris); }
+    .rec-gal-grp.sin .rec-gal-t { color:var(--gris); border-bottom-style:dashed; }
+    .rec-gal-cards { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; }
+    @media (min-width:600px) { .rec-gal-cards { grid-template-columns:repeat(3, minmax(0,1fr)); } }
+    @media (min-width:900px) { .rec-gal-cards { grid-template-columns:repeat(4, minmax(0,1fr)); } }
+    .rec-card { border:1.5px solid var(--borde); border-radius:var(--r-sm); background:var(--blanco);
+      padding:6px 6px 8px; cursor:pointer; min-width:0; -webkit-tap-highlight-color:transparent; }
+    .rec-card:active { background:var(--arena); }
+    .rec-card-img { aspect-ratio:16/9; border-radius:7px; overflow:hidden; background:#111; display:flex;
+      align-items:center; justify-content:center; font-size:22px; margin-bottom:6px; }
+    .rec-card-img img { width:100%; height:100%; object-fit:cover; display:block; }
+    .rec-card-n { font-size:12.5px; font-weight:800; color:var(--texto); line-height:1.25; overflow-wrap:anywhere;
+      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .rec-card-b { font-size:10px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--gris);
+      margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .rec-card-d { font-size:10.5px; color:var(--gris); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .rec-card-d em { font-style:normal; color:var(--ac-dada-tx); font-weight:700; }
     .rec-cts-t { font-size:10.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
       color:var(--gris); margin:14px 0 6px; }
     .rec-bl-vacio { font-size:12px; color:var(--gris); line-height:1.45; margin-top:6px; }
@@ -10543,7 +10537,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.348.0';
+    var APP_VERSION = '0.349.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -21261,9 +21255,9 @@
         if (nd.ses.length) nd.ses.forEach(function(c){ items.push({ k:'ses:' + c.id, nd:nd, ses:c }); });
         else items.push({ k:'bl:' + nd.it.id, nd:nd, ses:null });
       });
-      // v0.348: al abrir no hay nada elegido. Sin pestaña, debajo va el
-      // RESUMEN de la etapa (el estudio de todo su trabajo); al tocar una
-      // pestaña, esa sesión. Tocar la elegida otra vez vuelve al resumen.
+      // v0.348: al abrir no hay nada elegido. Sin pestaña, debajo va la
+      // GALERÍA de sesiones por golpes (v0.349); al tocar una pestaña, esa
+      // sesión. Tocar la elegida otra vez vuelve a la galería.
       var sel = -1;
       items.forEach(function(it, i){ if (it.k === _recSel) sel = i; });
       if (sel < 0) _recSel = null;
@@ -21310,8 +21304,8 @@
       });
       h += '</div>';
 
-      // ── sin elegida: el resumen de la etapa (v0.348) ──
-      if (!act) h += _recResumenHTML(e, p, nivel, mapEj, items);
+      // ── sin elegida: la galería de sesiones por golpes (v0.349) ──
+      if (!act) h += _recGaleriaHTML(e, p, nivel, mapEj, items);
 
       // ── el contenido de la elegida ──
       if (act) {
@@ -21422,99 +21416,55 @@
     }
     function recSel(k) { _recSel = (_recSel === k) ? null : k; _recVentanaPintar(); }
 
-    // ── v0.348 — EL RESUMEN DE LA ETAPA: el estudio de todo su trabajo ────
-    // Es lo que se ve al abrir la etapa, sin ninguna sesión elegida. Todo
-    // sale de lo que ya hay: las sesiones de cada bloque, sus ejercicios
-    // (minutos, carro/área, golpe canónico, condicionantes) y las semanas
-    // colocadas. No se guarda nada. Cuatro miradas:
-    //   1 · cifras: bloques con sesión, sesiones, minutos, ejercicios
-    //   2 · por bloque: cada sesión con su reparto carro/área y su semana
-    //   3 · qué golpes se trabajan de verdad (por los ejercicios), en barras
-    //   4 · carro frente a área y condicionantes, en toda la etapa
-    function _recResumenHTML(e, p, nivel, mapEj, items) {
+    // ── v0.349 — LA GALERÍA DE SESIONES DE LA ETAPA, POR GOLPES ───────────
+    // Es lo que se ve al abrir la etapa, sin ninguna sesión elegida. Las
+    // sesiones se agrupan por lo que dice su `golpes:` del vault, TAL CUAL y
+    // sin partirlo: «Derecha + bandeja» es una categoría propia, no sale ni
+    // en «Derecha» ni en «Bandeja». Es la lectura del entrenador, no una
+    // clasificación de la app. Sin `golpes:`, al final, en «Sin golpes».
+    // Cada sesión es una tarjeta con su miniatura, su nombre, su bloque, sus
+    // minutos y la semana en que está colocada. Sustituye al resumen con
+    // cifras de la v0.348.
+    function _recGaleriaHTML(e, p, nivel, mapEj, items) {
       var todosEj = leerEjercicios();
-      var sesiones = [];
-      e.nodos.forEach(function(nd){ nd.ses.forEach(function(c){ sesiones.push({ nd:nd, ses:c }); }); });
-      var conSes = e.nodos.filter(function(nd){ return nd.ses.length; }).length;
-      var minC = 0, minA = 0, ejVistos = {}, ejRepe = {}, golpes = {}, cond = { competitivo:0, condicionado:0, continuidad:0 }, nEjTot = 0;
-      var porSes = sesiones.map(function(x){
-        var ejs = _sesEjsOrdenados(x.ses, todosEj), c = 0, a = 0;
-        ejs.forEach(function(ej){
-          var m = _sesMin(ej);
-          if (_sesTipoEj(ej) === 'carro') c += m; else a += m;
-          nEjTot++;
-          ejRepe[ej.id] = (ejRepe[ej.id] || 0) + 1; ejVistos[ej.id] = ej;
-          var g = ejGolpe(ej); if (g) golpes[g] = (golpes[g] || 0) + 1;
-          (ejFaceta(ej, 'condicionantes') || []).forEach(function(k){ if (cond[k] !== undefined) cond[k]++; });
-        });
-        minC += c; minA += a;
-        return { x:x, n:ejs.length, c:c, a:a };
-      });
-      var nDistintos = Object.keys(ejVistos).length;
-      var repetidos = Object.keys(ejRepe).filter(function(id){ return ejRepe[id] > 1; });
-      var total = minC + minA;
-
-      var h = '<div class="rec-res">';
-      // 1 · cifras
-      h += '<div class="rec-res-kpis">' +
-        '<div class="rec-kpi"><b>' + conSes + '<span>/' + e.total + '</span></b><i>bloques con sesión</i></div>' +
-        '<div class="rec-kpi"><b>' + sesiones.length + '</b><i>' + (sesiones.length === 1 ? 'sesión' : 'sesiones') + '</i></div>' +
-        '<div class="rec-kpi"><b>' + total + '<span>′</span></b><i>de trabajo</i></div>' +
-        '<div class="rec-kpi"><b>' + nDistintos + '</b><i>ejercicios distintos' + (repetidos.length ? ' · ' + repetidos.length + ' repetidos' : '') + '</i></div>' +
-        '</div>';
-
-      // 2 · por bloque
-      h += '<div class="rec-res-t">Por bloque</div>';
+      var grupos = {}, orden = [];
       e.nodos.forEach(function(nd){
-        h += '<div class="rec-res-bl' + (nd.ses.length ? '' : ' vacio') + '">' +
-          '<div class="rec-res-bl-t">' + _gEsc(nd.it.t) +
-            '<span>' + (nd.ses.length ? nd.ses.length + (nd.ses.length === 1 ? ' sesión' : ' sesiones') : (nd.cts.length ? '⭐ ' + nd.cts.length : 'sin sesión')) + '</span></div>';
-        porSes.filter(function(ps){ return ps.x.nd === nd; }).forEach(function(ps){
-          var c = ps.x.ses, gTxt = String(c.golpes || '').trim(), en = _recSemanasDe(p, nivel, c.id), tot = ps.c + ps.a;
-          h += '<div class="rec-res-ses" onclick="recSel(\'ses:' + c.id + '\')">' +
-            '<div class="rec-res-ses-l"><b>' + _gEsc(gTxt || nombreSesion(c)) + '</b>' +
-              (gTxt ? '<small>' + _gEsc(nombreSesion(c)) + '</small>' : '') + '</div>' +
-            '<div class="rec-res-ses-r">' +
-              '<div class="rec-mini">' + (tot
-                ? '<i class="carro" style="width:' + Math.round(ps.c * 100 / tot) + '%"></i><i class="area" style="width:' + Math.round(ps.a * 100 / tot) + '%"></i>'
-                : '<i class="sin"></i>') + '</div>' +
-              '<div class="rec-res-ses-d">' + ps.n + ' ej' + (tot ? ' · ' + tot + '′' : '') +
-                (en.length ? ' · <em>' + _gEsc(_recSemLabel(en[0])) + '</em>' : '') + '</div>' +
-            '</div></div>';
+        nd.ses.forEach(function(c){
+          var g = String(c.golpes || '').trim();
+          var k = g ? g.toLowerCase() : '\u0000sin';
+          if (!grupos[k]) { grupos[k] = { t: g || 'Sin golpes', sin: !g, ses: [] }; orden.push(k); }
+          grupos[k].ses.push({ nd: nd, ses: c });
         });
-        h += '</div>';
       });
-
-      // 3 · golpes trabajados de verdad (por los ejercicios)
-      var gks = Object.keys(golpes).sort(function(a, b){ return golpes[b] - golpes[a]; });
-      if (gks.length) {
-        var gMax = golpes[gks[0]];
-        h += '<div class="rec-res-t">Golpes que se trabajan <small>(por los ejercicios)</small></div><div class="rec-res-golpes">';
-        gks.forEach(function(g){
-          h += '<div class="rec-res-g"><span class="rec-res-g-l">' + (GOLPE_ICONO[g] || '') + ' ' + _gEsc(GOLPE_LABEL[g] || g) + '</span>' +
-            '<span class="rec-res-g-b"><i style="width:' + Math.round(golpes[g] * 100 / gMax) + '%"></i></span>' +
-            '<span class="rec-res-g-n">' + golpes[g] + '</span></div>';
+      // por nombre, y «Sin golpes» al final
+      orden.sort(function(a, b){
+        if (grupos[a].sin !== grupos[b].sin) return grupos[a].sin ? 1 : -1;
+        return grupos[a].t.localeCompare(grupos[b].t);
+      });
+      var h = '<div class="rec-gal">';
+      if (!orden.length) {
+        h += '<div class="rec-bl-vacio">Esta etapa no tiene todavía ninguna sesión. Toca un bloque punteado para preparar una, o escríbela en el vault.</div>';
+      }
+      orden.forEach(function(k){
+        var gr = grupos[k];
+        h += '<div class="rec-gal-grp' + (gr.sin ? ' sin' : '') + '">' +
+          '<div class="rec-gal-t">' + _gEsc(gr.t) + '<span>' + gr.ses.length + '</span></div>' +
+          '<div class="rec-gal-cards">';
+        gr.ses.forEach(function(x){
+          var c = x.ses, th = _rutaSesThumb(c), en = _recSemanasDe(p, nivel, c.id);
+          var min = 0; _sesEjsOrdenados(c, todosEj).forEach(function(ej){ min += _sesMin(ej); });
+          h += '<div class="rec-card" onclick="recSel(\'ses:' + c.id + '\')">' +
+            '<div class="rec-card-img">' + (th
+              ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
+              : '<span>\u{1F3BE}</span>') + '</div>' +
+            '<div class="rec-card-n">' + _gEsc(nombreSesion(c)) + '</div>' +
+            '<div class="rec-card-b">' + _gEsc(x.nd.it.t) + '</div>' +
+            '<div class="rec-card-d">' + (min ? min + '′' : '') +
+              (en.length ? (min ? ' · ' : '') + '<em>' + _gEsc(_recSemLabel(en[0])) + '</em>' : '') + '</div>' +
+            '</div>';
         });
-        h += '</div>';
-      }
-
-      // 4 · balance de la etapa
-      if (total) {
-        h += '<div class="rec-res-t">Balance</div>' +
-          '<div class="rec-res-bal"><div class="rec-mini grande">' +
-            '<i class="carro" style="width:' + Math.round(minC * 100 / total) + '%"></i>' +
-            '<i class="area" style="width:' + Math.round(minA * 100 / total) + '%"></i></div>' +
-          '<div class="rec-res-bal-pie"><span>\u{1F6D2} Carro ' + minC + '′ · ' + Math.round(minC * 100 / total) + '%</span>' +
-            '<span>\u{1F3AF} Área ' + minA + '′ · ' + Math.round(minA * 100 / total) + '%</span></div>';
-        var cks = ['competitivo','condicionado','continuidad'].filter(function(k){ return cond[k]; });
-        if (cks.length && nEjTot) {
-          h += '<div class="rec-res-cond">' + cks.map(function(k){
-            return '<span><b>' + cond[k] + '</b> ' + k + ' <small>de ' + nEjTot + '</small></span>';
-          }).join('') + '</div>';
-        }
-        h += '</div>';
-      }
-      if (!sesiones.length) h += '<div class="rec-bl-vacio">Esta etapa no tiene todavía ninguna sesión. Toca un bloque punteado para preparar una, o escríbela en el vault.</div>';
+        h += '</div></div>';
+      });
       h += '</div>';
       return h;
     }
