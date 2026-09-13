@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.341.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.342.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,26 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.342.0 — Los golpes de la sesión los dice el entrenador (2026-09)
+    ⚠ EJECUTAR migraciones/migracion_clases_golpes.sql ANTES de usar esta
+      versión (y antes de volver a lanzar sync_padel.py).
+    · LA v0.341 DURÓ UN DÍA. Calcular el golpe de la sesión daba «Fondo» en
+      toda la etapa de fondo, y eso no informa. Lo que informa es el lado y
+      la combinación —«Derecha y revés», «Volea de derecha», «Bandeja +
+      volea»— y ese dato NO existe en los ejercicios: 103 de 124 no dicen
+      su lado. No se puede calcular; se escribe.
+    · NUEVO CAMPO `golpes:` EN LA NOTA DE LA SESIÓN, en el vault, texto
+      libre de una línea. sync_padel.py lo sube a la columna clases.golpes
+      (nueva), la app lo lee, lo fusiona y lo sube como el resto de campos,
+      e «Importar desde Obsidian» también lo trae. Mismo camino que
+      apartado y bloque (v0.186). El vault es el dueño.
+    · EN EL RECORRIDO, `golpes` ES EL TÍTULO DE LA SESIÓN y el nombre va
+      debajo. Sin `golpes`, el nombre sube a título. Se retira
+      golpesDeSesion (v0.341), que ya no lo usa nadie.
+    · Las dos sesiones de Consolidación de fondo llevan ya
+      golpes: "Derecha y revés". El resto salen con su nombre hasta que se
+      les escriba.
 
   v0.341.0 — En el Recorrido, la sesión se lee por sus golpes (2026-09)
     (sin migraciones · solo presentación)
@@ -10360,7 +10380,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.341.0';
+    var APP_VERSION = '0.342.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -10681,7 +10701,7 @@
           id:c.id, fecha:c.fecha, trabajada:!!c.trabajada,
           ejercicioIds:c.ejercicio_ids||[],
           nombre:c.nombre||'', tematica:c.tematica||'', objetivo:c.objetivo||'',
-          apartado:c.apartado||'', bloque:c.bloque||'',
+          apartado:c.apartado||'', bloque:c.bloque||'', golpes:c.golpes||'',   // v0.342
           _ownerUid:c.user_id
         }; });
 
@@ -10850,6 +10870,7 @@
             objetivo:    x.objetivo || prev.objetivo || '',
             apartado:    x.apartado || prev.apartado || '',
             bloque:      x.bloque   || prev.bloque   || '',
+            golpes:      x.golpes   || prev.golpes   || '',   // v0.342
             _ownerUid:   x._ownerUid  || prev._ownerUid,
           };
         } else {
@@ -10957,7 +10978,7 @@
           id:c.id, user_id:c._ownerUid||uid, fecha:c.fecha,
           trabajada:!!c.trabajada, ejercicio_ids:c.ejercicioIds||[],
           nombre:c.nombre||'', tematica:c.tematica||'', objetivo:c.objetivo||'',
-          apartado:c.apartado||'', bloque:c.bloque||''
+          apartado:c.apartado||'', bloque:c.bloque||'', golpes:c.golpes||''   // v0.342
         };
         if (gid) r.grupo_id = gid; return r;
       },
@@ -21064,8 +21085,8 @@
       if (!e.nodos.length) h += '<div class="plan-bl-vacio">Este apartado no tiene bloques todavía.</div>';
 
       // v0.338: los bloques van en GALERÍA —una rejilla de tarjetas, como las
-      // columnas de la v0.331 que gustaban—. v0.341: cada sesión se titula
-      // por los GOLPES que trabaja (golpesDeSesion), y su nombre va debajo.
+      // columnas de la v0.331 que gustaban—. v0.342: cada sesión se titula
+      // por los GOLPES que dice su nota del vault, y su nombre va debajo.
       h += '<div class="rec-gal">';
       e.nodos.forEach(function(nd){
         h += '<div class="rec-bl">';
@@ -21093,16 +21114,14 @@
         nd.ses.forEach(function(c){
           var th = _rutaSesThumb(c);
           var en = _recSemanasDe(p, nivel, c.id);
-          // v0.341: lo primero que se lee es QUÉ GOLPES se trabajan (hasta
-          // tres, de más a menos, con su icono); el nombre de la sesión
-          // —que dice CÓMO se trabajan— baja a segunda línea. Sin píldora:
-          // era la misma información repetida. Sin ejercicios, el nombre
-          // sube a primera línea para que la fila no quede sin título.
-          var gs = golpesDeSesion(c, mapEj).slice(0, 3);
-          var tit = gs.length
-            ? gs.map(function(x){ return (GOLPE_ICONO[x.key] || '') + ' ' + _gEsc(GOLPE_LABEL[x.key] || x.key); }).join(' · ')
-            : _gEsc(nombreSesion(c));
-          var sub = gs.length ? '<span class="rec-ses-nom">' + _gEsc(nombreSesion(c)) + '</span>' : '';
+          // v0.342: lo primero que se lee es lo que el entrenador escribió en
+          // `golpes:` en la nota de la sesión («Derecha y revés», «Bandeja +
+          // volea»); el nombre —que dice CÓMO se trabaja— va debajo. No se
+          // calcula nada: «fondo» no informa en una etapa toda de fondo, y
+          // el lado no existe en los ejercicios. Sin `golpes:`, el nombre.
+          var gTxt = String(c.golpes || '').trim();
+          var tit = gTxt ? _gEsc(gTxt) : _gEsc(nombreSesion(c));
+          var sub = gTxt ? '<span class="rec-ses-nom">' + _gEsc(nombreSesion(c)) + '</span>' : '';
           h += '<div class="plan-bl-fila rec-ses' + (c.trabajada ? ' trabajada' : '') +
             '" onclick="verSesion(' + c.id + ',\'planif\')">' +
             '<span class="plan-bl-thumb">' + (th
@@ -25105,20 +25124,6 @@
       return dom || '_sin';
     }
 
-    // v0.341 — TODOS los golpes de una sesión, de más a menos trabajado
-    // (canónicos). Es lo que se lee primero en el Recorrido: qué se trabaja.
-    function golpesDeSesion(ses, mapEj) {
-      var counts = {};
-      (ses.ejercicioIds || []).forEach(function(id){
-        var ej = mapEj[id]; if (!ej) return;
-        var g = ejGolpe(ej);
-        if (g) counts[g] = (counts[g] || 0) + 1;
-      });
-      return Object.keys(counts)
-        .map(function(g){ return { key:g, n:counts[g] }; })
-        .sort(function(a, b){ return b.n - a.n || String(a.key).localeCompare(String(b.key)); });
-    }
-
     // Intención dominante de una sesión (canónica). Para la sección Competición.
     function intencionDeSesion(ses, mapEj) {
       var counts = {};
@@ -27766,6 +27771,7 @@
           clases[matchIdx].objetivo     = sesData.objetivo || clases[matchIdx].objetivo || '';
           clases[matchIdx].apartado     = sesData.apartado !== undefined ? sesData.apartado : (clases[matchIdx].apartado || '');
           clases[matchIdx].bloque       = sesData.bloque   !== undefined ? sesData.bloque   : (clases[matchIdx].bloque   || '');
+          clases[matchIdx].golpes       = sesData.golpes   !== undefined ? sesData.golpes   : (clases[matchIdx].golpes   || '');   // v0.342
           if (ejIds.length > 0) clases[matchIdx].ejercicioIds = ejIds;
           // Actualizar los mapas por si el nombre cambió
           claveNombreMap[claveSesion(clases[matchIdx].fecha, clases[matchIdx].nombre)] = matchIdx;
@@ -27774,7 +27780,7 @@
 
         var nueva = { id: maxIdClase() + 1, fecha: sesData.fecha, ejercicioIds: ejIds,
           nombre: nombre, tematica: sesData.tipo || '', objetivo: sesData.objetivo || '',
-          apartado: sesData.apartado || '', bloque: sesData.bloque || '' };
+          apartado: sesData.apartado || '', bloque: sesData.bloque || '', golpes: sesData.golpes || '' };
         clases.push(nueva);
         claveNombreMap[claveN] = clases.length - 1;
         claveEjsMap[claveEjs(sesData.fecha, ejIds)] = clases.length - 1;
