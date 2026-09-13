@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.344.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.345.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,18 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.345.0 — La etapa en dos niveles: bloque, y dentro sus sesiones (2026-09)
+    (sin migraciones · solo presentación · para valorar)
+    · ARRIBA, LOS BLOQUES COMO CHIPS con su número de sesiones (punteado si
+      no tiene; ⭐n si solo tiene clases preparadas). Tocas uno y debajo salen
+      SOLO sus sesiones, como pestañas con golpes y nombre — ya sin repetir
+      el rótulo del bloque en cada una.
+    · LAS FLECHAS ‹ › SIGUEN RECORRIENDO TODAS LAS SESIONES de la etapa de
+      corrido: al pasar de la última de un bloque, el chip cambia solo.
+    · Sustituye a la tira única de la v0.344. Cuesta un toque más para llegar
+      a una sesión, pero escala: un bloque con muchas sesiones no arrastra a
+      los demás. Se monta para valorarlo en uso.
 
   v0.344.0 — La etapa se navega sesión a sesión (2026-09)
     (sin migraciones · solo presentación)
@@ -7878,6 +7890,17 @@
        pestañas que se desliza en horizontal (una por sesión; punteada si el
        bloque no tiene); debajo, la sesión elegida entera. Sustituye a la
        galería de tarjetas de la v0.338. */
+    /* v0.345: el primer nivel, los bloques como chips */
+    .rec-bls { display:flex; gap:6px; overflow-x:auto; -webkit-overflow-scrolling:touch;
+      padding:2px 2px 9px; margin:0 -2px 8px; border-bottom:1.5px solid var(--borde); }
+    .rec-bls::-webkit-scrollbar { height:0; }
+    .rec-bl-chip { flex:0 0 auto; font-family:inherit; font-size:12px; font-weight:800; padding:7px 11px;
+      border-radius:999px; border:1.5px solid var(--borde); background:var(--blanco); color:var(--texto);
+      cursor:pointer; white-space:nowrap; display:flex; align-items:center; gap:6px;
+      -webkit-tap-highlight-color:transparent; }
+    .rec-bl-chip.vacia { border-style:dashed; color:var(--gris); font-weight:700; }
+    .rec-bl-chip.on { border-color:var(--verde); background:var(--verde); color:var(--blanco); }
+    .rec-bl-chip-n { font-size:10.5px; font-weight:800; opacity:.75; }
     .rec-tabs { display:flex; gap:7px; overflow-x:auto; -webkit-overflow-scrolling:touch;
       padding:2px 2px 10px; margin:0 -2px 6px; scroll-snap-type:x proximity; }
     .rec-tabs::-webkit-scrollbar { height:4px; }
@@ -10431,7 +10454,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.344.0';
+    var APP_VERSION = '0.345.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -21160,25 +21183,35 @@
         '<button class="plan-modal-x" onclick="recEtapaCerrar()" aria-label="Cerrar">✕</button></div>';
       if (!e.nodos.length) h += '<div class="plan-bl-vacio">Este apartado no tiene bloques todavía.</div>';
 
-      // ── la tira de pestañas ──
-      h += '<div class="rec-tabs" id="rec-tabs">';
-      items.forEach(function(it, i){
-        var on = i === sel;
-        if (it.ses) {
+      // ── v0.345: DOS NIVELES. Arriba, los BLOQUES como chips con su número
+      // de sesiones (punteado si no tiene). Debajo, solo las sesiones del
+      // bloque elegido. Las flechas ‹ › siguen recorriendo TODAS las sesiones
+      // de la etapa de corrido: al pasar de la última de un bloque, el chip
+      // cambia solo. Sustituye a la tira única de la v0.344, que repetía el
+      // rótulo del bloque en cada pestaña y no escalaba con varias sesiones.
+      var blSel = act ? act.nd.it.id : null;
+      h += '<div class="rec-bls" id="rec-bls">';
+      e.nodos.forEach(function(nd){
+        var on = nd.it.id === blSel;
+        var nS = nd.ses.length;
+        h += '<button type="button" class="rec-bl-chip' + (on ? ' on' : '') + (nS ? '' : ' vacia') + '" data-bl="' + _gEsc(nd.it.id) + '" ' +
+          'onclick="recSelBloque(\'' + nd.it.id + '\')">' + _gEsc(nd.it.t) +
+          '<span class="rec-bl-chip-n">' + (nS ? nS : (nd.cts.length ? '⭐' + nd.cts.length : '0')) + '</span></button>';
+      });
+      h += '</div>';
+      var delBloque = items.filter(function(it){ return it.ses && it.nd.it.id === blSel; });
+      if (delBloque.length) {
+        h += '<div class="rec-tabs" id="rec-tabs">';
+        delBloque.forEach(function(it){
+          var on = it.k === _recSel;
           var g = String(it.ses.golpes || '').trim();
           h += '<button type="button" class="rec-tab' + (on ? ' on' : '') + '" data-k="' + _gEsc(it.k) + '" onclick="recSel(\'' + it.k + '\')">' +
-            '<span class="rec-tab-bl">' + _gEsc(it.nd.it.t) + '</span>' +
             '<span class="rec-tab-t">' + _gEsc(g || nombreSesion(it.ses)) + '</span>' +
             (g ? '<span class="rec-tab-n">' + _gEsc(nombreSesion(it.ses)) + '</span>' : '') +
             '</button>';
-        } else {
-          h += '<button type="button" class="rec-tab vacia' + (on ? ' on' : '') + '" data-k="' + _gEsc(it.k) + '" onclick="recSel(\'' + it.k + '\')">' +
-            '<span class="rec-tab-bl">' + _gEsc(it.nd.it.t) + '</span>' +
-            '<span class="rec-tab-t">' + (it.nd.cts.length ? '⭐ ' + it.nd.cts.length + (it.nd.cts.length === 1 ? ' clase' : ' clases') : 'Sin sesión') + '</span>' +
-            '</button>';
-        }
-      });
-      h += '</div>';
+        });
+        h += '</div>';
+      }
 
       // ── el contenido de la elegida ──
       if (act) {
@@ -21240,6 +21273,8 @@
       try {
         var tOn = ov.querySelector('.rec-tab.on');
         if (tOn && tOn.scrollIntoView) tOn.scrollIntoView({ block:'nearest', inline:'center' });
+        var bOn = ov.querySelector('.rec-bl-chip.on');
+        if (bOn && bOn.scrollIntoView) bOn.scrollIntoView({ block:'nearest', inline:'center' });
       } catch (x) {}
     }
     // v0.344 — La secuencia de una sesión, en modo lectura, para la ventana
@@ -21288,6 +21323,19 @@
       return h;
     }
     function recSel(k) { _recSel = k; _recVentanaPintar(); }
+    // v0.345: elegir un bloque = ir a su primera sesión (o al bloque vacío)
+    function recSelBloque(blId) {
+      var p = leerPlan(), nivel = _compNivel();
+      var est = _recEstado(p, nivel), k = null;
+      est.etapas.forEach(function(x){
+        if (x.et.key !== _recEtapaAbierta) return;
+        x.nodos.forEach(function(nd){
+          if (nd.it.id !== blId || k) return;
+          k = nd.ses.length ? 'ses:' + nd.ses[0].id : 'bl:' + nd.it.id;
+        });
+      });
+      if (k) { _recSel = k; _recVentanaPintar(); }
+    }
 
     // v0.337: _recEtapaActual, ctApToggle y ctBlToggle se retiran. La etapa
     // ya no se despliega en el sitio (va en ventana: recEtapaAbrir) y «la
