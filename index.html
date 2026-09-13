@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.349.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.350.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,15 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.350.0 — La galería, compacta: el título es el enlace (2026-09)
+    (sin migraciones · solo presentación)
+    · LAS SESIONES DE LA GALERÍA PASAN DE TARJETA A FILA: el nombre, que es
+      el enlace, y a la derecha en pequeño su bloque, sus minutos y la semana
+      en que está colocada. Fuera la miniatura: ocupaba demasiado para lo que
+      decía. Una columna en el móvil, dos desde 600px.
+    · UNA BARRA SEPARA LAS DOS COSAS: arriba la tira de pestañas por bloque,
+      debajo «Sesiones por golpes». Antes se juntaban.
 
   v0.349.0 — Al abrir la etapa, la galería de sesiones por golpes (2026-09)
     (sin migraciones · solo lee)
@@ -7989,26 +7998,23 @@
     .ej-modal-body { display:flex; flex-direction:column; gap:14px; }
     .ej-modal-body .detalle-imagen { width:100%; border-radius:10px; }
     /* v0.349: la galería de sesiones por golpes */
-    .rec-gal { border-top:1.5px solid var(--borde); padding-top:12px; }
+    .rec-gal { padding-top:4px; }
     .rec-gal-grp { margin-bottom:14px; }
     .rec-gal-t { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:800; color:var(--texto);
       padding-bottom:6px; margin-bottom:8px; border-bottom:1.5px solid var(--borde); }
     .rec-gal-t span { margin-left:auto; font-size:11px; font-weight:700; color:var(--gris); }
     .rec-gal-grp.sin .rec-gal-t { color:var(--gris); border-bottom-style:dashed; }
-    .rec-gal-cards { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; }
-    @media (min-width:600px) { .rec-gal-cards { grid-template-columns:repeat(3, minmax(0,1fr)); } }
-    @media (min-width:900px) { .rec-gal-cards { grid-template-columns:repeat(4, minmax(0,1fr)); } }
-    .rec-card { border:1.5px solid var(--borde); border-radius:var(--r-sm); background:var(--blanco);
-      padding:6px 6px 8px; cursor:pointer; min-width:0; -webkit-tap-highlight-color:transparent; }
+    .rec-sep { display:flex; align-items:center; gap:10px; margin:0 0 12px; }
+    .rec-sep::before, .rec-sep::after { content:''; flex:1; height:4px; border-radius:999px; background:var(--verde-suave); }
+    .rec-sep span { font-size:10.5px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--gris); white-space:nowrap; }
+    .rec-gal-cards { display:grid; grid-template-columns:1fr; gap:4px; }
+    @media (min-width:600px) { .rec-gal-cards { grid-template-columns:repeat(2, minmax(0,1fr)); gap:4px 14px; } }
+    .rec-card { display:flex; align-items:baseline; gap:8px; padding:6px 4px; border-bottom:1px solid var(--borde);
+      cursor:pointer; min-width:0; -webkit-tap-highlight-color:transparent; }
     .rec-card:active { background:var(--arena); }
-    .rec-card-img { aspect-ratio:16/9; border-radius:7px; overflow:hidden; background:#111; display:flex;
-      align-items:center; justify-content:center; font-size:22px; margin-bottom:6px; }
-    .rec-card-img img { width:100%; height:100%; object-fit:cover; display:block; }
-    .rec-card-n { font-size:12.5px; font-weight:800; color:var(--texto); line-height:1.25; overflow-wrap:anywhere;
-      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-    .rec-card-b { font-size:10px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--gris);
-      margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .rec-card-d { font-size:10.5px; color:var(--gris); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .rec-card-n { flex:1; min-width:0; font-size:13px; font-weight:800; color:var(--verde); line-height:1.3;
+      overflow-wrap:anywhere; text-decoration:underline; text-decoration-color:var(--borde); text-underline-offset:3px; }
+    .rec-card-d { flex-shrink:0; font-size:10.5px; color:var(--gris); white-space:nowrap; }
     .rec-card-d em { font-style:normal; color:var(--ac-dada-tx); font-weight:700; }
     .rec-cts-t { font-size:10.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
       color:var(--gris); margin:14px 0 6px; }
@@ -10537,7 +10543,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.349.0';
+    var APP_VERSION = '0.350.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -21422,9 +21428,9 @@
     // sin partirlo: «Derecha + bandeja» es una categoría propia, no sale ni
     // en «Derecha» ni en «Bandeja». Es la lectura del entrenador, no una
     // clasificación de la app. Sin `golpes:`, al final, en «Sin golpes».
-    // Cada sesión es una tarjeta con su miniatura, su nombre, su bloque, sus
-    // minutos y la semana en que está colocada. Sustituye al resumen con
-    // cifras de la v0.348.
+    // Cada sesión es una fila compacta: el nombre (que es el enlace) y, en
+    // pequeño, su bloque, sus minutos y la semana en que está colocada.
+    // v0.350: eran tarjetas con miniatura; ocupaban demasiado.
     function _recGaleriaHTML(e, p, nivel, mapEj, items) {
       var todosEj = leerEjercicios();
       var grupos = {}, orden = [];
@@ -21441,7 +21447,10 @@
         if (grupos[a].sin !== grupos[b].sin) return grupos[a].sin ? 1 : -1;
         return grupos[a].t.localeCompare(grupos[b].t);
       });
-      var h = '<div class="rec-gal">';
+      // v0.350: una BARRA que separa la tira de pestañas de la galería, y
+      // debajo filas compactas en vez de tarjetas: el título es el enlace.
+      var h = '<div class="rec-gal">' +
+        '<div class="rec-sep"><span>Sesiones por golpes</span></div>';
       if (!orden.length) {
         h += '<div class="rec-bl-vacio">Esta etapa no tiene todavía ninguna sesión. Toca un bloque punteado para preparar una, o escríbela en el vault.</div>';
       }
@@ -21451,16 +21460,13 @@
           '<div class="rec-gal-t">' + _gEsc(gr.t) + '<span>' + gr.ses.length + '</span></div>' +
           '<div class="rec-gal-cards">';
         gr.ses.forEach(function(x){
-          var c = x.ses, th = _rutaSesThumb(c), en = _recSemanasDe(p, nivel, c.id);
+          var c = x.ses, en = _recSemanasDe(p, nivel, c.id);
           var min = 0; _sesEjsOrdenados(c, todosEj).forEach(function(ej){ min += _sesMin(ej); });
           h += '<div class="rec-card" onclick="recSel(\'ses:' + c.id + '\')">' +
-            '<div class="rec-card-img">' + (th
-              ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
-              : '<span>\u{1F3BE}</span>') + '</div>' +
-            '<div class="rec-card-n">' + _gEsc(nombreSesion(c)) + '</div>' +
-            '<div class="rec-card-b">' + _gEsc(x.nd.it.t) + '</div>' +
-            '<div class="rec-card-d">' + (min ? min + '′' : '') +
-              (en.length ? (min ? ' · ' : '') + '<em>' + _gEsc(_recSemLabel(en[0])) + '</em>' : '') + '</div>' +
+            '<span class="rec-card-n">' + _gEsc(nombreSesion(c)) + '</span>' +
+            '<span class="rec-card-d">' + _gEsc(x.nd.it.t) +
+              (min ? ' · ' + min + '′' : '') +
+              (en.length ? ' · <em>' + _gEsc(_recSemLabel(en[0])) + '</em>' : '') + '</span>' +
             '</div>';
         });
         h += '</div></div>';
