@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.340.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.341.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,19 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.341.0 — En el Recorrido, la sesión se lee por sus golpes (2026-09)
+    (sin migraciones · solo presentación)
+    · LA PRIMERA LÍNEA DE CADA SESIÓN DICE QUÉ GOLPES TRABAJA, de más a
+      menos y con su icono (hasta tres): «🎾 Fondo · 🎯 Volea». Sale de sus
+      ejercicios (golpesDeSesion), no se escribe en ningún sitio.
+    · EL NOMBRE DE LA SESIÓN BAJA A SEGUNDA LÍNEA. El nombre dice CÓMO se
+      trabaja el golpe («Las puertas que se cierran»); para elegir qué dar
+      lo primero es el QUÉ, y el cómo se lee después.
+    · FUERA LA PÍLDORA «🎾 Fondo» de la v0.338: era la misma información
+      repetida y hacía ruido.
+    · Sin ejercicios, el nombre vuelve a la primera línea. Solo cambia la
+      ventana del Recorrido: el resto de la app nombra igual que antes.
 
   v0.340.0 — Los alumnos del club, a Excel (2026-09)
     (sin migraciones · solo lee)
@@ -7820,8 +7833,7 @@
     .rec-ses { align-items:flex-start; }
     .rec-ses-txt { flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
     .rec-ses-pie { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-    .rec-golpe { font-size:10.5px; font-weight:800; color:var(--ac-area-tx); background:var(--ac-area-sv);
-      border-radius:999px; padding:2px 7px; white-space:nowrap; }
+    .rec-ses-nom { font-size:11.5px; color:var(--gris); line-height:1.3; overflow-wrap:anywhere; }
     .rec-bl-cab { display:flex; align-items:center; gap:8px; }
     .rec-bl-t { flex:1; min-width:0; font-size:13.5px; font-weight:800; color:var(--texto);
       line-height:1.3; overflow-wrap:anywhere; }
@@ -10348,7 +10360,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.340.0';
+    var APP_VERSION = '0.341.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -21052,9 +21064,8 @@
       if (!e.nodos.length) h += '<div class="plan-bl-vacio">Este apartado no tiene bloques todavía.</div>';
 
       // v0.338: los bloques van en GALERÍA —una rejilla de tarjetas, como las
-      // columnas de la v0.331 que gustaban— y cada sesión enseña su GOLPE
-      // ESTRELLA: el dominante entre sus ejercicios (golpeDeSesion), con su
-      // icono. Así de un vistazo se ve qué se trabaja en cada bloque.
+      // columnas de la v0.331 que gustaban—. v0.341: cada sesión se titula
+      // por los GOLPES que trabaja (golpesDeSesion), y su nombre va debajo.
       h += '<div class="rec-gal">';
       e.nodos.forEach(function(nd){
         h += '<div class="rec-bl">';
@@ -21082,17 +21093,24 @@
         nd.ses.forEach(function(c){
           var th = _rutaSesThumb(c);
           var en = _recSemanasDe(p, nivel, c.id);
-          var g  = golpeDeSesion(c, mapEj);
-          var golpe = (g && g !== '_sin')
-            ? '<span class="rec-golpe">' + (GOLPE_ICONO[g] || '') + ' ' + _gEsc(GOLPE_LABEL[g] || g) + '</span>' : '';
+          // v0.341: lo primero que se lee es QUÉ GOLPES se trabajan (hasta
+          // tres, de más a menos, con su icono); el nombre de la sesión
+          // —que dice CÓMO se trabajan— baja a segunda línea. Sin píldora:
+          // era la misma información repetida. Sin ejercicios, el nombre
+          // sube a primera línea para que la fila no quede sin título.
+          var gs = golpesDeSesion(c, mapEj).slice(0, 3);
+          var tit = gs.length
+            ? gs.map(function(x){ return (GOLPE_ICONO[x.key] || '') + ' ' + _gEsc(GOLPE_LABEL[x.key] || x.key); }).join(' · ')
+            : _gEsc(nombreSesion(c));
+          var sub = gs.length ? '<span class="rec-ses-nom">' + _gEsc(nombreSesion(c)) + '</span>' : '';
           h += '<div class="plan-bl-fila rec-ses' + (c.trabajada ? ' trabajada' : '') +
             '" onclick="verSesion(' + c.id + ',\'planif\')">' +
             '<span class="plan-bl-thumb">' + (th
               ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
               : '<span class="plan-bl-noimg">\u{1F3BE}</span>') + '</span>' +
             '<span class="rec-ses-txt">' +
-              '<span class="plan-bl-nom">' + _gEsc(nombreSesion(c)) + '</span>' +
-              '<span class="rec-ses-pie">' + golpe +
+              '<span class="plan-bl-nom">' + tit + '</span>' + sub +
+              '<span class="rec-ses-pie">' +
               (en.length
                 ? '<button type="button" class="rec-sem-pill puesta" onclick="event.stopPropagation();recSemanaElegir(' + c.id + ')">' +
                     _gEsc(_recSemLabel(en[0])) + (en.length > 1 ? ' +' + (en.length - 1) : '') + '</button>'
@@ -25085,6 +25103,20 @@
       var dom = '', max = 0;
       Object.keys(counts).forEach(function(g){ if (counts[g] > max) { max = counts[g]; dom = g; } });
       return dom || '_sin';
+    }
+
+    // v0.341 — TODOS los golpes de una sesión, de más a menos trabajado
+    // (canónicos). Es lo que se lee primero en el Recorrido: qué se trabaja.
+    function golpesDeSesion(ses, mapEj) {
+      var counts = {};
+      (ses.ejercicioIds || []).forEach(function(id){
+        var ej = mapEj[id]; if (!ej) return;
+        var g = ejGolpe(ej);
+        if (g) counts[g] = (counts[g] || 0) + 1;
+      });
+      return Object.keys(counts)
+        .map(function(g){ return { key:g, n:counts[g] }; })
+        .sort(function(a, b){ return b.n - a.n || String(a.key).localeCompare(String(b.key)); });
     }
 
     // Intención dominante de una sesión (canónica). Para la sección Competición.
