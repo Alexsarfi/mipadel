@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.339.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.340.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,19 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.340.0 — Los alumnos del club, a Excel (2026-09)
+    (sin migraciones · solo lee)
+    · BOTÓN «📊 Excel» EN ALUMNOS DE LA ACADEMIA, en la cabecera nada más
+      entrar y también en la caja de exportar de abajo, junto a los PDF.
+    · UNA FILA POR ALUMNO CON TODA SU FICHA: nombre, apellidos, teléfono,
+      nivel, fecha de nacimiento, edad, categoría FEP, entrenador y franja
+      actuales, y la asistencia del curso (clases, asistencias, faltas J e
+      IJ, recuperaciones, %), más las observaciones.
+    · ES UN CSV QUE EXCEL ABRE DIRECTO, sin librerías: separador «;» (con
+      coma el Excel español lo mete todo en una columna), BOM UTF-8 (sin él
+      los acentos salen rotos) y fechas dd/mm/aaaa. Se descarga como
+      alumnos-club-<curso>-<fecha>.csv.
 
   v0.339.0 — El Recorrido como mapa de la pista (2026-09)
     (sin migraciones nuevas)
@@ -9477,6 +9490,8 @@
   <div id="pantalla-gestor-todos-alumnos" class="pantalla">
     <div class="cabecera">
       <button class="btn-volver" onclick="irA('pantalla-gestor')">‹ Panel</button>
+      <!-- v0.340: la exportación a Excel, a la vista nada más entrar -->
+      <button class="cab-mini-btn" onclick="gtaExportarExcel()">📊 Excel</button>
       <div class="cab-titulo">Alumnos de la academia</div>
       <div class="cab-sub" id="gta-sub">—</div>
     </div>
@@ -10333,7 +10348,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.339.0';
+    var APP_VERSION = '0.340.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -15877,6 +15892,75 @@
       window.open(URL.createObjectURL(blob), '_blank');
     }
 
+    // ── v0.340 — EXPORTAR LOS ALUMNOS A EXCEL ───────────────────────
+    // Un CSV que Excel abre directamente, sin depender de ninguna librería
+    // (la app es un solo archivo y funciona sin conexión). Tres detalles
+    // para que el Excel EN ESPAÑOL lo abra bien a la primera:
+    //   · separador «;» — con «,» el Excel español mete todo en una columna
+    //   · BOM UTF-8 al principio — sin él los acentos salen rotos
+    //   · fechas dd/mm/aaaa — que Excel las reconozca como fechas
+    // Lleva TODO lo que hay en la ficha (v0.308: nivel, nacimiento, edad,
+    // categoría FEP, observaciones) más la franja actual y la asistencia
+    // del curso, una fila por alumno. Solo lee.
+    function _csvCelda(v) {
+      var t = (v == null) ? '' : String(v);
+      return /[";\n\r]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+    }
+    function _csvFecha(iso) {
+      if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return '';
+      var q = iso.split('-');
+      return q[2] + '/' + q[1] + '/' + q[0];
+    }
+    function _gtaExcelFilas() {
+      if (!_gtaCache) _gtaCache = _gtaIndex();
+      var claves = Object.keys(_gtaCache.al).sort(_gtaCmp);
+      var cursoAct = _cursoActual();
+      var acad = {};
+      _alumnosAcademia().forEach(function(a){ acad[_gtaFullKey(a.nombre, a.apellidos)] = a; });
+      var filas = [[ 'Nombre', 'Apellidos', 'Teléfono', 'Nivel', 'Fecha de nacimiento', 'Edad',
+                     'Categoría FEP', 'Entrenador', 'Franja', 'Clases (curso ' + cursoAct + ')',
+                     'Asistencias', 'Faltas justificadas', 'Faltas sin justificar', 'Recuperaciones',
+                     '% asistencia', 'Observaciones' ]];
+      claves.forEach(function(k){
+        var al = _gtaCache.al[k];
+        var f  = acad[k] || {};
+        var fr = _gtaFranjasActuales(al.nombre, al.apellidos);
+        var ses = (al.sesiones || []).filter(function(x){ return _cursoDe(x.fecha) === cursoAct; });
+        var st = _histStats(ses);
+        var nivM = alNivelMeta(f.nivel || '');
+        var edad = alEdad(f.nacimiento || '');
+        var cat  = alCategoria(f.nacimiento || '');
+        filas.push([
+          al.nombre || '',
+          al.apellidos || f.apellidos || '',
+          f.telefono || '',
+          nivM ? nivM.t : '',
+          _csvFecha(f.nacimiento || ''),
+          edad === '' ? '' : edad,
+          cat ? (cat.t + (cat.fuera ? ' (sin categoría FEP)' : '')) : '',
+          fr.map(function(x){ return x.entrenador; }).filter(function(v, i, a){ return a.indexOf(v) === i; }).join(' / '),
+          fr.map(function(x){ return x.lbl; }).join(' / '),
+          st.tot, st.pres, st.fJ, st.fIJ, st.recups,
+          st.pct == null ? '' : st.pct,
+          f.observaciones || ''
+        ]);
+      });
+      return filas;
+    }
+    function gtaExportarExcel() {
+      var filas = _gtaExcelFilas();
+      if (filas.length < 2) { alert('No hay alumnos que exportar.'); return; }
+      var csv = '\uFEFF' + filas.map(function(r){ return r.map(_csvCelda).join(';'); }).join('\r\n') + '\r\n';
+      var nombre = 'alumnos-club-' + _cursoActual() + '-' + hoyLocal() + '.csv';
+      var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = nombre;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+      if (typeof planToast === 'function') planToast('📊 ' + (filas.length - 1) + ' alumnos → ' + nombre);
+    }
+
     // v0.165: a dónde vuelve el botón "‹" de la ficha del alumno. Si se
     // entró desde una franja del panel, vuelve AL PANEL (antes pasaba por
     // Alumnos y había que dar varios pasos para volver a la principal).
@@ -16028,6 +16112,7 @@
           '<div class="gent-export-btns">' +
             '<button type="button" class="btn btn-sec btn-sm" onclick="gtaExportarPDF(false)">📄 Solo datos</button>' +
             '<button type="button" class="btn btn-sec btn-sm" onclick="gtaExportarPDF(true)">📄 Datos + asistencia</button>' +
+            '<button type="button" class="btn btn-sec btn-sm" onclick="gtaExportarExcel()">📊 Excel</button>' +
           '</div></div>' : '');
       _gtaRenderAlta();
       if (!lista.length) {
