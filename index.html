@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.342.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.344.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,37 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.344.0 — La etapa se navega sesión a sesión (2026-09)
+    (sin migraciones · solo presentación)
+    · LA VENTANA DE LA ETAPA CAMBIA DE FORMA. Arriba, una tira de pestañas
+      que se desliza en horizontal: una por sesión, con su bloque, sus
+      golpes y su nombre; si un bloque no tiene sesión, una pestaña
+      punteada con su ＋. Debajo, la sesión elegida ENTERA: golpes, nombre,
+      objetivo, su botón de semana y la secuencia de ejercicios con
+      carro/área, minutos, jugadores y miniatura. Se pasa de una a otra
+      tocando la pestaña o con ‹ ›, sin salir de la ventana.
+    · Sustituye a la galería de tarjetas de la v0.338: para ELEGIR qué dar
+      hace falta ver lo que hay dentro, no solo el título, y abrir y cerrar
+      cada sesión era el rodeo que esto quita.
+    · La secuencia es la misma fila que en la pantalla de la sesión, pero en
+      solo lectura y con el atrás del ejercicio apuntando a Planificación;
+      al volver, la ventana reaparece en la misma pestaña.
+    · Las clases preparadas (⭐) del bloque van debajo de la sesión y siguen
+      abriendo su ficha encima.
+
+  v0.343.0 — «‹ Plan» vuelve a la primera (2026-09)
+    (sin migraciones)
+    · EL FALLO: al abrir una sesión desde la ventana de la etapa, la ventana
+      —que es un panel fijo fuera de las pantallas— se quedaba flotando
+      encima de la sesión. El primer toque en «‹ Plan» no volvía: cerraba la
+      ventana. Había que tocar dos veces, y a veces más si la ficha de una
+      clase tipo también estaba abierta.
+    · EL ARREGLO: al abrir una sesión se esconden los paneles fijos (ventana
+      del Recorrido y ficha de clase tipo). La etapa se RECUERDA, así que al
+      volver con «‹ Plan» la ventana se reabre sola donde estabas. Si sales
+      de Planificación por otro camino (barra de abajo, atrás del navegador),
+      se cierra del todo, como ya hacía el globo del día (v0.243).
 
   v0.342.0 — Los golpes de la sesión los dice el entrenador (2026-09)
     ⚠ EJECUTAR migraciones/migracion_clases_golpes.sql ANTES de usar esta
@@ -7843,20 +7874,40 @@
     .rec-et-chev { color:var(--gris); font-weight:800; }
     /* — la ventana de la etapa — */
     .rec-obj { font-size:12.5px; color:var(--gris); line-height:1.5; margin:-4px 0 12px; }
-    /* v0.338: los bloques en galería. Columnas FIJAS por ancho, como en la
-       v0.331: con auto-fit no se sabe dónde rompe la fila. */
-    .rec-gal { display:grid; grid-template-columns:1fr; gap:8px; }
-    @media (min-width:600px) { .rec-gal { grid-template-columns:repeat(2, minmax(0,1fr)); } }
-    @media (min-width:900px) { .rec-gal { grid-template-columns:repeat(3, minmax(0,1fr)); } }
-    .rec-bl { border:1.5px solid var(--borde); border-radius:var(--r-sm); padding:8px 9px;
-      margin:0; min-width:0; }
-    .rec-ses { align-items:flex-start; }
-    .rec-ses-txt { flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
-    .rec-ses-pie { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-    .rec-ses-nom { font-size:11.5px; color:var(--gris); line-height:1.3; overflow-wrap:anywhere; }
-    .rec-bl-cab { display:flex; align-items:center; gap:8px; }
-    .rec-bl-t { flex:1; min-width:0; font-size:13.5px; font-weight:800; color:var(--texto);
-      line-height:1.3; overflow-wrap:anywhere; }
+    /* v0.344: NAVEGAR por las sesiones de la etapa. Arriba una tira de
+       pestañas que se desliza en horizontal (una por sesión; punteada si el
+       bloque no tiene); debajo, la sesión elegida entera. Sustituye a la
+       galería de tarjetas de la v0.338. */
+    .rec-tabs { display:flex; gap:7px; overflow-x:auto; -webkit-overflow-scrolling:touch;
+      padding:2px 2px 10px; margin:0 -2px 6px; scroll-snap-type:x proximity; }
+    .rec-tabs::-webkit-scrollbar { height:4px; }
+    .rec-tabs::-webkit-scrollbar-thumb { background:var(--borde); border-radius:4px; }
+    .rec-tab { flex:0 0 auto; width:150px; text-align:left; font-family:inherit; cursor:pointer;
+      border:1.5px solid var(--borde); border-radius:var(--r-sm); background:var(--blanco);
+      padding:7px 9px 8px; display:flex; flex-direction:column; gap:2px; scroll-snap-align:center;
+      -webkit-tap-highlight-color:transparent; }
+    .rec-tab.on { border-color:var(--verde); background:var(--verde-suave); }
+    .rec-tab.vacia { border-style:dashed; }
+    .rec-tab-bl { font-size:10px; font-weight:800; letter-spacing:.04em; text-transform:uppercase;
+      color:var(--gris); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .rec-tab-t { font-size:13px; font-weight:800; color:var(--texto); line-height:1.25;
+      overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+    .rec-tab.vacia .rec-tab-t { color:var(--gris); font-weight:700; }
+    .rec-tab-n { font-size:10.5px; color:var(--gris); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .rec-cont { border-top:1.5px solid var(--borde); padding-top:10px; }
+    .rec-cont-cab { display:flex; align-items:flex-start; gap:6px; margin-bottom:8px; }
+    .rec-nav { flex-shrink:0; width:36px; height:36px; border:1.5px solid var(--borde); border-radius:10px;
+      background:var(--blanco); color:var(--texto); font-size:20px; font-weight:800; cursor:pointer;
+      font-family:inherit; -webkit-tap-highlight-color:transparent; }
+    .rec-nav:active { background:var(--arena); }
+    .rec-nav:disabled { opacity:.25; cursor:default; }
+    .rec-cont-tit { flex:1; min-width:0; }
+    .rec-cont-g { font-size:17px; font-weight:800; color:var(--texto); line-height:1.2; overflow-wrap:anywhere; }
+    .rec-cont-n { font-size:12.5px; color:var(--gris); margin-top:2px; overflow-wrap:anywhere; }
+    .rec-cont-obj { font-size:12.5px; color:var(--texto); line-height:1.45; margin-top:5px; }
+    .rec-cont-acts { display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin:0 0 12px; }
+    .rec-cts-t { font-size:10.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
+      color:var(--gris); margin:14px 0 6px; }
     .rec-bl-vacio { font-size:12px; color:var(--gris); line-height:1.45; margin-top:6px; }
     .rec-arbol { margin:8px 0 2px; }
     .rec-sem-pill { flex-shrink:0; font-family:inherit; font-size:11px; font-weight:700;
@@ -10380,7 +10431,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.342.0';
+    var APP_VERSION = '0.344.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -20956,8 +21007,18 @@
     // solo enseña qué hay.
     var _recEtapaAbierta = null;   // key de la etapa abierta en ventana
     var _recSemPara      = null;   // id de sesión a la que se le está eligiendo semana
+    var _recSel          = null;   // v0.344: pestaña elegida en la ventana ('ses:ID' o 'bl:ID')
 
-    function recEtapaAbrir(key) { _recEtapaAbierta = key; _recSemPara = null; _recVentanaPintar(); }
+    function recEtapaAbrir(key) { _recEtapaAbierta = key; _recSemPara = null; _recSel = null; _recVentanaPintar(); }
+    // v0.343 — Esconder sin olvidar: la ventana es un panel FIJO fuera de las
+    // pantallas, así que al abrir una sesión desde ella se quedaba flotando
+    // encima (y el primer toque en «‹ Plan» lo que hacía era cerrarla, no
+    // volver). Se esconde al salir y, como la etapa se recuerda, al volver a
+    // Planificación se reabre sola donde estabas.
+    function _recVentanaOcultar() {
+      var ov = document.getElementById('rec-ov');
+      if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; }
+    }
     function recEtapaCerrar() {
       _recEtapaAbierta = null; _recSemPara = null;
       var ov = document.getElementById('rec-ov');
@@ -21074,76 +21135,159 @@
         return;
       }
 
-      // ── La etapa: bloques y, dentro, clases tipo y sesiones ─────
+      // ── La etapa: NAVEGAR por sus sesiones (v0.344) ──────────────────
+      // Arriba, una tira con una pestaña por sesión (agrupadas por bloque y,
+      // si el bloque no tiene sesión, una pestaña punteada con su ＋). Debajo,
+      // la sesión elegida ENTERA: golpes, nombre, objetivo, su botón de
+      // semana y la secuencia de ejercicios con carro/área, minutos y
+      // miniatura. Se pasa de una a otra tocando la pestaña o con ‹ ›, sin
+      // salir de la ventana. Sustituye a la galería de tarjetas (v0.338).
+      var items = [];
+      e.nodos.forEach(function(nd){
+        if (nd.ses.length) nd.ses.forEach(function(c){ items.push({ k:'ses:' + c.id, nd:nd, ses:c }); });
+        else items.push({ k:'bl:' + nd.it.id, nd:nd, ses:null });
+      });
+      var sel = -1;
+      items.forEach(function(it, i){ if (it.k === _recSel) sel = i; });
+      if (sel < 0) { sel = 0; _recSel = items.length ? items[0].k : null; }
+      var act = items[sel] || null;
+
       h += '<div class="ruta-modal-hdr"><div>' +
         '<div class="ruta-modal-tit">' + _gEsc(e.et.nombre) + '</div>' +
         '<div class="ruta-modal-sub">' + (_recEsMapa(nivel) ? _gEsc(_recZonaLabel(_recZonaEtapa(e.et))) + ' · ' : '') +
           e.total + (e.total === 1 ? ' bloque' : ' bloques') + ' · ' +
           nSes + (nSes === 1 ? ' sesión' : ' sesiones') + '</div></div>' +
         '<button class="plan-modal-x" onclick="recEtapaCerrar()" aria-label="Cerrar">✕</button></div>';
-      if (e.et.obj) h += '<div class="rec-obj">' + _gEsc(e.et.obj) + '</div>';
       if (!e.nodos.length) h += '<div class="plan-bl-vacio">Este apartado no tiene bloques todavía.</div>';
 
-      // v0.338: los bloques van en GALERÍA —una rejilla de tarjetas, como las
-      // columnas de la v0.331 que gustaban—. v0.342: cada sesión se titula
-      // por los GOLPES que dice su nota del vault, y su nombre va debajo.
-      h += '<div class="rec-gal">';
-      e.nodos.forEach(function(nd){
-        h += '<div class="rec-bl">';
-        h += '<div class="rec-bl-cab">' +
-          '<span class="rec-sq">' + nd.n + '</span>' +
-          '<span class="rec-bl-t">' + _gEsc(nd.it.t) + '</span>' +
-          '<button type="button" class="plan-item-cfg" title="Preparar una clase de este bloque" ' +
-            'aria-label="Nueva clase" onclick="ctCrearAbrir(\'' + nd.it.id + '\')">＋</button></div>';
-        if (!nd.n) {
-          h += '<div class="rec-bl-vacio">Sin sesión todavía. Escríbela en el vault con este bloque, o pulsa ＋ para preparar una clase.</div>';
+      // ── la tira de pestañas ──
+      h += '<div class="rec-tabs" id="rec-tabs">';
+      items.forEach(function(it, i){
+        var on = i === sel;
+        if (it.ses) {
+          var g = String(it.ses.golpes || '').trim();
+          h += '<button type="button" class="rec-tab' + (on ? ' on' : '') + '" data-k="' + _gEsc(it.k) + '" onclick="recSel(\'' + it.k + '\')">' +
+            '<span class="rec-tab-bl">' + _gEsc(it.nd.it.t) + '</span>' +
+            '<span class="rec-tab-t">' + _gEsc(g || nombreSesion(it.ses)) + '</span>' +
+            (g ? '<span class="rec-tab-n">' + _gEsc(nombreSesion(it.ses)) + '</span>' : '') +
+            '</button>';
+        } else {
+          h += '<button type="button" class="rec-tab vacia' + (on ? ' on' : '') + '" data-k="' + _gEsc(it.k) + '" onclick="recSel(\'' + it.k + '\')">' +
+            '<span class="rec-tab-bl">' + _gEsc(it.nd.it.t) + '</span>' +
+            '<span class="rec-tab-t">' + (it.nd.cts.length ? '⭐ ' + it.nd.cts.length + (it.nd.cts.length === 1 ? ' clase' : ' clases') : 'Sin sesión') + '</span>' +
+            '</button>';
         }
-        // Las mismas filas que en Área (plan-bl-fila, con miniatura): una
-        // clase tipo abre su ficha; una sesión se abre, y además lleva su
-        // botón de semana — que para el click no abra la sesión.
-        if (nd.n) h += '<div class="plan-bl-arbol rec-arbol">';
-        nd.cts.forEach(function(c){
-          var th = _ctThumb(c, mapEj, todasS);
-          h += '<div class="plan-bl-fila" onclick="ctFichaAbrir(\'' + c.id + '\')">' +
-            '<span class="plan-bl-thumb">' + (th
-              ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
-              : '<span class="plan-bl-noimg">\u2B50</span>') + '</span>' +
-            '<span class="plan-bl-nom">' + _gEsc(c.nombre) + '</span>' +
-            '<span class="plan-bl-tag">\u2B50' + (c.usos ? ' ' + c.usos + '\u00D7' : '') + '</span></div>';
-        });
-        nd.ses.forEach(function(c){
-          var th = _rutaSesThumb(c);
-          var en = _recSemanasDe(p, nivel, c.id);
-          // v0.342: lo primero que se lee es lo que el entrenador escribió en
-          // `golpes:` en la nota de la sesión («Derecha y revés», «Bandeja +
-          // volea»); el nombre —que dice CÓMO se trabaja— va debajo. No se
-          // calcula nada: «fondo» no informa en una etapa toda de fondo, y
-          // el lado no existe en los ejercicios. Sin `golpes:`, el nombre.
-          var gTxt = String(c.golpes || '').trim();
-          var tit = gTxt ? _gEsc(gTxt) : _gEsc(nombreSesion(c));
-          var sub = gTxt ? '<span class="rec-ses-nom">' + _gEsc(nombreSesion(c)) + '</span>' : '';
-          h += '<div class="plan-bl-fila rec-ses' + (c.trabajada ? ' trabajada' : '') +
-            '" onclick="verSesion(' + c.id + ',\'planif\')">' +
-            '<span class="plan-bl-thumb">' + (th
-              ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
-              : '<span class="plan-bl-noimg">\u{1F3BE}</span>') + '</span>' +
-            '<span class="rec-ses-txt">' +
-              '<span class="plan-bl-nom">' + tit + '</span>' + sub +
-              '<span class="rec-ses-pie">' +
-              (en.length
-                ? '<button type="button" class="rec-sem-pill puesta" onclick="event.stopPropagation();recSemanaElegir(' + c.id + ')">' +
-                    _gEsc(_recSemLabel(en[0])) + (en.length > 1 ? ' +' + (en.length - 1) : '') + '</button>'
-                : '<button type="button" class="rec-sem-pill" onclick="event.stopPropagation();recSemanaElegir(' + c.id + ')">\u{1F4C5} Semana</button>') +
-              '</span></span>' +
-            '</div>';
-        });
-        if (nd.n) h += '</div>';
-        h += '</div>';
       });
-      h += '</div>';   // .rec-gal
+      h += '</div>';
+
+      // ── el contenido de la elegida ──
+      if (act) {
+        var prevK = sel > 0 ? items[sel - 1].k : null, nextK = sel < items.length - 1 ? items[sel + 1].k : null;
+        h += '<div class="rec-cont">';
+        h += '<div class="rec-cont-cab">' +
+          '<button type="button" class="rec-nav" ' + (prevK ? 'onclick="recSel(\'' + prevK + '\')"' : 'disabled') + ' aria-label="Anterior">‹</button>' +
+          '<div class="rec-cont-tit">';
+        if (act.ses) {
+          var c = act.ses, gTxt = String(c.golpes || '').trim();
+          h += '<div class="rec-cont-g">' + _gEsc(gTxt || nombreSesion(c)) + '</div>' +
+               (gTxt ? '<div class="rec-cont-n">' + _gEsc(nombreSesion(c)) + '</div>' : '') +
+               (c.objetivo ? '<div class="rec-cont-obj">' + _gEsc(c.objetivo) + '</div>' : '');
+        } else {
+          h += '<div class="rec-cont-g">' + _gEsc(act.nd.it.t) + '</div>' +
+               '<div class="rec-cont-n">' + (act.nd.it.f ? _gEsc(act.nd.it.f) : 'Bloque sin sesión') + '</div>';
+        }
+        h += '</div>' +
+          '<button type="button" class="rec-nav" ' + (nextK ? 'onclick="recSel(\'' + nextK + '\')"' : 'disabled') + ' aria-label="Siguiente">›</button>' +
+          '</div>';
+
+        if (act.ses) {
+          var c2 = act.ses, en = _recSemanasDe(p, nivel, c2.id);
+          h += '<div class="rec-cont-acts">' +
+            (en.length
+              ? '<button type="button" class="rec-sem-pill puesta" onclick="recSemanaElegir(' + c2.id + ')">' +
+                  _gEsc(_recSemLabel(en[0])) + (en.length > 1 ? ' +' + (en.length - 1) : '') + '</button>'
+              : '<button type="button" class="rec-sem-pill" onclick="recSemanaElegir(' + c2.id + ')">\u{1F4C5} Elegir semana</button>') +
+            '<button type="button" class="rec-sem-pill" onclick="verSesion(' + c2.id + ',\'planif\')">Abrir sesión ›</button>' +
+            '<button type="button" class="plan-item-cfg" title="Preparar una clase de este bloque" aria-label="Nueva clase" ' +
+              'onclick="ctCrearAbrir(\'' + act.nd.it.id + '\')">＋</button>' +
+            '</div>';
+          h += _recSecuenciaHTML(c2);
+        } else {
+          h += '<div class="rec-cont-acts">' +
+            '<button type="button" class="rec-sem-pill" onclick="ctCrearAbrir(\'' + act.nd.it.id + '\')">＋ Preparar una clase</button></div>';
+          if (!act.nd.cts.length) {
+            h += '<div class="rec-bl-vacio">Sin sesión todavía. Escríbela en el vault con este bloque, o pulsa ＋ para preparar una clase.</div>';
+          }
+        }
+        // las clases tipo del bloque, siempre debajo (abren su ficha encima)
+        if (act.nd.cts.length) {
+          h += '<div class="rec-cts-t">⭐ Clases preparadas de este bloque</div>';
+          act.nd.cts.forEach(function(ct){
+            var th = _ctThumb(ct, mapEj, todasS);
+            h += '<div class="plan-bl-fila" onclick="ctFichaAbrir(\'' + ct.id + '\')">' +
+              '<span class="plan-bl-thumb">' + (th
+                ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
+                : '<span class="plan-bl-noimg">⭐</span>') + '</span>' +
+              '<span class="plan-bl-nom">' + _gEsc(ct.nombre) + '</span>' +
+              '<span class="plan-bl-tag">⭐' + (ct.usos ? ' ' + ct.usos + '×' : '') + '</span></div>';
+          });
+        }
+        h += '</div>';   // .rec-cont
+      }
       h += '</div>';
       _ovPintarConScroll(ov, h);
+      // la pestaña elegida, a la vista en la tira
+      try {
+        var tOn = ov.querySelector('.rec-tab.on');
+        if (tOn && tOn.scrollIntoView) tOn.scrollIntoView({ block:'nearest', inline:'center' });
+      } catch (x) {}
     }
+    // v0.344 — La secuencia de una sesión, en modo lectura, para la ventana
+    // del Recorrido. Es la misma fila que en la pantalla de la sesión
+    // (seq-item con carro/área, minutos, jugadores y miniatura), pero sin el
+    // botón de ordenar y con el atrás del ejercicio apuntando a Planificación,
+    // que es desde donde se abrió. _sesSecuenciaHTML no vale aquí: su atrás
+    // vuelve a la pantalla de la sesión y su «Ordenar» repinta esa pantalla.
+    function _recSecuenciaHTML(sesion) {
+      var ejs = _sesEjsOrdenados(sesion, leerEjercicios());
+      if (!ejs.length) return '<div class="rec-bl-vacio">Esta sesión no tiene ejercicios.</div>';
+      var minC = 0, minA = 0, nC = 0, nA = 0, sinMin = false;
+      ejs.forEach(function(x){
+        var m = _sesMin(x); if (!m) sinMin = true;
+        if (_sesTipoEj(x) === 'carro') { nC++; minC += m; } else { nA++; minA += m; }
+      });
+      var total = minC + minA;
+      var h = '<div class="seq-cab">' +
+        '<span class="seq-cab-tag carro">\u{1F6D2} Carro · ' + (total ? minC + ' min' : nC) + '</span>' +
+        '<span class="seq-cab-tag area">\u{1F3AF} Área · ' + (total ? minA + ' min' : nA) + '</span></div>';
+      h += '<div class="seq">';
+      ejs.forEach(function(x, i){
+        var tipo = _sesTipoEj(x), min = _sesMin(x), jug = _sesJug(x), cond = _sesCondTxt(x);
+        var lbl = (tipo === 'carro' ? 'CARRO' : 'ÁREA') + (cond ? ' · ' + cond : '');
+        h += '<div class="seq-item ' + tipo + '" data-id="' + x.id + '">' +
+          '<span class="seq-num">' + (i + 1) + '</span>' +
+          '<div class="seq-body" onclick="verEjercicio(' + x.id + ',\'planif\')">' +
+            '<div class="seq-tipo">' + lbl + '</div>' +
+            '<div class="seq-nom">' + _gEsc(x.nombre || ('Ejercicio ' + x.id)) + '</div>' +
+          '</div>' +
+          _seqVideoHTML(x) +
+          '<span class="seq-dosis" onclick="verEjercicio(' + x.id + ',\'planif\')">' +
+            (min ? '<b>' + min + '′</b>' : '<b class="falta">—</b>') +
+            (jug ? '<span>' + jug + '</span>' : '') + '</span>' +
+          '</div>';
+      });
+      h += '</div>';
+      if (total && !sinMin) {
+        var barra = '';
+        ejs.forEach(function(x){
+          barra += '<div class="seq-barra-tr ' + _sesTipoEj(x) + '" style="width:' + Math.round(_sesMin(x) * 100 / total) + '%"></div>';
+        });
+        h += '<div class="seq-barra">' + barra + '</div>' +
+             '<div class="seq-barra-pie"><span>' + minC + '′ de carro</span><span>' + total + '′ en total</span><span>' + minA + '′ de área</span></div>';
+      }
+      return h;
+    }
+    function recSel(k) { _recSel = k; _recVentanaPintar(); }
 
     // v0.337: _recEtapaActual, ctApToggle y ctBlToggle se retiran. La etapa
     // ya no se despliega en el sitio (va en ventana: recEtapaAbrir) y «la
@@ -23438,6 +23582,12 @@
         var _ovD = document.getElementById('comp-dia-ov');
         if (_ovD) { _ovD.style.display = 'none'; _ovD.innerHTML = ''; }
       }
+      // v0.343: y lo mismo con la ventana de la etapa del Recorrido. Aquí sí
+      // se olvida la etapa: si te vas a otra sección, no tiene que
+      // reaparecer sola la próxima vez que entres en Planificación.
+      if (id !== 'pantalla-planificacion' && typeof _recEtapaAbierta !== 'undefined' && _recEtapaAbierta) {
+        recEtapaCerrar();
+      }
 
       if (id === 'pantalla-inicio')          actualizarInicio();
       if (id === 'pantalla-ajustes')         mostrarAjustes();
@@ -24902,6 +25052,9 @@
     }
 
     function verEjercicio(id, origen) {
+      // v0.344: si se abre desde la ventana del Recorrido, esconderla (la
+      // etapa y la pestaña se recuerdan y vuelven al volver). Ver v0.343.
+      if (typeof _recVentanaOcultar === 'function') _recVentanaOcultar();
       ejActivoId      = id;
       // v0.306: 'area' es la pestaña «Ejercicios de juego» de Área de trabajo.
       // Sin este caso, volver desde un ejercicio abierto ahí te dejaba en la
@@ -26016,6 +26169,12 @@
       var sesion = leerClases().filter(function(c){ return c.id === id; })[0];
       var ejs    = leerEjercicios();
       if (!sesion) return;
+      // v0.343: los paneles fijos (ventana del Recorrido, ficha de clase tipo)
+      // no son pantallas y no se apagan solos al cambiar de pantalla. Fuera,
+      // o se quedan encima de la sesión y roban el primer toque del «‹ Plan».
+      // La etapa abierta se recuerda y se reabre al volver.
+      _recVentanaOcultar();
+      if (typeof ctFichaCerrar === 'function') ctFichaCerrar();
 
       var vb = document.getElementById('volver-detalle-sesion');
       // v0.225: si la sesión se abrió desde el globo de una clase (Asistencia),
