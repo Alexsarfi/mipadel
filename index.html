@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.338.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.339.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,24 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.339.0 — El Recorrido como mapa de la pista (2026-09)
+    (sin migraciones nuevas)
+    · EN INICIACIÓN Y AVANZADO LAS ETAPAS VAN POR ZONA DE LA PISTA: fondo ·
+      campo medio · red · toda la pista. Cambia la metáfora: ya no es un
+      camino (qué va antes) sino un mapa (dónde se trabaja cada cosa). Por
+      eso el número «Etapa n» desaparece.
+    · LA ZONA SE DEDUCE, NO SE GUARDA. La etapa no lleva zona; sus bloques
+      sí (`z:` en el catálogo). Cae donde caiga la mayoría, sin contar el
+      «Saque» que va en todas; en empate manda el orden fondo → campo medio
+      → red → toda la pista (Neutralización cae en Fondo). Nada que
+      mantener, y si una cae donde no toca se corrige en el catálogo.
+    · EL TIRADOR ⠿ SIGUE, DENTRO DE SU ZONA. El orden guardado (et_orden)
+      es el de todo el tablero, para que una columna no pise a las otras.
+    · COMPETICIÓN SE QUEDA EN LISTA: cinco de sus siete etapas son «toda la
+      pista» y el mapa no diría nada.
+    · Una zona debajo de otra en el móvil; dos columnas desde 600px y las
+      cuatro desde 900px.
 
   v0.338.0 — El Recorrido: arrastrar, galería y golpe estrella (2026-09)
     (sin migraciones nuevas · usa la et_orden de la v0.337)
@@ -7754,7 +7772,19 @@
     .rec-drag:active { cursor:grabbing; }
     .rec-fila-et.arrastrando { opacity:.9; transform:scale(1.02); background:var(--blanco);
       box-shadow:0 6px 18px rgba(14,27,60,.22); border-radius:var(--r-sm); border-top-color:transparent; }
-    .rec-et-num { color:var(--gris); }
+    /* v0.339: el mapa por zonas. Una zona debajo de otra en el móvil; dos
+       columnas desde 600px y las cuatro desde 900px. Columnas fijas. */
+    .rec-mapa { display:grid; grid-template-columns:1fr; gap:12px; }
+    @media (min-width:600px) { .rec-mapa { grid-template-columns:repeat(2, minmax(0,1fr)); } }
+    @media (min-width:900px) { .rec-mapa { grid-template-columns:repeat(4, minmax(0,1fr)); } }
+    .rec-zona { min-width:0; }
+    .rec-zona-t { display:flex; align-items:center; gap:6px; font-size:10.5px; font-weight:800;
+      letter-spacing:.06em; text-transform:uppercase; color:var(--gris); padding:0 4px 6px;
+      border-bottom:1.5px solid var(--borde); margin-bottom:4px; }
+    .rec-zona-n { margin-left:auto; font-weight:700; letter-spacing:0; }
+    .rec-zona-vacia { font-size:12px; color:var(--gris); padding:8px 6px; }
+    .rec-mapa .rec-fila-et { border-top:none; border:1.5px solid var(--borde);
+      border-radius:var(--r-sm); margin:6px 0; padding:2px 0; background:var(--blanco); }
     .rec-et-toca { flex:1; min-width:0; display:flex; align-items:center; gap:9px;
       padding:7px 6px; cursor:pointer; border-radius:var(--r-sm); }
     .rec-et-toca:active { background:var(--arena); }
@@ -10303,7 +10333,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.338.0';
+    var APP_VERSION = '0.339.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -19971,9 +20001,13 @@
            '<button type="button" class="ct-nueva" onclick="event.stopPropagation();ctNueva()" ' +
              'title="Crear una clase desde cero" aria-label="Nueva clase">⚙</button>' +
            '<span class="ct-hdr-chev">›</span>' +
-           '<span class="ct-hdr-sub">Las etapas de este nivel, en el orden en que las vas a dar: ' +
-             'arrástralas desde ⠿. Toca una para ver sus bloques y sesiones, y desde ahí ' +
-             'elige en qué semana se trabaja cada una.</span></div>';
+           '<span class="ct-hdr-sub">' + (_recEsMapa(nivelCT)
+             ? 'Las etapas de este nivel, por zona de la pista. Arrástralas desde ⠿ para ordenarlas ' +
+               'dentro de su zona. Toca una para ver sus bloques y sesiones, y desde ahí elige en ' +
+               'qué semana se trabaja cada una.'
+             : 'Las etapas de este nivel, en el orden en que las vas a dar: arrástralas desde ⠿. ' +
+               'Toca una para ver sus bloques y sesiones, y desde ahí elige en qué semana se ' +
+               'trabaja cada una.') + '</span></div>';
 
       h += '<div class="ct-caja-body">';
 
@@ -20002,21 +20036,40 @@
       }
       // v0.338: se reordenan ARRASTRANDO desde el tirador ⠿ (mismo gesto que
       // la secuencia de una sesión, v0.315). Las flechas se retiran.
-      h += '<div id="rec-lista">';
-      estRec.etapas.forEach(function(e, iEt){
+      // v0.339: en Iniciación y Avanzado las etapas van en un MAPA por zona
+      // de la pista (fondo · campo medio · red · toda la pista); el número de
+      // etapa desaparece, porque el mapa dice dónde, no cuándo. Competición
+      // sigue en lista.
+      function filaEtapa(e) {
         var nSes = 0;
         e.nodos.forEach(function(nd){ nSes += nd.n; });
-        h += '<div class="rec-fila-et" data-key="' + _gEsc(e.et.key) + '">';
-        h += '<span class="rec-drag" title="Arrastrar para reordenar" aria-label="Reordenar">⠿</span>';
-        h += '<div class="rec-et-toca" onclick="recEtapaAbrir(\'' + e.et.key + '\')">' +
-          '<span class="rec-sq">' + nSes + '</span>' +
-          '<span class="rec-et-t">' + (nivelCT === 'competicion' ? '' : '<span class="rec-et-num">' + (iEt + 1) + '</span> · ') +
-            _gEsc(e.et.nombre) + '</span>' +
-          '<span class="rec-et-c">' + e.total + (e.total === 1 ? ' bloque' : ' bloques') + '</span>' +
-          '<span class="rec-et-chev">›</span></div>';
+        return '<div class="rec-fila-et" data-key="' + _gEsc(e.et.key) + '">' +
+          '<span class="rec-drag" title="Arrastrar para reordenar" aria-label="Reordenar">⠿</span>' +
+          '<div class="rec-et-toca" onclick="recEtapaAbrir(\'' + e.et.key + '\')">' +
+            '<span class="rec-sq">' + nSes + '</span>' +
+            '<span class="rec-et-t">' + _gEsc(e.et.nombre) + '</span>' +
+            '<span class="rec-et-c">' + e.total + (e.total === 1 ? ' bloque' : ' bloques') + '</span>' +
+            '<span class="rec-et-chev">›</span></div>' +
+          '</div>';
+      }
+      if (_recEsMapa(nivelCT)) {
+        h += '<div id="rec-lista" class="rec-mapa">';
+        REC_ZONAS.forEach(function(z){
+          var suyas = estRec.etapas.filter(function(e){ return _recZonaEtapa(e.et) === z.key; });
+          h += '<div class="rec-zona">' +
+            '<div class="rec-zona-t">' + _gEsc(z.label) +
+              '<span class="rec-zona-n">' + suyas.length + '</span></div>' +
+            '<div class="rec-zona-lista">';
+          if (!suyas.length) h += '<div class="rec-zona-vacia">Sin etapas aquí</div>';
+          suyas.forEach(function(e){ h += filaEtapa(e); });
+          h += '</div></div>';
+        });
         h += '</div>';
-      });
-      h += '</div>';
+      } else {
+        h += '<div id="rec-lista">';
+        estRec.etapas.forEach(function(e){ h += filaEtapa(e); });
+        h += '</div>';
+      }
       h += '</div>';   // .ct-caja-body
       h += '</div>';   // .ct-caja
 
@@ -20643,6 +20696,39 @@
         return ia - ib;
       });
     }
+    // ── v0.339 — EL MAPA POR ZONAS (Iniciación y Avanzado) ──────────────
+    // La etapa no lleva zona; sus BLOQUES sí (`z:` en el catálogo). La etapa
+    // cae en la zona de la mayoría de sus bloques, sin contar el «Saque» que
+    // va en todas. Empate → la primera de REC_ZONAS (Neutralización, con dos
+    // de fondo y dos de campo medio, cae en Fondo: neutralizar es defender
+    // desde atrás). Nada que mantener: si una etapa cae donde no toca, se
+    // corrige en el catálogo y vale para todos los grupos.
+    // Competición se queda en lista: cinco de sus siete etapas son «toda la
+    // pista» y el mapa no diría nada.
+    var REC_ZONAS = [
+      { key:'fondo',       label:'Fondo' },
+      { key:'campo-medio', label:'Campo medio' },
+      { key:'red',         label:'Red' },
+      { key:'todo-campo',  label:'Toda la pista' }
+    ];
+    var REC_MAPA_NIVELES = ['iniciacion', 'avanzado'];
+    function _recEsMapa(nivel) { return REC_MAPA_NIVELES.indexOf(nivel) >= 0; }
+    function _recZonaEtapa(et) {
+      var n = {};
+      (et.bloques || []).forEach(function(b){
+        if (String(b.t || '').trim().toLowerCase() === 'saque') return;
+        var z = b.z || 'todo-campo';
+        n[z] = (n[z] || 0) + 1;
+      });
+      var mejor = REC_ZONAS[REC_ZONAS.length - 1].key, max = 0;
+      REC_ZONAS.forEach(function(z){ if ((n[z.key] || 0) > max) { max = n[z.key]; mejor = z.key; } });
+      return mejor;
+    }
+    function _recZonaLabel(key) {
+      var z = REC_ZONAS.filter(function(x){ return x.key === key; })[0];
+      return z ? z.label : key;
+    }
+
     function recEtapaOrdenGuardar(keys) {
       var p = leerPlan(), nivel = _compNivel();
       if (!keys || !keys.length) return;
@@ -20682,7 +20768,11 @@
         document.addEventListener(ev, function(){
           if (!_recDrag) return;
           _recDrag.el.classList.remove('arrastrando');
-          var keys = Array.prototype.map.call(_recDrag.lista.querySelectorAll('.rec-fila-et'), function(x){
+          // v0.339: en el mapa cada zona tiene su lista (y ahí se queda el
+          // arrastre), pero el orden que se guarda es el de TODAS las etapas
+          // en el orden del tablero — si no, una columna pisaría a las otras.
+          var todo = document.getElementById('rec-lista') || _recDrag.lista;
+          var keys = Array.prototype.map.call(todo.querySelectorAll('.rec-fila-et'), function(x){
             return x.getAttribute('data-key');
           }).filter(Boolean);
           _recDrag = null;
@@ -20868,8 +20958,9 @@
 
       // ── La etapa: bloques y, dentro, clases tipo y sesiones ─────
       h += '<div class="ruta-modal-hdr"><div>' +
-        '<div class="ruta-modal-tit">' + (nivel === 'competicion' ? '' : 'Etapa ' + (iEt + 1) + ' · ') + _gEsc(e.et.nombre) + '</div>' +
-        '<div class="ruta-modal-sub">' + e.total + (e.total === 1 ? ' bloque' : ' bloques') + ' · ' +
+        '<div class="ruta-modal-tit">' + _gEsc(e.et.nombre) + '</div>' +
+        '<div class="ruta-modal-sub">' + (_recEsMapa(nivel) ? _gEsc(_recZonaLabel(_recZonaEtapa(e.et))) + ' · ' : '') +
+          e.total + (e.total === 1 ? ' bloque' : ' bloques') + ' · ' +
           nSes + (nSes === 1 ? ' sesión' : ' sesiones') + '</div></div>' +
         '<button class="plan-modal-x" onclick="recEtapaCerrar()" aria-label="Cerrar">✕</button></div>';
       if (e.et.obj) h += '<div class="rec-obj">' + _gEsc(e.et.obj) + '</div>';
