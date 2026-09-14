@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.352.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.353.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,16 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.353.0 — Planificación sin explicaciones (2026-09)
+    (sin migraciones · solo presentación)
+    · FUERA EL AVISO «Sin clases de <nivel> este mes» con su párrafo de
+      «Planifica abajo…»: sin franjas de ese nivel, arriba no se pinta nada.
+    · FUERA LA LÍNEA DE AYUDA DEL RECORRIDO («Las etapas de este nivel, por
+      zona de la pista…»). El Recorrido se explica solo.
+    · La Temporalización vacía dice «Sin clases todavía.» y nada más.
+    · Se retira también el intro «🧭 Plan por etapas…», que ya no alcanzaba
+      ningún nivel desde la v0.232.
 
   v0.352.0 — Barra con Técnica, Equipo e Individual en Inicio, Plan sin ruido (2026-09)
     (sin migraciones)
@@ -10584,7 +10594,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.352.0';
+    var APP_VERSION = '0.353.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -20322,14 +20332,9 @@
              ' · ' + nBloques + ' bloques</span>' +
            '<button type="button" class="ct-nueva" onclick="event.stopPropagation();ctNueva()" ' +
              'title="Crear una clase desde cero" aria-label="Nueva clase">⚙</button>' +
-           '<span class="ct-hdr-chev">›</span>' +
-           '<span class="ct-hdr-sub">' + (_recEsMapa(nivelCT)
-             ? 'Las etapas de este nivel, por zona de la pista. Arrástralas desde ⠿ para ordenarlas ' +
-               'dentro de su zona. Toca una para ver sus bloques y sesiones, y desde ahí elige en ' +
-               'qué semana se trabaja cada una.'
-             : 'Las etapas de este nivel, en el orden en que las vas a dar: arrástralas desde ⠿. ' +
-               'Toca una para ver sus bloques y sesiones, y desde ahí elige en qué semana se ' +
-               'trabaja cada una.') + '</span></div>';
+           '<span class="ct-hdr-chev">›</span></div>';
+      // v0.353: fuera la línea de ayuda de debajo de la cabecera. El
+      // Recorrido se explica solo; el texto era ruido en cada entrada.
 
       h += '<div class="ct-caja-body">';
 
@@ -20707,8 +20712,7 @@
         '<span class="chev">›</span></div>';
       h += '<div class="plan-otros-body">';
       if (!deEste.length) {
-        h += '<div class="plan-bl-vacio">El curso ' + cursoAct + ' todavía no tiene ninguna clase en este ' +
-             'nivel. Según vayas llenando días, irán apareciendo aquí por meses y semanas.</div>';
+        h += '<div class="plan-bl-vacio">Sin clases todavía.</div>';   // v0.353: sin explicación
       } else {
         h += _rutaTempVistaHTML();
         h += (_rutaTempVista === 'lista')
@@ -23432,9 +23436,9 @@
         // v0.237: sin grupos de este nivel no hay nada que tocar aquí arriba.
         // Se planifica abajo, semana a semana, y cuando el gestor ponga las
         // franjas la primera clase de cada semana ya llega preparada.
-        h += '<div class="comp-picker-vacio" style="padding:0.5rem 0 1rem;text-align:center;">Sin clases de ' +
-             _gEsc(planNivelLabel(_nivM)) + ' este mes.<br>' +
-             '<span class="ruta-panel-nota">Planifica abajo, en el curso: cuando el gestor ponga las franjas de este nivel, la primera clase de cada semana llegará ya preparada.</span></div>';
+        // v0.353: sin franjas de este nivel no se pinta nada. Antes había un
+        // aviso con explicación («Planifica abajo…») que en la práctica era
+        // ruido: quien entra aquí ya sabe dónde está.
       } else if (!_compMesTodo) {
         // ── v0.280 — SOLO LA SEMANA EN CURSO, Y EN HORIZONTAL ─────────
         // Antes se veían las cuatro o cinco semanas del mes, cada una en su
@@ -23614,8 +23618,6 @@
       // niveles, se mantiene el intro de siempre.
       if (edit) {
         h += '<div class="plan-intro">✏️ <strong>Modo edición.</strong> Toca un apartado para editarlo, ▲▼ para ordenar y 🗑️ para borrar. «＋ Nuevo» o «📚 Biblioteca» para añadir.</div>';
-      } else if (!esComp) {
-        h += '<div class="plan-intro">🧭 Plan por <strong>etapas</strong> (sin meses). Se avanza a la siguiente al cumplir su <strong>objetivo</strong>. El saque es transversal.</div>';
       }
 
       if (esComp) {
