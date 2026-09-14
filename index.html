@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.351.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.352.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,21 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.352.0 — Barra con Técnica, Equipo e Individual en Inicio, Plan sin ruido (2026-09)
+    (sin migraciones)
+    · LA BARRA DE ABAJO: Asistencia · Partido · Área · Carro · Técnica.
+      Técnica vuelve a ser botón propio (era pestaña dentro de Área desde la
+      v0.323) y Área queda limpia: solo los ejercicios de juego, sin pestañas.
+      Al EN2 no se le enseña Técnica, como antes. Fuera el botón PLAN: a la
+      planificación se entra por Inicio, por nivel.
+    · EQUIPO E INDIVIDUAL SE VAN DE PLAN A INICIO, debajo de la fila
+      Iniciación · Avanzado · Competición, centrados y un punto más
+      discretos. No tienen catálogo: abren directamente sus sesiones.
+    · EN PLANIFICACIÓN, FUERA LA BARRA DE NIVELES. Se entra ya en un nivel y
+      repetir los tres arriba era ruido. El nivel se dice en la cabecera
+      («🔥 Avanzado · Planificación anual · 7 etapas») y el espacio es para
+      el plan. Igual en Iniciación y Competición.
 
   v0.351.0 — La galería, sombreada (2026-09)
     (sin migraciones · solo CSS)
@@ -9287,6 +9302,11 @@
     .home-plan-btn.niv-ini  { border-color:#bbf7d0; background:var(--ac-dada-sv); }
     .home-plan-btn.niv-avz  { border-color:#fed7aa; background:#fff7ed; }
     .home-plan-btn.niv-comp { border-color:#bfdbfe; background:#eff6ff; }
+    /* v0.352: Equipo e Individual, centrados debajo y un punto más discretos */
+    .home-plan-grid.dos { grid-template-columns:repeat(2, minmax(0, 150px)); justify-content:center; margin-top:-2px; }
+    .home-plan-btn.niv-eq::before, .home-plan-btn.niv-ind::before { background:var(--borde); }
+    .home-plan-btn.niv-eq, .home-plan-btn.niv-ind { padding:0.8rem 0.4rem 0.7rem; }
+    .home-plan-btn.niv-eq .ico, .home-plan-btn.niv-ind .ico { font-size:20px; }
     /* Sesiones: botón con desplegable */
     .home-ses-btn { display:flex; align-items:center; justify-content:space-between; width:100%; padding:0.85rem 1rem; border-radius:14px; border:1.5px solid var(--borde); background:var(--blanco); cursor:pointer; font-size:14px; font-weight:800; color:var(--texto); font-family:'Outfit',sans-serif; -webkit-tap-highlight-color:transparent; }
     .home-ses-btn:active { transform:scale(0.99); }
@@ -9416,6 +9436,12 @@
           <button class="home-plan-btn niv-ini"  onclick="irPlanNivel('iniciacion')"><span class="ico">🌱</span><span class="lbl">Iniciación</span></button>
           <button class="home-plan-btn niv-avz"  id="home-plan-avz"  onclick="irPlanNivel('avanzado')"><span class="ico">🔥</span><span class="lbl">Avanzado</span></button>
           <button class="home-plan-btn niv-comp" id="home-plan-comp" onclick="irPlanNivel('competicion')"><span class="ico">🏆</span><span class="lbl">Competición</span></button>
+        </div>
+        <!-- v0.352: Equipo e Individual salen del Plan y viven aquí, debajo de
+             los niveles y centrados. No tienen catálogo: abren sus sesiones. -->
+        <div class="home-plan-grid dos" id="home-plan-otros">
+          <button class="home-plan-btn niv-eq"  onclick="irClasesNivel('equipo')"><span class="ico">🤝</span><span class="lbl">Equipo</span></button>
+          <button class="home-plan-btn niv-ind" onclick="irClasesNivel('individual')"><span class="ico">👤</span><span class="lbl">Individual</span></button>
         </div>
         <!-- (Sesiones vive en la pestaña "Sesiones" de la barra inferior;
              para EN1, que no tiene barra, se ofrece aquí este acceso) -->
@@ -9982,7 +10008,7 @@
   <div id="pantalla-planificacion" class="pantalla">
     <div class="cabecera">
       <button class="btn-volver" onclick="irA('pantalla-inicio')">‹ Inicio</button>
-      <div class="cab-titulo">Planificación anual</div>
+      <div class="cab-titulo" id="plan-titulo">Planificación anual</div>
       <div class="cab-sub" id="plan-sub">Septiembre → Junio</div>
     </div>
     <div class="contenido" id="plan-contenido"></div>
@@ -10558,7 +10584,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.351.0';
+    var APP_VERSION = '0.352.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -23561,15 +23587,14 @@
         (nivel === 'competicion' ? 'ciclo + áreas' : etapas.length + ' etapas') + (edit ? ' · editando' : '');
       var h = '';
 
-      // Tabs de nivel (EN2 solo ve Iniciación y Avanzado)
-      h += '<div class="plan-nivelbar nivelbar">';
-      PLAN_NIVELES_META.filter(function(n){ return nivelPermitido(n.key); }).forEach(function(n){
-        var act = n.key === nivel ? ' activo' : '';
-        h += '<button class="nivel-btn' + act + '" onclick="planSetNivel(\'' + n.key + '\')">' +
-             '<span class="nivel-btn-ico">' + n.icono + '</span>' +
-             '<span class="nivel-btn-lbl">' + n.label + '</span></button>';
-      });
-      h += '</div>';
+      // v0.352: fuera la barra de niveles. Se entra desde Inicio ya en un
+      // nivel, y repetirlos aquí era ruido: ese espacio es para el plan. El
+      // nivel se dice arriba, en la cabecera, como información.
+      var _metaN = PLAN_NIVELES_META.filter(function(n){ return n.key === nivel; })[0];
+      var _titEl = document.getElementById('plan-titulo');
+      if (_titEl) _titEl.textContent = (_metaN ? _metaN.icono + ' ' + _metaN.label : planNivelLabel(nivel));
+      if (subEl) subEl.textContent = 'Planificación anual · ' +
+        (nivel === 'competicion' ? 'ciclo + áreas' : etapas.length + ' etapas') + (edit ? ' · editando' : '');
 
       // v0.232: los TRES niveles usan la misma estructura (círculos + ruta +
       // catálogo). COMP_NIVELES son justo esos tres.
@@ -23687,9 +23712,16 @@
     //   · Técnica baja a pestaña de Área: es material de consulta, no algo que
     //     se abra en mitad de una clase. Al EN2 se le sigue ocultando allí.
     // El EN1 no ve barra (updateBottomNav ya la esconde para su rol).
-    var NAV_ORDEN_DEFECTO = ['asistencia','partido','plan','clases','carro'];
+    // v0.352: fuera PLAN (a la planificación se entra por Inicio, por nivel) y
+    // TÉCNICA vuelve a ser botón, fuera de Área. Al EN2 no se le enseña
+    // Técnica, como cuando era pestaña.
+    var NAV_ORDEN_DEFECTO = ['asistencia','partido','clases','carro','tecnica'];
     var NAV_ORDEN_NIVEL3  = NAV_ORDEN_DEFECTO;
-    function _navOrden(){ return NAV_ORDEN_DEFECTO.slice(); }
+    function _navOrden(){
+      var verTec = true;
+      try { verTec = nivelPermitido('tecnica'); } catch (e) {}
+      return NAV_ORDEN_DEFECTO.filter(function(k){ return k !== 'tecnica' || verTec; });
+    }
     var _navOrdenActual = null;
     function renderBottomNav(force){
       var nav = document.getElementById('appnav');
@@ -23714,6 +23746,8 @@
       // que se ilumina lo dice la pestaña abierta, no la pantalla.
       if (grupo === 'clases') {
         try { if (areaTab() === 'plan') grupo = 'plan'; } catch(e){}
+        // v0.352: la lista de sesiones de Técnica ilumina su propio botón
+        try { if (id === 'pantalla-clases' && nivelClasesSel === 'tecnica') grupo = 'tecnica'; } catch(e){}
       }
       nav.querySelectorAll('.appnav-btn').forEach(function(b){
         b.classList.toggle('activo', b.getAttribute('data-nav') === grupo);
@@ -25674,9 +25708,9 @@
     // Los otros caminos (volver de una sesión, de un ejercicio) respetan la
     // pestaña que estuviera abierta.
     function navArea() {
-      // v0.323: Área ya no incluye el Plan. Si venías del Plan, se vuelve a
-      // los ejercicios de juego; si estabas en Técnica, se respeta.
-      if (_areaTab !== 'tecnica') _areaTab = 'ejs';
+      // v0.323: Área ya no incluye el Plan. v0.352: ni Técnica. Área ES los
+      // ejercicios de juego.
+      _areaTab = 'ejs';
       try { localStorage.setItem('padel-area-tab', _areaTab); } catch (e) {}
       _areaEjSit = null; _areaEjForm = null;
       irA('pantalla-clases-niveles');
@@ -25702,12 +25736,7 @@
       return _areaTab;
     }
     function areaSetTab(k) {
-      if (k === 'tecnica') {   // v0.323
-        _areaTab = 'tecnica';
-        try { localStorage.setItem('padel-area-tab', 'tecnica'); } catch (e) {}
-        irClasesNivel('tecnica');
-        return;
-      }
+      // v0.352: 'tecnica' ya no es pestaña de Área (tiene botón en la barra)
       _areaTab = (k === 'ejs') ? 'ejs' : 'plan';
       try { localStorage.setItem('padel-area-tab', _areaTab); } catch (e) {}
       _areaEjSit = null; _areaEjForm = null;   // los filtros no se arrastran
@@ -25812,13 +25841,9 @@
         // Técnica, que baja de la barra. Entrando por el botón Plan no se
         // pintan pestañas: el botón ya dice dónde estás.
         // Al EN2 se le sigue ocultando Técnica, como cuando era un botón.
-        var _verTec = true;
-        try { _verTec = nivelPermitido('tecnica'); } catch (e) {}
-        tabs.innerHTML = (tab === 'plan') ? '' :
-          '<button class="area-tab' + (tab === 'ejs' ? ' activo' : '') +
-            '" onclick="areaSetTab(\'ejs\')">Ejercicios de juego</button>' +
-          (_verTec ? '<button class="area-tab' + (tab === 'tecnica' ? ' activo' : '') +
-            '" onclick="areaSetTab(\'tecnica\')">Técnica</button>' : '');
+        // v0.352: Técnica vuelve a la barra de abajo y sale de aquí. Con una
+        // sola pestaña no hay nada que elegir: Área queda limpia.
+        tabs.innerHTML = '';
       }
 
       // Pestaña «Ejercicios de juego»: el repertorio no depende del nivel del
