@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.353.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.354.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,22 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.354.0 — La etapa, por golpes y con pestañas (2026-09)
+    (sin migraciones · solo presentación)
+    · PESTAÑAS DE APARTADOS: la ventana del Recorrido puede tener varios
+      apartados abiertos a la vez, cada uno con su ✕, y un ＋ que despliega
+      los que quedan. Son pestañas DE LA APP: una del navegador recargaría
+      el archivo entero y, en el móvil, sacaría de la PWA.
+      Cada pestaña recuerda por dónde ibas (_recSelTab).
+    · FUERA LA TIRA POR BLOQUE (v0.346). Dentro de un apartado la única
+      ordenación es por GOLPES: el golpe manda y el bloque va debajo, en
+      pequeño, en cada sesión. Es la información con la que se trabaja en
+      pista; el bloque es dónde vive la sesión, no lo que enseña.
+    · Los BLOQUES SIN SESIÓN son un grupo más al final, con sus ⭐ clases
+      preparadas y el ＋. Antes vivían en la tira.
+    · Dentro de una sesión, «‹ Volver a los golpes» en lugar de ‹ ›, que
+      recorrían las sesiones por orden de bloque.
 
   v0.353.0 — Planificación sin explicaciones (2026-09)
     (sin migraciones · solo presentación)
@@ -7988,41 +8004,44 @@
     .rec-et-chev { color:var(--gris); font-weight:800; }
     /* — la ventana de la etapa — */
     .rec-obj { font-size:12.5px; color:var(--gris); line-height:1.5; margin:-4px 0 12px; }
-    /* v0.344: NAVEGAR por las sesiones de la etapa. Arriba una tira de
-       pestañas que se desliza en horizontal (una por sesión; punteada si el
-       bloque no tiene); debajo, la sesión elegida entera. Sustituye a la
-       galería de tarjetas de la v0.338. */
-    /* v0.346: una tira agrupada por bloque: rótulo encima, pestañas debajo */
-    .rec-tabs { display:flex; gap:14px; overflow-x:auto; -webkit-overflow-scrolling:touch;
-      padding:2px 2px 10px; margin:0 -2px 6px; scroll-snap-type:x proximity; }
-    .rec-grp { flex:0 0 auto; display:flex; flex-direction:column; gap:5px; }
-    .rec-grp-t { display:flex; align-items:center; gap:6px; font-size:10px; font-weight:800;
-      letter-spacing:.05em; text-transform:uppercase; color:var(--gris); padding:0 2px 3px;
-      border-bottom:1.5px solid var(--borde); white-space:nowrap; }
-    .rec-grp.vacio .rec-grp-t { border-bottom-style:dashed; }
-    .rec-grp-n { margin-left:auto; font-weight:700; letter-spacing:0; color:var(--gris); opacity:.8; }
-    .rec-grp-tabs { display:flex; gap:6px; }
-    .rec-tabs::-webkit-scrollbar { height:4px; }
-    .rec-tabs::-webkit-scrollbar-thumb { background:var(--borde); border-radius:4px; }
-    .rec-tab { flex:0 0 auto; width:150px; text-align:left; font-family:inherit; cursor:pointer;
-      border:1.5px solid var(--borde); border-radius:var(--r-sm); background:var(--blanco);
-      padding:7px 9px 8px; display:flex; flex-direction:column; gap:2px; scroll-snap-align:center;
+    /* v0.354: LA BARRA DE PESTAÑAS de la ventana. Varias etapas abiertas a la
+       vez, la de delante enganchada a la cabecera. Sustituye a la tira de
+       pestañas por bloque de la v0.346: la etapa ya solo se ordena por golpes. */
+    .rec-tb { display:flex; align-items:flex-end; gap:4px; overflow-x:auto;
+      -webkit-overflow-scrolling:touch; padding:0 2px; margin:0 -2px -1px; }
+    .rec-tb::-webkit-scrollbar { height:4px; }
+    .rec-tb::-webkit-scrollbar-thumb { background:var(--borde); border-radius:4px; }
+    .rec-tb-t { flex:0 0 auto; max-width:60%; display:flex; align-items:center; gap:6px;
+      border:1.5px solid var(--borde); border-bottom:none; border-radius:10px 10px 0 0;
+      background:var(--arena); padding:6px 8px 6px 10px; cursor:pointer;
       -webkit-tap-highlight-color:transparent; }
-    .rec-tab.on { border-color:var(--verde); background:var(--verde-suave); }
-    .rec-tab.vacia { border-style:dashed; }
-    .rec-tab-bl { font-size:10px; font-weight:800; letter-spacing:.04em; text-transform:uppercase;
-      color:var(--gris); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .rec-tab-t { font-size:13px; font-weight:800; color:var(--texto); line-height:1.25;
-      overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
-    .rec-tab.vacia .rec-tab-t { color:var(--gris); font-weight:700; }
-    .rec-tab-n { font-size:10.5px; color:var(--gris); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .rec-tb-t.on { background:var(--blanco); border-color:var(--verde); }
+    .rec-tb-n { font-size:12px; font-weight:800; color:var(--gris);
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .rec-tb-t.on .rec-tb-n { color:var(--verde); }
+    .rec-tb-x { flex-shrink:0; border:none; background:none; font-family:inherit; cursor:pointer;
+      font-size:11px; color:var(--gris); padding:0 2px; line-height:1;
+      -webkit-tap-highlight-color:transparent; }
+    .rec-tb-mas { flex:0 0 auto; border:1.5px dashed var(--borde); border-bottom:none;
+      border-radius:10px 10px 0 0; background:none; font-family:inherit; cursor:pointer;
+      font-size:13px; font-weight:800; color:var(--gris); padding:6px 9px;
+      -webkit-tap-highlight-color:transparent; }
+    .rec-tb-mas.on { border-style:solid; background:var(--arena); color:var(--texto); }
+    .rec-tb-lista { border:1.5px solid var(--borde); border-radius:var(--r-sm);
+      background:var(--blanco); margin:6px 0 0; overflow:hidden; }
+    .rec-tb-op { display:flex; align-items:baseline; gap:8px; padding:9px 10px;
+      border-bottom:1px solid var(--borde); cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .rec-tb-op:last-child { border-bottom:none; }
+    .rec-tb-op:active { background:var(--arena); }
+    .rec-tb-op-n { flex:1; min-width:0; font-size:13px; font-weight:800; color:var(--texto); }
+    .rec-tb-op-d { flex-shrink:0; font-size:10.5px; color:var(--gris); }
     .rec-cont { border-top:1.5px solid var(--borde); padding-top:10px; }
     .rec-cont-cab { display:flex; align-items:flex-start; gap:6px; margin-bottom:8px; }
-    .rec-nav { flex-shrink:0; width:36px; height:36px; border:1.5px solid var(--borde); border-radius:10px;
-      background:var(--blanco); color:var(--texto); font-size:20px; font-weight:800; cursor:pointer;
-      font-family:inherit; -webkit-tap-highlight-color:transparent; }
-    .rec-nav:active { background:var(--arena); }
-    .rec-nav:disabled { opacity:.25; cursor:default; }
+    /* v0.354: la salida de una sesión es volver a los golpes, no ‹ › por bloque */
+    .rec-volver { border:1.5px solid var(--borde); border-radius:10px; background:var(--blanco);
+      font-family:inherit; font-size:12.5px; font-weight:800; color:var(--gris);
+      padding:7px 12px; margin:0 0 10px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .rec-volver:active { background:var(--arena); }
     .rec-cont-tit { flex:1; min-width:0; }
     .rec-cont-g { font-size:17px; font-weight:800; color:var(--texto); line-height:1.2; overflow-wrap:anywhere; }
     .rec-cont-n { font-size:12.5px; color:var(--gris); margin-top:2px; overflow-wrap:anywhere; }
@@ -8043,9 +8062,9 @@
     .rec-gal-t span { margin-left:auto; font-size:11px; font-weight:800; color:var(--verde); opacity:.7; }
     .rec-gal-grp.sin { border-style:dashed; }
     .rec-gal-grp.sin .rec-gal-t { color:var(--gris); background:var(--arena); }
-    .rec-sep { display:flex; align-items:center; gap:10px; margin:0 0 12px; }
-    .rec-sep::before, .rec-sep::after { content:''; flex:1; height:4px; border-radius:999px; background:var(--borde); }
-    .rec-sep span { font-size:10.5px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--gris); white-space:nowrap; }
+    /* v0.354: los bloques sin sesión, un grupo más al final */
+    .rec-gal-grp.bloques { border-style:dashed; }
+    .rec-gal-grp.bloques .rec-gal-t { color:var(--gris); background:var(--arena); }
     .rec-gal-cards { display:grid; grid-template-columns:1fr; gap:0; padding:2px 10px 4px; }
     @media (min-width:600px) { .rec-gal-cards { grid-template-columns:repeat(2, minmax(0,1fr)); gap:0 14px; } }
     .rec-card { display:flex; align-items:baseline; gap:8px; padding:7px 2px; border-bottom:1px solid var(--borde);
@@ -10594,7 +10613,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.353.0';
+    var APP_VERSION = '0.354.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -21162,11 +21181,46 @@
     // → siguiente sesión». Se puede dar el bloque 5 en la semana 3, o probar
     // una sesión recién escrita cuando toque. El Recorrido no impone orden;
     // solo enseña qué hay.
-    var _recEtapaAbierta = null;   // key de la etapa abierta en ventana
+    var _recEtapaAbierta = null;   // key de la etapa ACTIVA (la pestaña de delante)
     var _recSemPara      = null;   // id de sesión a la que se le está eligiendo semana
-    var _recSel          = null;   // v0.344: pestaña elegida en la ventana ('ses:ID' o 'bl:ID')
+    var _recSel          = null;   // v0.344: sesión o bloque abierto DENTRO de la etapa activa
+    // v0.354 — VARIAS ETAPAS ABIERTAS A LA VEZ, como las pestañas de un
+    // navegador. _recTabs son las etapas abiertas en orden de apertura y
+    // _recEtapaAbierta es cuál se está viendo; _recSelTab recuerda por dónde
+    // ibas en cada una, para que saltar de pestaña no pierda el sitio. Son
+    // pestañas DE LA APP, no del navegador: una pestaña de verdad recargaría
+    // el archivo entero (1,9 MB), abriría otra sesión de Supabase y dejaría
+    // dos instancias escribiendo el mismo localStorage; y en el móvil, con la
+    // app instalada, sacaría al entrenador fuera de la PWA.
+    var _recTabs         = [];     // keys de las etapas abiertas, en orden
+    var _recSelTab       = {};     // key de etapa → su _recSel
+    var _recTabsMas      = false;  // el ＋ desplegado
 
-    function recEtapaAbrir(key) { _recEtapaAbierta = key; _recSemPara = null; _recSel = null; _recVentanaPintar(); }
+    function recEtapaAbrir(key) {
+      if (_recEtapaAbierta) _recSelTab[_recEtapaAbierta] = _recSel;
+      if (_recTabs.indexOf(key) < 0) _recTabs.push(key);
+      _recEtapaAbierta = key; _recSemPara = null; _recTabsMas = false;
+      _recSel = _recSelTab[key] || null;
+      _recVentanaPintar();
+    }
+    // Cerrar UNA pestaña. Si era la de delante, pasa a la de al lado; si era
+    // la última, se cierra la ventana entera.
+    function recTabCerrar(key) {
+      var i = _recTabs.indexOf(key);
+      if (i < 0) return;
+      _recTabs.splice(i, 1);
+      delete _recSelTab[key];
+      _recTabsMas = false;
+      if (!_recTabs.length) { recEtapaCerrar(); return; }
+      if (_recEtapaAbierta === key) {
+        var sig = _recTabs[Math.min(i, _recTabs.length - 1)];
+        _recEtapaAbierta = sig; _recSemPara = null;
+        _recSel = _recSelTab[sig] || null;
+      }
+      _recVentanaPintar();
+    }
+    function recTabsMas() { _recTabsMas = !_recTabsMas; _recVentanaPintar(); }
+    function recVolver()  { _recSel = null; _recVentanaPintar(); }
     // v0.343 — Esconder sin olvidar: la ventana es un panel FIJO fuera de las
     // pantallas, así que al abrir una sesión desde ella se quedaba flotando
     // encima (y el primer toque en «‹ Plan» lo que hacía era cerrarla, no
@@ -21179,6 +21233,7 @@
     }
     function recEtapaCerrar() {
       _recEtapaAbierta = null; _recSemPara = null;
+      _recTabs = []; _recSelTab = {}; _recTabsMas = false; _recSel = null;   // v0.354
       var ov = document.getElementById('rec-ov');
       if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; }
       if (typeof recEjCerrar === 'function') recEjCerrar();   // v0.347
@@ -21248,8 +21303,15 @@
       if (!_recEtapaAbierta) { ov.style.display = 'none'; ov.innerHTML = ''; return; }
       var p = leerPlan(), nivel = _compNivel();
       var est = _recEstado(p, nivel);
-      var iEt = -1, e = null;
-      est.etapas.forEach(function(x, i){ if (x.et.key === _recEtapaAbierta) { e = x; iEt = i; } });
+      // v0.354: las pestañas se podan contra las etapas que existen AHORA (al
+      // cambiar de nivel las keys son otras); si no queda ninguna, se cierra.
+      var vivas = {};
+      est.etapas.forEach(function(x){ vivas[x.et.key] = x; });
+      if (_recTabs.indexOf(_recEtapaAbierta) < 0) _recTabs.push(_recEtapaAbierta);
+      _recTabs = _recTabs.filter(function(k){ return !!vivas[k]; });
+      if (_recTabs.indexOf(_recEtapaAbierta) < 0) { _recEtapaAbierta = _recTabs[0] || null; _recSel = null; }
+      if (!_recEtapaAbierta) { recEtapaCerrar(); return; }
+      var e = vivas[_recEtapaAbierta];
       if (!e) { recEtapaCerrar(); return; }
       var mapEj = _ejsById(), todasS = leerClases();
       var nSes = 0; e.nodos.forEach(function(nd){ nSes += nd.n; });
@@ -21314,6 +21376,32 @@
       if (sel < 0) _recSel = null;
       var act = sel >= 0 ? items[sel] : null;
 
+      // ── v0.354: LA BARRA DE PESTAÑAS. Una por etapa abierta, con su ✕, y
+      // un ＋ que despliega las que quedan por abrir. Va arriba del todo,
+      // pegada a la cabecera, para que se lea como las pestañas de siempre.
+      h += '<div class="rec-tb">';
+      _recTabs.forEach(function(k){
+        var x = vivas[k], onT = k === _recEtapaAbierta;
+        h += '<div class="rec-tb-t' + (onT ? ' on' : '') + '" data-k="' + _gEsc(k) + '" onclick="recEtapaAbrir(\'' + k + '\')">' +
+          '<span class="rec-tb-n">' + _gEsc(x.et.nombre) + '</span>' +
+          '<button type="button" class="rec-tb-x" onclick="event.stopPropagation();recTabCerrar(\'' + k + '\')" aria-label="Cerrar pestaña">✕</button></div>';
+      });
+      var otras = est.etapas.filter(function(x){ return _recTabs.indexOf(x.et.key) < 0; });
+      if (otras.length) {
+        h += '<button type="button" class="rec-tb-mas' + (_recTabsMas ? ' on' : '') + '" onclick="recTabsMas()" aria-label="Abrir otro apartado">＋</button>';
+      }
+      h += '</div>';
+      if (_recTabsMas && otras.length) {
+        h += '<div class="rec-tb-lista">';
+        otras.forEach(function(x){
+          var nS2 = 0; x.nodos.forEach(function(nd){ nS2 += nd.ses.length; });
+          h += '<div class="rec-tb-op" onclick="recEtapaAbrir(\'' + x.et.key + '\')">' +
+            '<span class="rec-tb-op-n">' + _gEsc(x.et.nombre) + '</span>' +
+            '<span class="rec-tb-op-d">' + nS2 + (nS2 === 1 ? ' sesión' : ' sesiones') + '</span></div>';
+        });
+        h += '</div>';
+      }
+
       h += '<div class="ruta-modal-hdr"><div>' +
         '<div class="ruta-modal-tit">' + _gEsc(e.et.nombre) + '</div>' +
         '<div class="ruta-modal-sub">' + (_recEsMapa(nivel) ? _gEsc(_recZonaLabel(_recZonaEtapa(e.et))) + ' · ' : '') +
@@ -21322,48 +21410,17 @@
         '<button class="plan-modal-x" onclick="recEtapaCerrar()" aria-label="Cerrar">✕</button></div>';
       if (!e.nodos.length) h += '<div class="plan-bl-vacio">Este apartado no tiene bloques todavía.</div>';
 
-      // ── v0.346: UNA TIRA, AGRUPADA POR BLOQUE. Cada bloque es un grupo
-      // con su rótulo encima (nombre + cuántas sesiones) y sus pestañas
-      // debajo, pegadas; el bloque sin sesión lleva una pestaña punteada con
-      // su ＋. Todo en una fila que se desliza: ‹ › recorren las sesiones de
-      // corrido y de un vistazo se ve cuántas tiene cada bloque. Sustituye a
-      // los dos niveles de la v0.345 (un toque de más para llegar a una
-      // sesión) sin volver a repetir el rótulo en cada pestaña (v0.344).
-      h += '<div class="rec-tabs" id="rec-tabs">';
-      e.nodos.forEach(function(nd){
-        var nS = nd.ses.length;
-        h += '<div class="rec-grp' + (nS ? '' : ' vacio') + '">' +
-          '<div class="rec-grp-t">' + _gEsc(nd.it.t) +
-            '<span class="rec-grp-n">' + (nS ? nS : (nd.cts.length ? '⭐' + nd.cts.length : '')) + '</span></div>' +
-          '<div class="rec-grp-tabs">';
-        items.forEach(function(it){
-          if (it.nd !== nd) return;
-          var on = it.k === _recSel;
-          if (it.ses) {
-            var g = String(it.ses.golpes || '').trim();
-            h += '<button type="button" class="rec-tab' + (on ? ' on' : '') + '" data-k="' + _gEsc(it.k) + '" onclick="recSel(\'' + it.k + '\')">' +
-              '<span class="rec-tab-t">' + _gEsc(g || nombreSesion(it.ses)) + '</span>' +
-              (g ? '<span class="rec-tab-n">' + _gEsc(nombreSesion(it.ses)) + '</span>' : '') +
-              '</button>';
-          } else {
-            h += '<button type="button" class="rec-tab vacia' + (on ? ' on' : '') + '" data-k="' + _gEsc(it.k) + '" onclick="recSel(\'' + it.k + '\')">' +
-              '<span class="rec-tab-t">' + (nd.cts.length ? '⭐ ' + nd.cts.length + (nd.cts.length === 1 ? ' clase' : ' clases') : 'Sin sesión \uFF0B') + '</span>' +
-              '</button>';
-          }
-        });
-        h += '</div></div>';
-      });
-      h += '</div>';
-
       // ── sin elegida: la galería de sesiones por golpes (v0.349) ──
       if (!act) h += _recGaleriaHTML(e, p, nivel, mapEj, items);
 
       // ── el contenido de la elegida ──
       if (act) {
-        var prevK = sel > 0 ? items[sel - 1].k : null, nextK = sel < items.length - 1 ? items[sel + 1].k : null;
+        // v0.354: las flechas ‹ › recorrían las sesiones en el orden de los
+        // bloques, que ya no se ve. La salida es volver a la lista de golpes,
+        // que es de donde se ha entrado.
         h += '<div class="rec-cont">';
+        h += '<button type="button" class="rec-volver" onclick="recVolver()">‹ Volver a los golpes</button>';
         h += '<div class="rec-cont-cab">' +
-          '<button type="button" class="rec-nav" ' + (prevK ? 'onclick="recSel(\'' + prevK + '\')"' : 'disabled') + ' aria-label="Anterior">‹</button>' +
           '<div class="rec-cont-tit">';
         if (act.ses) {
           var c = act.ses, gTxt = String(c.golpes || '').trim();
@@ -21374,9 +21431,7 @@
           h += '<div class="rec-cont-g">' + _gEsc(act.nd.it.t) + '</div>' +
                '<div class="rec-cont-n">' + (act.nd.it.f ? _gEsc(act.nd.it.f) : 'Bloque sin sesión') + '</div>';
         }
-        h += '</div>' +
-          '<button type="button" class="rec-nav" ' + (nextK ? 'onclick="recSel(\'' + nextK + '\')"' : 'disabled') + ' aria-label="Siguiente">›</button>' +
-          '</div>';
+        h += '</div></div>';
 
         if (act.ses) {
           var c2 = act.ses, en = _recSemanasDe(p, nivel, c2.id);
@@ -21414,9 +21469,9 @@
       }
       h += '</div>';
       _ovPintarConScroll(ov, h);
-      // la pestaña elegida, a la vista en la tira
+      // la pestaña de delante, a la vista en la barra
       try {
-        var tOn = ov.querySelector('.rec-tab.on');
+        var tOn = ov.querySelector('.rec-tb-t.on');
         if (tOn && tOn.scrollIntoView) tOn.scrollIntoView({ block:'nearest', inline:'center' });
       } catch (x) {}
     }
@@ -21494,10 +21549,9 @@
       });
       // v0.350: una BARRA que separa la tira de pestañas de la galería, y
       // debajo filas compactas en vez de tarjetas: el título es el enlace.
-      var h = '<div class="rec-gal">' +
-        '<div class="rec-sep"><span>Sesiones por golpes</span></div>';
+      var h = '<div class="rec-gal">';
       if (!orden.length) {
-        h += '<div class="rec-bl-vacio">Esta etapa no tiene todavía ninguna sesión. Toca un bloque punteado para preparar una, o escríbela en el vault.</div>';
+        h += '<div class="rec-bl-vacio">Esta etapa no tiene todavía ninguna sesión. Toca un bloque de abajo para preparar una clase, o escríbela en el vault.</div>';
       }
       orden.forEach(function(k){
         var gr = grupos[k];
@@ -21516,6 +21570,25 @@
         });
         h += '</div></div>';
       });
+      // v0.354: los bloques que todavía no tienen sesión son UN GRUPO MÁS al
+      // final, con la misma pinta que un golpe. Antes vivían en la tira de
+      // pestañas, que ya no existe; sin esto se perderían de vista el ＋ para
+      // preparar una clase y las ⭐ ya preparadas de cada bloque.
+      var vacios = e.nodos.filter(function(nd){ return !nd.ses.length; });
+      if (vacios.length) {
+        h += '<div class="rec-gal-grp bloques">' +
+          '<div class="rec-gal-t">Bloques sin sesión<span>' + vacios.length + '</span></div>' +
+          '<div class="rec-gal-cards">';
+        vacios.forEach(function(nd){
+          h += '<div class="rec-card" onclick="recSel(\'bl:' + nd.it.id + '\')">' +
+            '<span class="rec-card-n">' + _gEsc(nd.it.t) + '</span>' +
+            '<span class="rec-card-d">' + (nd.cts.length
+              ? '⭐ ' + nd.cts.length + (nd.cts.length === 1 ? ' clase' : ' clases')
+              : 'Preparar ＋') + '</span>' +
+            '</div>';
+        });
+        h += '</div></div>';
+      }
       h += '</div>';
       return h;
     }
