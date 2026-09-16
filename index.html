@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.354.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.356.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,30 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.356.0 — Los golpes, en barras plegadas (2026-09)
+    (sin migraciones · solo presentación)
+    · Al entrar en un apartado se ven LOS GOLPES Y NADA MÁS: cada uno es una
+      barra a todo el ancho con cuántas sesiones tiene y cuántos minutos
+      suman. Se abre la que interesa y sus sesiones caen debajo.
+    · A todo el ancho y no en rejilla porque el rótulo es texto libre del
+      vault y los hay largos («Voleas y víboras de definición»): en dos
+      columnas habría que recortarlos, y el rótulo es justo el dato.
+    · «Bloques sin sesión» es la última barra, con el mismo comportamiento.
+    · Se puede abrir más de un golpe a la vez; al cerrar la ventana se
+      olvidan todos y se vuelve a entrar en limpio.
+
+  v0.355.0 — La etapa, a pantalla completa y sin repetir el nombre (2026-09)
+    (sin migraciones · solo presentación)
+    · LAS PESTAÑAS YA ESTÁN PUESTAS: la barra es la lista de apartados del
+      nivel, en el orden del Recorrido, así que al abrir uno están las demás.
+      No hay que ir añadiéndolas a mano, y por eso se retiran el ＋ y el ✕ de
+      cada pestaña. Una pestaña nueva = un apartado nuevo del nivel (vive en
+      el plan base de la app, con sus bloques).
+    · VENTANA COMPLETA: la etapa ocupa toda la pantalla (antes 88vh y 520px
+      de ancho). La barra de pestañas y el ✕ se quedan arriba al desplazar.
+    · FUERA EL NOMBRE REPETIDO: la pestaña de delante ya dice en qué apartado
+      estás; debajo solo queda la línea de zona · bloques · sesiones.
 
   v0.354.0 — La etapa, por golpes y con pestañas (2026-09)
     (sin migraciones · solo presentación)
@@ -8007,34 +8031,31 @@
     /* v0.354: LA BARRA DE PESTAÑAS de la ventana. Varias etapas abiertas a la
        vez, la de delante enganchada a la cabecera. Sustituye a la tira de
        pestañas por bloque de la v0.346: la etapa ya solo se ordena por golpes. */
-    .rec-tb { display:flex; align-items:flex-end; gap:4px; overflow-x:auto;
-      -webkit-overflow-scrolling:touch; padding:0 2px; margin:0 -2px -1px; }
+    /* v0.355: la ventana de la etapa ocupa la PANTALLA ENTERA (se quedaba
+       pequeña para lo que hay dentro) y la barra va pegada arriba, con el ✕
+       fuera del desplazamiento. #rec-ov gana al @media de .ruta-modal-ov, y
+       .ruta-modal.rec-modal al de .ruta-modal: las media queries de este
+       archivo no suman especificidad, así que hay que ganarlas por clase. */
+    #rec-ov { align-items:stretch; padding:0; }
+    .ruta-modal.rec-modal { max-width:none; width:100%; height:100dvh; max-height:100dvh;
+      border-radius:0; box-shadow:none; padding:0 12px calc(16px + env(safe-area-inset-bottom)); }
+    .rec-top { position:sticky; top:0; z-index:3; display:flex; align-items:flex-end; gap:8px;
+      background:var(--blanco); padding:8px 0 0; margin:0 -2px;
+      border-bottom:1.5px solid var(--borde); }
+    .rec-top .plan-modal-x { flex-shrink:0; margin-bottom:5px; }
+    .rec-tb { flex:1; min-width:0; display:flex; align-items:flex-end; gap:4px; overflow-x:auto;
+      -webkit-overflow-scrolling:touch; padding:0 2px; margin:0 0 -1.5px; }
     .rec-tb::-webkit-scrollbar { height:4px; }
     .rec-tb::-webkit-scrollbar-thumb { background:var(--borde); border-radius:4px; }
-    .rec-tb-t { flex:0 0 auto; max-width:60%; display:flex; align-items:center; gap:6px;
-      border:1.5px solid var(--borde); border-bottom:none; border-radius:10px 10px 0 0;
-      background:var(--arena); padding:6px 8px 6px 10px; cursor:pointer;
+    .rec-tb-t { flex:0 0 auto; max-width:60%; display:flex; align-items:center;
+      border:1.5px solid var(--borde); border-bottom-color:transparent; border-radius:10px 10px 0 0;
+      background:var(--arena); padding:7px 11px; cursor:pointer;
       -webkit-tap-highlight-color:transparent; }
-    .rec-tb-t.on { background:var(--blanco); border-color:var(--verde); }
+    .rec-tb-t.on { background:var(--blanco); border-color:var(--verde); border-bottom-color:var(--blanco); }
     .rec-tb-n { font-size:12px; font-weight:800; color:var(--gris);
       white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .rec-tb-t.on .rec-tb-n { color:var(--verde); }
-    .rec-tb-x { flex-shrink:0; border:none; background:none; font-family:inherit; cursor:pointer;
-      font-size:11px; color:var(--gris); padding:0 2px; line-height:1;
-      -webkit-tap-highlight-color:transparent; }
-    .rec-tb-mas { flex:0 0 auto; border:1.5px dashed var(--borde); border-bottom:none;
-      border-radius:10px 10px 0 0; background:none; font-family:inherit; cursor:pointer;
-      font-size:13px; font-weight:800; color:var(--gris); padding:6px 9px;
-      -webkit-tap-highlight-color:transparent; }
-    .rec-tb-mas.on { border-style:solid; background:var(--arena); color:var(--texto); }
-    .rec-tb-lista { border:1.5px solid var(--borde); border-radius:var(--r-sm);
-      background:var(--blanco); margin:6px 0 0; overflow:hidden; }
-    .rec-tb-op { display:flex; align-items:baseline; gap:8px; padding:9px 10px;
-      border-bottom:1px solid var(--borde); cursor:pointer; -webkit-tap-highlight-color:transparent; }
-    .rec-tb-op:last-child { border-bottom:none; }
-    .rec-tb-op:active { background:var(--arena); }
-    .rec-tb-op-n { flex:1; min-width:0; font-size:13px; font-weight:800; color:var(--texto); }
-    .rec-tb-op-d { flex-shrink:0; font-size:10.5px; color:var(--gris); }
+    .rec-sub { font-size:11.5px; color:var(--gris); padding:8px 2px 10px; }
     .rec-cont { border-top:1.5px solid var(--borde); padding-top:10px; }
     .rec-cont-cab { display:flex; align-items:flex-start; gap:6px; margin-bottom:8px; }
     /* v0.354: la salida de una sesión es volver a los golpes, no ‹ › por bloque */
@@ -8054,19 +8075,28 @@
        v0.351: SOMBREADA para distinguirla de la tira: la galería entera va
        sobre arena, cada grupo es una tarjeta blanca y su cabecera va teñida
        del azul suave de la app. Sin sombras: la piel de pista es plana. */
-    .rec-gal { background:var(--arena); border-radius:var(--r-md); padding:12px 10px 4px; margin:0 -2px; }
-    .rec-gal-grp { background:var(--blanco); border:1.5px solid var(--borde); border-radius:var(--r-sm);
-      overflow:hidden; margin-bottom:10px; }
-    .rec-gal-t { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:800; color:var(--verde);
-      padding:8px 10px; background:var(--verde-suave); }
-    .rec-gal-t span { margin-left:auto; font-size:11px; font-weight:800; color:var(--verde); opacity:.7; }
-    .rec-gal-grp.sin { border-style:dashed; }
-    .rec-gal-grp.sin .rec-gal-t { color:var(--gris); background:var(--arena); }
-    /* v0.354: los bloques sin sesión, un grupo más al final */
-    .rec-gal-grp.bloques { border-style:dashed; }
-    .rec-gal-grp.bloques .rec-gal-t { color:var(--gris); background:var(--arena); }
-    .rec-gal-cards { display:grid; grid-template-columns:1fr; gap:0; padding:2px 10px 4px; }
-    @media (min-width:600px) { .rec-gal-cards { grid-template-columns:repeat(2, minmax(0,1fr)); gap:0 14px; } }
+    /* v0.356: los golpes, en BARRAS a todo el ancho y plegadas. La galería
+       entera va sobre arena y las barras forman una sola tarjeta blanca; al
+       abrir una, sus sesiones caen debajo sobre arena para que se vea que
+       cuelgan de ella. */
+    .rec-gal { background:var(--arena); border-radius:var(--r-md); padding:10px; margin:0 -2px; }
+    .rec-gal-lista { background:var(--blanco); border:1.5px solid var(--borde);
+      border-radius:var(--r-sm); overflow:hidden; }
+    .rec-gal-b { display:flex; align-items:center; gap:10px; padding:13px 12px; cursor:pointer;
+      border-bottom:1px solid var(--borde); -webkit-tap-highlight-color:transparent; }
+    .rec-gal-lista > .rec-gal-b:last-child { border-bottom:none; }
+    .rec-gal-b:active { background:var(--arena); }
+    .rec-gal-b.on { background:var(--verde-suave); border-bottom-color:var(--verde-suave); }
+    .rec-gal-b-n { flex:1; min-width:0; font-size:14px; font-weight:800; color:var(--texto);
+      line-height:1.3; overflow-wrap:anywhere; }
+    .rec-gal-b.on .rec-gal-b-n { color:var(--verde); }
+    .rec-gal-b-d { flex-shrink:0; font-size:11px; font-weight:800; color:var(--gris); }
+    .rec-gal-b.on .rec-gal-b-d { color:var(--verde); opacity:.75; }
+    .rec-gal-b-ch { flex-shrink:0; font-size:11px; color:var(--gris); transition:transform .15s; }
+    .rec-gal-b.on .rec-gal-b-ch { color:var(--verde); transform:rotate(180deg); }
+    .rec-gal-b.sin .rec-gal-b-n, .rec-gal-b.bloques .rec-gal-b-n { color:var(--gris); font-weight:700; }
+    .rec-gal-ses { background:var(--arena); border-bottom:1px solid var(--borde); padding:2px 12px; }
+    .rec-gal-lista > .rec-gal-ses:last-child { border-bottom:none; }
     .rec-card { display:flex; align-items:baseline; gap:8px; padding:7px 2px; border-bottom:1px solid var(--borde);
       cursor:pointer; min-width:0; -webkit-tap-highlight-color:transparent; }
     .rec-card:last-child { border-bottom:none; }
@@ -10613,7 +10643,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.354.0';
+    var APP_VERSION = '0.356.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -21184,43 +21214,35 @@
     var _recEtapaAbierta = null;   // key de la etapa ACTIVA (la pestaña de delante)
     var _recSemPara      = null;   // id de sesión a la que se le está eligiendo semana
     var _recSel          = null;   // v0.344: sesión o bloque abierto DENTRO de la etapa activa
-    // v0.354 — VARIAS ETAPAS ABIERTAS A LA VEZ, como las pestañas de un
-    // navegador. _recTabs son las etapas abiertas en orden de apertura y
-    // _recEtapaAbierta es cuál se está viendo; _recSelTab recuerda por dónde
-    // ibas en cada una, para que saltar de pestaña no pierda el sitio. Son
-    // pestañas DE LA APP, no del navegador: una pestaña de verdad recargaría
-    // el archivo entero (1,9 MB), abriría otra sesión de Supabase y dejaría
-    // dos instancias escribiendo el mismo localStorage; y en el móvil, con la
-    // app instalada, sacaría al entrenador fuera de la PWA.
-    var _recTabs         = [];     // keys de las etapas abiertas, en orden
+    // v0.354 — TODOS LOS APARTADOS DEL NIVEL, EN PESTAÑAS. Son pestañas DE LA
+    // APP, no del navegador: una de verdad recargaría el archivo entero
+    // (1,9 MB), abriría otra sesión de Supabase y dejaría dos instancias
+    // escribiendo el mismo localStorage; y en el móvil, con la app instalada,
+    // sacaría al entrenador fuera de la PWA.
+    // v0.355: la barra NO se va montando a mano. Es la lista de apartados del
+    // nivel, la misma del Recorrido y en su mismo orden, así que al abrir
+    // cualquiera están ya las demás. _recTabs se rellena al pintar (dato
+    // derivado, no estado que mantener) y _recSelTab recuerda por dónde ibas
+    // en cada una para que cambiar de pestaña no pierda el sitio.
+    // Una pestaña NUEVA = un apartado nuevo del nivel, que vive en el plan
+    // base de la app (PLAN_BASE, con sus bloques): no se añade desde la
+    // pantalla.
+    var _recTabs         = [];     // keys de los apartados del nivel (derivado)
     var _recSelTab       = {};     // key de etapa → su _recSel
-    var _recTabsMas      = false;  // el ＋ desplegado
 
     function recEtapaAbrir(key) {
       if (_recEtapaAbierta) _recSelTab[_recEtapaAbierta] = _recSel;
-      if (_recTabs.indexOf(key) < 0) _recTabs.push(key);
-      _recEtapaAbierta = key; _recSemPara = null; _recTabsMas = false;
+      _recEtapaAbierta = key; _recSemPara = null;
       _recSel = _recSelTab[key] || null;
       _recVentanaPintar();
     }
-    // Cerrar UNA pestaña. Si era la de delante, pasa a la de al lado; si era
-    // la última, se cierra la ventana entera.
-    function recTabCerrar(key) {
-      var i = _recTabs.indexOf(key);
-      if (i < 0) return;
-      _recTabs.splice(i, 1);
-      delete _recSelTab[key];
-      _recTabsMas = false;
-      if (!_recTabs.length) { recEtapaCerrar(); return; }
-      if (_recEtapaAbierta === key) {
-        var sig = _recTabs[Math.min(i, _recTabs.length - 1)];
-        _recEtapaAbierta = sig; _recSemPara = null;
-        _recSel = _recSelTab[sig] || null;
-      }
-      _recVentanaPintar();
-    }
-    function recTabsMas() { _recTabsMas = !_recTabsMas; _recVentanaPintar(); }
     function recVolver()  { _recSel = null; _recVentanaPintar(); }
+    // v0.356 — La galería de golpes arranca PLEGADA: al entrar en un apartado
+    // se ven los golpes y nada más, y se abre el que interesa. La clave es
+    // «etapa|posición» porque el rótulo del golpe es texto libre del vault y
+    // no se puede meter tal cual en un onclick.
+    var _recGalAbre = {};
+    function recGalToggle(k) { _recGalAbre[k] = !_recGalAbre[k]; _recVentanaPintar(); }
     // v0.343 — Esconder sin olvidar: la ventana es un panel FIJO fuera de las
     // pantallas, así que al abrir una sesión desde ella se quedaba flotando
     // encima (y el primer toque en «‹ Plan» lo que hacía era cerrarla, no
@@ -21233,7 +21255,7 @@
     }
     function recEtapaCerrar() {
       _recEtapaAbierta = null; _recSemPara = null;
-      _recTabs = []; _recSelTab = {}; _recTabsMas = false; _recSel = null;   // v0.354
+      _recTabs = []; _recSelTab = {}; _recSel = null; _recGalAbre = {};   // v0.354/356
       var ov = document.getElementById('rec-ov');
       if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; }
       if (typeof recEjCerrar === 'function') recEjCerrar();   // v0.347
@@ -21307,8 +21329,7 @@
       // cambiar de nivel las keys son otras); si no queda ninguna, se cierra.
       var vivas = {};
       est.etapas.forEach(function(x){ vivas[x.et.key] = x; });
-      if (_recTabs.indexOf(_recEtapaAbierta) < 0) _recTabs.push(_recEtapaAbierta);
-      _recTabs = _recTabs.filter(function(k){ return !!vivas[k]; });
+      _recTabs = est.etapas.map(function(x){ return x.et.key; });   // v0.355: todos, ya abiertos
       if (_recTabs.indexOf(_recEtapaAbierta) < 0) { _recEtapaAbierta = _recTabs[0] || null; _recSel = null; }
       if (!_recEtapaAbierta) { recEtapaCerrar(); return; }
       var e = vivas[_recEtapaAbierta];
@@ -21376,38 +21397,22 @@
       if (sel < 0) _recSel = null;
       var act = sel >= 0 ? items[sel] : null;
 
-      // ── v0.354: LA BARRA DE PESTAÑAS. Una por etapa abierta, con su ✕, y
-      // un ＋ que despliega las que quedan por abrir. Va arriba del todo,
-      // pegada a la cabecera, para que se lea como las pestañas de siempre.
-      h += '<div class="rec-tb">';
+      // ── v0.354/355: LA BARRA DE PESTAÑAS, con TODOS los apartados del
+      // nivel ya abiertos y el ✕ de la ventana a su derecha, fuera del
+      // desplazamiento. La pestaña de delante YA dice en qué apartado estás,
+      // así que debajo no se repite el nombre (v0.355): solo la línea de
+      // zona · bloques · sesiones.
+      h += '<div class="rec-top"><div class="rec-tb">';
       _recTabs.forEach(function(k){
         var x = vivas[k], onT = k === _recEtapaAbierta;
         h += '<div class="rec-tb-t' + (onT ? ' on' : '') + '" data-k="' + _gEsc(k) + '" onclick="recEtapaAbrir(\'' + k + '\')">' +
-          '<span class="rec-tb-n">' + _gEsc(x.et.nombre) + '</span>' +
-          '<button type="button" class="rec-tb-x" onclick="event.stopPropagation();recTabCerrar(\'' + k + '\')" aria-label="Cerrar pestaña">✕</button></div>';
+          '<span class="rec-tb-n">' + _gEsc(x.et.nombre) + '</span></div>';
       });
-      var otras = est.etapas.filter(function(x){ return _recTabs.indexOf(x.et.key) < 0; });
-      if (otras.length) {
-        h += '<button type="button" class="rec-tb-mas' + (_recTabsMas ? ' on' : '') + '" onclick="recTabsMas()" aria-label="Abrir otro apartado">＋</button>';
-      }
-      h += '</div>';
-      if (_recTabsMas && otras.length) {
-        h += '<div class="rec-tb-lista">';
-        otras.forEach(function(x){
-          var nS2 = 0; x.nodos.forEach(function(nd){ nS2 += nd.ses.length; });
-          h += '<div class="rec-tb-op" onclick="recEtapaAbrir(\'' + x.et.key + '\')">' +
-            '<span class="rec-tb-op-n">' + _gEsc(x.et.nombre) + '</span>' +
-            '<span class="rec-tb-op-d">' + nS2 + (nS2 === 1 ? ' sesión' : ' sesiones') + '</span></div>';
-        });
-        h += '</div>';
-      }
-
-      h += '<div class="ruta-modal-hdr"><div>' +
-        '<div class="ruta-modal-tit">' + _gEsc(e.et.nombre) + '</div>' +
-        '<div class="ruta-modal-sub">' + (_recEsMapa(nivel) ? _gEsc(_recZonaLabel(_recZonaEtapa(e.et))) + ' · ' : '') +
-          e.total + (e.total === 1 ? ' bloque' : ' bloques') + ' · ' +
-          nSes + (nSes === 1 ? ' sesión' : ' sesiones') + '</div></div>' +
+      h += '</div>' +
         '<button class="plan-modal-x" onclick="recEtapaCerrar()" aria-label="Cerrar">✕</button></div>';
+      h += '<div class="rec-sub">' + (_recEsMapa(nivel) ? _gEsc(_recZonaLabel(_recZonaEtapa(e.et))) + ' · ' : '') +
+        e.total + (e.total === 1 ? ' bloque' : ' bloques') + ' · ' +
+        nSes + (nSes === 1 ? ' sesión' : ' sesiones') + '</div>';
       if (!e.nodos.length) h += '<div class="plan-bl-vacio">Este apartado no tiene bloques todavía.</div>';
 
       // ── sin elegida: la galería de sesiones por golpes (v0.349) ──
@@ -21522,15 +21527,21 @@
     }
     function recSel(k) { _recSel = (_recSel === k) ? null : k; _recVentanaPintar(); }
 
-    // ── v0.349 — LA GALERÍA DE SESIONES DE LA ETAPA, POR GOLPES ───────────
-    // Es lo que se ve al abrir la etapa, sin ninguna sesión elegida. Las
+    // ── v0.349 — LA GALERÍA DE GOLPES DE LA ETAPA ─────────────────────────
+    // Es lo que se ve al abrir un apartado, sin ninguna sesión elegida. Las
     // sesiones se agrupan por lo que dice su `golpes:` del vault, TAL CUAL y
     // sin partirlo: «Derecha + bandeja» es una categoría propia, no sale ni
     // en «Derecha» ni en «Bandeja». Es la lectura del entrenador, no una
     // clasificación de la app. Sin `golpes:`, al final, en «Sin golpes».
-    // Cada sesión es una fila compacta: el nombre (que es el enlace) y, en
-    // pequeño, su bloque, sus minutos y la semana en que está colocada.
     // v0.350: eran tarjetas con miniatura; ocupaban demasiado.
+    // v0.356: cada golpe es una BARRA a todo el ancho —rótulo, cuántas
+    // sesiones y cuántos minutos suman— y arranca PLEGADA: al entrar en el
+    // apartado se ven los golpes y nada más, y se abre el que interesa. A
+    // todo el ancho porque los rótulos son texto libre del vault y los hay
+    // largos («Salida de pared + bajada», «Voleas y víboras de definición»):
+    // en rejilla habría que recortarlos. Dentro, cada sesión es una fila
+    // compacta: el nombre es el enlace y, en pequeño, su bloque, sus minutos
+    // y la semana en que está colocada.
     function _recGaleriaHTML(e, p, nivel, mapEj, items) {
       var todosEj = leerEjercicios();
       var grupos = {}, orden = [];
@@ -21538,8 +21549,10 @@
         nd.ses.forEach(function(c){
           var g = String(c.golpes || '').trim();
           var k = g ? g.toLowerCase() : '\u0000sin';
-          if (!grupos[k]) { grupos[k] = { t: g || 'Sin golpes', sin: !g, ses: [] }; orden.push(k); }
-          grupos[k].ses.push({ nd: nd, ses: c });
+          if (!grupos[k]) { grupos[k] = { t: g || 'Sin golpes', sin: !g, ses: [], min: 0 }; orden.push(k); }
+          var minS = 0; _sesEjsOrdenados(c, todosEj).forEach(function(ej){ minS += _sesMin(ej); });
+          grupos[k].ses.push({ nd: nd, ses: c, min: minS });
+          grupos[k].min += minS;
         });
       });
       // por nombre, y «Sin golpes» al final
@@ -21547,49 +21560,55 @@
         if (grupos[a].sin !== grupos[b].sin) return grupos[a].sin ? 1 : -1;
         return grupos[a].t.localeCompare(grupos[b].t);
       });
-      // v0.350: una BARRA que separa la tira de pestañas de la galería, y
-      // debajo filas compactas en vez de tarjetas: el título es el enlace.
       var h = '<div class="rec-gal">';
       if (!orden.length) {
-        h += '<div class="rec-bl-vacio">Esta etapa no tiene todavía ninguna sesión. Toca un bloque de abajo para preparar una clase, o escríbela en el vault.</div>';
+        h += '<div class="rec-bl-vacio">Esta etapa no tiene todavía ninguna sesión. Abre «Bloques sin sesión» para preparar una clase, o escríbela en el vault.</div>';
       }
-      orden.forEach(function(k){
-        var gr = grupos[k];
-        h += '<div class="rec-gal-grp' + (gr.sin ? ' sin' : '') + '">' +
-          '<div class="rec-gal-t">' + _gEsc(gr.t) + '<span>' + gr.ses.length + '</span></div>' +
-          '<div class="rec-gal-cards">';
+      h += '<div class="rec-gal-lista">';
+      orden.forEach(function(k, i){
+        var gr = grupos[k], kb = e.et.key + '|' + i, ab = !!_recGalAbre[kb];
+        h += '<div class="rec-gal-b' + (ab ? ' on' : '') + (gr.sin ? ' sin' : '') + '" onclick="recGalToggle(\'' + kb + '\')">' +
+          '<span class="rec-gal-b-n">' + _gEsc(gr.t) + '</span>' +
+          '<span class="rec-gal-b-d">' + gr.ses.length + (gr.min ? ' · ' + gr.min + '′' : '') + '</span>' +
+          '<span class="rec-gal-b-ch">▾</span></div>';
+        if (!ab) return;
+        h += '<div class="rec-gal-ses">';
         gr.ses.forEach(function(x){
           var c = x.ses, en = _recSemanasDe(p, nivel, c.id);
-          var min = 0; _sesEjsOrdenados(c, todosEj).forEach(function(ej){ min += _sesMin(ej); });
           h += '<div class="rec-card" onclick="recSel(\'ses:' + c.id + '\')">' +
             '<span class="rec-card-n">' + _gEsc(nombreSesion(c)) + '</span>' +
             '<span class="rec-card-d">' + _gEsc(x.nd.it.t) +
-              (min ? ' · ' + min + '′' : '') +
+              (x.min ? ' · ' + x.min + '′' : '') +
               (en.length ? ' · <em>' + _gEsc(_recSemLabel(en[0])) + '</em>' : '') + '</span>' +
             '</div>';
         });
-        h += '</div></div>';
+        h += '</div>';
       });
-      // v0.354: los bloques que todavía no tienen sesión son UN GRUPO MÁS al
-      // final, con la misma pinta que un golpe. Antes vivían en la tira de
-      // pestañas, que ya no existe; sin esto se perderían de vista el ＋ para
-      // preparar una clase y las ⭐ ya preparadas de cada bloque.
+      // v0.354: los bloques que todavía no tienen sesión son UNA BARRA MÁS al
+      // final. Antes vivían en la tira de pestañas, que ya no existe; sin
+      // esto se perderían de vista el ＋ para preparar una clase y las ⭐ ya
+      // preparadas de cada bloque.
       var vacios = e.nodos.filter(function(nd){ return !nd.ses.length; });
       if (vacios.length) {
-        h += '<div class="rec-gal-grp bloques">' +
-          '<div class="rec-gal-t">Bloques sin sesión<span>' + vacios.length + '</span></div>' +
-          '<div class="rec-gal-cards">';
-        vacios.forEach(function(nd){
-          h += '<div class="rec-card" onclick="recSel(\'bl:' + nd.it.id + '\')">' +
-            '<span class="rec-card-n">' + _gEsc(nd.it.t) + '</span>' +
-            '<span class="rec-card-d">' + (nd.cts.length
-              ? '⭐ ' + nd.cts.length + (nd.cts.length === 1 ? ' clase' : ' clases')
-              : 'Preparar ＋') + '</span>' +
-            '</div>';
-        });
-        h += '</div></div>';
+        var kv = e.et.key + '|bl', abv = !!_recGalAbre[kv];
+        h += '<div class="rec-gal-b bloques' + (abv ? ' on' : '') + '" onclick="recGalToggle(\'' + kv + '\')">' +
+          '<span class="rec-gal-b-n">Bloques sin sesión</span>' +
+          '<span class="rec-gal-b-d">' + vacios.length + '</span>' +
+          '<span class="rec-gal-b-ch">▾</span></div>';
+        if (abv) {
+          h += '<div class="rec-gal-ses">';
+          vacios.forEach(function(nd){
+            h += '<div class="rec-card" onclick="recSel(\'bl:' + nd.it.id + '\')">' +
+              '<span class="rec-card-n">' + _gEsc(nd.it.t) + '</span>' +
+              '<span class="rec-card-d">' + (nd.cts.length
+                ? '⭐ ' + nd.cts.length + (nd.cts.length === 1 ? ' clase' : ' clases')
+                : 'Preparar ＋') + '</span>' +
+              '</div>';
+          });
+          h += '</div>';
+        }
       }
-      h += '</div>';
+      h += '</div></div>';
       return h;
     }
 
