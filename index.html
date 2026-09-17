@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.356.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.357.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,19 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.357.0 — El objetivo en la lista, y la muesca del iPhone (2026-09)
+    (sin migraciones · solo presentación)
+    · EL OBJETIVO DE LA SESIÓN, en gris debajo de su fila: es lo que dice qué
+      se busca con ese golpe, y hasta ahora había que abrir la sesión para
+      verlo. Recortado a dos renglones (el más largo del vault son 161
+      caracteres). Lo lleva el vault en `objetivo:`, no se calcula.
+    · ARREGLADA LA MUESCA: la ventana de la etapa ocupa la pantalla entera y
+      el <meta viewport> es viewport-fit=cover con barra de estado
+      translúcida, así que las pestañas salían DEBAJO del reloj del iPhone y
+      no se podían tocar. El hueco de env(safe-area-inset-top) se le da al
+      overlay (#rec-ov) y no a la ventana: así la barra pegajosa se queda
+      donde se ve, que es lo que no arregla el padding de la ventana.
 
   v0.356.0 — Los golpes, en barras plegadas (2026-09)
     (sin migraciones · solo presentación)
@@ -8036,8 +8049,15 @@
        fuera del desplazamiento. #rec-ov gana al @media de .ruta-modal-ov, y
        .ruta-modal.rec-modal al de .ruta-modal: las media queries de este
        archivo no suman especificidad, así que hay que ganarlas por clase. */
-    #rec-ov { align-items:stretch; padding:0; }
-    .ruta-modal.rec-modal { max-width:none; width:100%; height:100dvh; max-height:100dvh;
+    /* v0.357 — LA MUESCA. La ventana ocupa la pantalla entera y el <meta
+       viewport> lleva viewport-fit=cover con la barra de estado translúcida,
+       así que arrancaba DEBAJO del reloj del iPhone: las pestañas quedaban
+       tapadas y no se podían tocar. El hueco se le da al OVERLAY, no a la
+       ventana: así la caja entera empieza bajo la muesca y la barra pegajosa
+       (.rec-top, top:0) se queda donde se ve, que es lo que no arreglaba
+       meterle padding solo a la ventana. */
+    #rec-ov { align-items:stretch; padding:env(safe-area-inset-top) 0 0; }
+    .ruta-modal.rec-modal { max-width:none; width:100%; height:100%; max-height:100%;
       border-radius:0; box-shadow:none; padding:0 12px calc(16px + env(safe-area-inset-bottom)); }
     .rec-top { position:sticky; top:0; z-index:3; display:flex; align-items:flex-end; gap:8px;
       background:var(--blanco); padding:8px 0 0; margin:0 -2px;
@@ -8097,8 +8117,14 @@
     .rec-gal-b.sin .rec-gal-b-n, .rec-gal-b.bloques .rec-gal-b-n { color:var(--gris); font-weight:700; }
     .rec-gal-ses { background:var(--arena); border-bottom:1px solid var(--borde); padding:2px 12px; }
     .rec-gal-lista > .rec-gal-ses:last-child { border-bottom:none; }
-    .rec-card { display:flex; align-items:baseline; gap:8px; padding:7px 2px; border-bottom:1px solid var(--borde);
+    .rec-card { display:flex; align-items:baseline; flex-wrap:wrap; gap:8px; padding:7px 2px; border-bottom:1px solid var(--borde);
       cursor:pointer; min-width:0; -webkit-tap-highlight-color:transparent; }
+    /* v0.357: el objetivo de la sesión, en gris y en su propia línea (base
+       100% para que caiga debajo del nombre y su línea de bloque). Es lo que
+       dice qué se busca con ese golpe, y estaba solo dentro de la sesión. Se
+       recorta a dos renglones: el más largo del vault son 161 caracteres. */
+    .rec-card-o { flex-basis:100%; margin:1px 0 0; font-size:11.5px; color:var(--gris); line-height:1.4;
+      overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
     .rec-card:last-child { border-bottom:none; }
     .rec-card:active { background:var(--arena); }
     .rec-card-n { flex:1; min-width:0; font-size:13px; font-weight:800; color:var(--verde); line-height:1.3;
@@ -10643,7 +10669,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.356.0';
+    var APP_VERSION = '0.357.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -21580,6 +21606,7 @@
             '<span class="rec-card-d">' + _gEsc(x.nd.it.t) +
               (x.min ? ' · ' + x.min + '′' : '') +
               (en.length ? ' · <em>' + _gEsc(_recSemLabel(en[0])) + '</em>' : '') + '</span>' +
+            (c.objetivo ? '<span class="rec-card-o">' + _gEsc(c.objetivo) + '</span>' : '') +   // v0.357
             '</div>';
         });
         h += '</div>';
