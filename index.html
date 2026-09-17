@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.357.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.358.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,29 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.358.0 — Las zonas mandan: el Recorrido de Iniciación y Avanzado sin cuadrados (2026-09)
+    (sin migraciones · nada cambia en el vault ni en Supabase)
+    · EL RECORRIDO SON LAS CUATRO ZONAS (fondo · campo medio · red · toda la
+      pista), una fila cada una con sus golpes, sus sesiones y lo pendiente.
+      Fuera los cuadrados de apartado y, con ellos, el arrastre ⠿ para
+      reordenarlos: las zonas son fijas, no hay nada que ordenar. (En
+      Competición, que no usa el mapa, todo sigue igual.)
+    · LA VENTANA tiene cuatro pestañas fijas —las zonas— y dentro las barras
+      de golpes de siempre. Cada bloque cae en la zona de su `z:` del
+      catálogo, no en la de su apartado por mayoría: la sesión de campo
+      medio de Neutralización va a Campo medio, que es donde se da.
+    · EL APARTADO Y EL BLOQUE NO SE BORRAN de ningún sitio: siguen en el
+      vault (`apartado:`/`bloque:`), en Supabase, en el catálogo y en gris
+      bajo cada sesión («Consolidación de fondo · Dirección cruzado y
+      paralelo»). Dejan de mandar, que no es lo mismo que desaparecer. Las
+      clases tipo ⭐ siguen colgando de su bloque.
+    · La barra «Bloques sin sesión» pasa a llamarse «PENDIENTES DE ESCRIBIR»,
+      que es lo que es: el mapa de lo que falta en esa zona, cada uno con su
+      apartado. El «Saque» de cada apartado solo entra si tiene sesión o
+      clase preparada: siete «Saque» seguidos no informan de nada.
+    · En la fila de la sesión, a la derecha solo quedan minutos y semana; el
+      apartado · bloque baja a su línea gris, y debajo el objetivo (v0.357).
 
   v0.357.0 — El objetivo en la lista, y la muesca del iPhone (2026-09)
     (sin migraciones · solo presentación)
@@ -8016,19 +8039,20 @@
     .rec-drag:active { cursor:grabbing; }
     .rec-fila-et.arrastrando { opacity:.9; transform:scale(1.02); background:var(--blanco);
       box-shadow:0 6px 18px rgba(14,27,60,.22); border-radius:var(--r-sm); border-top-color:transparent; }
-    /* v0.339: el mapa por zonas. Una zona debajo de otra en el móvil; dos
-       columnas desde 600px y las cuatro desde 900px. Columnas fijas. */
-    .rec-mapa { display:grid; grid-template-columns:1fr; gap:12px; }
-    @media (min-width:600px) { .rec-mapa { grid-template-columns:repeat(2, minmax(0,1fr)); } }
-    @media (min-width:900px) { .rec-mapa { grid-template-columns:repeat(4, minmax(0,1fr)); } }
-    .rec-zona { min-width:0; }
-    .rec-zona-t { display:flex; align-items:center; gap:6px; font-size:10.5px; font-weight:800;
-      letter-spacing:.06em; text-transform:uppercase; color:var(--gris); padding:0 4px 6px;
-      border-bottom:1.5px solid var(--borde); margin-bottom:4px; }
-    .rec-zona-n { margin-left:auto; font-weight:700; letter-spacing:0; }
-    .rec-zona-vacia { font-size:12px; color:var(--gris); padding:8px 6px; }
-    .rec-mapa .rec-fila-et { border-top:none; border:1.5px solid var(--borde);
-      border-radius:var(--r-sm); margin:6px 0; padding:2px 0; background:var(--blanco); }
+    /* v0.358: en Iniciación y Avanzado el Recorrido son LAS CUATRO ZONAS, una
+       fila cada una. Sustituye al mapa de columnas con cuadrados de apartado
+       de la v0.339 (y a su arrastre): las zonas son fijas, no hay nada que
+       ordenar. En escritorio, dos por fila. */
+    .rec-zonas { display:grid; grid-template-columns:1fr; gap:8px; }
+    @media (min-width:700px) { .rec-zonas { grid-template-columns:repeat(2, minmax(0,1fr)); } }
+    .rec-zona-fila { display:flex; align-items:center; gap:10px; padding:11px 12px; cursor:pointer;
+      border:1.5px solid var(--borde); border-radius:var(--r-sm); background:var(--blanco);
+      -webkit-tap-highlight-color:transparent; }
+    .rec-zona-fila:active { background:var(--arena); }
+    .rec-zona-fila-t { flex:1; min-width:0; }
+    .rec-zona-fila-n { display:block; font-size:14px; font-weight:800; color:var(--texto); line-height:1.25; }
+    .rec-zona-fila-d { display:block; font-size:11px; color:var(--gris); margin-top:2px; }
+    .rec-zona-fila-p { flex-shrink:0; font-size:10.5px; font-weight:700; color:var(--gris); white-space:nowrap; }
     .rec-et-toca { flex:1; min-width:0; display:flex; align-items:center; gap:9px;
       padding:7px 6px; cursor:pointer; border-radius:var(--r-sm); }
     .rec-et-toca:active { background:var(--arena); }
@@ -8125,6 +8149,9 @@
        recorta a dos renglones: el más largo del vault son 161 caracteres. */
     .rec-card-o { flex-basis:100%; margin:1px 0 0; font-size:11.5px; color:var(--gris); line-height:1.4;
       overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+    /* v0.358: apartado · bloque, en su línea gris, sin mandar */
+    .rec-card-b { flex-basis:100%; margin:-3px 0 0; font-size:10.5px; color:var(--gris); opacity:.85;
+      line-height:1.35; overflow-wrap:anywhere; }
     .rec-card:last-child { border-bottom:none; }
     .rec-card:active { background:var(--arena); }
     .rec-card-n { flex:1; min-width:0; font-size:13px; font-weight:800; color:var(--verde); line-height:1.3;
@@ -10669,7 +10696,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.357.0';
+    var APP_VERSION = '0.358.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -20454,17 +20481,20 @@
             '<span class="rec-et-chev">›</span></div>' +
           '</div>';
       }
+      // v0.358: en el mapa ya no hay cuadrados de apartado que arrastrar.
+      // Son las CUATRO ZONAS, fijas, una fila cada una con lo que tiene
+      // dentro; el apartado y el bloque siguen escritos pero no mandan.
       if (_recEsMapa(nivelCT)) {
-        h += '<div id="rec-lista" class="rec-mapa">';
-        REC_ZONAS.forEach(function(z){
-          var suyas = estRec.etapas.filter(function(e){ return _recZonaEtapa(e.et) === z.key; });
-          h += '<div class="rec-zona">' +
-            '<div class="rec-zona-t">' + _gEsc(z.label) +
-              '<span class="rec-zona-n">' + suyas.length + '</span></div>' +
-            '<div class="rec-zona-lista">';
-          if (!suyas.length) h += '<div class="rec-zona-vacia">Sin etapas aquí</div>';
-          suyas.forEach(function(e){ h += filaEtapa(e); });
-          h += '</div></div>';
+        var estZ = _recZonasEstado(p, nivelCT);
+        h += '<div id="rec-lista" class="rec-zonas">';
+        estZ.etapas.forEach(function(e){
+          var r = _recZonaResumen(e);
+          h += '<div class="rec-zona-fila" onclick="recEtapaAbrir(\'' + e.et.key + '\')">' +
+            '<div class="rec-zona-fila-t">' +
+              '<span class="rec-zona-fila-n">' + _gEsc(e.et.nombre) + '</span>' +
+              '<span class="rec-zona-fila-d">' + _gEsc(r.texto) + '</span></div>' +
+            (r.pend ? '<span class="rec-zona-fila-p">' + r.pend + (r.pend === 1 ? ' pendiente' : ' pendientes') + '</span>' : '') +
+            '<span class="rec-et-chev">›</span></div>';
         });
         h += '</div>';
       } else {
@@ -21129,6 +21159,64 @@
       var z = REC_ZONAS.filter(function(x){ return x.key === key; })[0];
       return z ? z.label : key;
     }
+    // ── v0.358 — LAS ZONAS MANDAN; el apartado y el bloque se quedan escritos ──
+    // En Iniciación y Avanzado el Recorrido ya no enseña apartados: enseña
+    // las cuatro zonas, y dentro de cada una los golpes con sus sesiones. El
+    // apartado y el bloque NO se borran de ningún sitio —siguen en el vault,
+    // en Supabase y en gris bajo cada sesión— pero dejan de mandar: son el
+    // nombre del capítulo del temario, no lo que se trabaja en pista.
+    // Cada bloque cae en la zona que dice su `z:` del catálogo (no la de su
+    // apartado por mayoría, que es lo que hacía el mapa de la v0.339); sin
+    // `z:`, la de su apartado. El «Saque» de cada apartado (z: toda la pista,
+    // uno por apartado) solo entra si tiene sesión o clase preparada: siete
+    // «Saque» pendientes seguidos no informan de nada.
+    // Devuelve la misma forma que _recEstado —{etapas:[{et, nodos, total…}]}—
+    // con una pseudo-etapa por zona (key «z:fondo»…), para que la ventana y
+    // la galería no tengan que saber si miran una zona o un apartado.
+    function _recZonasEstado(p, nivel) {
+      var est = _recEstado(p, nivel);
+      var porZona = {};
+      REC_ZONAS.forEach(function(z){
+        porZona[z.key] = { et:{ key:'z:' + z.key, nombre:z.label, zona:z.key, bloques:[] },
+                           nodos:[], hechos:0, listos:0, total:0 };
+      });
+      var ultima = REC_ZONAS[REC_ZONAS.length - 1].key;
+      est.etapas.forEach(function(e){
+        var zEt = _recZonaEtapa(e.et);
+        e.nodos.forEach(function(nd){
+          var esSaque = String(nd.it.t || '').trim().toLowerCase() === 'saque';
+          if (esSaque && !nd.ses.length && !nd.cts.length) return;
+          var z = nd.it.z || zEt;
+          if (!porZona[z]) z = porZona[zEt] ? zEt : ultima;
+          nd.ap = e.et.nombre;   // el apartado, para la línea gris de la sesión
+          porZona[z].nodos.push(nd);
+        });
+      });
+      var out = REC_ZONAS.map(function(z){
+        var e = porZona[z.key];
+        e.total  = e.nodos.length;
+        e.hechos = e.nodos.filter(function(x){ return x.dado; }).length;
+        e.listos = e.nodos.filter(function(x){ return !x.dado && x.n > 0; }).length;
+        return e;
+      });
+      return { etapas: out, colocadas: est.colocadas };
+    }
+    // Lo que dice una zona de sí misma: golpes distintos, sesiones y bloques
+    // pendientes de escribir. Lo usan la fila del Recorrido y la ventana.
+    function _recZonaResumen(e) {
+      var golpes = {}, nSes = 0, pend = 0;
+      e.nodos.forEach(function(nd){
+        if (!nd.ses.length) { pend++; return; }
+        nd.ses.forEach(function(c){
+          nSes++;
+          var g = String(c.golpes || '').trim().toLowerCase();
+          golpes[g || '\u0000sin'] = true;
+        });
+      });
+      var nG = Object.keys(golpes).length;
+      return { nGolpes:nG, nSes:nSes, pend:pend,
+        texto: nG + (nG === 1 ? ' golpe' : ' golpes') + ' · ' + nSes + (nSes === 1 ? ' sesión' : ' sesiones') };
+    }
 
     function recEtapaOrdenGuardar(keys) {
       var p = leerPlan(), nivel = _compNivel();
@@ -21350,7 +21438,10 @@
       if (!ov) return;
       if (!_recEtapaAbierta) { ov.style.display = 'none'; ov.innerHTML = ''; return; }
       var p = leerPlan(), nivel = _compNivel();
-      var est = _recEstado(p, nivel);
+      // v0.358: en Iniciación y Avanzado las pestañas son las ZONAS, no los
+      // apartados; Competición sigue por apartados.
+      var esZonas = _recEsMapa(nivel);
+      var est = esZonas ? _recZonasEstado(p, nivel) : _recEstado(p, nivel);
       // v0.354: las pestañas se podan contra las etapas que existen AHORA (al
       // cambiar de nivel las keys son otras); si no queda ninguna, se cierra.
       var vivas = {};
@@ -21436,10 +21527,16 @@
       });
       h += '</div>' +
         '<button class="plan-modal-x" onclick="recEtapaCerrar()" aria-label="Cerrar">✕</button></div>';
-      h += '<div class="rec-sub">' + (_recEsMapa(nivel) ? _gEsc(_recZonaLabel(_recZonaEtapa(e.et))) + ' · ' : '') +
-        e.total + (e.total === 1 ? ' bloque' : ' bloques') + ' · ' +
-        nSes + (nSes === 1 ? ' sesión' : ' sesiones') + '</div>';
-      if (!e.nodos.length) h += '<div class="plan-bl-vacio">Este apartado no tiene bloques todavía.</div>';
+      if (esZonas) {
+        var rz = _recZonaResumen(e);
+        h += '<div class="rec-sub">' + _gEsc(rz.texto) +
+          (rz.pend ? ' · ' + rz.pend + (rz.pend === 1 ? ' pendiente' : ' pendientes') : '') + '</div>';
+      } else {
+        h += '<div class="rec-sub">' +
+          e.total + (e.total === 1 ? ' bloque' : ' bloques') + ' · ' +
+          nSes + (nSes === 1 ? ' sesión' : ' sesiones') + '</div>';
+      }
+      if (!e.nodos.length && !esZonas) h += '<div class="plan-bl-vacio">Este apartado no tiene bloques todavía.</div>';
 
       // ── sin elegida: la galería de sesiones por golpes (v0.349) ──
       if (!act) h += _recGaleriaHTML(e, p, nivel, mapEj, items);
@@ -21588,7 +21685,7 @@
       });
       var h = '<div class="rec-gal">';
       if (!orden.length) {
-        h += '<div class="rec-bl-vacio">Esta etapa no tiene todavía ninguna sesión. Abre «Bloques sin sesión» para preparar una clase, o escríbela en el vault.</div>';
+        h += '<div class="rec-bl-vacio">Esta etapa no tiene todavía ninguna sesión. Abre «Pendientes de escribir» para preparar una clase, o escríbela en el vault.</div>';
       }
       h += '<div class="rec-gal-lista">';
       orden.forEach(function(k, i){
@@ -21601,11 +21698,15 @@
         h += '<div class="rec-gal-ses">';
         gr.ses.forEach(function(x){
           var c = x.ses, en = _recSemanasDe(p, nivel, c.id);
+          // v0.358: a la derecha solo minutos y semana; el apartado y el
+          // bloque van en su línea gris (en zonas, los dos; por apartado,
+          // solo el bloque, que el apartado ya es la pestaña).
+          var dRight = (x.min ? x.min + '′' : '') +
+            (en.length ? (x.min ? ' · ' : '') + '<em>' + _gEsc(_recSemLabel(en[0])) + '</em>' : '');
           h += '<div class="rec-card" onclick="recSel(\'ses:' + c.id + '\')">' +
             '<span class="rec-card-n">' + _gEsc(nombreSesion(c)) + '</span>' +
-            '<span class="rec-card-d">' + _gEsc(x.nd.it.t) +
-              (x.min ? ' · ' + x.min + '′' : '') +
-              (en.length ? ' · <em>' + _gEsc(_recSemLabel(en[0])) + '</em>' : '') + '</span>' +
+            (dRight ? '<span class="rec-card-d">' + dRight + '</span>' : '') +
+            '<span class="rec-card-b">' + (x.nd.ap ? _gEsc(x.nd.ap) + ' · ' : '') + _gEsc(x.nd.it.t) + '</span>' +
             (c.objetivo ? '<span class="rec-card-o">' + _gEsc(c.objetivo) + '</span>' : '') +   // v0.357
             '</div>';
         });
@@ -21618,8 +21719,10 @@
       var vacios = e.nodos.filter(function(nd){ return !nd.ses.length; });
       if (vacios.length) {
         var kv = e.et.key + '|bl', abv = !!_recGalAbre[kv];
+        // v0.358: se llama «Pendientes de escribir», que es lo que son: el
+        // mapa de lo que falta. Cada uno con su apartado en gris.
         h += '<div class="rec-gal-b bloques' + (abv ? ' on' : '') + '" onclick="recGalToggle(\'' + kv + '\')">' +
-          '<span class="rec-gal-b-n">Bloques sin sesión</span>' +
+          '<span class="rec-gal-b-n">Pendientes de escribir</span>' +
           '<span class="rec-gal-b-d">' + vacios.length + '</span>' +
           '<span class="rec-gal-b-ch">▾</span></div>';
         if (abv) {
@@ -21630,6 +21733,7 @@
               '<span class="rec-card-d">' + (nd.cts.length
                 ? '⭐ ' + nd.cts.length + (nd.cts.length === 1 ? ' clase' : ' clases')
                 : 'Preparar ＋') + '</span>' +
+              (nd.ap ? '<span class="rec-card-b">' + _gEsc(nd.ap) + '</span>' : '') +
               '</div>';
           });
           h += '</div>';
