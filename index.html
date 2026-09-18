@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.362.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.363.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,22 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.363.0 — Los golpes en pestañas y la sesión en ventana que nace de la fila (2026-09)
+    (sin migraciones · solo presentación)
+    · EN LA FICHA DE ZONA LOS GOLPES VAN EN PESTAÑAS (y «Pendientes» a la
+      derecha si hay bloques sin sesión). Se entra con la primera abierta;
+      debajo solo las sesiones de ese golpe, con bloque, minutos, semana y
+      objetivo. Sustituye a los chips que había que abrir uno a uno. En el
+      móvil la fila se desliza. Juegos se queda como estaba: son ejercicios.
+    · LA SESIÓN SE ABRE EN VENTANA (la de Competición, sin el «‹ Volver»),
+      no en el sitio: la pista y las pestañas se quedan debajo. La ventana
+      CRECE DESDE LA FILA tocada y vuelve a ella al cerrar (transform, sin
+      librerías; donde no haya transiciones, aparece y punto). No ocupa la
+      pantalla entera: se ve el fondo oscuro, y TOCARLO CIERRA. En
+      escritorio, centrada.
+    · El fondo oscuro cierra también en el «¿qué semana?» (vuelve a la
+      ventana de la que salió) y en la etapa de Competición.
 
   v0.362.0 — La pista, limpia: letras sobre las líneas, gris al elegir, Juegos (2026-09)
     (sin migraciones · el plan sembrado se pone al día solo)
@@ -8158,6 +8174,30 @@
     .rec-gal.chips .rec-gal-ses { flex-basis:100%; background:var(--arena); border:none; border-radius:var(--r-sm); padding:2px 12px; margin:2px 0 4px; }
     .rec-gal.chips .rec-bl-vacio { flex-basis:100%; }
     .rec-zc .rec-cont { border-top:none; padding-top:0; }
+    /* v0.363: los golpes en pestañas dentro de la ficha */
+    .rec-zt { display:flex; gap:2px; overflow-x:auto; -webkit-overflow-scrolling:touch;
+      border-bottom:2px solid var(--borde); margin:0 0 8px; }
+    .rec-zt::-webkit-scrollbar { display:none; }
+    .rec-zt-t { flex:0 0 auto; border:none; border-bottom:2px solid transparent; margin-bottom:-2px;
+      background:none; font-family:inherit; font-size:13px; font-weight:800; color:var(--gris);
+      padding:7px 11px; cursor:pointer; white-space:nowrap; -webkit-tap-highlight-color:transparent; }
+    .rec-zt-t span { font-weight:700; font-size:11px; margin-left:5px; opacity:.7; }
+    .rec-zt-t.on { color:var(--verde); border-bottom-color:var(--verde); }
+    .rec-zt-t.pend { margin-left:auto; font-weight:700; }
+    .rec-zt-t.sin { font-weight:700; }
+    .rec-zt-lista { background:var(--arena); border-radius:var(--r-sm); padding:2px 12px; }
+    /* la sesión en ventana: no ocupa la pantalla entera para que se vea el
+       fondo (que la cierra); en escritorio, centrada */
+    #rec-ov.ses { align-items:flex-end; padding:0; }
+    .ruta-modal.rec-modal.ses { height:auto; max-height:88vh; border-radius:18px 18px 0 0;
+      padding:0 14px calc(16px + env(safe-area-inset-bottom)); box-shadow:0 -8px 30px rgba(0,0,0,.25); }
+    @media (min-width:600px) {
+      #rec-ov.ses { align-items:center; padding:24px; }
+      .ruta-modal.rec-modal.ses { max-width:560px; max-height:86vh; border-radius:18px; }
+    }
+    .rec-vs-top { position:sticky; top:0; z-index:3; display:flex; align-items:center; justify-content:space-between;
+      background:var(--blanco); padding:8px 0 6px; margin:0 0 4px; }
+    .rec-vs-z { font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
     /* v0.362: los ejercicios de juegos y calentamiento, dentro de la ficha */
     .rec-jg { margin-top:12px; border-top:1.5px solid var(--borde); padding-top:10px; }
     .rec-jg-t { display:flex; align-items:center; gap:8px; font-size:11px; font-weight:800; letter-spacing:.05em;
@@ -10643,7 +10683,7 @@
   <!-- v0.337: la etapa del Recorrido, en ventana. Va DEBAJO de la ficha y del
        compositor (comp-bloque-ov) a propósito: desde aquí se abren los dos
        y tienen que quedar encima. -->
-  <div id="rec-ov" class="ruta-modal-ov" style="display:none" onclick="recEtapaCerrar()"></div>
+  <div id="rec-ov" class="ruta-modal-ov" style="display:none" onclick="recOvFondo()"></div>
   <!-- v0.347: la explicación de un ejercicio, encima de la ventana de la etapa -->
   <div id="ej-ov" class="ruta-modal-ov comp-bloque-ov" style="display:none" onclick="recEjCerrar()"></div>
 
@@ -10813,7 +10853,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.362.0';
+    var APP_VERSION = '0.363.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -21385,8 +21425,77 @@
       h += '<div class="rec-zc-f">' + _gEsc(z.f) + '</div>';
       // v0.362: fuera las tres cifras (sesiones · minutos · dadas): no se
       // usaban para elegir. Se quedan en _recZonaResumen por si vuelven.
-      h += _recCuerpoHTML(e, p, nivel, _ejsById(), leerClases(), { chips:true });
-      if (e.et.zona === 'juegos' && _recSel == null) h += _recJuegosHTML();
+      // v0.363: los golpes van en PESTAÑAS y la sesión se abre en ventana.
+      // Juegos se queda como estaba (chips + ejercicios sueltos): son
+      // ejercicios, no golpes.
+      if (e.et.zona === 'juegos') {
+        h += _recCuerpoHTML(e, p, nivel, _ejsById(), leerClases(), { chips:true });
+        if (_recSel == null) h += _recJuegosHTML();
+      } else {
+        h += _recZonaTabsHTML(e, p, nivel, z);
+      }
+      h += '</div>';
+      return h;
+    }
+    // ── v0.363 — LOS GOLPES COMO PESTAÑAS, dentro de la ficha ──────────────
+    // Una pestaña por golpe (agrupado como en la galería: el `golpes:` del
+    // vault tal cual, «Sin golpes» al final) y, si hay bloques sin sesión,
+    // «Pendientes» a la derecha. Se entra con la primera abierta, así la
+    // ficha nunca sale vacía. Debajo, solo las sesiones de ese golpe; tocar
+    // una la abre en ventana (recSesVentana), que crece desde la fila.
+    function _recZonaTabsHTML(e, p, nivel, z) {
+      var todosEj = leerEjercicios();
+      var grupos = {}, orden = [];
+      e.nodos.forEach(function(nd){
+        nd.ses.forEach(function(c){
+          var g = String(c.golpes || '').trim();
+          var k = g ? g.toLowerCase() : '\u0000sin';
+          if (!grupos[k]) { grupos[k] = { t: g || 'Sin golpes', sin: !g, ses: [] }; orden.push(k); }
+          grupos[k].ses.push({ nd: nd, ses: c });
+        });
+      });
+      orden.sort(function(a, b){
+        if (grupos[a].sin !== grupos[b].sin) return grupos[a].sin ? 1 : -1;
+        return grupos[a].t.localeCompare(grupos[b].t);
+      });
+      var vacios = e.nodos.filter(function(nd){ return !nd.ses.length; });
+      var tabs = orden.map(function(k){ return { k:k, t:grupos[k].t, n:grupos[k].ses.length, sin:grupos[k].sin }; });
+      if (vacios.length) tabs.push({ k:'\u0000pend', t:'Pendientes', n:vacios.length, pend:true });
+      if (!tabs.length) return '<div class="rec-bl-vacio">Esta zona no tiene todavía ninguna sesión ni bloque. Escríbela en el vault con un bloque de esta zona.</div>';
+      var sel = _recGolpeSel[e.et.zona] || 0;
+      if (sel >= tabs.length) sel = 0;
+      var h = '<div class="rec-zt">';
+      tabs.forEach(function(tb, i){
+        var on = i === sel;
+        h += '<button type="button" class="rec-zt-t' + (on ? ' on' : '') + (tb.pend ? ' pend' : '') + (tb.sin ? ' sin' : '') + '"' +
+          (on ? ' style="color:' + z.color + ';border-bottom-color:' + z.color + '"' : '') +
+          ' onclick="recGolpeSel(\'' + e.et.zona + '\',' + i + ')">' + _gEsc(tb.t) + '<span>' + tb.n + '</span></button>';
+      });
+      h += '</div><div class="rec-zt-lista">';
+      var tb = tabs[sel];
+      if (tb.pend) {
+        vacios.forEach(function(nd){
+          h += '<div class="rec-card" onclick="recSesVentana(\'bl:' + nd.it.id + '\', event)">' +
+            '<span class="rec-card-n">' + _gEsc(nd.it.t) + '</span>' +
+            '<span class="rec-card-d">' + (nd.cts.length
+              ? '⭐ ' + nd.cts.length + (nd.cts.length === 1 ? ' clase' : ' clases')
+              : 'Preparar \uFF0B') + '</span>' +
+            (nd.ap ? '<span class="rec-card-b">' + _gEsc(nd.ap) + '</span>' : '') +
+            '</div>';
+        });
+      } else {
+        grupos[tb.k].ses.forEach(function(x){
+          var c = x.ses, en = _recSemanasDe(p, nivel, c.id), min = 0;
+          _sesEjsOrdenados(c, todosEj).forEach(function(ej){ min += _sesMin(ej); });
+          var dRight = (min ? min + '′' : '') + (en.length ? (min ? ' · ' : '') + '<em>' + _gEsc(_recSemLabel(en[0])) + '</em>' : '');
+          h += '<div class="rec-card" onclick="recSesVentana(\'ses:' + c.id + '\', event)">' +
+            '<span class="rec-card-n">' + _gEsc(nombreSesion(c)) + '</span>' +
+            (dRight ? '<span class="rec-card-d">' + dRight + '</span>' : '') +
+            '<span class="rec-card-b">' + (x.nd.ap ? _gEsc(x.nd.ap) + ' · ' : '') + _gEsc(x.nd.it.t) + '</span>' +
+            (c.objetivo ? '<span class="rec-card-o">' + _gEsc(c.objetivo) + '</span>' : '') +
+            '</div>';
+        });
+      }
       h += '</div>';
       return h;
     }
@@ -21646,6 +21755,67 @@
       _recVentanaPintar();
     }
     function recVolver()  { _recSel = null; _recRepintar(); }
+    // ── v0.363 — LA SESIÓN EN VENTANA, desde la ficha de zona ──────────────
+    // En Iniciación y Avanzado la sesión ya no se abre en el sitio: sale en
+    // la ventana (la misma de Competición), que NACE de la fila tocada
+    // —se mide dónde está y la ventana crece desde ahí— y vuelve a ella al
+    // cerrar. Tocar el fondo oscuro cierra. _recVentSes guarda qué y de qué
+    // zona; si se sale a la pantalla de la sesión («Abrir sesión ›») y se
+    // vuelve, la ventana reaparece donde estaba (mostrarPlanificacion repinta).
+    var _recVentSes = null, _recVentOrigen = null;
+    function recSesVentana(k, ev) {
+      _recVentOrigen = null;
+      try {
+        var el = ev && (ev.currentTarget || ev.target);
+        if (el && el.closest) el = el.closest('.rec-card') || el;
+        if (el && el.getBoundingClientRect) { var r = el.getBoundingClientRect(); _recVentOrigen = { x:r.left, y:r.top, w:r.width, h:r.height }; }
+      } catch (x) {}
+      _recVentSes = { k:k, zona:_recZonaSel };
+      _recVentanaPintar();
+    }
+    function recVentCerrar() {
+      var ov = document.getElementById('rec-ov');
+      var m = ov && ov.querySelector('.rec-modal.ses');
+      var fin = function(){
+        _recVentSes = null; _recSel = null; _recVentOrigen = null;
+        if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; ov.classList.remove('ses'); }
+        if (typeof recEjCerrar === 'function') recEjCerrar();
+      };
+      if (m && _recVentOrigen && _recVentAnimar(m, _recVentOrigen, true)) { setTimeout(fin, 200); return; }
+      fin();
+    }
+    // La ventana crece desde la fila (o se encoge hacia ella al cerrar). Sin
+    // librerías: se compara el rectángulo de la fila con el de la ventana y
+    // se anima transform. En un navegador sin transiciones simplemente aparece.
+    function _recVentAnimar(m, o, alReves) {
+      try {
+        var r = m.getBoundingClientRect();
+        if (!r.width || !r.height) return false;
+        var sx = Math.max(o.w / r.width, .05), sy = Math.max(o.h / r.height, .05);
+        var t = 'translate(' + Math.round(o.x - r.left) + 'px,' + Math.round(o.y - r.top) + 'px) scale(' + sx.toFixed(3) + ',' + sy.toFixed(3) + ')';
+        m.style.transformOrigin = '0 0';
+        if (alReves) {
+          m.style.transition = 'transform .2s ease-in, opacity .2s ease-in';
+          m.style.transform = t; m.style.opacity = '.4';
+          return true;
+        }
+        m.style.transition = 'none'; m.style.transform = t; m.style.opacity = '.5';
+        m.getBoundingClientRect();   // fuerza el reflow para que la transición arranque desde la fila
+        m.style.transition = 'transform .22s ease-out, opacity .22s ease-out';
+        m.style.transform = 'none'; m.style.opacity = '1';
+        return true;
+      } catch (x) { return false; }
+    }
+    // El fondo oscuro cierra lo que esté abierto: el «¿qué semana?» vuelve a
+    // la ventana de la que salió; la sesión se cierra; la etapa (Competición) también.
+    function recOvFondo() {
+      if (_recSemPara != null) { recSemanaVolver(); return; }
+      if (_recVentSes) { recVentCerrar(); return; }
+      recEtapaCerrar();
+    }
+    // Los golpes como pestañas dentro de la ficha de zona: cuál está elegida
+    var _recGolpeSel = {};
+    function recGolpeSel(zona, i) { _recGolpeSel[zona] = i; _recRepintar(); }
     // v0.360 — Repintar lo que esté a la vista: la ventana si hay etapa
     // abierta (Competición), o la pantalla de Planificación si la zona está
     // en el sitio (Iniciación y Avanzado), sin que salte el scroll.
@@ -21683,6 +21853,8 @@
     function recEtapaCerrar() {
       _recEtapaAbierta = null; _recSemPara = null;
       _recTabs = []; _recSelTab = {}; _recSel = null; _recGalAbre = {};   // v0.354/356
+      _recVentSes = null; _recVentOrigen = null;   // v0.363
+      var ovS = document.getElementById('rec-ov'); if (ovS) ovS.classList.remove('ses');
       var ov = document.getElementById('rec-ov');
       if (ov) { ov.style.display = 'none'; ov.innerHTML = ''; }
       if (typeof recEjCerrar === 'function') recEjCerrar();   // v0.347
@@ -21752,7 +21924,7 @@
       // v0.360: la ventana se abre por dos motivos: una etapa (Competición)
       // o el «¿qué semana?» de una sesión, que también se pide desde la
       // ficha de zona EN EL SITIO (Iniciación y Avanzado), sin etapa abierta.
-      if (!_recEtapaAbierta && _recSemPara == null) { ov.style.display = 'none'; ov.innerHTML = ''; return; }
+      if (!_recEtapaAbierta && _recSemPara == null && !_recVentSes) { ov.style.display = 'none'; ov.innerHTML = ''; ov.classList.remove('ses'); return; }
       var p = leerPlan(), nivel = _compNivel();
       var todasS = leerClases();
       var h = '<div class="ruta-modal rec-modal" onclick="event.stopPropagation()">';
@@ -21795,6 +21967,25 @@
         return;
       }
 
+      // ── v0.363: LA SESIÓN (o el bloque) EN VENTANA, desde la ficha de zona ──
+      if (_recVentSes) {
+        var estV = _recZonasEstado(p, nivel);
+        var eV = estV.etapas.filter(function(x){ return x.et.key === 'z:' + _recVentSes.zona; })[0];
+        if (!eV) { recVentCerrar(); return; }
+        _recSel = _recVentSes.k;
+        var zV = _recZona(_recVentSes.zona);
+        var hs = '<div class="ruta-modal rec-modal ses" onclick="event.stopPropagation()" style="border-top:5px solid ' + zV.color + '">' +
+          '<div class="rec-vs-top"><span class="rec-vs-z" style="color:' + zV.color + '">' + _gEsc(zV.label) + '</span>' +
+          '<button class="plan-modal-x" onclick="recVentCerrar()" aria-label="Cerrar">✕</button></div>';
+        hs += _recCuerpoHTML(eV, p, nivel, _ejsById(), todasS, { sinVolver:true });
+        if (_recSel == null) { recVentCerrar(); return; }   // la sesión ya no está
+        hs += '</div>';
+        ov.classList.add('ses');
+        _ovPintarConScroll(ov, hs);
+        if (_recVentOrigen) { var mS = ov.querySelector('.rec-modal.ses'); if (mS) _recVentAnimar(mS, _recVentOrigen, false); }
+        return;
+      }
+      ov.classList.remove('ses');
       // v0.358: en Iniciación y Avanzado las pestañas son las ZONAS, no los
       // apartados; Competición sigue por apartados.
       var esZonas = _recEsMapa(nivel);
@@ -21875,7 +22066,7 @@
         // bloques, que ya no se ve. La salida es volver a la lista de golpes,
         // que es de donde se ha entrado.
         h += '<div class="rec-cont">';
-        h += '<button type="button" class="rec-volver" onclick="recVolver()">‹ Volver a los golpes</button>';
+        if (!opts.sinVolver) h += '<button type="button" class="rec-volver" onclick="recVolver()">‹ Volver a los golpes</button>';
         h += '<div class="rec-cont-cab">' +
           '<div class="rec-cont-tit">';
         if (act.ses) {
