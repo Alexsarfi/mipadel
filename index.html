@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.360.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.361.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,21 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.361.0 — La pista entera: esquinas y la mitad del rival (2026-09)
+    (sin migraciones · el plan sembrado se pone al día solo)
+    · GEOMETRÍA DE VERDAD: los cuadros de saque van entre la red y la línea
+      de saque, partidos por la línea central; el fondo va detrás. (En la
+      v0.360 la línea central estaba dibujada en el fondo.)
+    · LAS ESQUINAS: quinta zona, dos cuadrados en los rincones del fondo
+      que son una sola zona. «Doble pared» pasa a z:'esquina'.
+    · LA MITAD DEL RIVAL TRABAJA: su fondo es TÁCTICA (patrón y partido; la
+      key sigue siendo todo-campo, que es lo que lleva el catálogo), su
+      cuadro izquierdo SAQUE Y RESTO (el bloque Saque, también los de
+      Iniciación: z:'saque') y el derecho LECTURA DEL RIVAL, bloque nuevo
+      de Juego táctico (z:'rival'). Fuera el botón «Toda la pista».
+    · Todo lo que se toca en la pista abre lo mismo: sesiones por golpes.
+      Siete zonas, siete colores; el editor de bloques ofrece las nuevas.
 
   v0.360.0 — La pista es el menú (2026-09)
     (sin migraciones · solo presentación)
@@ -8094,15 +8109,9 @@
        a las cuatro filas de la v0.358 y a la ventana con pestañas. */
     .rec-pista-caja { max-width:360px; margin:0 auto; }
     .rec-pista { display:block; width:100%; height:auto; }
-    .rec-pista.mini { max-width:300px; margin:0 auto; }
+    .rec-pista.mini { max-width:320px; margin:0 auto; }
     .rec-pista-z rect { transition:opacity .15s; }
     .rec-pista-z:active rect { opacity:.7; }
-    .rec-pista-toda { display:block; width:100%; margin:8px 0 0; padding:9px 12px; font-family:inherit;
-      font-size:13px; font-weight:800; color:var(--texto); background:var(--blanco);
-      border:1.5px solid var(--borde); border-radius:var(--r-sm); cursor:pointer;
-      -webkit-tap-highlight-color:transparent; }
-    .rec-pista-toda span { font-weight:700; font-size:11px; color:var(--gris); margin-left:6px; }
-    .rec-pista-toda.on span { color:#fff; opacity:.85; }
     /* la ficha de zona */
     .rec-zc { margin:12px -2px 0; background:var(--blanco); border:1.5px solid var(--borde);
       border-left:5px solid var(--verde); border-radius:0 var(--r-md) var(--r-md) 0; padding:12px 12px 10px; }
@@ -10225,7 +10234,10 @@
           <option value="fondo">fondo</option>
           <option value="campo-medio">campo-medio</option>
           <option value="red">red</option>
-          <option value="todo-campo">todo-campo</option>
+          <option value="esquina">esquina (doble pared)</option>
+          <option value="todo-campo">todo-campo (táctica)</option>
+          <option value="saque">saque y resto</option>
+          <option value="rival">lectura del rival</option>
         </select>
         <label class="plan-modal-lbl">Golpe (define a qué sesiones enlaza)</label>
         <select id="pe-g" class="plan-modal-inp">
@@ -10287,7 +10299,10 @@
           <option value="fondo">fondo</option>
           <option value="campo-medio">campo-medio</option>
           <option value="red">red</option>
-          <option value="todo-campo">todo-campo</option>
+          <option value="esquina">esquina (doble pared)</option>
+          <option value="todo-campo">todo-campo (táctica)</option>
+          <option value="saque">saque y resto</option>
+          <option value="rival">lectura del rival</option>
         </select>
         <label class="plan-modal-lbl">Golpe (define a qué sesiones enlaza)</label>
         <select id="ple-g" class="plan-modal-inp">
@@ -10776,7 +10791,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.360.0';
+    var APP_VERSION = '0.361.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -17570,32 +17585,32 @@
           {t:'Revés de fondo', f:'Revés equilibrado desde el fondo. Alternar derecha y revés.', int:'base', z:'fondo', g:'fondo'},
           {t:'Profundidad y dirección', f:'Jugar largo y dirigir cruzado o paralelo con seguridad.', int:'anular', z:'fondo', g:'fondo'},
           {t:'Constancia', f:'Mantener intercambios largos sin fallar. Paciencia.', int:'anular', z:'fondo', g:'fondo'},
-          {t:'Saque', f:'Solo poner la bola en juego con continuidad.', int:'base', z:'todo-campo', g:'saque'} ]},
+          {t:'Saque', f:'Solo poner la bola en juego con continuidad.', int:'base', z:'saque', g:'saque'} ]},
         { key:'i2', nombre:'Defensa', obj:'Leer la pared y defenderse con globo.', bloques:[
           // v0.359: se llaman como en el vault y en el plan sembrado («Pared de
           // fondo», «Pared lateral»); el catálogo del código se había desviado.
           {t:'Pared de fondo', f:'Leer el bote, esperar la bola y salir hacia el fondo.', int:'anular', z:'fondo', g:'pared'},
           {t:'Pared lateral', f:'Colocación con pared lateral y devolución segura.', int:'anular', z:'fondo', g:'pared'},
           {t:'Globo de defensa', f:'Globo profundo para defenderse y recuperar la red.', int:'anular', z:'campo-medio', g:'globo'},
-          {t:'Saque', f:'Empezar a colocar: dirección y profundidad.', int:'anular', z:'todo-campo', g:'saque'} ]},
+          {t:'Saque', f:'Empezar a colocar: dirección y profundidad.', int:'anular', z:'saque', g:'saque'} ]},
         { key:'i3', nombre:'La red', obj:'Volear con control y sostener la red.', bloques:[
           {t:'Volea de derecha', f:'Primera volea: impacto delante del cuerpo, sin armar.', int:'dominar', z:'red', g:'volea'},
           {t:'Volea de revés', f:'Volea de revés estable, muñeca firme.', int:'dominar', z:'red', g:'volea'},
           {t:'Voleas con dirección', f:'Dirigir la volea para mover al rival.', int:'dominar', z:'red', g:'volea'},
           {t:'Bandeja: primer contacto', f:'Introducción a la bandeja para mantener la red.', int:'dominar', z:'red', g:'bandeja'},
-          {t:'Saque', f:'Sacar y subir a la red (enlazar con la volea).', int:'dominar', z:'todo-campo', g:'saque'} ]},
+          {t:'Saque', f:'Sacar y subir a la red (enlazar con la volea).', int:'dominar', z:'saque', g:'saque'} ]},
         { key:'i4', nombre:'Ganar la red', obj:'Reconocer la bola buena y subir a volear.', bloques:[
           {t:'Subir a la red', f:'Reconocer la bola buena y subir a volear.', int:'dominar', z:'campo-medio', g:'volea'},
           {t:'Globo y subir', f:'Defender con globo y aprovechar para ganar la red.', int:'dominar', z:'campo-medio', g:'globo'},
-          {t:'Saque', f:'Saque + primera bola (saque–resto–transición).', int:'dominar', z:'todo-campo', g:'saque'} ]},
+          {t:'Saque', f:'Saque + primera bola (saque–resto–transición).', int:'dominar', z:'saque', g:'saque'} ]},
         { key:'i5', nombre:'Definición y saque', obj:'Cerrar bola fácil y restar/sacar con criterio.', bloques:[
           {t:'Remate básico', f:'Mecánica del remate: timing y control antes que potencia.', int:'definir', z:'red', g:'remate'},
           {t:'Víbora: primer contacto', f:'Introducción a la víbora como golpe de presión.', int:'definir', z:'red', g:'vibora'},
-          {t:'Saque', f:'Con restricción de zona y variación (más exigente).', int:'definir', z:'todo-campo', g:'saque'} ]},
+          {t:'Saque', f:'Con restricción de zona y variación (más exigente).', int:'definir', z:'saque', g:'saque'} ]},
         { key:'i6', nombre:'Jugar', obj:'Jugar puntos aplicando todo.', bloques:[
           {t:'Puntos cortos', f:'Mini-juego y primeros puntos aplicando lo aprendido.', int:'dominar', z:'todo-campo', g:'mixto'},
           {t:'Partidos y evaluación', f:'Jugar partidos y revisar el progreso.', int:'definir', z:'todo-campo', g:'mixto'},
-          {t:'Saque', f:'En punto real, competitivo (a 21, restricciones).', int:'definir', z:'todo-campo', g:'saque'} ]}
+          {t:'Saque', f:'En punto real, competitivo (a 21, restricciones).', int:'definir', z:'saque', g:'saque'} ]}
       ],
       avanzado: [
         // v0.359 — PODADO a 16 bloques, uno por tema real (antes 38, 31 sin
@@ -17610,7 +17625,7 @@
           {t:'Construir desde el fondo', f:'Paciencia y construcción para abrir el punto.', int:'dominar', z:'fondo', g:'fondo'} ]},
         { key:'a2', nombre:'Pared', obj:'Resolver cualquier pared con control y dirección.', bloques:[
           {t:'Salida de pared', f:'Salir de la pared de fondo y de la lateral controlando la dirección.', int:'anular', z:'fondo', g:'pared'},
-          {t:'Doble pared', f:'Dobles paredes y bote pronto cuando no hay pared.', int:'anular', z:'fondo', g:'pared'} ]},
+          {t:'Doble pared', f:'Dobles paredes: lateral-fondo y fondo-lateral.', int:'anular', z:'esquina', g:'pared'} ]},
         { key:'a3', nombre:'Neutralización', obj:'Defender bajo presión y quitar el ataque al rival.', bloques:[
           {t:'Globo defensivo', f:'Globo profundo para neutralizar y quitar la red.', int:'anular', z:'fondo', g:'globo'},
           {t:'Contención y bola neutra', f:'Defender con paciencia desde campo medio y esperar el error.', int:'anular', z:'campo-medio', g:'mixto'} ]},
@@ -17626,7 +17641,8 @@
         { key:'a7', nombre:'Juego táctico', obj:'Aplicar el patrón completo en pareja y en partido.', bloques:[
           {t:'Patrón anular-dominar-definir', f:'Enlazar las tres fases en un mismo punto.', int:'definir', z:'todo-campo', g:'mixto'},
           {t:'Partido evaluado', f:'Jugar partido con análisis y objetivos.', int:'definir', z:'todo-campo', g:'mixto'},
-          {t:'Saque', f:'Colocación, variación y saque + primera bola.', int:'dominar', z:'todo-campo', g:'saque'} ]}
+          {t:'Saque', f:'Saque y resto: colocación, variación y saque + primera bola.', int:'dominar', z:'saque', g:'saque'},
+          {t:'Lectura del rival', f:'Fortalezas, debilidades, mover y confundir al rival.', int:'dominar', z:'rival', g:'mixto'} ]}
       ],
       // Competición NO va por etapas en secuencia: es un CICLO (Preparar →
       // Competir → Analizar → Entrenar) + un CATÁLOGO de 6 áreas de las que se
@@ -17635,13 +17651,13 @@
         { key:'c1', tipo:'area', nombre:'Solidez y defensa', obj:'Anular: no fallar y neutralizar.', bloques:[
           {t:'Defensa paciente bajo presión', f:'Sostener bajo presión sin precipitar.', int:'anular', z:'fondo', g:'mixto'},
           {t:'Pared y globo para neutralizar', f:'Combinar pared y globo para recuperar posición.', int:'anular', z:'campo-medio', g:'globo'},
-          {t:'Resto con criterio', f:'Restar con seguridad y devolver con intención.', int:'anular', z:'todo-campo', g:'saque'},
+          {t:'Resto con criterio', f:'Restar con seguridad y devolver con intención.', int:'anular', z:'saque', g:'saque'},
           {t:'Consistencia', f:'Meter una bola más que el rival. La base.', int:'anular', z:'fondo', g:'fondo'},
           {t:'Luchar todas las bolas', f:'Actitud y cobertura: ninguna bola perdida.', int:'anular', z:'fondo', g:'mixto'},
           {t:'Ubicación', f:'Colocar donde más daño hace y cubrir bien.', int:'anular', z:'todo-campo', g:'mixto'} ]},
         { key:'c2', tipo:'area', nombre:'Construcción y red', obj:'Dominar: construir el punto y ganar la red.', bloques:[
           {t:'Construir desde el fondo', f:'Paciencia y construcción para abrir el punto.', int:'dominar', z:'fondo', g:'fondo'},
-          {t:'Saque y subida', f:'Sacar y subir a la red con criterio.', int:'dominar', z:'todo-campo', g:'saque'},
+          {t:'Saque y subida', f:'Sacar y subir a la red con criterio.', int:'dominar', z:'saque', g:'saque'},
           {t:'Globo ofensivo y transición', f:'Globo que pasa para girar el punto y subir.', int:'dominar', z:'campo-medio', g:'globo'},
           {t:'Presión en la red en pareja', f:'Coordinar la pareja para asfixiar en la red.', int:'dominar', z:'red', g:'mixto'},
           {t:'Bandeja táctica', f:'Elegir bandeja según la situación para mantener la red.', int:'dominar', z:'red', g:'bandeja'},
@@ -17844,7 +17860,7 @@
       var m = PLAN_NIVELES_META.filter(function(n){ return n.key===key; })[0];
       return m ? m.label : key;
     }
-    var ZONAS_PLAN = ['fondo','campo-medio','red','todo-campo'];
+    var ZONAS_PLAN = ['fondo','campo-medio','red','esquina','todo-campo','saque','rival'];   // v0.361
     // Biblioteca de bloques predefinidos (para añadir rápido a cualquier mes)
     var PLAN_BIBLIOTECA = [
       { cat:'Fundamentos', t:'Empuñadura y posición base', f:'Empuñadura continental, posición de espera y primeros pasos.', int:'base', z:'todo-campo', g:'fondo' },
@@ -21256,13 +21272,22 @@
     // pista» y el mapa no diría nada.
     // v0.360: cada zona con su color (dice DÓNDE, no un estado) y una frase
     // de vestuario para la cabecera de su ficha.
+    // v0.361: siete zonas. Las esquinas del fondo (doble pared) y la mitad
+    // del RIVAL repartida en tres: su fondo es la Táctica (el punto entero;
+    // la key sigue siendo `todo-campo` porque así la lleva el catálogo), su
+    // cuadro de saque izquierdo es Saque y resto, y el derecho la Lectura
+    // del rival. Cada zona abre lo mismo: sesiones por golpes.
     var REC_ZONAS = [
-      { key:'fondo',       label:'Fondo',         color:'#2f6fb5', f:'Defender y construir desde atrás.' },
-      { key:'campo-medio', label:'Campo medio',   color:'#d0821a', f:'La transición: ganar la red sin regalar el punto.' },
-      { key:'red',         label:'Red',           color:'#1c8f6a', f:'Mandar en la red: volea y juego aéreo.' },
-      { key:'todo-campo',  label:'Toda la pista', color:'#5f5e5a', f:'El punto entero: patrón, saque y partido.' }
+      { key:'fondo',       label:'Fondo',             color:'#2f6fb5', f:'Defender y construir desde atrás.' },
+      { key:'campo-medio', label:'Campo medio',       color:'#d0821a', f:'La transición: ganar la red sin regalar el punto.' },
+      { key:'red',         label:'Red',               color:'#1c8f6a', f:'Mandar en la red: volea y juego aéreo.' },
+      { key:'esquina',     label:'Esquina',           color:'#7a4fc9', f:'La esquina: doble pared, lateral-fondo y fondo-lateral.' },
+      { key:'todo-campo',  label:'Táctica',           color:'#5f5e5a', f:'El punto entero: patrón y partido.' },
+      { key:'saque',       label:'Saque y resto',     color:'#b8432a', f:'El punto empieza aquí: saque, resto y primera bola.' },
+      { key:'rival',       label:'Lectura del rival', color:'#8a5a9e', f:'Mirar al otro lado: fortalezas, debilidades, moverle.' }
     ];
-    function _recZona(key) { return REC_ZONAS.filter(function(x){ return x.key === key; })[0] || REC_ZONAS[REC_ZONAS.length - 1]; }
+    var REC_ZONA_DEFECTO = 'todo-campo';
+    function _recZona(key) { return REC_ZONAS.filter(function(x){ return x.key === key; })[0] || _recZona(REC_ZONA_DEFECTO); }
     // ── v0.360 — LA PISTA DIBUJADA ─────────────────────────────────────
     // Un SVG: la mitad de arriba es el rival, difuminada; la de abajo son
     // las tres bandas —red · campo medio · fondo— con su nombre y sus
@@ -21273,45 +21298,65 @@
       var por = {}; estZ.etapas.forEach(function(e){ por[e.et.zona] = e; });
       var sel = _recZonaSel, mini = !!sel;
       var res = function(z){ return _recZonaResumen(por[z]); };
-      var band = function(z, y, hgt, cls){
+      var cuentas = function(r){ return r.nGolpes + (r.nGolpes === 1 ? ' golpe' : ' golpes') + ' · ' + r.nSes + (r.nSes === 1 ? ' sesión' : ' sesiones'); };
+      // Una zona = un <g> con uno o más rectángulos (las esquinas son dos) y
+      // su rótulo. Sin zona elegida: nombre + cuentas en oscuro sobre su
+      // color suave. Con una elegida: la suya llena y en blanco, las demás
+      // apagadas y solo con el nombre en su color.
+      var zona = function(z, rects, tx, ty, fs, rival, corto){
         var c = _recZona(z), on = sel === z, r = res(z);
-        var op = on ? '.85' : (mini ? '.22' : '.42');
-        var f = on ? '#fff' : (mini ? c.color : '#1e2a3a');
-        var n = r.nGolpes + (r.nGolpes === 1 ? ' golpe' : ' golpes') + ' · ' + r.nSes + (r.nSes === 1 ? ' sesión' : ' sesiones');
-        return '<g class="rec-pista-z' + (on ? ' on' : '') + '" onclick="recZonaSel(\'' + z + '\')" style="cursor:pointer">' +
-          '<rect x="10" y="' + y + '" width="180" height="' + hgt + '" fill="' + c.color + '" opacity="' + op + '"/>' +
-          (mini
-            ? '<text x="100" y="' + (y + hgt / 2 + 3.5) + '" text-anchor="middle" font-size="9.5" font-weight="800" fill="' + f + '">' + _gEsc(c.label) + (on ? ' · ' + _gEsc(n) : '') + '</text>'
-            : '<text x="100" y="' + (y + hgt / 2 - 2) + '" text-anchor="middle" font-size="13" font-weight="800" fill="' + f + '">' + _gEsc(c.label) + '</text>' +
-              '<text x="100" y="' + (y + hgt / 2 + 11) + '" text-anchor="middle" font-size="8.5" fill="' + f + '" opacity=".85">' + _gEsc(n) + '</text>') +
-          '</g>';
+        var op = on ? '.85' : (mini ? '.22' : (rival ? '.55' : '.42'));
+        var f = on ? '#fff' : (mini ? c.color : (rival ? '#fff' : '#1e2a3a'));
+        var h = '<g class="rec-pista-z' + (on ? ' on' : '') + '" onclick="recZonaSel(\'' + z + '\')" style="cursor:pointer">';
+        rects.forEach(function(q){ h += '<rect x="' + q[0] + '" y="' + q[1] + '" width="' + q[2] + '" height="' + q[3] + '" fill="' + c.color + '" opacity="' + op + '"/>'; });
+        if (mini) {
+          h += '<text x="' + tx + '" y="' + (ty + 3) + '" text-anchor="middle" font-size="' + fs + '" font-weight="800" fill="' + f + '">' + _gEsc(c.label) + (on ? ' · ' + _gEsc(cuentas(r)) : '') + '</text>';
+        } else {
+          h += '<text x="' + tx + '" y="' + (ty - 2) + '" text-anchor="middle" font-size="' + fs + '" font-weight="800" fill="' + f + '">' + _gEsc(c.label) + '</text>' +
+               // en las esquinas no caben las cuentas: solo el número de sesiones
+               '<text x="' + tx + '" y="' + (ty + 10) + '" text-anchor="middle" font-size="7.5" fill="' + f + '" opacity=".85">' + (corto ? r.nSes : _gEsc(cuentas(r))) + '</text>';
+        }
+        return h + '</g>';
       };
+      var lin = function(x1, y1, x2, y2, w, col){ return '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="' + (col || '#fff') + '" stroke-width="' + (w || 1.5) + '" opacity="' + (col ? '1' : '.85') + '"/>'; };
       var h;
       if (!mini) {
+        // v0.361: geometría de verdad. Cada mitad: los cuadros de saque van
+        // entre la red y la línea de saque, partidos por la línea central;
+        // detrás, el fondo. La mitad del rival (arriba) se reparte en Táctica
+        // (su fondo), Saque y resto (cuadro izquierdo) y Lectura del rival
+        // (cuadro derecho). La nuestra (abajo): red, campo medio, fondo, y
+        // las dos esquinas del fondo como una zona.
         h = '<svg class="rec-pista" viewBox="0 0 200 300" role="img" aria-label="Pista: toca una zona">' +
           '<rect x="10" y="10" width="180" height="280" rx="6" fill="#1c8f6a" opacity=".13"/>' +
-          '<rect x="10" y="10" width="180" height="140" fill="#888" opacity=".18"/>' +
-          '<line x1="10" y1="80" x2="190" y2="80" stroke="#fff" stroke-width="1.5" opacity=".8"/>' +
-          '<line x1="100" y1="10" x2="100" y2="80" stroke="#fff" stroke-width="1.5" opacity=".8"/>' +
-          '<text x="100" y="48" text-anchor="middle" font-size="9" fill="#777">rival</text>' +
-          band('red', 150, 55) + band('campo-medio', 205, 40) + band('fondo', 245, 45) +
-          '<line x1="10" y1="220" x2="190" y2="220" stroke="#fff" stroke-width="1.5" opacity=".8"/>' +
-          '<line x1="100" y1="220" x2="100" y2="290" stroke="#fff" stroke-width="1.5" opacity=".8"/>' +
-          '<line x1="10" y1="150" x2="190" y2="150" stroke="#1e2a3a" stroke-width="3"/>' +
+          zona('todo-campo', [[10, 10, 180, 70]], 100, 45, 12, true) +
+          zona('saque', [[10, 80, 90, 70]], 55, 115, 10.5, true) +
+          zona('rival', [[100, 80, 90, 70]], 145, 115, 10.5, true) +
+          lin(10, 80, 190, 80) + lin(100, 80, 100, 150) +
+          zona('red', [[10, 150, 180, 55]], 100, 178, 13) +
+          zona('campo-medio', [[10, 205, 180, 40]], 100, 225, 12) +
+          zona('fondo', [[10, 245, 180, 45]], 100, 268, 13) +
+          zona('esquina', [[10, 245, 42, 45], [148, 245, 42, 45]], 31, 268, 7.5, false, true) +
+          lin(10, 220, 190, 220) + lin(100, 150, 100, 220) +
+          lin(10, 150, 190, 150, 3, '#1e2a3a') +
           '<rect x="10" y="10" width="180" height="280" rx="6" fill="none" stroke="#1c8f6a" stroke-width="2"/>' +
           '</svg>';
       } else {
-        h = '<svg class="rec-pista mini" viewBox="0 0 200 100" role="img" aria-label="Pista: zona elegida">' +
-          '<rect x="10" y="4" width="180" height="92" rx="5" fill="#1c8f6a" opacity=".10"/>' +
-          band('red', 4, 32) + band('campo-medio', 36, 28) + band('fondo', 64, 32) +
-          '<line x1="10" y1="4" x2="190" y2="4" stroke="#1e2a3a" stroke-width="3"/>' +
-          '<rect x="10" y="4" width="180" height="92" rx="5" fill="none" stroke="#1c8f6a" stroke-width="1.5"/>' +
+        // la tira: la misma pista al 40 %, con la elegida llena
+        h = '<svg class="rec-pista mini" viewBox="0 0 200 124" role="img" aria-label="Pista: zona elegida">' +
+          '<rect x="10" y="4" width="180" height="116" rx="5" fill="#1c8f6a" opacity=".10"/>' +
+          zona('todo-campo', [[10, 4, 180, 28]], 100, 18, 9) +
+          zona('saque', [[10, 32, 90, 28]], 55, 46, 8) +
+          zona('rival', [[100, 32, 90, 28]], 145, 46, 8) +
+          lin(10, 32, 190, 32) + lin(100, 32, 100, 60) +
+          zona('red', [[10, 60, 180, 22]], 100, 71, 9) +
+          zona('campo-medio', [[10, 82, 180, 18]], 100, 91, 8.5) +
+          zona('fondo', [[10, 100, 180, 20]], 100, 110, 9) +
+          zona('esquina', [[10, 100, 42, 20], [148, 100, 42, 20]], 31, 110, 6.5) +
+          lin(10, 60, 190, 60, 3, '#1e2a3a') +
+          '<rect x="10" y="4" width="180" height="116" rx="5" fill="none" stroke="#1c8f6a" stroke-width="1.5"/>' +
           '</svg>';
       }
-      var t = _recZona('todo-campo'), rt = res('todo-campo');
-      h += '<button type="button" class="rec-pista-toda' + (sel === 'todo-campo' ? ' on' : '') + '" style="' +
-        (sel === 'todo-campo' ? 'background:' + t.color + ';border-color:' + t.color + ';color:#fff' : '') + '" onclick="recZonaSel(\'todo-campo\')">' +
-        _gEsc(t.label) + ' <span>' + rt.nSes + (rt.nSes === 1 ? ' sesión' : ' sesiones') + '</span></button>';
       return h;
     }
     // ── v0.360 — LA FICHA DE LA ZONA, en el sitio ───────────────────────
@@ -21344,10 +21389,10 @@
       var n = {};
       (et.bloques || []).forEach(function(b){
         if (String(b.t || '').trim().toLowerCase() === 'saque') return;
-        var z = b.z || 'todo-campo';
+        var z = b.z || REC_ZONA_DEFECTO;
         n[z] = (n[z] || 0) + 1;
       });
-      var mejor = REC_ZONAS[REC_ZONAS.length - 1].key, max = 0;
+      var mejor = REC_ZONA_DEFECTO, max = 0;
       REC_ZONAS.forEach(function(z){ if ((n[z.key] || 0) > max) { max = n[z.key]; mejor = z.key; } });
       return mejor;
     }
@@ -21376,7 +21421,7 @@
         porZona[z.key] = { et:{ key:'z:' + z.key, nombre:z.label, zona:z.key, bloques:[] },
                            nodos:[], hechos:0, listos:0, total:0 };
       });
-      var ultima = REC_ZONAS[REC_ZONAS.length - 1].key;
+      var ultima = REC_ZONA_DEFECTO;
       est.etapas.forEach(function(e){
         var zEt = _recZonaEtapa(e.et);
         e.nodos.forEach(function(nd){
