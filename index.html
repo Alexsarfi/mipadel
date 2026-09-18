@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.361.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.362.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,22 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.362.0 — La pista, limpia: letras sobre las líneas, gris al elegir, Juegos (2026-09)
+    (sin migraciones · el plan sembrado se pone al día solo)
+    · LA LETRA VA ENCIMA DE LA LÍNEA: la pista se pinta en tres capas
+      (zonas, líneas blancas, rótulos). Fuera las cuentas de golpes y
+      sesiones de cada zona: en la pista solo se elige dónde.
+    · AL ELEGIR UNA ZONA, LAS DEMÁS SE QUEDAN EN GRIS y la elegida llena de
+      su color: la importancia la lleva ella.
+    · JUEGOS en el cuadro derecho del rival, en vez de Lectura del rival: el
+      bloque pasa a «Juegos y calentamiento» (z:'juegos', la migración lo
+      renombra conservando el id). Es la única zona que, además de
+      sesiones, enseña los EJERCICIOS sueltos de calentamiento, juegos
+      condicionados, cooperación y socialización —agrupados por categoría,
+      cada uno abre su ventana—, porque son lo que complementa una clase.
+    · FUERA LAS TRES CIFRAS de la ficha (sesiones · minutos · dadas): no se
+      usaban para elegir.
 
   v0.361.0 — La pista entera: esquinas y la mitad del rival (2026-09)
     (sin migraciones · el plan sembrado se pone al día solo)
@@ -8142,6 +8158,12 @@
     .rec-gal.chips .rec-gal-ses { flex-basis:100%; background:var(--arena); border:none; border-radius:var(--r-sm); padding:2px 12px; margin:2px 0 4px; }
     .rec-gal.chips .rec-bl-vacio { flex-basis:100%; }
     .rec-zc .rec-cont { border-top:none; padding-top:0; }
+    /* v0.362: los ejercicios de juegos y calentamiento, dentro de la ficha */
+    .rec-jg { margin-top:12px; border-top:1.5px solid var(--borde); padding-top:10px; }
+    .rec-jg-t { display:flex; align-items:center; gap:8px; font-size:11px; font-weight:800; letter-spacing:.05em;
+      text-transform:uppercase; color:var(--gris); margin:8px 0 4px; }
+    .rec-jg-t span { font-weight:700; letter-spacing:0; opacity:.8; }
+    .rec-jg-lista { background:var(--arena); border-radius:var(--r-sm); padding:2px 12px; }
     .rec-et-toca { flex:1; min-width:0; display:flex; align-items:center; gap:9px;
       padding:7px 6px; cursor:pointer; border-radius:var(--r-sm); }
     .rec-et-toca:active { background:var(--arena); }
@@ -10237,7 +10259,7 @@
           <option value="esquina">esquina (doble pared)</option>
           <option value="todo-campo">todo-campo (táctica)</option>
           <option value="saque">saque y resto</option>
-          <option value="rival">lectura del rival</option>
+          <option value="juegos">juegos y calentamiento</option>
         </select>
         <label class="plan-modal-lbl">Golpe (define a qué sesiones enlaza)</label>
         <select id="pe-g" class="plan-modal-inp">
@@ -10302,7 +10324,7 @@
           <option value="esquina">esquina (doble pared)</option>
           <option value="todo-campo">todo-campo (táctica)</option>
           <option value="saque">saque y resto</option>
-          <option value="rival">lectura del rival</option>
+          <option value="juegos">juegos y calentamiento</option>
         </select>
         <label class="plan-modal-lbl">Golpe (define a qué sesiones enlaza)</label>
         <select id="ple-g" class="plan-modal-inp">
@@ -10791,7 +10813,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.361.0';
+    var APP_VERSION = '0.362.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -17642,7 +17664,7 @@
           {t:'Patrón anular-dominar-definir', f:'Enlazar las tres fases en un mismo punto.', int:'definir', z:'todo-campo', g:'mixto'},
           {t:'Partido evaluado', f:'Jugar partido con análisis y objetivos.', int:'definir', z:'todo-campo', g:'mixto'},
           {t:'Saque', f:'Saque y resto: colocación, variación y saque + primera bola.', int:'dominar', z:'saque', g:'saque'},
-          {t:'Lectura del rival', f:'Fortalezas, debilidades, mover y confundir al rival.', int:'dominar', z:'rival', g:'mixto'} ]}
+          {t:'Juegos y calentamiento', f:'Juegos de calentamiento y juegos en sí: lo que complementa la sesión.', int:'base', z:'juegos', g:'mixto'} ]}
       ],
       // Competición NO va por etapas en secuencia: es un CICLO (Preparar →
       // Competir → Analizar → Entrenar) + un CATÁLOGO de 6 áreas de las que se
@@ -17860,7 +17882,7 @@
       var m = PLAN_NIVELES_META.filter(function(n){ return n.key===key; })[0];
       return m ? m.label : key;
     }
-    var ZONAS_PLAN = ['fondo','campo-medio','red','esquina','todo-campo','saque','rival'];   // v0.361
+    var ZONAS_PLAN = ['fondo','campo-medio','red','esquina','todo-campo','saque','juegos'];   // v0.362
     // Biblioteca de bloques predefinidos (para añadir rápido a cualquier mes)
     var PLAN_BIBLIOTECA = [
       { cat:'Fundamentos', t:'Empuñadura y posición base', f:'Empuñadura continental, posición de espera y primeros pasos.', int:'base', z:'todo-campo', g:'fondo' },
@@ -18006,7 +18028,8 @@
       'bandeja tactica':                'Juego aéreo',
       'subida tras golpe profundo':     'Subida a la red',
       'remate por 3 y salida de pista': 'Remate y salida de pista',
-      'dejada y amago':                 'Definición fina'
+      'dejada y amago':                 'Definición fina',
+      'lectura del rival':              'Juegos y calentamiento'   // v0.362: el cuadro del rival pasó a Juegos
     };
     var PLAN_PODA_AV_BAJAS = [
       'Salida de pared lateral', 'Defensa paciente bajo presión', 'Pared y globo para neutralizar',
@@ -21275,8 +21298,9 @@
     // v0.361: siete zonas. Las esquinas del fondo (doble pared) y la mitad
     // del RIVAL repartida en tres: su fondo es la Táctica (el punto entero;
     // la key sigue siendo `todo-campo` porque así la lleva el catálogo), su
-    // cuadro de saque izquierdo es Saque y resto, y el derecho la Lectura
-    // del rival. Cada zona abre lo mismo: sesiones por golpes.
+    // cuadro de saque izquierdo es Saque y resto, y el derecho JUEGOS
+    // (v0.362): calentamiento y juegos, que además de sesiones enseña los
+    // EJERCICIOS de esas categorías, porque son lo que complementa una clase.
     var REC_ZONAS = [
       { key:'fondo',       label:'Fondo',             color:'#2f6fb5', f:'Defender y construir desde atrás.' },
       { key:'campo-medio', label:'Campo medio',       color:'#d0821a', f:'La transición: ganar la red sin regalar el punto.' },
@@ -21284,7 +21308,7 @@
       { key:'esquina',     label:'Esquina',           color:'#7a4fc9', f:'La esquina: doble pared, lateral-fondo y fondo-lateral.' },
       { key:'todo-campo',  label:'Táctica',           color:'#5f5e5a', f:'El punto entero: patrón y partido.' },
       { key:'saque',       label:'Saque y resto',     color:'#b8432a', f:'El punto empieza aquí: saque, resto y primera bola.' },
-      { key:'rival',       label:'Lectura del rival', color:'#8a5a9e', f:'Mirar al otro lado: fortalezas, debilidades, moverle.' }
+      { key:'juegos',      label:'Juegos',            color:'#c2417a', f:'Calentamiento y juegos: los ejercicios que complementan cualquier sesión.' }
     ];
     var REC_ZONA_DEFECTO = 'todo-campo';
     function _recZona(key) { return REC_ZONAS.filter(function(x){ return x.key === key; })[0] || _recZona(REC_ZONA_DEFECTO); }
@@ -21295,67 +21319,52 @@
     // una, se ENCOGE a una tira (200×100) que se queda arriba como
     // navegación y la banda elegida se ve llena de su color.
     function _recPistaHTML(estZ, p, nivel) {
-      var por = {}; estZ.etapas.forEach(function(e){ por[e.et.zona] = e; });
       var sel = _recZonaSel, mini = !!sel;
-      var res = function(z){ return _recZonaResumen(por[z]); };
-      var cuentas = function(r){ return r.nGolpes + (r.nGolpes === 1 ? ' golpe' : ' golpes') + ' · ' + r.nSes + (r.nSes === 1 ? ' sesión' : ' sesiones'); };
-      // Una zona = un <g> con uno o más rectángulos (las esquinas son dos) y
-      // su rótulo. Sin zona elegida: nombre + cuentas en oscuro sobre su
-      // color suave. Con una elegida: la suya llena y en blanco, las demás
-      // apagadas y solo con el nombre en su color.
-      var zona = function(z, rects, tx, ty, fs, rival, corto){
-        var c = _recZona(z), on = sel === z, r = res(z);
-        var op = on ? '.85' : (mini ? '.22' : (rival ? '.55' : '.42'));
-        var f = on ? '#fff' : (mini ? c.color : (rival ? '#fff' : '#1e2a3a'));
-        var h = '<g class="rec-pista-z' + (on ? ' on' : '') + '" onclick="recZonaSel(\'' + z + '\')" style="cursor:pointer">';
-        rects.forEach(function(q){ h += '<rect x="' + q[0] + '" y="' + q[1] + '" width="' + q[2] + '" height="' + q[3] + '" fill="' + c.color + '" opacity="' + op + '"/>'; });
-        if (mini) {
-          h += '<text x="' + tx + '" y="' + (ty + 3) + '" text-anchor="middle" font-size="' + fs + '" font-weight="800" fill="' + f + '">' + _gEsc(c.label) + (on ? ' · ' + _gEsc(cuentas(r)) : '') + '</text>';
-        } else {
-          h += '<text x="' + tx + '" y="' + (ty - 2) + '" text-anchor="middle" font-size="' + fs + '" font-weight="800" fill="' + f + '">' + _gEsc(c.label) + '</text>' +
-               // en las esquinas no caben las cuentas: solo el número de sesiones
-               '<text x="' + tx + '" y="' + (ty + 10) + '" text-anchor="middle" font-size="7.5" fill="' + f + '" opacity=".85">' + (corto ? r.nSes : _gEsc(cuentas(r))) + '</text>';
-        }
-        return h + '</g>';
+      // v0.362: la pista se pinta en TRES capas —los rectángulos de zona,
+      // las líneas blancas y, encima, los rótulos— para que la letra quede
+      // sobre la línea y no debajo. Sin cuentas: aquí solo se elige dónde.
+      // Con una zona elegida, ella va llena de su color y LAS DEMÁS EN GRIS.
+      var rects = '', textos = '';
+      var zona = function(z, rs, tx, ty, fs, rival){
+        var c = _recZona(z), on = sel === z;
+        var fill = on ? c.color : (mini ? '#9a9a9a' : c.color);
+        var op = on ? '.88' : (mini ? '.28' : (rival ? '.55' : '.42'));
+        var f = on ? '#fff' : (mini ? '#6b6b6b' : (rival ? '#fff' : '#1e2a3a'));
+        rects += '<g class="rec-pista-z' + (on ? ' on' : '') + '" onclick="recZonaSel(\'' + z + '\')" style="cursor:pointer">';
+        rs.forEach(function(q){ rects += '<rect x="' + q[0] + '" y="' + q[1] + '" width="' + q[2] + '" height="' + q[3] + '" fill="' + fill + '" opacity="' + op + '"/>'; });
+        rects += '</g>';
+        textos += '<text x="' + tx + '" y="' + ty + '" text-anchor="middle" font-size="' + fs + '" font-weight="800" fill="' + f + '" pointer-events="none">' + _gEsc(c.label) + '</text>';
       };
       var lin = function(x1, y1, x2, y2, w, col){ return '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="' + (col || '#fff') + '" stroke-width="' + (w || 1.5) + '" opacity="' + (col ? '1' : '.85') + '"/>'; };
-      var h;
+      var h, lineas;
       if (!mini) {
-        // v0.361: geometría de verdad. Cada mitad: los cuadros de saque van
-        // entre la red y la línea de saque, partidos por la línea central;
-        // detrás, el fondo. La mitad del rival (arriba) se reparte en Táctica
-        // (su fondo), Saque y resto (cuadro izquierdo) y Lectura del rival
-        // (cuadro derecho). La nuestra (abajo): red, campo medio, fondo, y
-        // las dos esquinas del fondo como una zona.
+        // Geometría de verdad (v0.361): cuadros de saque entre la red y la
+        // línea de saque, partidos por la central; el fondo detrás. Arriba el
+        // rival: Táctica (su fondo), Saque y resto (cuadro izquierdo), Juegos
+        // (cuadro derecho). Abajo: red, campo medio, fondo y las esquinas.
+        zona('todo-campo', [[10, 10, 180, 70]], 100, 49, 12, true);
+        zona('saque', [[10, 80, 90, 70]], 55, 119, 10.5, true);
+        zona('juegos', [[100, 80, 90, 70]], 145, 119, 10.5, true);
+        zona('red', [[10, 150, 180, 55]], 100, 182, 13);
+        zona('campo-medio', [[10, 205, 180, 40]], 100, 229, 12);
+        zona('fondo', [[10, 245, 180, 45]], 100, 272, 13);
+        zona('esquina', [[10, 245, 42, 45], [148, 245, 42, 45]], 31, 272, 7.5);
+        lineas = lin(10, 80, 190, 80) + lin(100, 80, 100, 150) + lin(10, 220, 190, 220) + lin(100, 150, 100, 220) + lin(10, 150, 190, 150, 3, '#1e2a3a');
         h = '<svg class="rec-pista" viewBox="0 0 200 300" role="img" aria-label="Pista: toca una zona">' +
-          '<rect x="10" y="10" width="180" height="280" rx="6" fill="#1c8f6a" opacity=".13"/>' +
-          zona('todo-campo', [[10, 10, 180, 70]], 100, 45, 12, true) +
-          zona('saque', [[10, 80, 90, 70]], 55, 115, 10.5, true) +
-          zona('rival', [[100, 80, 90, 70]], 145, 115, 10.5, true) +
-          lin(10, 80, 190, 80) + lin(100, 80, 100, 150) +
-          zona('red', [[10, 150, 180, 55]], 100, 178, 13) +
-          zona('campo-medio', [[10, 205, 180, 40]], 100, 225, 12) +
-          zona('fondo', [[10, 245, 180, 45]], 100, 268, 13) +
-          zona('esquina', [[10, 245, 42, 45], [148, 245, 42, 45]], 31, 268, 7.5, false, true) +
-          lin(10, 220, 190, 220) + lin(100, 150, 100, 220) +
-          lin(10, 150, 190, 150, 3, '#1e2a3a') +
-          '<rect x="10" y="10" width="180" height="280" rx="6" fill="none" stroke="#1c8f6a" stroke-width="2"/>' +
-          '</svg>';
+          '<rect x="10" y="10" width="180" height="280" rx="6" fill="#1c8f6a" opacity=".13"/>' + rects + lineas + textos +
+          '<rect x="10" y="10" width="180" height="280" rx="6" fill="none" stroke="#1c8f6a" stroke-width="2"/></svg>';
       } else {
-        // la tira: la misma pista al 40 %, con la elegida llena
+        zona('todo-campo', [[10, 4, 180, 28]], 100, 21, 9);
+        zona('saque', [[10, 32, 90, 28]], 55, 49, 8);
+        zona('juegos', [[100, 32, 90, 28]], 145, 49, 8);
+        zona('red', [[10, 60, 180, 22]], 100, 74, 9);
+        zona('campo-medio', [[10, 82, 180, 18]], 100, 94, 8.5);
+        zona('fondo', [[10, 100, 180, 20]], 100, 113, 9);
+        zona('esquina', [[10, 100, 42, 20], [148, 100, 42, 20]], 31, 113, 6.5);
+        lineas = lin(10, 32, 190, 32) + lin(100, 32, 100, 60) + lin(10, 60, 190, 60, 3, '#1e2a3a');
         h = '<svg class="rec-pista mini" viewBox="0 0 200 124" role="img" aria-label="Pista: zona elegida">' +
-          '<rect x="10" y="4" width="180" height="116" rx="5" fill="#1c8f6a" opacity=".10"/>' +
-          zona('todo-campo', [[10, 4, 180, 28]], 100, 18, 9) +
-          zona('saque', [[10, 32, 90, 28]], 55, 46, 8) +
-          zona('rival', [[100, 32, 90, 28]], 145, 46, 8) +
-          lin(10, 32, 190, 32) + lin(100, 32, 100, 60) +
-          zona('red', [[10, 60, 180, 22]], 100, 71, 9) +
-          zona('campo-medio', [[10, 82, 180, 18]], 100, 91, 8.5) +
-          zona('fondo', [[10, 100, 180, 20]], 100, 110, 9) +
-          zona('esquina', [[10, 100, 42, 20], [148, 100, 42, 20]], 31, 110, 6.5) +
-          lin(10, 60, 190, 60, 3, '#1e2a3a') +
-          '<rect x="10" y="4" width="180" height="116" rx="5" fill="none" stroke="#1c8f6a" stroke-width="1.5"/>' +
-          '</svg>';
+          '<rect x="10" y="4" width="180" height="116" rx="5" fill="#1c8f6a" opacity=".10"/>' + rects + lineas + textos +
+          '<rect x="10" y="4" width="180" height="116" rx="5" fill="none" stroke="#1c8f6a" stroke-width="1.5"/></svg>';
       }
       return h;
     }
@@ -21374,12 +21383,46 @@
         (r.int ? '<span class="rec-zc-int" style="color:' + z.color + ';border-color:' + z.color + '">' + _gEsc(intL) + '</span>' : '') +
         '<button type="button" class="rec-zc-x" onclick="recZonaSel(\'' + e.et.zona + '\')" aria-label="Cerrar">✕</button></div>';
       h += '<div class="rec-zc-f">' + _gEsc(z.f) + '</div>';
-      h += '<div class="rec-zc-kpis">' +
-        '<div class="rec-zc-k"><b>' + r.nSes + '</b><span>' + (r.nSes === 1 ? 'sesión' : 'sesiones') + '</span></div>' +
-        '<div class="rec-zc-k"><b>' + r.min + '′</b><span>de pista</span></div>' +
-        '<div class="rec-zc-k"><b>' + r.dadas + '<i>/' + r.nSes + '</i></b><span>dadas</span></div>' +
-        '</div>';
+      // v0.362: fuera las tres cifras (sesiones · minutos · dadas): no se
+      // usaban para elegir. Se quedan en _recZonaResumen por si vuelven.
       h += _recCuerpoHTML(e, p, nivel, _ejsById(), leerClases(), { chips:true });
+      if (e.et.zona === 'juegos' && _recSel == null) h += _recJuegosHTML();
+      h += '</div>';
+      return h;
+    }
+    // ── v0.362 — LOS EJERCICIOS DE JUEGOS Y CALENTAMIENTO ────────────────
+    // El cuadro Juegos es la única zona que, además de sesiones, enseña
+    // EJERCICIOS sueltos: los de las categorías de calentamiento y juegos
+    // (calentamiento · juegos condicionados · cooperación · socialización),
+    // que son lo que se mete en cualquier sesión para arrancar o para
+    // cerrar. Agrupados por categoría; cada uno abre su ventana (recEjAbrir).
+    var REC_JUEGOS_CATS = ['calentamiento', 'juegos condicionados', 'cooperación', 'cooperacion', 'socialización', 'socializacion'];
+    function _recJuegosHTML() {
+      var cats = {}; leerCategorias().forEach(function(c){ cats[c.id] = c.nombre; });
+      var grupos = {}, orden = [];
+      leerEjercicios().forEach(function(ej){
+        var nom = cats[ej.categoriaId] || '';
+        if (REC_JUEGOS_CATS.indexOf(String(nom).trim().toLowerCase()) < 0) return;
+        if (!grupos[nom]) { grupos[nom] = []; orden.push(nom); }
+        grupos[nom].push(ej);
+      });
+      orden.sort(function(a, b){ return a.localeCompare(b); });
+      var h = '<div class="rec-jg">';
+      if (!orden.length) {
+        h += '<div class="rec-bl-vacio">No hay ejercicios de calentamiento ni juegos en el catálogo. Guárdalos en el vault en «03 EJERCICIOS/calentamiento» o «juegos condicionados».</div>';
+      }
+      orden.forEach(function(nom){
+        h += '<div class="rec-jg-t">' + _gEsc(nom) + '<span>' + grupos[nom].length + '</span></div><div class="rec-jg-lista">';
+        grupos[nom].sort(function(a, b){ return String(a.nombre).localeCompare(String(b.nombre)); }).forEach(function(ej){
+          var min = _sesMin(ej), jug = _sesJug(ej);
+          h += '<div class="rec-card" onclick="recEjAbrir(' + ej.id + ')">' +
+            '<span class="rec-card-n">' + _gEsc(ej.nombre) + '</span>' +
+            ((min || jug) ? '<span class="rec-card-d">' + (min ? min + '′' : '') + (min && jug ? ' · ' : '') + _gEsc(jug) + '</span>' : '') +
+            (ej.descripcion ? '<span class="rec-card-o">' + _gEsc(ej.descripcion) + '</span>' : '') +
+            '</div>';
+        });
+        h += '</div>';
+      });
       h += '</div>';
       return h;
     }
