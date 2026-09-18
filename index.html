@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.358.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.360.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,55 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.360.0 — La pista es el menú (2026-09)
+    (sin migraciones · solo presentación)
+    · EN INICIACIÓN Y AVANZADO EL RECORRIDO ES UNA PISTA DIBUJADA: media
+      pista desde arriba con sus tres bandas —red · campo medio · fondo— y
+      el rival difuminado enfrente; cada banda lleva sus golpes y sesiones
+      encima. «Toda la pista» es un botón bajo la pista.
+    · TOCAR UNA BANDA LA SOMBREA DE SU COLOR y la pista se encoge a una
+      tira que se queda arriba como navegación; debajo se abre LA FICHA DE
+      LA ZONA en el sitio, sin ventana ni pestañas: nombre grande con la
+      barra de su color, la intención del catálogo (anular · dominar ·
+      definir, la mayoritaria de sus bloques), la frase de la zona y tres
+      cifras —sesiones, minutos de pista, dadas este curso—. Debajo, los
+      golpes como chips (pendientes en punteado) que se abren con sus
+      sesiones, o la sesión abierta con su secuencia.
+    · UN COLOR POR ZONA, y significa DÓNDE (los colores de estado se
+      retiraron en la v0.337 porque no informaban): azul fondo, ámbar campo
+      medio, verde red, gris toda la pista.
+    · El cuerpo de la etapa (galería o sesión) sale a _recCuerpoHTML y lo
+      comparten la ficha y la ventana, que sigue para Competición y para
+      el «¿Qué semana?». recSel/recGalToggle repintan lo que esté a la
+      vista (_recRepintar) sin que salte el scroll.
+
+  v0.359.0 — Una sesión, un bloque: Avanzado podado a 16 (2026-09)
+    (sin migraciones SQL · la migración del plan va dentro de la app)
+    · EL CATÁLOGO DE AVANZADO PASA DE 38 BLOQUES A 16, uno por tema real.
+      Con 31 huecos, «¿dónde está la sesión?» era «¿en cuál de los tres
+      parecidos la puse?». Entra «Juego aéreo» (bandeja, víbora y gancho)
+      en el sitio de «Bandeja táctica»; se funden los siete «Saque» en uno
+      (Juego táctico); nombres únicos en el nivel.
+    · EL PLAN YA SEMBRADO SE PONE AL DÍA SOLO (_planPodaAvanzado): renombra
+      por nombre conservando el id —las ⭐ clases tipo y lo dado cuelgan del
+      id—, añade lo que falte, borra solo la lista de baja y nunca un
+      bloque con clases tipo. Idempotente: corre en cada lectura y guarda
+      solo si cambia algo. Un bloque creado a mano no se toca.
+    · FUERA EL ENLACE MANUAL DE SESIONES (sesInc): era la única forma de que
+      una sesión saliera en dos bloques. Se retira de la pantalla del bloque
+      y de la unión; los enlaces que hubiera se limpian una vez, con aviso.
+    · EL APARTADO LO PONE LA CARPETA DEL VAULT: la nota vive en
+      «Avanzado/Pared/…», así que `apartado:` sobra en el frontmatter (22
+      notas lo pierden; manda si se escribe). sync_padel.py lo deduce.
+    · EL SINCRONIZADOR HACE DE GUARDIÁN: bloquea una sesión con `bloque:`
+      de dos valores; avisa si el frontmatter dice un apartado distinto de
+      su carpeta, si un nombre de bloque se repite en el nivel, y si el
+      mismo `golpes:` vive en dos ZONAS (saldría en dos pestañas).
+    · De paso: el catálogo de Iniciación del código decía «Salida de pared
+      de fondo/lateral» y el vault y el plan sembrado «Pared de fondo /
+      lateral»; se alinea el código. plan_bloques.json se regenera del
+      catálogo y lleva ahora las zonas.
 
   v0.358.0 — Las zonas mandan: el Recorrido de Iniciación y Avanzado sin cuadrados (2026-09)
     (sin migraciones · nada cambia en el vault ni en Supabase)
@@ -8039,20 +8088,51 @@
     .rec-drag:active { cursor:grabbing; }
     .rec-fila-et.arrastrando { opacity:.9; transform:scale(1.02); background:var(--blanco);
       box-shadow:0 6px 18px rgba(14,27,60,.22); border-radius:var(--r-sm); border-top-color:transparent; }
-    /* v0.358: en Iniciación y Avanzado el Recorrido son LAS CUATRO ZONAS, una
-       fila cada una. Sustituye al mapa de columnas con cuadrados de apartado
-       de la v0.339 (y a su arrastre): las zonas son fijas, no hay nada que
-       ordenar. En escritorio, dos por fila. */
-    .rec-zonas { display:grid; grid-template-columns:1fr; gap:8px; }
-    @media (min-width:700px) { .rec-zonas { grid-template-columns:repeat(2, minmax(0,1fr)); } }
-    .rec-zona-fila { display:flex; align-items:center; gap:10px; padding:11px 12px; cursor:pointer;
-      border:1.5px solid var(--borde); border-radius:var(--r-sm); background:var(--blanco);
+    /* v0.360: LA PISTA ES EL MENÚ. Media pista en SVG con las bandas de
+       zona; tocar una la sombrea de su color y la pista se encoge a una tira
+       que se queda arriba. Debajo, la FICHA de la zona en el sitio. Sustituye
+       a las cuatro filas de la v0.358 y a la ventana con pestañas. */
+    .rec-pista-caja { max-width:360px; margin:0 auto; }
+    .rec-pista { display:block; width:100%; height:auto; }
+    .rec-pista.mini { max-width:300px; margin:0 auto; }
+    .rec-pista-z rect { transition:opacity .15s; }
+    .rec-pista-z:active rect { opacity:.7; }
+    .rec-pista-toda { display:block; width:100%; margin:8px 0 0; padding:9px 12px; font-family:inherit;
+      font-size:13px; font-weight:800; color:var(--texto); background:var(--blanco);
+      border:1.5px solid var(--borde); border-radius:var(--r-sm); cursor:pointer;
       -webkit-tap-highlight-color:transparent; }
-    .rec-zona-fila:active { background:var(--arena); }
-    .rec-zona-fila-t { flex:1; min-width:0; }
-    .rec-zona-fila-n { display:block; font-size:14px; font-weight:800; color:var(--texto); line-height:1.25; }
-    .rec-zona-fila-d { display:block; font-size:11px; color:var(--gris); margin-top:2px; }
-    .rec-zona-fila-p { flex-shrink:0; font-size:10.5px; font-weight:700; color:var(--gris); white-space:nowrap; }
+    .rec-pista-toda span { font-weight:700; font-size:11px; color:var(--gris); margin-left:6px; }
+    .rec-pista-toda.on span { color:#fff; opacity:.85; }
+    /* la ficha de zona */
+    .rec-zc { margin:12px -2px 0; background:var(--blanco); border:1.5px solid var(--borde);
+      border-left:5px solid var(--verde); border-radius:0 var(--r-md) var(--r-md) 0; padding:12px 12px 10px; }
+    .rec-zc-cab { display:flex; align-items:center; gap:8px; }
+    .rec-zc-n { flex:1; min-width:0; font-size:20px; font-weight:800; color:var(--texto); line-height:1.15; }
+    .rec-zc-int { flex-shrink:0; font-size:11px; font-weight:800; letter-spacing:.04em; text-transform:uppercase;
+      border:1.5px solid; border-radius:999px; padding:3px 9px; }
+    .rec-zc-x { flex-shrink:0; width:32px; height:32px; border:1.5px solid var(--borde); border-radius:9px;
+      background:var(--blanco); color:var(--gris); font-family:inherit; font-size:14px; cursor:pointer;
+      -webkit-tap-highlight-color:transparent; }
+    .rec-zc-f { font-size:12.5px; color:var(--gris); line-height:1.45; margin:4px 0 10px; }
+    .rec-zc-kpis { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; margin:0 0 12px; }
+    .rec-zc-k { background:var(--arena); border-radius:var(--r-sm); padding:8px 6px; text-align:center; }
+    .rec-zc-k b { display:block; font-size:19px; font-weight:800; color:var(--texto); line-height:1.1; }
+    .rec-zc-k b i { font-style:normal; font-size:12px; color:var(--gris); }
+    .rec-zc-k span { display:block; font-size:10.5px; color:var(--gris); margin-top:2px; }
+    /* la galería como CHIPS dentro de la ficha: sin arena ni tarjeta, los
+       golpes en píldoras y las sesiones de la abierta debajo, a todo el ancho */
+    .rec-gal.chips { background:none; padding:0; margin:0; }
+    .rec-gal.chips .rec-gal-lista { display:flex; flex-wrap:wrap; gap:6px; background:none; border:none; border-radius:0; overflow:visible; }
+    .rec-gal.chips .rec-gal-b { border:1.5px solid var(--borde); border-radius:999px; padding:7px 12px; gap:6px; }
+    .rec-gal.chips .rec-gal-b.on { border-color:var(--verde); }
+    .rec-gal.chips .rec-gal-lista > .rec-gal-b:last-child { border-bottom:1.5px solid var(--borde); }   /* gana al «sin borde abajo» de las barras */
+    .rec-gal.chips .rec-gal-lista > .rec-gal-b.on:last-child { border-bottom-color:var(--verde); }
+    .rec-gal.chips .rec-gal-b.bloques, .rec-gal.chips .rec-gal-b.sin { border-style:dashed; }
+    .rec-gal.chips .rec-gal-b-n { flex:0 1 auto; font-size:13px; }
+    .rec-gal.chips .rec-gal-b-ch { display:none; }
+    .rec-gal.chips .rec-gal-ses { flex-basis:100%; background:var(--arena); border:none; border-radius:var(--r-sm); padding:2px 12px; margin:2px 0 4px; }
+    .rec-gal.chips .rec-bl-vacio { flex-basis:100%; }
+    .rec-zc .rec-cont { border-top:none; padding-top:0; }
     .rec-et-toca { flex:1; min-width:0; display:flex; align-items:center; gap:9px;
       padding:7px 6px; cursor:pointer; border-radius:var(--r-sm); }
     .rec-et-toca:active { background:var(--arena); }
@@ -10696,7 +10776,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.358.0';
+    var APP_VERSION = '0.360.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -17492,8 +17572,10 @@
           {t:'Constancia', f:'Mantener intercambios largos sin fallar. Paciencia.', int:'anular', z:'fondo', g:'fondo'},
           {t:'Saque', f:'Solo poner la bola en juego con continuidad.', int:'base', z:'todo-campo', g:'saque'} ]},
         { key:'i2', nombre:'Defensa', obj:'Leer la pared y defenderse con globo.', bloques:[
-          {t:'Salida de pared de fondo', f:'Leer el bote, esperar la bola y salir hacia el fondo.', int:'anular', z:'fondo', g:'pared'},
-          {t:'Salida de pared lateral', f:'Colocación con pared lateral y devolución segura.', int:'anular', z:'fondo', g:'pared'},
+          // v0.359: se llaman como en el vault y en el plan sembrado («Pared de
+          // fondo», «Pared lateral»); el catálogo del código se había desviado.
+          {t:'Pared de fondo', f:'Leer el bote, esperar la bola y salir hacia el fondo.', int:'anular', z:'fondo', g:'pared'},
+          {t:'Pared lateral', f:'Colocación con pared lateral y devolución segura.', int:'anular', z:'fondo', g:'pared'},
           {t:'Globo de defensa', f:'Globo profundo para defenderse y recuperar la red.', int:'anular', z:'campo-medio', g:'globo'},
           {t:'Saque', f:'Empezar a colocar: dirección y profundidad.', int:'anular', z:'todo-campo', g:'saque'} ]},
         { key:'i3', nombre:'La red', obj:'Volear con control y sostener la red.', bloques:[
@@ -17516,51 +17598,35 @@
           {t:'Saque', f:'En punto real, competitivo (a 21, restricciones).', int:'definir', z:'todo-campo', g:'saque'} ]}
       ],
       avanzado: [
+        // v0.359 — PODADO a 16 bloques, uno por tema real (antes 38, 31 sin
+        // sesión: «¿en cuál de los tres parecidos la puse?»). Los nombres son
+        // ÚNICOS en el nivel, así que el bloque basta para colocar una sesión;
+        // el apartado lo pone la carpeta del vault. Un solo «Saque», en Juego
+        // táctico. Si el plan de una cuenta se sembró con el catálogo viejo,
+        // _planPodaAvanzado lo pone al día conservando los ids.
         { key:'a1', nombre:'Consolidación de fondo', obj:'Dominar el fondo con dirección, profundidad y cambios de ritmo.', bloques:[
           {t:'Dirección cruzado y paralelo', f:'Dominar la diagonal y cambiar a paralelo con criterio.', int:'anular', z:'fondo', g:'fondo'},
           {t:'Profundidad y ritmo', f:'Bola neutra: jugar largo y alto para que no ataquen.', int:'anular', z:'fondo', g:'fondo'},
-          {t:'Construir desde el fondo', f:'Paciencia y construcción para abrir el punto.', int:'dominar', z:'fondo', g:'fondo'},
-          {t:'Saque', f:'Colocación y profundidad consistentes.', int:'anular', z:'todo-campo', g:'saque'} ]},
+          {t:'Construir desde el fondo', f:'Paciencia y construcción para abrir el punto.', int:'dominar', z:'fondo', g:'fondo'} ]},
         { key:'a2', nombre:'Pared', obj:'Resolver cualquier pared con control y dirección.', bloques:[
-          {t:'Salida de pared con dirección', f:'Salir de la pared de fondo controlando la dirección.', int:'anular', z:'fondo', g:'pared'},
-          {t:'Salida de pared lateral', f:'Abrir el cuerpo y resolver la pared lateral.', int:'anular', z:'fondo', g:'pared'},
-          {t:'Doble pared y bote pronto', f:'Dobles paredes y bote pronto cuando no hay pared.', int:'anular', z:'fondo', g:'pared'},
-          {t:'Saque', f:'Profundo y cerrado para dificultar el resto.', int:'anular', z:'todo-campo', g:'saque'} ]},
+          {t:'Salida de pared', f:'Salir de la pared de fondo y de la lateral controlando la dirección.', int:'anular', z:'fondo', g:'pared'},
+          {t:'Doble pared', f:'Dobles paredes y bote pronto cuando no hay pared.', int:'anular', z:'fondo', g:'pared'} ]},
         { key:'a3', nombre:'Neutralización', obj:'Defender bajo presión y quitar el ataque al rival.', bloques:[
-          {t:'Globo defensivo', f:'Globo profundo para neutralizar y quitar la red.', int:'anular', z:'campo-medio', g:'globo'},
-          {t:'Contención y bola neutra', f:'Defender con paciencia y esperar el error.', int:'anular', z:'fondo', g:'mixto'},
-          {t:'Defensa paciente bajo presión', f:'Sostener bajo presión sin precipitar.', int:'anular', z:'fondo', g:'mixto'},
-          {t:'Pared y globo para neutralizar', f:'Combinar pared y globo para recuperar posición.', int:'anular', z:'campo-medio', g:'globo'},
-          {t:'Saque', f:'Variar efecto para condicionar el resto.', int:'anular', z:'todo-campo', g:'saque'} ]},
-        { key:'a4', nombre:'Dominio de la red', obj:'Mandar en la red con volea y bandeja, ya en pareja.', bloques:[
-          {t:'Voleas a distintas alturas', f:'Voleas altas y bajas con control y dirección.', int:'dominar', z:'red', g:'volea'},
-          {t:'Voleas de presión a los pies', f:'Volear a los pies para que levanten la bola.', int:'dominar', z:'red', g:'volea'},
-          {t:'Bandeja con dirección', f:'Dirigir cruzado o paralelo para fijar al rival.', int:'dominar', z:'red', g:'bandeja'},
-          {t:'Bandeja con desplazamiento', f:'Bandeja en movimiento, giro de cadera y recuperación.', int:'dominar', z:'red', g:'bandeja'},
-          {t:'Bandeja táctica', f:'Elegir bandeja según la situación para mantener la red.', int:'dominar', z:'red', g:'bandeja'},
-          {t:'Mover desde la red', f:'Desplazar al rival con voleas y bandejas dirigidas.', int:'dominar', z:'red', g:'volea'},
-          {t:'Hundir y cerrar espacios', f:'Presionar en la red cerrando los huecos.', int:'dominar', z:'red', g:'volea'},
-          {t:'Presión en la red en pareja', f:'Coordinar la pareja para asfixiar en la red.', int:'dominar', z:'red', g:'mixto'},
-          {t:'Saque', f:'Sacar y subir con agresividad.', int:'dominar', z:'todo-campo', g:'saque'} ]},
+          {t:'Globo defensivo', f:'Globo profundo para neutralizar y quitar la red.', int:'anular', z:'fondo', g:'globo'},
+          {t:'Contención y bola neutra', f:'Defender con paciencia desde campo medio y esperar el error.', int:'anular', z:'campo-medio', g:'mixto'} ]},
+        { key:'a4', nombre:'Dominio de la red', obj:'Mandar en la red con volea y juego aéreo, ya en pareja.', bloques:[
+          {t:'Voleas', f:'Voleas a distintas alturas, de presión y con dirección.', int:'dominar', z:'red', g:'volea'},
+          {t:'Juego aéreo', f:'Bandeja, víbora y gancho: mantener la red desde arriba.', int:'dominar', z:'red', g:'bandeja'} ]},
         { key:'a5', nombre:'Transición y subida', obj:'Ganar la red desde el fondo con criterio.', bloques:[
-          {t:'Subida tras golpe profundo', f:'Aprovechar un golpe profundo para subir.', int:'dominar', z:'campo-medio', g:'fondo'},
-          {t:'Globo + bandeja', f:'Defender con globo y resolver con bandeja al subir.', int:'dominar', z:'campo-medio', g:'bandeja'},
-          {t:'Bajar a bolear', f:'Aproximación y primera volea baja en transición.', int:'dominar', z:'campo-medio', g:'volea'},
-          {t:'Globo ofensivo y transición', f:'Globo que pasa para girar el punto y subir.', int:'dominar', z:'campo-medio', g:'globo'},
-          {t:'Saque', f:'Saque + primera bola para tomar la red.', int:'dominar', z:'todo-campo', g:'saque'} ]},
-        { key:'a6', nombre:'Definición', obj:'Cerrar puntos con remate, víbora y recursos finos.', bloques:[
-          {t:'Remate por 3 y salida de pista', f:'Remate liftado y por 3 para sacar la bola.', int:'definir', z:'red', g:'remate'},
-          {t:'Remate por 3 y por 4', f:'Buscar salida por 3 y por 4 según la bola.', int:'definir', z:'red', g:'remate'},
-          {t:'Víbora con dirección', f:'Víbora dirigida como golpe de presión.', int:'definir', z:'red', g:'vibora'},
-          {t:'Voleas de ángulo', f:'Cerrar el punto con volea angulada en bola fácil.', int:'definir', z:'red', g:'volea'},
-          {t:'Voleas y víboras de definición', f:'Combinar volea y víbora para rematar.', int:'definir', z:'red', g:'mixto'},
-          {t:'Dejada y amago', f:'Dejada con sensibilidad y amago para descolocar.', int:'definir', z:'red', g:'volea'},
-          {t:'Passing y globo ofensivo', f:'Definir desde el fondo: passing y globo que pasa.', int:'definir', z:'fondo', g:'globo'},
-          {t:'Saque', f:'Como arma: forzar resto incómodo y abrir cancha.', int:'definir', z:'todo-campo', g:'saque'} ]},
+          {t:'Subida a la red', f:'Aprovechar un golpe profundo para subir y bajar a bolear.', int:'dominar', z:'campo-medio', g:'fondo'},
+          {t:'Globo ofensivo y transición', f:'Globo que pasa para girar el punto y subir.', int:'dominar', z:'campo-medio', g:'globo'} ]},
+        { key:'a6', nombre:'Definición', obj:'Cerrar puntos con remate y recursos finos.', bloques:[
+          {t:'Remate y salida de pista', f:'Remate liftado, por 3 y por 4 para sacar la bola.', int:'definir', z:'red', g:'remate'},
+          {t:'Definición fina', f:'Dejada, amago y volea de ángulo: cerrar con sensibilidad.', int:'definir', z:'red', g:'volea'} ]},
         { key:'a7', nombre:'Juego táctico', obj:'Aplicar el patrón completo en pareja y en partido.', bloques:[
           {t:'Patrón anular-dominar-definir', f:'Enlazar las tres fases en un mismo punto.', int:'definir', z:'todo-campo', g:'mixto'},
           {t:'Partido evaluado', f:'Jugar partido con análisis y objetivos.', int:'definir', z:'todo-campo', g:'mixto'},
-          {t:'Saque', f:'Táctico bajo marcador, en puntos importantes.', int:'definir', z:'todo-campo', g:'saque'} ]}
+          {t:'Saque', f:'Colocación, variación y saque + primera bola.', int:'dominar', z:'todo-campo', g:'saque'} ]}
       ],
       // Competición NO va por etapas en secuencia: es un CICLO (Preparar →
       // Competir → Analizar → Entrenar) + un CATÁLOGO de 6 áreas de las que se
@@ -17898,7 +17964,91 @@
         p.etapasAbiertas = {};
         _planGuardar(p);
       }
+      _planPodaAvanzado(p);   // v0.359
       return p.contenido;
+    }
+    // ── v0.359 — LA PODA DE AVANZADO, aplicada al plan YA SEMBRADO ────────
+    // El plan de cada cuenta se sembró una vez del catálogo, con un id
+    // aleatorio por bloque, y no se vuelve a leer del código. Así que el
+    // catálogo podado de PLAN_ETAPAS no llegaría a nadie que ya tenga plan.
+    // Esto lo pone al día POR NOMBRE, conservando los ids: las ⭐ clases tipo
+    // y lo marcado como dado cuelgan del id, y sobreviven al cambio de nombre.
+    //   · renombra (Bandeja táctica → Juego aéreo…) y refresca f/int/z/g;
+    //   · añade lo que falte del catálogo;
+    //   · borra SOLO los nombres de la lista de baja, y nunca uno con clases
+    //     tipo: ese se queda, con su nombre, hasta que se decida qué hacer;
+    //   · funde los «Saque» (uno por apartado) en el de Juego táctico;
+    //   · retira los enlaces manuales de sesión (sesInc) en TODOS los
+    //     niveles: eran la única forma de que una sesión saliera dos veces.
+    // Es idempotente y solo guarda si ha cambiado algo, así que puede
+    // correr en cada lectura sin coste; un bloque creado a mano por el
+    // entrenador no está en ninguna lista y no se toca.
+    var PLAN_PODA_AV_RENOMBRES = {
+      'salida de pared con direccion': 'Salida de pared',
+      'doble pared y bote pronto':      'Doble pared',
+      'voleas a distintas alturas':     'Voleas',
+      'bandeja tactica':                'Juego aéreo',
+      'subida tras golpe profundo':     'Subida a la red',
+      'remate por 3 y salida de pista': 'Remate y salida de pista',
+      'dejada y amago':                 'Definición fina'
+    };
+    var PLAN_PODA_AV_BAJAS = [
+      'Salida de pared lateral', 'Defensa paciente bajo presión', 'Pared y globo para neutralizar',
+      'Voleas de presión a los pies', 'Bandeja con dirección', 'Bandeja con desplazamiento',
+      'Mover desde la red', 'Hundir y cerrar espacios', 'Presión en la red en pareja',
+      'Globo + bandeja', 'Bajar a bolear', 'Remate por 3 y por 4', 'Víbora con dirección',
+      'Voleas de ángulo', 'Voleas y víboras de definición', 'Passing y globo ofensivo'
+    ];
+    function _planNorm(t) {
+      return String(t || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ');
+    }
+    function _planPodaAvanzado(p) {
+      var c = p.contenido; if (!c) return false;
+      var cambio = false, sesIncQuitados = 0;
+      // 0 · fuera los enlaces manuales, en todos los niveles
+      Object.keys(c).forEach(function(nv){
+        Object.keys(c[nv] || {}).forEach(function(k){
+          (c[nv][k] || []).forEach(function(it){
+            if (it.sesInc) { if (it.sesInc.length) sesIncQuitados += it.sesInc.length; delete it.sesInc; cambio = true; }
+          });
+        });
+      });
+      var av = c.avanzado, cat = PLAN_ETAPAS.avanzado;
+      if (av && cat) {
+        var bajas = {}; PLAN_PODA_AV_BAJAS.forEach(function(t){ bajas[_planNorm(t)] = true; });
+        var conCt = {};
+        try { _ctDeNivel(p, 'avanzado').forEach(function(ct){ (ct.bloques || []).forEach(function(id){ conCt[id] = true; }); }); } catch (x) {}
+        cat.forEach(function(et){
+          var arr = av[et.key] || (av[et.key] = []);
+          // 1 · renombrar y refrescar
+          arr.forEach(function(it){
+            var nuevo = PLAN_PODA_AV_RENOMBRES[_planNorm(it.t)];
+            if (nuevo && it.t !== nuevo) { it.t = nuevo; cambio = true; }
+          });
+          et.bloques.forEach(function(b){
+            var it = arr.filter(function(x){ return _planNorm(x.t) === _planNorm(b.t); })[0];
+            if (!it) { arr.push({ id:_planNuevoId(), t:b.t, f:b.f, int:b.int, z:b.z, g:b.g }); cambio = true; return; }
+            ['f','int','z','g'].forEach(function(k){ if (it[k] !== b[k]) { it[k] = b[k]; cambio = true; } });
+          });
+          // 2 · bajas (nunca con clases tipo) y Saque fuera de Juego táctico
+          var antes = arr.length;
+          av[et.key] = arr.filter(function(it){
+            var n = _planNorm(it.t);
+            if (conCt[it.id]) return true;
+            if (bajas[n]) return false;
+            if (n === 'saque' && et.key !== 'a7') return false;
+            return true;
+          });
+          if (av[et.key].length !== antes) cambio = true;
+        });
+      }
+      if (cambio) {
+        _planGuardar(p);
+        if (sesIncQuitados && typeof planToast === 'function') {
+          planToast('Se han retirado ' + sesIncQuitados + ' enlaces manuales de sesión: cada sesión vive solo en su bloque');
+        }
+      }
+      return cambio;
     }
     // Biblioteca EDITABLE del usuario. Se siembra de PLAN_BIBLIOTECA la 1ª vez,
     // marcando cada bloque predefinido como "base común" (los 3 niveles).
@@ -18208,18 +18358,8 @@
       return arr.filter(function(x){ return x.id === planSesCtx.id; })[0] || null;
     }
     function planSesToggleEdit() { planSesEditMode = !planSesEditMode; renderPlanSesiones(); }
-    // Enlaza/desenlaza una sesión a este apartado (lista blanca: solo las que añadas).
-    function planSesToggleSesion(sesId) {
-      var p = leerPlan();
-      var arr = (planContenido(p)[planSesCtx.nivel] || {})[planSesCtx.mes] || [];
-      var it = arr.filter(function(x){ return x.id === planSesCtx.id; })[0];
-      if (!it) return;
-      if (!it.sesInc) it.sesInc = [];
-      var i = it.sesInc.indexOf(sesId);
-      if (i >= 0) it.sesInc.splice(i, 1); else it.sesInc.push(sesId);
-      _planGuardar(p);
-      renderPlanSesiones();
-    }
+    // v0.359: planSesToggleSesion (enlace manual de sesiones, `sesInc`) se
+    // retira. Una sesión vive solo en el bloque que declara su nota.
 
     // v0.119 — PRUEBA DE CONCEPTO: en Competición, las filas enlazan EJERCICIOS
     // directamente (en vez de sesiones compuestas). Enlaza/desenlaza un ejercicio
@@ -18258,8 +18398,11 @@
         if (it.f) h += '<div class="plan-item-foco" style="margin:0 0 0.7rem;">' + it.f + '</div>';
       }
 
-      if (!esEN1Cuenta()) h += '<button class="plan-edit-toggle' + (edit ? ' on' : '') + '" onclick="planSesToggleEdit()">' +
-           (edit ? '✓ Terminar' : (esComp ? '✏️ Añadir / quitar ejercicios' : '✏️ Añadir / quitar sesiones')) + '</button>';
+      // v0.359: el enlace manual de SESIONES se retira (era la única forma de
+      // que una sesión saliera en dos bloques). Solo Competición sigue
+      // enlazando ejercicios a mano.
+      if (!esEN1Cuenta() && esComp) h += '<button class="plan-edit-toggle' + (edit ? ' on' : '') + '" onclick="planSesToggleEdit()">' +
+           (edit ? '✓ Terminar' : '✏️ Añadir / quitar ejercicios') + '</button>';
 
       // ── Competición (v0.119, prueba de concepto): ejercicios enlazados directamente ──
       if (esComp) {
@@ -18321,46 +18464,24 @@
         return;
       }
 
-      // ── Resto de niveles (Iniciación/Avanzado/Equipo…): sesiones, como siempre ──
-      var mapEj    = _ejsById();
-      var sesNivel = leerClases().filter(function(c){ return nivelDeSesion(c, mapEj) === ctx.nivel; });
-      var inc  = (it && it.sesInc) ? it.sesInc : [];
-
-      if (edit) {
-        if (!sesNivel.length) {
-          h += '<div class="plan-ses-intro">Aún no tienes sesiones de ' + planNivelLabel(ctx.nivel) + '.</div>';
-        } else {
-          h += '<div class="plan-intro">✏️ <strong>Marca</strong> las sesiones que quieres enlazar a este apartado. Las marcadas «desde ficha» ya vienen enlazadas desde Obsidian (apartado + bloque) y no necesitan tocarse.</div>';
-          sesNivel.forEach(function(c){
-            var auto = _sesEsAuto(c, ctx.nivel, ctx.mes, it);
-            var on = inc.indexOf(c.id) >= 0 || auto;
-            var nEj = (c.ejercicioIds||[]).length;
-            var metaExtra = (c.tematica ? c.tematica + ' · ' : '') + nEj + ' ejercicio' + (nEj!==1?'s':'') + (auto ? ' · <em>desde ficha</em>' : '');
-            h += '<div class="plan-ses-card plansel' + (on ? ' on' : '') + '" onclick="planSesToggleSesion(' + c.id + ')">' +
-                   '<span class="plansel-check">' + (on ? '✓' : '') + '</span>' +
-                   '<div class="plan-ses-card-body">' +
-                     '<div class="plan-ses-card-nom">' + nombreSesion(c) + '</div>' +
-                     '<div class="plan-ses-card-meta">' + metaExtra + '</div>' +
-                   '</div></div>';
-          });
-        }
+      // ── Resto de niveles: las sesiones del bloque, las que dice el vault ──
+      // v0.359: sin «Añadir / quitar»: una sesión vive en el bloque que
+      // declara su nota (`bloque:` + la carpeta del apartado) y en ninguno
+      // más. Aquí solo se enseñan.
+      var vis = _sesionesDeBloqueUnion(ctx.nivel, ctx.mes, it);
+      if (!vis.length) {
+        h += '<div class="plan-ses-intro">Este bloque no tiene sesiones. Se escriben en el vault con <code>bloque:</code> «' + _gEsc(ctx.t) + '» y llegan al sincronizar.</div>';
       } else {
-        var vis = _sesionesDeBloqueUnion(ctx.nivel, ctx.mes, it);
-        if (!vis.length) {
-          h += '<div class="plan-ses-intro">Este apartado no tiene sesiones enlazadas. Pulsa «Añadir / quitar sesiones» para enlazar las que quieras.</div>';
-        } else {
-          h += '<div class="plan-ses-intro">' + vis.length + (vis.length!==1 ? ' sesiones' : ' sesión') + ' enlazada' + (vis.length!==1?'s':'') + ' · toca para verla.</div>';
-          vis.forEach(function(c){
-            var auto = _sesEsAuto(c, ctx.nivel, ctx.mes, it);
-            var nEj = (c.ejercicioIds||[]).length;
-            var metaExtra = (c.tematica ? c.tematica + ' · ' : '') + nEj + ' ejercicio' + (nEj!==1?'s':'') + (auto ? ' · <em>desde ficha</em>' : '');
-            h += '<div class="plan-ses-card" onclick="verSesion(' + c.id + ',\'plan\')">' +
-                   '<div class="plan-ses-card-body">' +
-                     '<div class="plan-ses-card-nom">' + nombreSesion(c) + '</div>' +
-                     '<div class="plan-ses-card-meta">' + metaExtra + '</div>' +
-                   '</div><span class="plan-ses-card-arr">›</span></div>';
-          });
-        }
+        h += '<div class="plan-ses-intro">' + vis.length + (vis.length!==1 ? ' sesiones' : ' sesión') + ' · toca para ver el detalle.</div>';
+        vis.forEach(function(c){
+          var nEj = (c.ejercicioIds||[]).length;
+          var metaExtra = (c.golpes ? _gEsc(c.golpes) + ' · ' : '') + nEj + ' ejercicio' + (nEj!==1?'s':'');
+          h += '<div class="plan-ses-card" onclick="verSesion(' + c.id + ',\'plan\')">' +
+                 '<div class="plan-ses-card-body">' +
+                   '<div class="plan-ses-card-nom">' + nombreSesion(c) + '</div>' +
+                   '<div class="plan-ses-card-meta">' + metaExtra + '</div>' +
+                 '</div><span class="plan-ses-card-arr">›</span></div>';
+        });
       }
       document.getElementById('plan-ses-list').innerHTML = h;
     }
@@ -18386,18 +18507,18 @@
     // enlazadas para todo el grupo sin marcarlas una a una. `etapaKey` es la
     // clave del apartado (a1…); `it` es el bloque. Deduplica por id.
     function _sesionesDeBloqueUnion(nivel, etapaKey, it) {
-      var manual = (it && it.sesInc) ? it.sesInc : [];
+      // v0.359: sin la lista manual (sesInc). El único camino es apartado +
+      // bloque, así que una sesión no puede salir en dos sitios.
       var etNom  = _apartadoNombre(nivel, etapaKey).trim().toLowerCase();
       var bloqT  = (it && it.t) ? it.t.trim().toLowerCase() : '';
       var mapEj  = _ejsById();
       var res = [], vistos = {};
       leerClases().forEach(function(c){
-        var enManual = manual.indexOf(c.id) >= 0;
         var enAuto = etNom && bloqT && c.apartado && c.bloque &&
                      String(c.apartado).trim().toLowerCase() === etNom &&
                      String(c.bloque).trim().toLowerCase()   === bloqT &&
                      nivelDeSesion(c, mapEj) === nivel;
-        if ((enManual || enAuto) && !vistos[c.id]) { vistos[c.id] = true; res.push(c); }
+        if (enAuto && !vistos[c.id]) { vistos[c.id] = true; res.push(c); }
       });
       return _ordenSesPorVideo(res, mapEj);
     }
@@ -19889,17 +20010,15 @@
       var clases = leerClases();
       var out = {};
       areas.forEach(function(a){
-        var manual = a.sesInc || [];
-        var etNom  = (a.apartado || '').trim().toLowerCase();
+        var etNom  = (a.apartado || '').trim().toLowerCase();   // v0.359: sin sesInc
         var bloqT  = (a.t || '').trim().toLowerCase();
         var res = [], vistos = {};
         clases.forEach(function(c){
-          var enManual = manual.indexOf(c.id) >= 0;
           var enAuto = etNom && bloqT && c.apartado && c.bloque &&
                        String(c.apartado).trim().toLowerCase() === etNom &&
                        String(c.bloque).trim().toLowerCase()   === bloqT &&
                        nivelDeSesion(c, mapEj) === nivel;
-          if ((enManual || enAuto) && !vistos[c.id]) { vistos[c.id] = true; res.push(c); }
+          if (enAuto && !vistos[c.id]) { vistos[c.id] = true; res.push(c); }
         });
         out[a.id] = _ordenSesPorVideo(res, mapEj);   // v0.251: con vídeo primero
       });
@@ -20484,19 +20603,18 @@
       // v0.358: en el mapa ya no hay cuadrados de apartado que arrastrar.
       // Son las CUATRO ZONAS, fijas, una fila cada una con lo que tiene
       // dentro; el apartado y el bloque siguen escritos pero no mandan.
+      // v0.360: LA PISTA ES EL MENÚ. Media pista vista desde arriba con sus
+      // tres bandas (y el rival difuminado enfrente); cada banda lleva sus
+      // cuentas. Tocar una la sombrea de su color, la pista se encoge y
+      // debajo se abre la FICHA de la zona, en el sitio, sin ventana ni
+      // pestañas. «Toda la pista» es la cuarta zona, como botón bajo la pista.
       if (_recEsMapa(nivelCT)) {
         var estZ = _recZonasEstado(p, nivelCT);
-        h += '<div id="rec-lista" class="rec-zonas">';
-        estZ.etapas.forEach(function(e){
-          var r = _recZonaResumen(e);
-          h += '<div class="rec-zona-fila" onclick="recEtapaAbrir(\'' + e.et.key + '\')">' +
-            '<div class="rec-zona-fila-t">' +
-              '<span class="rec-zona-fila-n">' + _gEsc(e.et.nombre) + '</span>' +
-              '<span class="rec-zona-fila-d">' + _gEsc(r.texto) + '</span></div>' +
-            (r.pend ? '<span class="rec-zona-fila-p">' + r.pend + (r.pend === 1 ? ' pendiente' : ' pendientes') + '</span>' : '') +
-            '<span class="rec-et-chev">›</span></div>';
-        });
-        h += '</div>';
+        h += '<div id="rec-lista" class="rec-pista-caja">' + _recPistaHTML(estZ, p, nivelCT) + '</div>';
+        if (_recZonaSel) {
+          var eZ = estZ.etapas.filter(function(x){ return x.et.key === 'z:' + _recZonaSel; })[0];
+          if (eZ) h += _recZonaFichaHTML(eZ, p, nivelCT); else _recZonaSel = null;
+        }
       } else {
         h += '<div id="rec-lista">';
         estRec.etapas.forEach(function(e){ h += filaEtapa(e); });
@@ -21136,12 +21254,90 @@
     // corrige en el catálogo y vale para todos los grupos.
     // Competición se queda en lista: cinco de sus siete etapas son «toda la
     // pista» y el mapa no diría nada.
+    // v0.360: cada zona con su color (dice DÓNDE, no un estado) y una frase
+    // de vestuario para la cabecera de su ficha.
     var REC_ZONAS = [
-      { key:'fondo',       label:'Fondo' },
-      { key:'campo-medio', label:'Campo medio' },
-      { key:'red',         label:'Red' },
-      { key:'todo-campo',  label:'Toda la pista' }
+      { key:'fondo',       label:'Fondo',         color:'#2f6fb5', f:'Defender y construir desde atrás.' },
+      { key:'campo-medio', label:'Campo medio',   color:'#d0821a', f:'La transición: ganar la red sin regalar el punto.' },
+      { key:'red',         label:'Red',           color:'#1c8f6a', f:'Mandar en la red: volea y juego aéreo.' },
+      { key:'todo-campo',  label:'Toda la pista', color:'#5f5e5a', f:'El punto entero: patrón, saque y partido.' }
     ];
+    function _recZona(key) { return REC_ZONAS.filter(function(x){ return x.key === key; })[0] || REC_ZONAS[REC_ZONAS.length - 1]; }
+    // ── v0.360 — LA PISTA DIBUJADA ─────────────────────────────────────
+    // Un SVG: la mitad de arriba es el rival, difuminada; la de abajo son
+    // las tres bandas —red · campo medio · fondo— con su nombre y sus
+    // cuentas encima. Sin zona elegida la pista va entera (200×300); con
+    // una, se ENCOGE a una tira (200×100) que se queda arriba como
+    // navegación y la banda elegida se ve llena de su color.
+    function _recPistaHTML(estZ, p, nivel) {
+      var por = {}; estZ.etapas.forEach(function(e){ por[e.et.zona] = e; });
+      var sel = _recZonaSel, mini = !!sel;
+      var res = function(z){ return _recZonaResumen(por[z]); };
+      var band = function(z, y, hgt, cls){
+        var c = _recZona(z), on = sel === z, r = res(z);
+        var op = on ? '.85' : (mini ? '.22' : '.42');
+        var f = on ? '#fff' : (mini ? c.color : '#1e2a3a');
+        var n = r.nGolpes + (r.nGolpes === 1 ? ' golpe' : ' golpes') + ' · ' + r.nSes + (r.nSes === 1 ? ' sesión' : ' sesiones');
+        return '<g class="rec-pista-z' + (on ? ' on' : '') + '" onclick="recZonaSel(\'' + z + '\')" style="cursor:pointer">' +
+          '<rect x="10" y="' + y + '" width="180" height="' + hgt + '" fill="' + c.color + '" opacity="' + op + '"/>' +
+          (mini
+            ? '<text x="100" y="' + (y + hgt / 2 + 3.5) + '" text-anchor="middle" font-size="9.5" font-weight="800" fill="' + f + '">' + _gEsc(c.label) + (on ? ' · ' + _gEsc(n) : '') + '</text>'
+            : '<text x="100" y="' + (y + hgt / 2 - 2) + '" text-anchor="middle" font-size="13" font-weight="800" fill="' + f + '">' + _gEsc(c.label) + '</text>' +
+              '<text x="100" y="' + (y + hgt / 2 + 11) + '" text-anchor="middle" font-size="8.5" fill="' + f + '" opacity=".85">' + _gEsc(n) + '</text>') +
+          '</g>';
+      };
+      var h;
+      if (!mini) {
+        h = '<svg class="rec-pista" viewBox="0 0 200 300" role="img" aria-label="Pista: toca una zona">' +
+          '<rect x="10" y="10" width="180" height="280" rx="6" fill="#1c8f6a" opacity=".13"/>' +
+          '<rect x="10" y="10" width="180" height="140" fill="#888" opacity=".18"/>' +
+          '<line x1="10" y1="80" x2="190" y2="80" stroke="#fff" stroke-width="1.5" opacity=".8"/>' +
+          '<line x1="100" y1="10" x2="100" y2="80" stroke="#fff" stroke-width="1.5" opacity=".8"/>' +
+          '<text x="100" y="48" text-anchor="middle" font-size="9" fill="#777">rival</text>' +
+          band('red', 150, 55) + band('campo-medio', 205, 40) + band('fondo', 245, 45) +
+          '<line x1="10" y1="220" x2="190" y2="220" stroke="#fff" stroke-width="1.5" opacity=".8"/>' +
+          '<line x1="100" y1="220" x2="100" y2="290" stroke="#fff" stroke-width="1.5" opacity=".8"/>' +
+          '<line x1="10" y1="150" x2="190" y2="150" stroke="#1e2a3a" stroke-width="3"/>' +
+          '<rect x="10" y="10" width="180" height="280" rx="6" fill="none" stroke="#1c8f6a" stroke-width="2"/>' +
+          '</svg>';
+      } else {
+        h = '<svg class="rec-pista mini" viewBox="0 0 200 100" role="img" aria-label="Pista: zona elegida">' +
+          '<rect x="10" y="4" width="180" height="92" rx="5" fill="#1c8f6a" opacity=".10"/>' +
+          band('red', 4, 32) + band('campo-medio', 36, 28) + band('fondo', 64, 32) +
+          '<line x1="10" y1="4" x2="190" y2="4" stroke="#1e2a3a" stroke-width="3"/>' +
+          '<rect x="10" y="4" width="180" height="92" rx="5" fill="none" stroke="#1c8f6a" stroke-width="1.5"/>' +
+          '</svg>';
+      }
+      var t = _recZona('todo-campo'), rt = res('todo-campo');
+      h += '<button type="button" class="rec-pista-toda' + (sel === 'todo-campo' ? ' on' : '') + '" style="' +
+        (sel === 'todo-campo' ? 'background:' + t.color + ';border-color:' + t.color + ';color:#fff' : '') + '" onclick="recZonaSel(\'todo-campo\')">' +
+        _gEsc(t.label) + ' <span>' + rt.nSes + (rt.nSes === 1 ? ' sesión' : ' sesiones') + '</span></button>';
+      return h;
+    }
+    // ── v0.360 — LA FICHA DE LA ZONA, en el sitio ───────────────────────
+    // Nombre grande con la barra de su color, la intención del catálogo
+    // (la mayoritaria de sus bloques), la frase de la zona y tres cifras:
+    // sesiones, minutos de pista y dadas este curso. Debajo, los golpes como
+    // CHIPS (los pendientes en punteado) que se abren con sus sesiones, o la
+    // sesión abierta con su secuencia: el mismo cuerpo que la ventana.
+    function _recZonaFichaHTML(e, p, nivel) {
+      var z = _recZona(e.et.zona), r = _recZonaResumen(e, p, nivel);
+      var intL = (typeof PLAN_INT !== 'undefined' && PLAN_INT[r.int]) ? PLAN_INT[r.int].l : r.int;
+      var h = '<div class="rec-zc" style="border-left-color:' + z.color + '">';
+      h += '<div class="rec-zc-cab">' +
+        '<div class="rec-zc-n">' + _gEsc(z.label) + '</div>' +
+        (r.int ? '<span class="rec-zc-int" style="color:' + z.color + ';border-color:' + z.color + '">' + _gEsc(intL) + '</span>' : '') +
+        '<button type="button" class="rec-zc-x" onclick="recZonaSel(\'' + e.et.zona + '\')" aria-label="Cerrar">✕</button></div>';
+      h += '<div class="rec-zc-f">' + _gEsc(z.f) + '</div>';
+      h += '<div class="rec-zc-kpis">' +
+        '<div class="rec-zc-k"><b>' + r.nSes + '</b><span>' + (r.nSes === 1 ? 'sesión' : 'sesiones') + '</span></div>' +
+        '<div class="rec-zc-k"><b>' + r.min + '′</b><span>de pista</span></div>' +
+        '<div class="rec-zc-k"><b>' + r.dadas + '<i>/' + r.nSes + '</i></b><span>dadas</span></div>' +
+        '</div>';
+      h += _recCuerpoHTML(e, p, nivel, _ejsById(), leerClases(), { chips:true });
+      h += '</div>';
+      return h;
+    }
     var REC_MAPA_NIVELES = ['iniciacion', 'avanzado'];
     function _recEsMapa(nivel) { return REC_MAPA_NIVELES.indexOf(nivel) >= 0; }
     function _recZonaEtapa(et) {
@@ -21203,18 +21399,29 @@
     }
     // Lo que dice una zona de sí misma: golpes distintos, sesiones y bloques
     // pendientes de escribir. Lo usan la fila del Recorrido y la ventana.
-    function _recZonaResumen(e) {
-      var golpes = {}, nSes = 0, pend = 0;
+    function _recZonaResumen(e, p, nivel) {
+      var golpes = {}, nSes = 0, pend = 0, min = 0, dadas = 0, ints = {};
+      var conMin = !!p, todosEj = conMin ? leerEjercicios() : [];
+      var hoyW = conMin ? _rutaSemanaLibre(hoyLocal()).lunISO : '';
       e.nodos.forEach(function(nd){
+        if (nd.it && nd.it.int) ints[nd.it.int] = (ints[nd.it.int] || 0) + 1;
         if (!nd.ses.length) { pend++; return; }
         nd.ses.forEach(function(c){
           nSes++;
           var g = String(c.golpes || '').trim().toLowerCase();
           golpes[g || '\u0000sin'] = true;
+          if (conMin) {
+            _sesEjsOrdenados(c, todosEj).forEach(function(ej){ min += _sesMin(ej); });
+            // «dada»: marcada como trabajada, o colocada en una semana ya pasada
+            var sem = _recSemanasDe(p, nivel, c.id);
+            if (c.trabajada || sem.some(function(l){ return l < hoyW; })) dadas++;
+          }
         });
       });
       var nG = Object.keys(golpes).length;
-      return { nGolpes:nG, nSes:nSes, pend:pend,
+      var intMax = '', max = 0;
+      Object.keys(ints).forEach(function(k){ if (ints[k] > max) { max = ints[k]; intMax = k; } });
+      return { nGolpes:nG, nSes:nSes, pend:pend, min:min, dadas:dadas, int:intMax,
         texto: nG + (nG === 1 ? ' golpe' : ' golpes') + ' · ' + nSes + (nSes === 1 ? ' sesión' : ' sesiones') };
     }
 
@@ -21350,13 +21557,31 @@
       _recSel = _recSelTab[key] || null;
       _recVentanaPintar();
     }
-    function recVolver()  { _recSel = null; _recVentanaPintar(); }
+    function recVolver()  { _recSel = null; _recRepintar(); }
+    // v0.360 — Repintar lo que esté a la vista: la ventana si hay etapa
+    // abierta (Competición), o la pantalla de Planificación si la zona está
+    // en el sitio (Iniciación y Avanzado), sin que salte el scroll.
+    function _recRepintar() {
+      if (_recEtapaAbierta) { _recVentanaPintar(); return; }
+      var y = window.scrollY || 0;
+      mostrarPlanificacion();
+      window.scrollTo(0, y);
+    }
+    // v0.360 — LA ZONA ELEGIDA EN EL SITIO. Tocar una banda de la pista la
+    // sombrea y abre su ficha debajo; tocarla otra vez la cierra. Cambiar de
+    // zona olvida la sesión abierta (era de la otra).
+    var _recZonaSel = null;
+    function recZonaSel(z) {
+      if (_recZonaSel === z) { _recZonaSel = null; }
+      else { _recZonaSel = z; _recSel = null; }
+      _recRepintar();
+    }
     // v0.356 — La galería de golpes arranca PLEGADA: al entrar en un apartado
     // se ven los golpes y nada más, y se abre el que interesa. La clave es
     // «etapa|posición» porque el rótulo del golpe es texto libre del vault y
     // no se puede meter tal cual en un onclick.
     var _recGalAbre = {};
-    function recGalToggle(k) { _recGalAbre[k] = !_recGalAbre[k]; _recVentanaPintar(); }
+    function recGalToggle(k) { _recGalAbre[k] = !_recGalAbre[k]; _recRepintar(); }
     // v0.343 — Esconder sin olvidar: la ventana es un panel FIJO fuera de las
     // pantallas, así que al abrir una sesión desde ella se quedaba flotando
     // encima (y el primer toque en «‹ Plan» lo que hacía era cerrarla, no
@@ -21375,7 +21600,7 @@
       if (typeof recEjCerrar === 'function') recEjCerrar();   // v0.347
     }
     function recSemanaElegir(sesId) { _recSemPara = sesId; _recVentanaPintar(); }
-    function recSemanaVolver()      { _recSemPara = null;  _recVentanaPintar(); }
+    function recSemanaVolver()      { _recSemPara = null;  _recVentanaPintar(); if (!_recEtapaAbierta) _recRepintar(); }
 
     // En qué semanas está ya colocada una sesión (lunes ISO, de la más
     // reciente a la más antigua). Recorre las claves de rutaSes: con nivel
@@ -21436,24 +21661,12 @@
     function _recVentanaPintar() {
       var ov = document.getElementById('rec-ov');
       if (!ov) return;
-      if (!_recEtapaAbierta) { ov.style.display = 'none'; ov.innerHTML = ''; return; }
+      // v0.360: la ventana se abre por dos motivos: una etapa (Competición)
+      // o el «¿qué semana?» de una sesión, que también se pide desde la
+      // ficha de zona EN EL SITIO (Iniciación y Avanzado), sin etapa abierta.
+      if (!_recEtapaAbierta && _recSemPara == null) { ov.style.display = 'none'; ov.innerHTML = ''; return; }
       var p = leerPlan(), nivel = _compNivel();
-      // v0.358: en Iniciación y Avanzado las pestañas son las ZONAS, no los
-      // apartados; Competición sigue por apartados.
-      var esZonas = _recEsMapa(nivel);
-      var est = esZonas ? _recZonasEstado(p, nivel) : _recEstado(p, nivel);
-      // v0.354: las pestañas se podan contra las etapas que existen AHORA (al
-      // cambiar de nivel las keys son otras); si no queda ninguna, se cierra.
-      var vivas = {};
-      est.etapas.forEach(function(x){ vivas[x.et.key] = x; });
-      _recTabs = est.etapas.map(function(x){ return x.et.key; });   // v0.355: todos, ya abiertos
-      if (_recTabs.indexOf(_recEtapaAbierta) < 0) { _recEtapaAbierta = _recTabs[0] || null; _recSel = null; }
-      if (!_recEtapaAbierta) { recEtapaCerrar(); return; }
-      var e = vivas[_recEtapaAbierta];
-      if (!e) { recEtapaCerrar(); return; }
-      var mapEj = _ejsById(), todasS = leerClases();
-      var nSes = 0; e.nodos.forEach(function(nd){ nSes += nd.n; });
-
+      var todasS = leerClases();
       var h = '<div class="ruta-modal rec-modal" onclick="event.stopPropagation()">';
 
       // ── Modo «¿qué semana?» ─────────────────────────────────────
@@ -21494,25 +21707,21 @@
         return;
       }
 
-      // ── La etapa: NAVEGAR por sus sesiones (v0.344) ──────────────────
-      // Arriba, una tira con una pestaña por sesión (agrupadas por bloque y,
-      // si el bloque no tiene sesión, una pestaña punteada con su ＋). Debajo,
-      // la sesión elegida ENTERA: golpes, nombre, objetivo, su botón de
-      // semana y la secuencia de ejercicios con carro/área, minutos y
-      // miniatura. Se pasa de una a otra tocando la pestaña o con ‹ ›, sin
-      // salir de la ventana. Sustituye a la galería de tarjetas (v0.338).
-      var items = [];
-      e.nodos.forEach(function(nd){
-        if (nd.ses.length) nd.ses.forEach(function(c){ items.push({ k:'ses:' + c.id, nd:nd, ses:c }); });
-        else items.push({ k:'bl:' + nd.it.id, nd:nd, ses:null });
-      });
-      // v0.348: al abrir no hay nada elegido. Sin pestaña, debajo va la
-      // GALERÍA de sesiones por golpes (v0.349); al tocar una pestaña, esa
-      // sesión. Tocar la elegida otra vez vuelve a la galería.
-      var sel = -1;
-      items.forEach(function(it, i){ if (it.k === _recSel) sel = i; });
-      if (sel < 0) _recSel = null;
-      var act = sel >= 0 ? items[sel] : null;
+      // v0.358: en Iniciación y Avanzado las pestañas son las ZONAS, no los
+      // apartados; Competición sigue por apartados.
+      var esZonas = _recEsMapa(nivel);
+      var est = esZonas ? _recZonasEstado(p, nivel) : _recEstado(p, nivel);
+      // v0.354: las pestañas se podan contra las etapas que existen AHORA (al
+      // cambiar de nivel las keys son otras); si no queda ninguna, se cierra.
+      var vivas = {};
+      est.etapas.forEach(function(x){ vivas[x.et.key] = x; });
+      _recTabs = est.etapas.map(function(x){ return x.et.key; });   // v0.355: todos, ya abiertos
+      if (_recTabs.indexOf(_recEtapaAbierta) < 0) { _recEtapaAbierta = _recTabs[0] || null; _recSel = null; }
+      if (!_recEtapaAbierta) { recEtapaCerrar(); return; }
+      var e = vivas[_recEtapaAbierta];
+      if (!e) { recEtapaCerrar(); return; }
+      var nSes = 0; e.nodos.forEach(function(nd){ nSes += nd.n; });
+      var mapEj = _ejsById();
 
       // ── v0.354/355: LA BARRA DE PESTAÑAS, con TODOS los apartados del
       // nivel ya abiertos y el ✕ de la ventana a su derecha, fuera del
@@ -21538,8 +21747,39 @@
       }
       if (!e.nodos.length && !esZonas) h += '<div class="plan-bl-vacio">Este apartado no tiene bloques todavía.</div>';
 
+      h += _recCuerpoHTML(e, p, nivel, mapEj, todasS, {});   // v0.360
+      h += '</div>';
+      _ovPintarConScroll(ov, h);
+      // la pestaña de delante, a la vista en la barra
+      try {
+        var tOn = ov.querySelector('.rec-tb-t.on');
+        if (tOn && tOn.scrollIntoView) tOn.scrollIntoView({ block:'nearest', inline:'center' });
+      } catch (x) {}
+    }
+    // ── v0.360 — EL CUERPO DE UNA ETAPA O ZONA, reutilizable ──────────────
+    // Lo que había dentro de la ventana debajo de las pestañas: la galería
+    // de golpes (sin nada elegido) o la sesión/bloque abierto con su
+    // secuencia. Lo usan la ventana (Competición) y la FICHA DE ZONA en el
+    // sitio (Iniciación y Avanzado), que ya no abre ventana. opts.chips pinta
+    // la galería como chips en vez de barras.
+    function _recCuerpoHTML(e, p, nivel, mapEj, todasS, opts) {
+      opts = opts || {};
+      var h = '';
+      var items = [];
+      e.nodos.forEach(function(nd){
+        if (nd.ses.length) nd.ses.forEach(function(c){ items.push({ k:'ses:' + c.id, nd:nd, ses:c }); });
+        else items.push({ k:'bl:' + nd.it.id, nd:nd, ses:null });
+      });
+      // v0.348: al abrir no hay nada elegido. Sin pestaña, debajo va la
+      // GALERÍA de sesiones por golpes (v0.349); al tocar una pestaña, esa
+      // sesión. Tocar la elegida otra vez vuelve a la galería.
+      var sel = -1;
+      items.forEach(function(it, i){ if (it.k === _recSel) sel = i; });
+      if (sel < 0) _recSel = null;
+      var act = sel >= 0 ? items[sel] : null;
+
       // ── sin elegida: la galería de sesiones por golpes (v0.349) ──
-      if (!act) h += _recGaleriaHTML(e, p, nivel, mapEj, items);
+      if (!act) h += _recGaleriaHTML(e, p, nivel, mapEj, items, opts);
 
       // ── el contenido de la elegida ──
       if (act) {
@@ -21595,13 +21835,7 @@
         }
         h += '</div>';   // .rec-cont
       }
-      h += '</div>';
-      _ovPintarConScroll(ov, h);
-      // la pestaña de delante, a la vista en la barra
-      try {
-        var tOn = ov.querySelector('.rec-tb-t.on');
-        if (tOn && tOn.scrollIntoView) tOn.scrollIntoView({ block:'nearest', inline:'center' });
-      } catch (x) {}
+      return h;
     }
     // v0.344 — La secuencia de una sesión, en modo lectura, para la ventana
     // del Recorrido. Es la misma fila que en la pantalla de la sesión
@@ -21648,7 +21882,7 @@
       }
       return h;
     }
-    function recSel(k) { _recSel = (_recSel === k) ? null : k; _recVentanaPintar(); }
+    function recSel(k) { _recSel = (_recSel === k) ? null : k; _recRepintar(); }
 
     // ── v0.349 — LA GALERÍA DE GOLPES DE LA ETAPA ─────────────────────────
     // Es lo que se ve al abrir un apartado, sin ninguna sesión elegida. Las
@@ -21665,7 +21899,8 @@
     // en rejilla habría que recortarlos. Dentro, cada sesión es una fila
     // compacta: el nombre es el enlace y, en pequeño, su bloque, sus minutos
     // y la semana en que está colocada.
-    function _recGaleriaHTML(e, p, nivel, mapEj, items) {
+    function _recGaleriaHTML(e, p, nivel, mapEj, items, opts) {
+      var chips = !!(opts && opts.chips);   // v0.360: en la ficha de zona, chips
       var todosEj = leerEjercicios();
       var grupos = {}, orden = [];
       e.nodos.forEach(function(nd){
@@ -21683,7 +21918,7 @@
         if (grupos[a].sin !== grupos[b].sin) return grupos[a].sin ? 1 : -1;
         return grupos[a].t.localeCompare(grupos[b].t);
       });
-      var h = '<div class="rec-gal">';
+      var h = '<div class="rec-gal' + (chips ? ' chips' : '') + '">';
       if (!orden.length) {
         h += '<div class="rec-bl-vacio">Esta etapa no tiene todavía ninguna sesión. Abre «Pendientes de escribir» para preparar una clase, o escríbela en el vault.</div>';
       }
