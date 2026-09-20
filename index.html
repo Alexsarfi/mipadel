@@ -50,6 +50,31 @@
     · Cada ejercicio abre su ventana (la de siempre, recEjAbrir); cada
       sesión, la de sesión.
 
+  v0.366.0 — Ejercicios de juego, ordenados por el momento de la clase (2026-09)
+    (sin migraciones nuevas · hay que volver a sincronizar el vault)
+    · EL FALLO: el «Calentamiento de rugby» salía dentro de «Juego de fondo»,
+      al lado del trabajo serio, y la «Rotación con capitán» caía en «Sin
+      situación puesta» como si le faltara un dato. No le falta nada: a un
+      round robin no le corresponde ninguna situación de punto.
+    · POR QUÉ: las carpetas `calentamiento/`, `juegos condicionados/` y
+      `equipo/` no estaban en el mapa de tipos de sync_padel.py, así que sus
+      12 notas llegaban SIN TIPO y aquí solo quedaba la situación para
+      colocarlas.
+    · AHORA EL EJE ES EL ORDEN EN QUE TRANSCURRE UNA CLASE: 🔥 Calentamiento
+      primero · el trabajo por situación del punto en medio (fondo, mitad de
+      pista, transición, red, saque) · y al final 🎲 Juegos condicionados y
+      👥 Equipo. La fila de arriba deja de llamarse «Situación del punto» y
+      pasa a «Momento de la clase», con esos bloques como pills más.
+    · El tipo manda sobre la situación: un calentamiento es un calentamiento
+      aunque se juegue desde el fondo.
+    · «Sin situación puesta» se queda solo para lo que de verdad le falta el
+      dato. Hoy, con esto, queda vacío.
+    · HAY QUE VOLVER A EJECUTAR `python3 _SCRIPTS/sync_padel.py`: el tipo de
+      esas 12 notas lo calcula el script, no la app.
+    · Las tres carpetas entran también en las secciones de la pantalla
+      Ejercicios, por si algún día hay un calentamiento de cesta (esa pantalla
+      solo enseña los de carro desde la v0.323, así que hoy no cambia nada).
+
   v0.365.0 — Un vídeo sin miniatura ya no se confunde con «por grabar» (2026-09)
     (sin migraciones nuevas)
     · EL CASO: un ejercicio cuyo vídeo es de Instagram (o Drive, o un enlace
@@ -25668,6 +25693,14 @@
       { key:'Táctica',           label:'Táctica',           tab:'Táctica',    cls:'secc-tactica',
         sub:'Construcción · Control · Definición · Red · Transición' },
       { key:'Físico',            label:'Físico',            tab:'Físico',     cls:'secc-fisico',  sub:'Preparación física' },
+      // v0.366 — Tres carpetas del vault que hasta ahora llegaban sin tipo.
+      // Aquí solo se ven si alguna vez tienen un ejercicio de CARRO (esta
+      // pantalla filtra por carro desde la v0.323); los de área viven en
+      // ÁREA › Ejercicios de juego, con bloque propio. Están puestas para que
+      // no se queden huérfanas el día que haya un calentamiento con cesta.
+      { key:'Calentamiento',        label:'Calentamiento',        tab:'Calentar', cls:'secc-otros', sub:'Entrada en calor' },
+      { key:'Juegos condicionados', label:'Juegos condicionados', tab:'Juegos',   cls:'secc-otros', sub:'Puntos con condición' },
+      { key:'Equipo',               label:'Equipo',               tab:'Equipo',   cls:'secc-otros', sub:'Formatos de grupo' },
       { key:'Otros',             label:'Otros',             tab:'Otros',      cls:'secc-otros',   sub:'Sin carpeta asignada' }
     ];
     // Orden de las subcategorías tácticas (las que no estén, al final).
@@ -26513,6 +26546,36 @@
     // que buscar en el móvil y buscar en Obsidian se sientan igual.
     var AREA_SIT_ORDEN = ['fondo', 'mitad-pista', 'transicion', 'red', 'saque'];
 
+    // ── v0.366 — El eje de la pestaña no es solo la situación del punto: es
+    //    EL ORDEN EN QUE TRANSCURRE UNA CLASE. Primero se calienta, luego se
+    //    trabaja (y ahí sí manda la situación del punto), y al final se juega.
+    //    Antes, un «Calentamiento de rugby» salía en «Juego de fondo» al lado
+    //    del trabajo serio, y una «Rotación con capitán» caía en «Sin
+    //    situación puesta», como si le faltara un dato — cuando a un round
+    //    robin no le falta nada: es que no tiene situación de punto.
+    var AREA_GRUPO_ORDEN = ['calentamiento']
+      .concat(AREA_SIT_ORDEN)
+      .concat(['juegos', 'equipo', '_']);
+    var AREA_GRUPO_META = {
+      calentamiento: { icono:'🔥', label:'Calentamiento' },
+      juegos:        { icono:'🎲', label:'Juegos condicionados' },
+      equipo:        { icono:'👥', label:'Equipo' },
+      _:             { icono:'❓', label:'Sin situación puesta' }
+    };
+    // El tipo (la carpeta del vault) manda sobre la situación: un calentamiento
+    // es un calentamiento aunque se juegue desde el fondo.
+    function _areaEjGrupo(ej) {
+      var t = ejTipo(ej);
+      if (t === 'Calentamiento')        return 'calentamiento';
+      if (t === 'Juegos condicionados') return 'juegos';
+      if (t === 'Equipo')               return 'equipo';
+      return ejSituacion(ej) || '_';
+    }
+    function _areaGrupoMeta(k) {
+      return AREA_GRUPO_META[k] ||
+             { icono: SITUACION_ICONO[k] || '🎾', label: SITUACION_LABEL[k] || k };
+    }
+
     // v0.307 — La fila «Jugadores» no lista los formatos crudos del vault, los
     // AGRUPA por cuánta gente hace falta, de menos a más. El último grupo es
     // EQUIPO: los ejercicios de grupo entero (rotaciones, todos con todos),
@@ -26594,7 +26657,7 @@
     function _areaEjLista() {
       return leerEjercicios().filter(function(e) {
         if (_esDeCarro(e)) return false;
-        if (_areaEjSit  !== null && (ejSituacion(e) || '_') !== _areaEjSit) return false;
+        if (_areaEjSit  !== null && _areaEjGrupo(e) !== _areaEjSit) return false;
         if (_areaEjForm !== null && _areaFormGrupo(e) !== _areaEjForm) return false;
         return true;
       });
@@ -26617,16 +26680,16 @@
       }
       var h = '';
 
-      // ── Fila 1: situación del punto (el eje principal)
+      // ── Fila 1: el momento de la clase (calentar → trabajar → jugar)
       var cSit = {};
-      deArea.forEach(function(e){ var s = ejSituacion(e) || '_'; cSit[s] = (cSit[s] || 0) + 1; });
-      var sits = AREA_SIT_ORDEN.filter(function(k){ return cSit[k]; });
-      if (cSit['_']) sits.push('_');
-      h += '<div class="areaej-filtro-tit">Situación del punto</div><div class="filtros subcats">';
+      deArea.forEach(function(e){ var s = _areaEjGrupo(e); cSit[s] = (cSit[s] || 0) + 1; });
+      var sits = AREA_GRUPO_ORDEN.filter(function(k){ return cSit[k]; });
+      h += '<div class="areaej-filtro-tit">Momento de la clase</div><div class="filtros subcats">';
       sits.forEach(function(k) {
+        var meta = _areaGrupoMeta(k);
         h += '<div class="fpill' + (_areaEjSit === k ? ' activo' : '') +
              '" onclick="areaEjFiltroSit(\'' + k + '\')">' +
-             (k === '_' ? '❓ Sin situación' : (SITUACION_ICONO[k] + ' ' + SITUACION_LABEL[k])) +
+             meta.icono + ' ' + _gEsc(meta.label) +
              ' <b>' + cSit[k] + '</b></div>';
       });
       h += '</div>';
@@ -26656,14 +26719,14 @@
                '<p>Ningún ejercicio de juego con esos filtros.</p></div>';
       }
       var porSit = {};
-      lista.forEach(function(e){ var s = ejSituacion(e) || '_'; (porSit[s] = porSit[s] || []).push(e); });
-      var claves = AREA_SIT_ORDEN.filter(function(k){ return porSit[k]; });
-      if (porSit['_']) claves.push('_');
+      lista.forEach(function(e){ var s = _areaEjGrupo(e); (porSit[s] = porSit[s] || []).push(e); });
+      var claves = AREA_GRUPO_ORDEN.filter(function(k){ return porSit[k]; });
       claves.forEach(function(k) {
         var grupo = porSit[k].slice().sort(_ejOrdenGolpe);
+        var meta  = _areaGrupoMeta(k);
         h += '<div class="areaej-sit">' +
-               '<span class="areaej-sit-ico">' + (k === '_' ? '❓' : SITUACION_ICONO[k]) + '</span>' +
-               '<span class="areaej-sit-lbl">' + (k === '_' ? 'Sin situación puesta' : SITUACION_LABEL[k]) + '</span>' +
+               '<span class="areaej-sit-ico">' + meta.icono + '</span>' +
+               '<span class="areaej-sit-lbl">' + _gEsc(meta.label) + '</span>' +
                '<span class="areaej-sit-n">' + grupo.length + '</span>' +
                '<span class="areaej-sit-linea"></span>' +
              '</div>';
