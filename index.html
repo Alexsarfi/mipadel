@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.366.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.367.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,13 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.367.0 — El ejercicio con vídeo, de otro color (2026-09)
+    (sin migraciones · solo presentación)
+    · EL EJERCICIO QUE TIENE VÍDEO ENLAZADO SE VE EN VERDE: en la secuencia
+      de la sesión (ventana y pantalla), en las filas de Juegos (con ▶
+      delante) y en su propia ventana (borde superior, título y «▶ con
+      vídeo» en la cabecera). Sin vídeo, como siempre. _ejConVideo.
 
   v0.366.0 — Juegos también en pestañas (2026-09)
     (sin migraciones · solo presentación)
@@ -8328,6 +8335,15 @@
     .rec-cont-obj { font-size:12.5px; color:var(--texto); line-height:1.45; margin-top:5px; }
     .rec-cont-acts { display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin:0 0 12px; }
     /* v0.347: la ventana del ejercicio reutiliza los estilos de la pantalla */
+    /* v0.367: el ejercicio CON VÍDEO se ve de otro color, en la fila y en su
+       ventana. Verde de la app: es lo que ya significa «se puede ver». */
+    .seq-item.convid { border-left-color:var(--verde); background:var(--verde-suave); }
+    .seq-item.convid .seq-nom { color:var(--verde); }
+    .rec-card.convid .rec-card-n { color:var(--verde); }
+    .rec-card.convid { background:var(--verde-suave); border-radius:8px; padding-left:8px; padding-right:8px; margin:2px -6px; }
+    .ej-modal.convid { border-top:5px solid var(--verde); }
+    .ej-modal.convid .ruta-modal-tit { color:var(--verde); }
+    .ej-vid-tag { color:var(--verde); font-weight:800; }
     .ej-modal-body { display:flex; flex-direction:column; gap:14px; }
     .ej-modal-body .detalle-imagen { width:100%; border-radius:10px; }
     /* v0.349: la galería de sesiones por golpes.
@@ -10917,7 +10933,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.366.0';
+    var APP_VERSION = '0.367.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -17702,7 +17718,9 @@
 
     // ── RUTAS POR ETAPAS (no temporal). Sustituyen a los meses. ──
     // Cada nivel = secuencia de etapas { key, nombre, obj, bloques:[{t,f,int,z,g}] }.
-    // El saque es transversal: bloque "Saque" al final de cada etapa, evolucionando.
+    // v0.363: en iniciación el saque deja de repetirse en cada etapa y vive
+    // solo en «Definición y saque» — un bloque «Saque» en 6 apartados hacía
+    // ambiguo el `bloque:` de un AT y sync_padel.py lo avisaba en cada sync.
     var PLAN_ETAPAS = {
       iniciacion: [
         { key:'i1', nombre:'Fundamentos de fondo', obj:'Pelotear con control desde el fondo sin fallar.', bloques:[
@@ -17710,33 +17728,28 @@
           {t:'Derecha de fondo', f:'Golpeo limpio de derecha con control y profundidad.', int:'base', z:'fondo', g:'fondo'},
           {t:'Revés de fondo', f:'Revés equilibrado desde el fondo. Alternar derecha y revés.', int:'base', z:'fondo', g:'fondo'},
           {t:'Profundidad y dirección', f:'Jugar largo y dirigir cruzado o paralelo con seguridad.', int:'anular', z:'fondo', g:'fondo'},
-          {t:'Constancia', f:'Mantener intercambios largos sin fallar. Paciencia.', int:'anular', z:'fondo', g:'fondo'},
-          {t:'Saque', f:'Solo poner la bola en juego con continuidad.', int:'base', z:'saque', g:'saque'} ]},
+          {t:'Constancia', f:'Mantener intercambios largos sin fallar. Paciencia.', int:'anular', z:'fondo', g:'fondo'} ]},
         { key:'i2', nombre:'Defensa', obj:'Leer la pared y defenderse con globo.', bloques:[
           // v0.359: se llaman como en el vault y en el plan sembrado («Pared de
           // fondo», «Pared lateral»); el catálogo del código se había desviado.
           {t:'Pared de fondo', f:'Leer el bote, esperar la bola y salir hacia el fondo.', int:'anular', z:'fondo', g:'pared'},
           {t:'Pared lateral', f:'Colocación con pared lateral y devolución segura.', int:'anular', z:'fondo', g:'pared'},
-          {t:'Globo de defensa', f:'Globo profundo para defenderse y recuperar la red.', int:'anular', z:'campo-medio', g:'globo'},
-          {t:'Saque', f:'Empezar a colocar: dirección y profundidad.', int:'anular', z:'saque', g:'saque'} ]},
+          {t:'Globo de defensa', f:'Globo profundo para defenderse y recuperar la red.', int:'anular', z:'campo-medio', g:'globo'} ]},
         { key:'i3', nombre:'La red', obj:'Volear con control y sostener la red.', bloques:[
           {t:'Volea de derecha', f:'Primera volea: impacto delante del cuerpo, sin armar.', int:'dominar', z:'red', g:'volea'},
           {t:'Volea de revés', f:'Volea de revés estable, muñeca firme.', int:'dominar', z:'red', g:'volea'},
           {t:'Voleas con dirección', f:'Dirigir la volea para mover al rival.', int:'dominar', z:'red', g:'volea'},
-          {t:'Bandeja: primer contacto', f:'Introducción a la bandeja para mantener la red.', int:'dominar', z:'red', g:'bandeja'},
-          {t:'Saque', f:'Sacar y subir a la red (enlazar con la volea).', int:'dominar', z:'saque', g:'saque'} ]},
+          {t:'Bandeja: primer contacto', f:'Introducción a la bandeja para mantener la red.', int:'dominar', z:'red', g:'bandeja'} ]},
         { key:'i4', nombre:'Ganar la red', obj:'Reconocer la bola buena y subir a volear.', bloques:[
           {t:'Subir a la red', f:'Reconocer la bola buena y subir a volear.', int:'dominar', z:'campo-medio', g:'volea'},
-          {t:'Globo y subir', f:'Defender con globo y aprovechar para ganar la red.', int:'dominar', z:'campo-medio', g:'globo'},
-          {t:'Saque', f:'Saque + primera bola (saque–resto–transición).', int:'dominar', z:'saque', g:'saque'} ]},
+          {t:'Globo y subir', f:'Defender con globo y aprovechar para ganar la red.', int:'dominar', z:'campo-medio', g:'globo'} ]},
         { key:'i5', nombre:'Definición y saque', obj:'Cerrar bola fácil y restar/sacar con criterio.', bloques:[
           {t:'Remate básico', f:'Mecánica del remate: timing y control antes que potencia.', int:'definir', z:'red', g:'remate'},
           {t:'Víbora: primer contacto', f:'Introducción a la víbora como golpe de presión.', int:'definir', z:'red', g:'vibora'},
           {t:'Saque', f:'Con restricción de zona y variación (más exigente).', int:'definir', z:'saque', g:'saque'} ]},
         { key:'i6', nombre:'Jugar', obj:'Jugar puntos aplicando todo.', bloques:[
           {t:'Puntos cortos', f:'Mini-juego y primeros puntos aplicando lo aprendido.', int:'dominar', z:'todo-campo', g:'mixto'},
-          {t:'Partidos y evaluación', f:'Jugar partidos y revisar el progreso.', int:'definir', z:'todo-campo', g:'mixto'},
-          {t:'Saque', f:'En punto real, competitivo (a 21, restricciones).', int:'definir', z:'saque', g:'saque'} ]}
+          {t:'Partidos y evaluación', f:'Jugar partidos y revisar el progreso.', int:'definir', z:'todo-campo', g:'mixto'} ]}
       ],
       avanzado: [
         // v0.359 — PODADO a 16 bloques, uno por tema real (antes 38, 31 sin
@@ -21618,8 +21631,8 @@
       } else {
         grupos[tb.k].sort(function(a, b){ return String(a.nombre).localeCompare(String(b.nombre)); }).forEach(function(ej){
           var min = _sesMin(ej), jug = _sesJug(ej);
-          h += '<div class="rec-card" onclick="recEjAbrir(' + ej.id + ')">' +
-            '<span class="rec-card-n">' + _gEsc(ej.nombre) + '</span>' +
+          h += '<div class="rec-card' + (_ejConVideo(ej) ? ' convid' : '') + '" onclick="recEjAbrir(' + ej.id + ')">' +
+            '<span class="rec-card-n">' + (_ejConVideo(ej) ? '▶ ' : '') + _gEsc(ej.nombre) + '</span>' +
             ((min || jug) ? '<span class="rec-card-d">' + (min ? min + '′' : '') + (min && jug ? ' · ' : '') + _gEsc(jug) + '</span>' : '') +
             (ej.descripcion ? '<span class="rec-card-o">' + _gEsc(ej.descripcion) + '</span>' : '') + '</div>';
         });
@@ -21646,8 +21659,8 @@
         h += '<div class="rec-jg-t">' + _gEsc(nom) + '<span>' + grupos[nom].length + '</span></div><div class="rec-jg-lista">';
         grupos[nom].sort(function(a, b){ return String(a.nombre).localeCompare(String(b.nombre)); }).forEach(function(ej){
           var min = _sesMin(ej), jug = _sesJug(ej);
-          h += '<div class="rec-card" onclick="recEjAbrir(' + ej.id + ')">' +
-            '<span class="rec-card-n">' + _gEsc(ej.nombre) + '</span>' +
+          h += '<div class="rec-card' + (_ejConVideo(ej) ? ' convid' : '') + '" onclick="recEjAbrir(' + ej.id + ')">' +
+            '<span class="rec-card-n">' + (_ejConVideo(ej) ? '▶ ' : '') + _gEsc(ej.nombre) + '</span>' +
             ((min || jug) ? '<span class="rec-card-d">' + (min ? min + '′' : '') + (min && jug ? ' · ' : '') + _gEsc(jug) + '</span>' : '') +
             (ej.descripcion ? '<span class="rec-card-o">' + _gEsc(ej.descripcion) + '</span>' : '') +
             '</div>';
@@ -22260,7 +22273,7 @@
       ejs.forEach(function(x, i){
         var tipo = _sesTipoEj(x), min = _sesMin(x), jug = _sesJug(x), cond = _sesCondTxt(x);
         var lbl = (tipo === 'carro' ? 'CARRO' : 'ÁREA') + (cond ? ' · ' + cond : '');
-        h += '<div class="seq-item ' + tipo + '" data-id="' + x.id + '">' +
+        h += '<div class="seq-item ' + tipo + (_ejConVideo(x) ? ' convid' : '') + '" data-id="' + x.id + '">' +
           '<span class="seq-num">' + (i + 1) + '</span>' +
           '<div class="seq-body" onclick="recEjAbrir(' + x.id + ')">' +
             '<div class="seq-tipo">' + lbl + '</div>' +
@@ -22394,11 +22407,13 @@
       if (!ej) return;
       var cat = leerCategorias().filter(function(c){ return c.id === ej.categoriaId; })[0];
       var g = ejGolpe(ej);
-      var h = '<div class="ruta-modal ej-modal" onclick="event.stopPropagation()">';
+      var conVid = _ejConVideo(ej);
+      var h = '<div class="ruta-modal ej-modal' + (conVid ? ' convid' : '') + '" onclick="event.stopPropagation()">';
       h += '<div class="ruta-modal-hdr"><div>' +
         '<div class="ruta-modal-tit">' + _gEsc(ej.nombre) + '</div>' +
         '<div class="ruta-modal-sub">' + _gEsc(cat ? cat.nombre : 'Sin categoría') +
-          (g ? ' · ' + _gEsc(GOLPE_LABEL[g] || g) : '') + '</div></div>' +
+          (g ? ' · ' + _gEsc(GOLPE_LABEL[g] || g) : '') +
+          (conVid ? ' · <span class="ej-vid-tag">▶ con vídeo</span>' : '') + '</div></div>' +
         '<button class="plan-modal-x" onclick="recEjCerrar()" aria-label="Cerrar">✕</button></div>';
       h += '<div class="ej-modal-body">' + _ejCuerpoHTML(ej, true) + '</div>';
       h += '<div class="rec-cont-acts" style="margin-top:12px;">' +
@@ -25349,6 +25364,10 @@
     // Un EJ puede ser una progresión con varios vídeos (campo `videos:` del
     // vault) en vez de uno solo — p.ej. el mismo patrón con alimentación baja
     // y alta. Devuelve siempre un array; si no hay `videos`, cae a [ej.video].
+    // v0.367 — ¿Tiene vídeo enlazado? Clase para que la fila del ejercicio
+    // (secuencia de la sesión, Juegos) y su ventana se vean de OTRO COLOR:
+    // el vídeo es lo que hace que el ejercicio se pueda enseñar sin explicar.
+    function _ejConVideo(ej) { return ejVideos(ej).length > 0; }
     function ejVideos(ej) {
       var vs = ejFaceta(ej, 'videos');
       if (Array.isArray(vs) && vs.length) return vs.filter(Boolean);
@@ -27481,7 +27500,7 @@
         var abre = ed ? '' : ' onclick="verEjercicio(' + e.id + ',\'sesion\')"';
         var min  = _sesMin(e), jug = _sesJug(e), cond = _sesCondTxt(e);
         var lbl  = (tipo === 'carro' ? 'CARRO' : 'ÁREA') + (cond ? ' · ' + cond : '');
-        h += '<div class="seq-item ' + tipo + (ed ? ' ed' : '') + '" data-id="' + e.id + '">' +
+        h += '<div class="seq-item ' + tipo + (ed ? ' ed' : '') + (_ejConVideo(e) ? ' convid' : '') + '" data-id="' + e.id + '">' +
           (ed ? '<span class="seq-drag" title="Arrastrar para reordenar" aria-label="Reordenar">⠿</span>' : '') +
           '<span class="seq-num">' + (i + 1) + '</span>' +
           '<div class="seq-body"' + abre + '>' +
