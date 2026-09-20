@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.364.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.366.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,31 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.366.0 — Juegos también en pestañas (2026-09)
+    (sin migraciones · solo presentación)
+    · La ficha de JUEGOS va en pestañas como las demás zonas, pero de
+      CATEGORÍAS de ejercicio: Calentamiento · Cooperación · Juegos
+      condicionados · Socialización, por nombre. Si el bloque tiene
+      sesiones, una pestaña «Sesiones»; «Pendientes» a la derecha si está
+      sin escribir. Fuera el aviso de «Esta etapa no tiene sesión» y el chip
+      de pendientes que salían encima de los ejercicios.
+    · Cada ejercicio abre su ventana (la de siempre, recEjAbrir); cada
+      sesión, la de sesión.
+
+  v0.365.0 — Un vídeo sin miniatura ya no se confunde con «por grabar» (2026-09)
+    (sin migraciones nuevas)
+    · EL CASO: un ejercicio cuyo vídeo es de Instagram (o Drive, o un enlace
+      suelto) no tiene miniatura que enseñar, porque solo YouTube la sirve.
+      La tarjeta lo pintaba ATENUADO y con la claqueta 🎬, exactamente igual
+      que los ejercicios que están de verdad sin grabar. Mentía: el vídeo
+      estaba ahí, y desde la ficha se abría sin problema.
+    · AHORA la tarjeta distingue las dos cosas: sin vídeo sigue apagada y con
+      claqueta; CON vídeo pero sin miniatura sale a plena luz y con un ▶.
+    · La ficha ya hacía lo correcto desde siempre («▶ Abrir vídeo» para lo que
+      no es de YouTube), así que ahí no cambia nada.
+    · Y el formato `1v1` entra en el grupo de «2 jugadores» de la pestaña
+      Ejercicios de juego: los duelos de calentamiento necesitan dos.
 
   v0.364.0 — «Jugadores» agrupa por alumnos necesarios, y entra el formato 3+A (2026-09)
     (sin migraciones nuevas)
@@ -10867,7 +10892,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.364.0';
+    var APP_VERSION = '0.366.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -21442,12 +21467,11 @@
       // v0.363: los golpes van en PESTAÑAS y la sesión se abre en ventana.
       // Juegos se queda como estaba (chips + ejercicios sueltos): son
       // ejercicios, no golpes.
-      if (e.et.zona === 'juegos') {
-        h += _recCuerpoHTML(e, p, nivel, _ejsById(), leerClases(), { chips:true });
-        if (_recSel == null) h += _recJuegosHTML();
-      } else {
-        h += _recZonaTabsHTML(e, p, nivel, z);
-      }
+      // v0.364: Juegos también en pestañas, pero de CATEGORÍAS de ejercicio
+      // (Calentamiento · Cooperación · Juegos condicionados…), igual que las
+      // demás zonas van por golpes.
+      if (e.et.zona === 'juegos') h += _recJuegosTabsHTML(e, p, nivel, z);
+      else h += _recZonaTabsHTML(e, p, nivel, z);
       h += '</div>';
       return h;
     }
@@ -21520,6 +21544,65 @@
     // que son lo que se mete en cualquier sesión para arrancar o para
     // cerrar. Agrupados por categoría; cada uno abre su ventana (recEjAbrir).
     var REC_JUEGOS_CATS = ['calentamiento', 'juegos condicionados', 'cooperación', 'cooperacion', 'socialización', 'socializacion'];
+    // v0.364 — JUEGOS EN PESTAÑAS: una por categoría de ejercicio, ordenadas
+    // por nombre; si el bloque tiene sesiones, una pestaña «Sesiones»; y
+    // «Pendientes» a la derecha si el bloque está sin escribir. Cada
+    // ejercicio abre su ventana (recEjAbrir); cada sesión, la de sesión.
+    function _recJuegosTabsHTML(e, p, nivel, z) {
+      var cats = {}; leerCategorias().forEach(function(c){ cats[c.id] = c.nombre; });
+      var grupos = {}, orden = [];
+      leerEjercicios().forEach(function(ej){
+        var nom = cats[ej.categoriaId] || '';
+        if (REC_JUEGOS_CATS.indexOf(String(nom).trim().toLowerCase()) < 0) return;
+        if (!grupos[nom]) { grupos[nom] = []; orden.push(nom); }
+        grupos[nom].push(ej);
+      });
+      orden.sort(function(a, b){ return a.localeCompare(b); });
+      var tabs = orden.map(function(nom){ return { k:nom, t:nom, n:grupos[nom].length }; });
+      var sesiones = []; e.nodos.forEach(function(nd){ nd.ses.forEach(function(c){ sesiones.push({ nd:nd, ses:c }); }); });
+      if (sesiones.length) tabs.push({ k:'\u0000ses', t:'Sesiones', n:sesiones.length, ses:true });
+      var vacios = e.nodos.filter(function(nd){ return !nd.ses.length; });
+      if (vacios.length) tabs.push({ k:'\u0000pend', t:'Pendientes', n:vacios.length, pend:true });
+      if (!tabs.length) return '<div class="rec-bl-vacio">No hay ejercicios de calentamiento ni juegos en el catálogo. Guárdalos en el vault en «03 EJERCICIOS/calentamiento» o «juegos condicionados».</div>';
+      var sel = _recGolpeSel[e.et.zona] || 0;
+      if (sel >= tabs.length) sel = 0;
+      var h = '<div class="rec-zt">';
+      tabs.forEach(function(tb, i){
+        var on = i === sel;
+        h += '<button type="button" class="rec-zt-t' + (on ? ' on' : '') + (tb.pend ? ' pend' : '') + '"' +
+          (on ? ' style="color:' + z.color + ';border-bottom-color:' + z.color + '"' : '') +
+          ' onclick="recGolpeSel(\'' + e.et.zona + '\',' + i + ')">' + _gEsc(tb.t) + '<span>' + tb.n + '</span></button>';
+      });
+      h += '</div><div class="rec-zt-lista">';
+      var tb = tabs[sel];
+      if (tb.pend) {
+        vacios.forEach(function(nd){
+          h += '<div class="rec-card" onclick="recSesVentana(\'bl:' + nd.it.id + '\', event)">' +
+            '<span class="rec-card-n">' + _gEsc(nd.it.t) + '</span>' +
+            '<span class="rec-card-d">' + (nd.cts.length ? '⭐ ' + nd.cts.length + (nd.cts.length === 1 ? ' clase' : ' clases') : 'Preparar \uFF0B') + '</span>' +
+            (nd.ap ? '<span class="rec-card-b">' + _gEsc(nd.ap) + '</span>' : '') + '</div>';
+        });
+      } else if (tb.ses) {
+        sesiones.forEach(function(x){
+          var c = x.ses;
+          h += '<div class="rec-card" onclick="recSesVentana(\'ses:' + c.id + '\', event)">' +
+            '<span class="rec-card-n">' + _gEsc(nombreSesion(c)) + '</span>' +
+            '<span class="rec-card-b">' + (x.nd.ap ? _gEsc(x.nd.ap) + ' · ' : '') + _gEsc(x.nd.it.t) + '</span>' +
+            (c.objetivo ? '<span class="rec-card-o">' + _gEsc(c.objetivo) + '</span>' : '') + '</div>';
+        });
+      } else {
+        grupos[tb.k].sort(function(a, b){ return String(a.nombre).localeCompare(String(b.nombre)); }).forEach(function(ej){
+          var min = _sesMin(ej), jug = _sesJug(ej);
+          h += '<div class="rec-card" onclick="recEjAbrir(' + ej.id + ')">' +
+            '<span class="rec-card-n">' + _gEsc(ej.nombre) + '</span>' +
+            ((min || jug) ? '<span class="rec-card-d">' + (min ? min + '′' : '') + (min && jug ? ' · ' : '') + _gEsc(jug) + '</span>' : '') +
+            (ej.descripcion ? '<span class="rec-card-o">' + _gEsc(ej.descripcion) + '</span>' : '') + '</div>';
+        });
+      }
+      h += '</div>';
+      return h;
+    }
+    // (v0.362, ya sin uso desde la v0.364; se conserva por si vuelve la lista corrida)
     function _recJuegosHTML() {
       var cats = {}; leerCategorias().forEach(function(c){ cats[c.id] = c.nombre; });
       var grupos = {}, orden = [];
@@ -25775,7 +25858,11 @@
       // v0.248: en Ejercicios, los que no tienen vídeo ya no se quedan sin
       // hueco de miniatura (dejaban la fila descuadrada): llevan un marco
       // gris con icono y la tarjeta atenuada, para verlos como "por grabar".
-      var sinVid = !thumb;
+      // v0.365: un vídeo SIN miniatura (Instagram, Drive, un enlace suelto) no
+      // es un ejercicio «por grabar»: el vídeo existe, lo que no hay es imagen
+      // que enseñar. Antes salía atenuado y con la claqueta, igual que los que
+      // están de verdad sin grabar, y eso engañaba.
+      var sinVid = !thumb && !ej.video;
       var h = '<div class="ejcard' + ((thumb || esEj) ? '' : ' ejcard-sinthumb') +
               (esVert ? ' vert' : '') + (sinVid && esEj ? ' porgrabar' : '') +
               '" onclick="verEjercicio(' + ej.id + ',\'' + origen + '\')">';
@@ -25784,7 +25871,7 @@
           '<img src="' + thumb + '" class="ejcard-img" alt="" loading="lazy" onerror="this.style.display=\'none\';this.parentNode.classList.add(\'sin-img\')">' +
           (ej.video ? '<div class="ejcard-play">▶</div>' : '') + '</div>';
       } else if (esEj) {
-        h += '<div class="ejcard-thumb ejcard-nov"><span>🎬</span></div>';
+        h += '<div class="ejcard-thumb ejcard-nov"><span>' + (ej.video ? '▶' : '🎬') + '</span></div>';
       }
       h += '<div class="ejcard-body">' +
           '<div class="ejcard-titulo">' + ej.nombre + '</div>' +
@@ -26439,7 +26526,7 @@
     // Que el entrenador esté dentro ya lo dice el propio formato en la chapa.
     var AREA_FORM_GRUPOS = [
       { key:'1a',     label:'1 jugador',   fmts:['1+a'] },
-      { key:'2',      label:'2 jugadores', fmts:['2v0', '1+1', '2+a'] },
+      { key:'2',      label:'2 jugadores', fmts:['2v0', '1+1', '1v1', '2+a'] },
       { key:'3',      label:'3 jugadores', fmts:['3j', '3+a'] },
       { key:'4',      label:'4 jugadores', fmts:['4j', '2v2', '4+a'] },
       { key:'equipo', label:'👥 Equipo',   fmts:['rotación-capitán', 'rotacion-capitan',
