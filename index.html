@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.363.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.364.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,20 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.364.0 — «Jugadores» agrupa por alumnos necesarios, y entra el formato 3+A (2026-09)
+    (sin migraciones nuevas)
+    · EL CASO: la sesión de resto condicionado se juega 2 vs 2 CON EL ENTRENADOR
+      DENTRO, en el lado de los que no restan. Hacen falta 3 alumnos, no 4, así
+      que su formato en el vault es `3+A` — nuevo valor, con la misma lógica que
+      el `1+A` de toda la vida: alumnos + el entrenador.
+    · LA FILA «JUGADORES» YA AGRUPA POR CUÁNTOS ALUMNOS HACEN FALTA, que es lo
+      que decides en pista cuando ves quién ha venido. Así `3+A` va con los de 3
+      y `2+A` con los de 2, en vez de quedarse todos juntos en un cajón de
+      «1 + entrenador» que en realidad mezclaba dos cosas distintas.
+    · Que el entrenador esté dentro lo sigue diciendo el propio formato en la
+      chapa de la tarjeta, así que no se pierde el dato.
+    · Reconoce también `4+A` por si aparece.
 
   v0.363.0 — Los golpes en pestañas y la sesión en ventana que nace de la fila (2026-09)
     (sin migraciones · solo presentación)
@@ -10853,7 +10867,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.363.0';
+    var APP_VERSION = '0.364.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -26418,13 +26432,18 @@
     // que no son «4 jugadores», son otra cosa — se montan con el grupo que
     // haya. Cualquier formato que no esté en la tabla cae en «Otros» a
     // propósito: preferimos que sobre a que desaparezca material sin avisar.
+    // v0.364 — El grupo lo marca CUÁNTOS ALUMNOS hacen falta, no si el
+    // entrenador entra o no. Por eso `3+A` (tres alumnos y el entrenador
+    // jugando dentro, como en el resto condicionado) va con los de 3, y `2+A`
+    // con los de 2: lo que decides en pista es si te llegan tres o cuatro.
+    // Que el entrenador esté dentro ya lo dice el propio formato en la chapa.
     var AREA_FORM_GRUPOS = [
-      { key:'1a',     label:'1 + entrenador', fmts:['1+a', '2+a'] },
-      { key:'2',      label:'2 jugadores',    fmts:['2v0', '1+1'] },
-      { key:'3',      label:'3 jugadores',    fmts:['3j'] },
-      { key:'4',      label:'4 jugadores',    fmts:['4j', '2v2'] },
-      { key:'equipo', label:'👥 Equipo',      fmts:['rotación-capitán', 'rotacion-capitan',
-                                                   'todos-con-todos', 'round-robin', 'equipo'] }
+      { key:'1a',     label:'1 jugador',   fmts:['1+a'] },
+      { key:'2',      label:'2 jugadores', fmts:['2v0', '1+1', '2+a'] },
+      { key:'3',      label:'3 jugadores', fmts:['3j', '3+a'] },
+      { key:'4',      label:'4 jugadores', fmts:['4j', '2v2', '4+a'] },
+      { key:'equipo', label:'👥 Equipo',   fmts:['rotación-capitán', 'rotacion-capitan',
+                                                'todos-con-todos', 'round-robin', 'equipo'] }
     ];
     var AREA_FORM_LABEL = { otros:'Otros formatos', _:'Sin formato' };
     AREA_FORM_GRUPOS.forEach(function(g){ AREA_FORM_LABEL[g.key] = g.label; });
