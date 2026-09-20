@@ -46,6 +46,23 @@
       delante) y en su propia ventana (borde superior, título y «▶ con
       vídeo» en la cabecera). Sin vídeo, como siempre. _ejConVideo.
 
+  v0.367.0 — Las tres miniaturas de una progresión, en la propia fila (2026-09)
+    (sin migraciones nuevas)
+    · EL CASO: «Doble pared fondo lateral» tiene 3 vídeos (las 3 fases de la
+      progresión). En la fila de la sesión salía UNA miniatura con un «3»
+      encima, y al pulsarla se abría el vídeo 1. El contador decía que había
+      tres, pero no había manera de llegar al 2 y al 3 sin entrar al ejercicio.
+    · AHORA SALEN LAS TRES, una al lado de otra, numeradas 1·2·3, y CADA UNA
+      ABRE SU VÍDEO en el visor de siempre. Un toque desde la sesión.
+    · Son más estrechas que la miniatura única (52 px, 46 en el móvil) para que
+      el nombre del ejercicio siga cabiendo, y pierden el ▶ del centro: a ese
+      tamaño competía con el número, y que la tira entera son vídeos se ve solo.
+    · Los ejercicios de UN vídeo no cambian nada. Solo se les ha quitado el
+      contador, que ya no tenía sentido.
+    · Vale en los dos sitios que pintan la secuencia de una sesión: la ventana
+      del bloque en Recorrido y la pantalla de la sesión, porque las dos pasan
+      por la misma función.
+
   v0.366.0 — Juegos también en pestañas (2026-09)
     (sin migraciones · solo presentación)
     · La ficha de JUEGOS va en pestañas como las demás zonas, pero de
@@ -9442,6 +9459,14 @@
     .seq-vid-n { position:absolute; top:2px; left:3px; font-size:10px; font-weight:800; color:#fff;
       background:rgba(0,0,0,.6); border-radius:999px; padding:0 5px; }
     @media (max-width:699px){ .seq-vid { width:74px; } }
+    /* v0.367 — las miniaturas de una progresión, una al lado de otra. Más
+       estrechas que la única, para que el nombre del ejercicio siga cabiendo,
+       y sin el ▶ del centro: a este tamaño estorba al número, y que la tira
+       entera son vídeos ya se ve. El número va abajo, donde no tapa la cara. */
+    .seq-vids { display:flex; gap:4px; flex-shrink:0; }
+    .seq-vid.mini { width:52px; border-radius:6px; }
+    .seq-vid.mini .seq-vid-n { top:auto; bottom:2px; left:3px; font-size:9.5px; padding:0 4px; }
+    @media (max-width:699px){ .seq-vids { gap:3px; } .seq-vid.mini { width:46px; } }
     .seq-dosis { flex-shrink:0; min-width:52px; text-align:right; cursor:pointer;
       display:flex; flex-direction:column; gap:1px; }
     .seq-dosis b { font-size:15px; font-weight:800; color:var(--texto); }
@@ -27557,6 +27582,25 @@
         return '<span class="seq-vid"><img src="' + th0 + '" alt="" loading="lazy" ' +
                'onerror="this.style.display=\'none\'"></span>';
       }
+      // v0.367 — PROGRESIÓN DE VARIOS VÍDEOS: salen TODAS las miniaturas en la
+      // fila, numeradas 1·2·3, y cada una abre SU vídeo. Antes salía solo la
+      // del primero con un «3» encima, y al pulsarla se abría el vídeo 1: el
+      // contador decía que había tres, pero no daba manera de llegar a ellos
+      // sin entrar en el ejercicio.
+      if (vids.length > 1) {
+        var hv = '<span class="seq-vids">';
+        vids.forEach(function(v2, vi) {
+          var yt2 = extraerIdYoutube(v2);
+          var th2 = yt2 ? ('https://img.youtube.com/vi/' + yt2 + '/mqdefault.jpg') : _rutaEjThumb(e);
+          hv += '<span class="seq-vid mini ver" title="Vídeo ' + (vi + 1) + ' de ' + vids.length +
+            '" onclick="event.stopPropagation();abrirLightboxVideo(' +
+            (yt2 ? "'" + yt2 + "'" : 'null') + ',\'' + String(v2).replace(/'/g, "\\'") + '\')">' +
+            (th2 ? '<img src="' + th2 + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
+                 : '<span class="seq-vid-ph">🎬</span>') +
+            '<span class="seq-vid-n">' + (vi + 1) + '</span></span>';
+        });
+        return hv + '</span>';
+      }
       var v = vids[0], yt = extraerIdYoutube(v);
       var th = yt ? ('https://img.youtube.com/vi/' + yt + '/mqdefault.jpg') : _rutaEjThumb(e);
       return '<span class="seq-vid ver" title="Ver el vídeo" onclick="event.stopPropagation();' +
@@ -27564,8 +27608,7 @@
         String(v).replace(/'/g, "\\'") + '\')">' +
         (th ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
             : '<span class="seq-vid-ph">🎬</span>') +
-        '<span class="seq-vid-play">▶</span>' +
-        (vids.length > 1 ? '<span class="seq-vid-n">' + vids.length + '</span>' : '') + '</span>';
+        '<span class="seq-vid-play">▶</span></span>';
     }
 
     // ── v0.316 — REORDENAR SOLO CUANDO SE PIDE ───────────────────────
