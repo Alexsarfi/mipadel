@@ -46,8 +46,8 @@
       texto de `golpes:` del vault). Lo que no esté en la lista va después,
       por nombre; «Sin golpes» y «Pendientes», al final. Es una decisión de
       entrenador, no un cálculo: se cambia a mano en esa lista.
-    · En Fondo hoy: Derecha y revés · Globo · Saque/Resto · Bajada de pared ·
-      Salida de pared + bajada.
+    · En Fondo: Derecha y revés · Globo · Saque/Resto · Bajada de pared ·
+      Pared de fondo · Pared lateral. La doble pared va en la Esquina.
 
   v0.367.0 — El ejercicio con vídeo, de otro color (2026-09)
     (sin migraciones · solo presentación)
@@ -21996,7 +21996,9 @@
     // siempre al final. Es una decisión de entrenador, no un cálculo: por eso
     // está escrita aquí y se cambia a mano.
     var REC_GOLPES_ORDEN = {
-      'fondo':       ['derecha y reves', 'globo', 'saque/resto', 'saque', 'resto', 'pared de fondo', 'bajada de pared', 'pared lateral', 'salida de pared', 'salida de pared + bajada', 'contraataque'],
+      // Fondo (Alex, 2026-09-21): bajada de pared es un golpe; aparte van
+      // pared de fondo y pared lateral; la doble pared vive en la esquina
+      'fondo':       ['derecha y reves', 'globo', 'saque/resto', 'saque', 'resto', 'bajada de pared', 'pared de fondo', 'pared lateral', 'contraataque'],
       'esquina':     ['doble pared', 'doble pared fondo-lateral', 'doble pared lateral-fondo'],
       'campo-medio': ['volea de derecha (subida)', 'volea de reves (subida)', 'subida a la red', 'bote pronto', 'bote pronto + volea', 'globo ofensivo', 'globo + bandeja'],
       'red':         ['volea', 'volea de derecha', 'volea de reves', 'voleas', 'bandeja', 'vibora', 'bandeja + vibora', 'gancho', 'remate', 'remate por 3', 'dejada'],
