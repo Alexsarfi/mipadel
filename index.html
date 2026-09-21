@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.367.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.368.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,16 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.368.0 — Los golpes, de más fácil a más difícil (2026-09)
+    (sin migraciones · solo presentación)
+    · LAS PESTAÑAS DE GOLPES DE CADA ZONA VAN EN ORDEN DE DIFICULTAD, no
+      alfabético: la lista está escrita en REC_GOLPES_ORDEN (por zona, con el
+      texto de `golpes:` del vault). Lo que no esté en la lista va después,
+      por nombre; «Sin golpes» y «Pendientes», al final. Es una decisión de
+      entrenador, no un cálculo: se cambia a mano en esa lista.
+    · En Fondo hoy: Derecha y revés · Globo · Saque/Resto · Bajada de pared ·
+      Salida de pared + bajada.
 
   v0.367.0 — El ejercicio con vídeo, de otro color (2026-09)
     (sin migraciones · solo presentación)
@@ -10958,7 +10968,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.367.0';
+    var APP_VERSION = '0.368.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -21555,8 +21565,12 @@
           grupos[k].ses.push({ nd: nd, ses: c });
         });
       });
+      // v0.368: de más fácil a más difícil según REC_GOLPES_ORDEN; empate,
+      // por nombre; «Sin golpes» al final
       orden.sort(function(a, b){
         if (grupos[a].sin !== grupos[b].sin) return grupos[a].sin ? 1 : -1;
+        var pa = _recGolpePos(e.et.zona, grupos[a].t), pb = _recGolpePos(e.et.zona, grupos[b].t);
+        if (pa !== pb) return pa - pb;
         return grupos[a].t.localeCompare(grupos[b].t);
       });
       var vacios = e.nodos.filter(function(nd){ return !nd.ses.length; });
@@ -21975,6 +21989,25 @@
     }
     // Los golpes como pestañas dentro de la ficha de zona: cuál está elegida
     var _recGolpeSel = {};
+    // ── v0.368 — EL ORDEN DE LOS GOLPES: de más fácil a más difícil ────────
+    // Por zona, la lista de golpes (el texto de `golpes:` del vault, sin
+    // mayúsculas ni acentos) en el orden en que se enseñan. Los que no estén
+    // en la lista van después, por nombre; «Sin golpes» y «Pendientes»,
+    // siempre al final. Es una decisión de entrenador, no un cálculo: por eso
+    // está escrita aquí y se cambia a mano.
+    var REC_GOLPES_ORDEN = {
+      'fondo':       ['derecha y reves', 'globo', 'saque/resto', 'saque', 'resto', 'pared de fondo', 'bajada de pared', 'pared lateral', 'salida de pared', 'salida de pared + bajada', 'contraataque'],
+      'esquina':     ['doble pared', 'doble pared fondo-lateral', 'doble pared lateral-fondo'],
+      'campo-medio': ['volea de derecha (subida)', 'volea de reves (subida)', 'subida a la red', 'bote pronto', 'bote pronto + volea', 'globo ofensivo', 'globo + bandeja'],
+      'red':         ['volea', 'volea de derecha', 'volea de reves', 'voleas', 'bandeja', 'vibora', 'bandeja + vibora', 'gancho', 'remate', 'remate por 3', 'dejada'],
+      'saque':       ['saque', 'saque/resto', 'resto', 'saque + subida'],
+      'todo-campo':  ['derecha y reves (punto)', 'patron', 'partido']
+    };
+    function _recGolpePos(zona, t) {
+      var lista = REC_GOLPES_ORDEN[zona] || [];
+      var i = lista.indexOf(_planNorm(t));
+      return i < 0 ? 1000 : i;
+    }
     function recGolpeSel(zona, i) { _recGolpeSel[zona] = i; _recRepintar(); }
     // v0.360 — Repintar lo que esté a la vista: la ventana si hay etapa
     // abierta (Competición), o la pantalla de Planificación si la zona está
