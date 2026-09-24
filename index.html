@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.369.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.370.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,12 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.370.0 — En el grupo de Fondo, «Derecha» la primera (2026-09)
+    (sin migraciones)
+    · En el Recorrido de Avanzado, las pestañas del grupo de Fondo salen en
+      el orden de REC_GOLPES_ORDEN. «Derecha» no estaba en la lista y caía al
+      final. Ahora va la primera, y «Revés» justo detrás.
 
   v0.369.0 — La sesión puede llevar un tercer bloque: la explicación técnica (2026-09)
     (⚠ MIGRACIÓN: migraciones/migracion_clases_explicacion.sql, una vez)
@@ -10993,7 +10999,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.369.0';
+    var APP_VERSION = '0.370.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -22023,8 +22029,10 @@
     // está escrita aquí y se cambia a mano.
     var REC_GOLPES_ORDEN = {
       // Fondo (Alex, 2026-09-21): bajada de pared es un golpe; aparte van
-      // pared de fondo y pared lateral; la doble pared vive en la esquina
-      'fondo':       ['derecha y reves', 'globo', 'saque/resto', 'saque', 'resto', 'bajada de pared', 'pared de fondo', 'pared lateral', 'contraataque'],
+      // pared de fondo y pared lateral; la doble pared vive en la esquina.
+      // v0.370 (Alex, 2026-09-24): «Derecha» la primera del grupo, y «Revés»
+      // detrás, que es la sesión que viene
+      'fondo':       ['derecha', 'reves', 'derecha y reves', 'globo', 'saque/resto', 'saque', 'resto', 'bajada de pared', 'pared de fondo', 'pared lateral', 'contraataque'],
       'esquina':     ['doble pared', 'doble pared fondo-lateral', 'doble pared lateral-fondo'],
       'campo-medio': ['volea de derecha (subida)', 'volea de reves (subida)', 'subida a la red', 'bote pronto', 'bote pronto + volea', 'globo ofensivo', 'globo + bandeja'],
       'red':         ['volea', 'volea de derecha', 'volea de reves', 'voleas', 'bandeja', 'vibora', 'bandeja + vibora', 'gancho', 'remate', 'remate por 3', 'dejada'],
