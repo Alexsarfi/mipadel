@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.370.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.371.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,16 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.371.0 — La explicación técnica ya no desaparece al volver a descargar (2026-09)
+    (sin migraciones)
+    · EL FALLO (de la v0.369): la sesión de derecha plana no enseñaba su
+      bloque 📖 Técnica. La primera descarga lo traía, pero la app vuelve a
+      descargar sola (al volver a ella y cada 5 min) y FUSIONA con la copia
+      local copiando una lista fija de campos. `explicacion` no estaba en esa
+      lista, así que la segunda descarga lo borraba de la copia local.
+    · ARREGLO: la fusión la incluye, y manda el servidor (el dueño es el
+      vault). También la trae «Importar desde Obsidian», que tampoco la leía.
 
   v0.370.0 — En el grupo de Fondo, «Derecha» la primera (2026-09)
     (sin migraciones)
@@ -10999,7 +11009,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.370.0';
+    var APP_VERSION = '0.371.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -11491,6 +11501,9 @@
             apartado:    x.apartado || prev.apartado || '',
             bloque:      x.bloque   || prev.bloque   || '',
             golpes:      x.golpes   || prev.golpes   || '',   // v0.342
+            // v0.371: faltaba aquí, y la segunda descarga la borraba de la
+            // copia local. Manda el servidor: si allí no está, no está.
+            explicacion: x.explicacion || null,
             _ownerUid:   x._ownerUid  || prev._ownerUid,
           };
         } else {
@@ -29275,6 +29288,7 @@
           clases[matchIdx].apartado     = sesData.apartado !== undefined ? sesData.apartado : (clases[matchIdx].apartado || '');
           clases[matchIdx].bloque       = sesData.bloque   !== undefined ? sesData.bloque   : (clases[matchIdx].bloque   || '');
           clases[matchIdx].golpes       = sesData.golpes   !== undefined ? sesData.golpes   : (clases[matchIdx].golpes   || '');   // v0.342
+          clases[matchIdx].explicacion  = sesData.explicacion || null;   // v0.371
           if (ejIds.length > 0) clases[matchIdx].ejercicioIds = ejIds;
           // Actualizar los mapas por si el nombre cambió
           claveNombreMap[claveSesion(clases[matchIdx].fecha, clases[matchIdx].nombre)] = matchIdx;
@@ -29283,7 +29297,8 @@
 
         var nueva = { id: maxIdClase() + 1, fecha: sesData.fecha, ejercicioIds: ejIds,
           nombre: nombre, tematica: sesData.tipo || '', objetivo: sesData.objetivo || '',
-          apartado: sesData.apartado || '', bloque: sesData.bloque || '', golpes: sesData.golpes || '' };
+          apartado: sesData.apartado || '', bloque: sesData.bloque || '', golpes: sesData.golpes || '',
+          explicacion: sesData.explicacion || null };   // v0.371
         clases.push(nueva);
         claveNombreMap[claveN] = clases.length - 1;
         claveEjsMap[claveEjs(sesData.fecha, ejIds)] = clases.length - 1;
