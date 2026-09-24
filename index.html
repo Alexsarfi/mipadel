@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.368.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.369.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,24 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.369.0 — La sesión puede llevar un tercer bloque: la explicación técnica (2026-09)
+    (⚠ MIGRACIÓN: migraciones/migracion_clases_explicacion.sql, una vez)
+    · EL MODELO: una sesión son dos bloques —🛒 carro y 🎯 área— con sus
+      ejercicios dentro. Ahora puede llevar un TERCERO, opcional, delante de
+      todo: 📖 la explicación técnica, el vídeo que se ve antes de empezar.
+    · NO ES UN EJERCICIO: es una nota GT de 09 DETALLES DEL GESTO TÉCNICO. La
+      nota de la sesión la enlaza con `explicacion_tecnica:` y sync_padel.py
+      sube su título y su vídeo a la nueva columna `explicacion` de clases.
+    · Se pinta ARRIBA y fuera de la lista ordenable, en ámbar para que no se
+      confunda con carro ni área, con su miniatura que abre el vídeo. Sale en
+      la ventana del bloque (Recorrido) y en la pantalla de la sesión, y en la
+      cabecera aparece la chapa «📖 Técnica».
+    · La app no lo escribe nunca: el dueño es el vault.
+    · Sin la migración no se rompe nada: el script sube ese campo aparte y,
+      si la columna no existe, avisa y sigue con todo lo demás.
+    · Primera sesión que lo usa: «Derecha plana — Del carro a la volea de
+      mantenimiento» (avanzado, 23 de septiembre).
 
   v0.368.0 — Los golpes, de más fácil a más difícil (2026-09)
     (sin migraciones · solo presentación)
@@ -9417,6 +9435,13 @@
     .seq-cab-tag { font-size:11.5px; font-weight:800; border-radius:999px; padding:3px 9px; }
     .seq-cab-tag.carro { color:var(--ac-carro-tx); background:var(--ac-carro-sv); }
     .seq-cab-tag.area  { color:var(--ac-area-tx);  background:var(--ac-area-sv); }
+    /* v0.369 — tercer bloque opcional: la EXPLICACIÓN TÉCNICA de la sesión.
+       Va arriba, fuera de la lista ordenable (no es un ejercicio y no se
+       mueve), con su propio color para que no se confunda con carro ni área. */
+    .seq-cab-tag.tecnica { color:#92400e; background:#fffbeb; }
+    .seq-item.tecnica { border-left-color:#d97706; background:#fffbeb; margin-bottom:8px; }
+    .seq-item.tecnica .seq-num { background:#d97706; font-size:12px; }
+    .seq-item.tecnica .seq-tipo { color:#92400e; }
     .seq-edit { margin-left:auto; font-family:inherit; font-size:12px; font-weight:700;
       color:var(--gris); padding:5px 11px; border:1.5px solid var(--borde); border-radius:999px;
       background:var(--blanco); cursor:pointer; }
@@ -10968,7 +10993,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.368.0';
+    var APP_VERSION = '0.369.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -11290,6 +11315,7 @@
           ejercicioIds:c.ejercicio_ids||[],
           nombre:c.nombre||'', tematica:c.tematica||'', objetivo:c.objetivo||'',
           apartado:c.apartado||'', bloque:c.bloque||'', golpes:c.golpes||'',   // v0.342
+          explicacion:c.explicacion||null,   // v0.369 — solo lectura: lo escribe el vault
           _ownerUid:c.user_id
         }; });
 
@@ -22317,6 +22343,38 @@
     // botón de ordenar y con el ejercicio abriéndose en VENTANA (recEjAbrir,
     // v0.347) en vez de en su pantalla. _sesSecuenciaHTML no vale aquí: su atrás
     // vuelve a la pantalla de la sesión y su «Ordenar» repinta esa pantalla.
+    // ── v0.369 — BLOQUE DE EXPLICACIÓN TÉCNICA ────────────────────────
+    // Opcional. Si la nota de la sesión trae `explicacion_tecnica:` (una
+    // nota GT del vault), sync_padel.py la resuelve y aquí llega como
+    // { titulo, nota, video, golpe }. Se pinta ARRIBA y fuera de la lista
+    // ordenable: no es un ejercicio, es lo que se ve antes de empezar.
+    // La app no lo escribe nunca: el dueño es el vault.
+    function _seqCabTecnicaHTML(sesion) {
+      var x = sesion && sesion.explicacion;
+      return (x && x.titulo) ? '<span class="seq-cab-tag tecnica">📖 Técnica</span>' : '';
+    }
+    function _seqExplicacionHTML(sesion) {
+      var x = sesion && sesion.explicacion;
+      if (!x || !x.titulo) return '';
+      var v  = x.video || '';
+      var yt = v ? extraerIdYoutube(v) : null;
+      var th = yt ? ('https://img.youtube.com/vi/' + yt + '/mqdefault.jpg') : null;
+      var mini = v
+        ? '<span class="seq-vid ver" title="Ver la explicación" onclick="event.stopPropagation();' +
+            'abrirLightboxVideo(' + (yt ? "'" + yt + "'" : 'null') + ',\'' +
+            String(v).replace(/'/g, "\\'") + '\')">' +
+            (th ? '<img src="' + th + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
+                : '<span class="seq-vid-ph">🎬</span>') +
+            '<span class="seq-vid-play">▶</span></span>'
+        : '<span class="seq-vid sinvid" title="Sin vídeo todavía">🎬</span>';
+      return '<div class="seq-item tecnica">' +
+        '<span class="seq-num">📖</span>' +
+        '<div class="seq-body">' +
+          '<div class="seq-tipo">EXPLICACIÓN TÉCNICA</div>' +
+          '<div class="seq-nom">' + _gEsc(x.titulo) + '</div>' +
+        '</div>' + mini + '</div>';
+    }
+
     function _recSecuenciaHTML(sesion) {
       var ejs = _sesEjsOrdenados(sesion, leerEjercicios());
       if (!ejs.length) return '<div class="rec-bl-vacio">Esta sesión no tiene ejercicios.</div>';
@@ -22327,8 +22385,10 @@
       });
       var total = minC + minA;
       var h = '<div class="seq-cab">' +
+        _seqCabTecnicaHTML(sesion) +
         '<span class="seq-cab-tag carro">\u{1F6D2} Carro · ' + (total ? minC + ' min' : nC) + '</span>' +
         '<span class="seq-cab-tag area">\u{1F3AF} Área · ' + (total ? minA + ' min' : nA) + '</span></div>';
+      h += _seqExplicacionHTML(sesion);
       h += '<div class="seq">';
       ejs.forEach(function(x, i){
         var tipo = _sesTipoEj(x), min = _sesMin(x), jug = _sesJug(x), cond = _sesCondTxt(x);
@@ -27548,11 +27608,13 @@
 
       // Cabecera: reparto carro/área y el botón de ordenar
       var h = '<div class="seq-cab">' +
+        _seqCabTecnicaHTML(sesion) +
         '<span class="seq-cab-tag carro">🛒 Carro · ' + (total ? minC + ' min' : nC) + '</span>' +
         '<span class="seq-cab-tag area">🎯 Área · ' + (total ? minA + ' min' : nA) + '</span>' +
         '<button type="button" class="seq-edit' + (ed ? ' on' : '') + '" onclick="seqToggleEdit()">' +
           (ed ? '✓ Listo' : '✏️ Ordenar') + '</button></div>';
       if (ed) h += '<div class="seq-aviso">Arrastra ⠿ o usa ▲▼. Se guarda solo.</div>';
+      h += _seqExplicacionHTML(sesion);   // v0.369 — fuera de la lista ordenable
 
       h += '<div class="seq' + (ed ? ' editando' : '') + '" id="seq-lista" data-ses="' + sesion.id + '">';
       ejsEnSesion.forEach(function(e, i){
