@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.371.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.372.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,14 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.372.0 — «Añadir clase este día»: todos los entrenadores del registro (2026-10)
+    (sin migraciones)
+    · EL SELECTOR DE ENTRENADOR del ＋ general (gestor) solo ofrecía a los que
+      ya tenían clases o asistencia, así que con un plantel de seis salía
+      uno. Ahora lista a todos los que tienen perfil en el club y a los
+      externos del catálogo, por nombre. El panel sigue enseñando solo a los
+      que tienen datos, que ahí sí es lo que informa.
 
   v0.371.0 — La explicación técnica ya no desaparece al volver a descargar (2026-09)
     (sin migraciones)
@@ -11009,7 +11017,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.371.0';
+    var APP_VERSION = '0.372.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -31304,7 +31312,11 @@
       if (_entGrupo) {
         if (_gPrefillEntPick && !clase) {
           var _by = _gestorAgrupar();
-          var _uids = Object.keys(_by).filter(function(u){ return _by[u].clases.length || _by[u].regs.length; });
+          // v0.372: TODOS los entrenadores del registro (perfil o externo del
+          // catálogo), no solo los que ya tienen clases o asistencia. Era el
+          // filtro del panel, que aquí no tiene sentido: el ＋ sirve justo
+          // para crearle la primera clase a quien aún no tiene ninguna.
+          var _uids = Object.keys(_by).filter(function(u){ return _by[u].perfil || _esExtUid(u) || _by[u].clases.length || _by[u].regs.length; });
           _uids.sort(function(a,b){ return _gestorNombre(_by[a]).localeCompare(_gestorNombre(_by[b])); });
           var _selEnt = document.getElementById('asist-form-ent');
           _selEnt.innerHTML = _uids.map(function(u){
