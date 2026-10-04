@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.373.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.374.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,18 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.374.0 — La ficha del alumno dice en qué franja está, aunque no tenga clases dadas (2026-10)
+    (sin migraciones)
+    · EL CASO: metes a Saúl en la franja del miércoles (desde el 07/10),
+      abres su ficha y dice «Todavía no está en ninguna franja». La ficha
+      miraba solo las CLASES DADAS (registros); el cupo de la franja no
+      contaba. Con un alumno recién metido, siempre cero.
+    · AHORA el índice guarda también las franjas en las que está (cupo) y la
+      ficha, si no hay clases dadas, enseña «Está en esta franja, sin
+      ninguna clase dada todavía: Miércoles 17:00-18:00 · Pau X 17h · Manuel
+      · desde 07/10». El aviso de «ninguna franja» queda solo para quien de
+      verdad no está en ninguna.
 
   v0.373.0 — Días en blanco al elegir uno · buscar alumnos sin acentos (2026-10)
     (sin migraciones)
@@ -11040,7 +11052,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.373.0';
+    var APP_VERSION = '0.374.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -16712,7 +16724,7 @@
       var by  = _gestorAgrupar();
       var map = {};
       var porEnt = {};   // entrenador → conjunto de sus alumnos (cupo + registros)
-      function ensA(key, nombre, ape){ if(!map[key]) map[key]={ sesiones:[], nombre:nombre, apellidos:ape||'' }; return map[key]; }
+      function ensA(key, nombre, ape){ if(!map[key]) map[key]={ sesiones:[], franjas:[], nombre:nombre, apellidos:ape||'' }; return map[key]; }
       Object.keys(by).forEach(function(uid){
         var d = by[uid];
         if (!d.clases.length && !d.regs.length) return;
@@ -16724,7 +16736,13 @@
         clases.forEach(function(c){ (c.alumnos||[]).forEach(function(a){
           var nombre = alNom(a); if(!nombre) return;
           var ape = alApe(a), key = _gtaFullKey(nombre, ape);
-          ensA(key, nombre, ape); entAl[key] = true;
+          var e = ensA(key, nombre, ape); entAl[key] = true;
+          // v0.374: la FRANJA en la que está (cupo), aunque aún no tenga
+          // ninguna clase dada. Es lo que faltaba para que la ficha no diga
+          // «no está en ninguna franja» a quien acaba de entrar en una.
+          if (alActivo(a, hoyLocal()) || !alBaja(a)) {
+            e.franjas.push({ dia:c.diaSemana, franja:c.franja||'', nombre:c.nombre||'', entrenador:entrenador, inicio:c.inicio||'', alta:alAlta(a)||'' });
+          }
         }); });
         regs.forEach(function(r){
           if (r.sinClase) return;
@@ -17726,6 +17744,22 @@
       // con quién juega) y si hay que buscarla no sirve de nada.
       var fichaHTML = _gtaFichaHTML(al) + _gtaObsHTML(al);
       if (!al.sesiones.length) {
+        // v0.374: sin clases dadas todavía, pero puede estar YA en una franja
+        // (lo normal con un alumno recién metido). Se dice dónde está.
+        var frs = al.franjas || [];
+        if (frs.length) {
+          cont.innerHTML = fichaHTML +
+            '<div class="vacio" style="padding:1.2rem 0;"><div class="vacio-icono">📅</div>' +
+            '<p>Está en ' + (frs.length === 1 ? 'esta franja' : 'estas franjas') + ', sin ninguna clase dada todavía:</p>' +
+            '<div style="margin-top:8px;">' + frs.map(function(f){
+              var d = (f.dia >= 0 && DIAS_NOMBRES_A[f.dia]) ? DIAS_NOMBRES_A[f.dia] : '';
+              var desde = f.alta || f.inicio;
+              return '<div style="font-size:13px;font-weight:700;color:var(--texto);padding:4px 0;">' +
+                _gEsc((d + ' ' + f.franja).trim()) + (f.nombre ? ' · ' + _gEsc(f.nombre) : '') +
+                ' <span style="font-weight:600;color:var(--gris);">· ' + _gEsc(f.entrenador) + (desde ? ' · desde ' + _gEsc(formatFechaCorta(desde)) : '') + '</span></div>';
+            }).join('') + '</div></div>';
+          return;
+        }
         cont.innerHTML = fichaHTML +
           '<div class="vacio" style="padding:1.2rem 0;"><div class="vacio-icono">📅</div>' +
           '<p>Todavía no está en ninguna franja.<br>Usa «Cambiar de clase» para asignarle entrenador y horario.</p></div>';
