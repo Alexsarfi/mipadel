@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.372.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.373.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,19 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.373.0 — Días en blanco al elegir uno · buscar alumnos sin acentos (2026-10)
+    (sin migraciones)
+    · CALENDARIO DEL GESTOR: con un día elegido, los otros cuatro se quedan
+      en blanco con borde (como «Toda la semana» cuando no es la vista
+      activa) y manda el dorado. En la vista semana siguen en verde.
+    · BUSCAR ALUMNOS SIN ACENTOS: los tres campos de nombre (nueva clase,
+      alta rápida, recuperación) dejan el <datalist> nativo —Safari casa con
+      acentos y solo mira el nombre— por una lista de sugerencias propia:
+      cada palabra escrita tiene que estar en nombre + apellidos, sin
+      acentos ni mayúsculas. «maria fernandez» encuentra a María Fernández.
+      Tocar la sugerencia rellena nombre y, donde ya lo hacía, apellidos y
+      teléfono. El <datalist> se conserva (no lo usa ya ningún campo).
 
   v0.372.0 — «Añadir clase este día»: todos los entrenadores del registro (2026-10)
     (sin migraciones)
@@ -6783,6 +6796,12 @@
     .gplan-col { flex:1; min-width:72px; display:flex; flex-direction:column; gap:5px; }
     .gplan-day { font-size:12px; font-weight:800; color:var(--blanco); background:var(--verde); border:none; border-radius:9px; padding:6px 2px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
     .gplan-day:active { transform:scale(0.97); }
+    /* v0.373: sugerencias de alumnos bajo el campo */
+    .al-sug { position:absolute; z-index:50; background:var(--blanco); border:1.5px solid var(--borde); border-radius:10px;
+      box-shadow:0 6px 18px rgba(14,27,60,.16); max-height:220px; overflow-y:auto; }
+    .al-sug-it { padding:8px 11px; font-size:13px; cursor:pointer; border-bottom:1px solid var(--borde); }
+    .al-sug-it:last-child { border-bottom:none; }
+    .al-sug-it:hover, .al-sug-it:active { background:var(--arena); }
     .gplan-slot { background:var(--blanco); border:1.5px solid var(--borde); border-radius:9px; padding:4px; display:flex; flex-direction:column; gap:3px; }
     .gplan-hora { font-size:9.5px; font-weight:800; color:var(--texto); background:var(--arena); border:none; border-radius:6px; padding:3px 2px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; -webkit-tap-highlight-color:transparent; }
     .gplan-hora:active { transform:scale(0.97); }
@@ -6814,7 +6833,11 @@
     .gpsem-hdr:active { filter:brightness(0.96); }
     .gpsem-chev { margin-left:auto; font-size:13px; font-weight:800; opacity:.8; }
     .gpplan-entblock.plegado { opacity:.85; }
+    /* v0.373: con un día elegido, LOS DEMÁS en blanco con borde (igual que
+       «Toda la semana» cuando no es la vista activa), para que mande el
+       dorado. Sin día elegido (vista semana) siguen en verde. */
     .gpplan-diarow .gplan-day { flex:1; min-width:0; padding:9px 2px; font-size:13px; }
+    .gpplan-diarow.condia .gplan-day:not(.sel) { background:var(--blanco); color:var(--texto); border:1.5px solid var(--borde); }
     /* v0.114.1: día activo con sombreado DORADO (mismas características) */
     .gplan-day.sel { background:var(--dorado); box-shadow:0 0 0 2.5px #f4e8c8, 0 0 0 4px var(--dorado); text-transform:uppercase; }
     .gpplan-panel { background:var(--blanco); border:1.5px solid var(--verde-suave); border-radius:13px; padding:0.4rem 0.7rem 0.6rem; margin-bottom:10px; }
@@ -10766,8 +10789,8 @@
           <datalist id="dl-alumnos"></datalist>
           <div class="asist-form-alumnos-lista" id="asist-form-alumnos"></div>
           <div class="asist-form-add-alumno" style="flex-wrap:wrap;">
-            <input id="asist-form-nuevo-alumno" class="form-input" type="text" placeholder="Nombre *" style="flex:1;min-width:105px;" list="dl-alumnos"
-                   onkeydown="if(event.key==='Enter'){event.preventDefault();asistAnadirAlumno();}" oninput="asistAutoRellenar(this.value)">
+            <input id="asist-form-nuevo-alumno" class="form-input" type="text" placeholder="Nombre *" style="flex:1;min-width:105px;" autocomplete="off"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();asistAnadirAlumno();}" oninput="asistAutoRellenar(this.value);alSugerir(this,function(a){asistAutoRellenar(a.nombre);})" onblur="alSugCerrar(this)">
             <input id="asist-form-nuevo-apellidos" class="form-input" type="text" placeholder="Apellidos" style="flex:1;min-width:105px;"
                    onkeydown="if(event.key==='Enter'){event.preventDefault();asistAnadirAlumno();}">
             <input id="asist-form-nuevo-telefono" class="form-input" type="tel" placeholder="Teléfono" style="flex:1;min-width:105px;"
@@ -11017,7 +11040,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.372.0';
+    var APP_VERSION = '0.373.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -12988,7 +13011,7 @@
       h += '<button type="button" class="gplan-semana' + (_gpSelDia === 'S' ? ' sel' : '') +
            '" onclick="gpSelDia(\'S\')">🗓 Toda la semana · alumnos</button>';
       // v0.87: fila horizontal de días (mismo formato de siempre) + drill-down
-      h += '<div class="gpplan-diarow">';
+      h += '<div class="gpplan-diarow' + (_gpSelDia != null && _gpSelDia !== 'S' ? ' condia' : '') + '">';
       diasPlan.forEach(function(dia){
         h += '<button type="button" class="gplan-day' + (_gpSelDia === dia ? ' sel' : '') +
              '" onclick="gpSelDia(' + dia + ')">' + _GDIAS[dia] + '</button>';
@@ -29589,6 +29612,49 @@
                (a.apellidos ? ' label="' + _gEsc(a.nombre + ' ' + a.apellidos) + '"' : '') + '></option>';
       }).join('');
     }
+    // ── v0.373 — SUGERENCIAS DE ALUMNOS SIN ACENTOS ───────────────────────
+    // El <datalist> nativo lo casa el navegador: Safari distingue acentos y
+    // solo mira el `value` (el nombre), así que «Maria Fernandez» no
+    // encontraba a «María Fernández». Esto lo sustituye por una lista propia
+    // bajo el campo: cada palabra escrita tiene que estar en nombre+apellidos,
+    // sin acentos ni mayúsculas. Tocar una sugerencia rellena el nombre y, si
+    // el campo tiene su «autorellenar», los apellidos y el teléfono.
+    function _alSugNorm(t) { return _galsNorm(t).replace(/\s+/g, ' ').trim(); }
+    function alSugerir(inp, onPick) {
+      if (!inp) return;
+      var caja = inp.parentNode.querySelector('.al-sug[data-for="' + inp.id + '"]');
+      var q = _alSugNorm(inp.value);
+      if (!q) { if (caja) caja.remove(); return; }
+      var toks = q.split(' ');
+      var hits = _alumnosAcademia().filter(function(a){
+        var full = _alSugNorm((a.nombre || '') + ' ' + (a.apellidos || ''));
+        return toks.every(function(t){ return full.indexOf(t) >= 0; });
+      }).slice(0, 8);
+      if (!hits.length) { if (caja) caja.remove(); return; }
+      if (!caja) {
+        caja = document.createElement('div'); caja.className = 'al-sug'; caja.setAttribute('data-for', inp.id);
+        inp.parentNode.style.position = inp.parentNode.style.position || 'relative';
+        inp.parentNode.appendChild(caja);
+      }
+      caja.innerHTML = hits.map(function(a, i){
+        return '<div class="al-sug-it" data-i="' + i + '"><b>' + _gEsc(a.nombre) + '</b>' + (a.apellidos ? ' ' + _gEsc(a.apellidos) : '') + '</div>';
+      }).join('');
+      Array.prototype.forEach.call(caja.querySelectorAll('.al-sug-it'), function(el){
+        el.addEventListener('mousedown', function(ev){
+          ev.preventDefault();
+          var a = hits[+el.getAttribute('data-i')];
+          inp.value = a.nombre;
+          caja.remove();
+          if (typeof onPick === 'function') onPick(a);
+        });
+      });
+      caja.style.top = (inp.offsetTop + inp.offsetHeight + 2) + 'px';
+      caja.style.left = inp.offsetLeft + 'px';
+      caja.style.width = Math.max(inp.offsetWidth, 220) + 'px';
+    }
+    function alSugCerrar(inp) {
+      setTimeout(function(){ var c = inp && inp.parentNode && inp.parentNode.querySelector('.al-sug[data-for="' + inp.id + '"]'); if (c) c.remove(); }, 150);
+    }
 
     function alumnosNombres(clase) { return (clase.alumnos || []).map(alNom); }
     function alumnosActivos(clase, fecha) {   // NOMBRES de los activos (display)
@@ -30929,8 +30995,8 @@
           '<div class="asist-recup-panel">' +
             '<div style="font-size:12px;font-weight:700;color:var(--texto);margin-bottom:4px;">＋ Añadir alumno a la clase (alta el ' + formatFechaCorta(asistFechaActiva) + ')</div>' +
             '<div class="asist-form-add-alumno" style="flex-wrap:wrap;">' +
-              '<input id="asist-alta-nombre" class="form-input" type="text" placeholder="Nombre *" style="flex:1;min-width:100px;" list="dl-alumnos" ' +
-                'oninput="asistAltaAutoRellenar(this.value)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();asistAltaRapida();}">' +
+              '<input id="asist-alta-nombre" class="form-input" type="text" placeholder="Nombre *" style="flex:1;min-width:100px;" autocomplete="off" ' +
+                'oninput="asistAltaAutoRellenar(this.value);alSugerir(this,function(a){asistAltaAutoRellenar(a.nombre);})" onblur="alSugCerrar(this)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();asistAltaRapida();}">' +
               '<input id="asist-alta-apellidos" class="form-input" type="text" placeholder="Apellidos" style="flex:1;min-width:100px;">' +
               '<input id="asist-alta-telefono" class="form-input" type="tel" placeholder="Teléfono" style="flex:1;min-width:100px;">' +
               '<button class="btn btn-verde btn-sm" style="flex-shrink:0;" onclick="asistAltaRapida()">＋ Alta</button>' +
@@ -30954,8 +31020,8 @@
         '<div class="asist-recup-panel">' +
           '<div style="font-size:12px;font-weight:700;color:var(--texto);margin-bottom:4px;">↩ Añadir recuperación (solo el nombre; la asistencia se marca ese día)</div>' +
           '<div class="asist-form-add-alumno">' +
-            '<input id="asist-recup-input" class="form-input" type="text" placeholder="Escribir nombre…" list="dl-alumnos" ' +
-              'onkeydown="if(event.key===\'Enter\'){event.preventDefault();asistAnadirRecupInput();}">' +
+            '<input id="asist-recup-input" class="form-input" type="text" placeholder="Escribir nombre…" autocomplete="off" ' +
+              'oninput="alSugerir(this)" onblur="alSugCerrar(this)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();asistAnadirRecupInput();}">' +
             '<button class="btn btn-verde btn-sm" style="flex-shrink:0;" onclick="asistAnadirRecupInput()">＋</button>' +
           '</div>' +
           '<div class="asist-recup-chips">' + chips + '</div>' +
