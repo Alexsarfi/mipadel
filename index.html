@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.380.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.381.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,12 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.381.0 — Gestor: los entrenadores, encima de «Toda la semana» y centrados (2026-10)
+    (sin migraciones)
+    · La fila de chips de entrenadores (v0.380) sube por encima del botón
+      «🗓 Toda la semana · alumnos» y va centrada. Solo aparece con la vista
+      de semana abierta; el funcionamiento no cambia.
 
   v0.380.0 — Gestor: elegir qué entrenadores se ven en «Toda la semana» (2026-10)
     (sin migraciones)
@@ -6914,7 +6920,7 @@
     .gpplan-diarow { display:flex; gap:6px; margin:0.3rem 0 0.6rem; }
     /* v0.167: botón de vista "toda la semana" (encima de los días) */
     /* v0.380 — chips de entrenadores en «Toda la semana» */
-    .gpsem-ents { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 10px; }
+    .gpsem-ents { display:flex; flex-wrap:wrap; justify-content:center; gap:6px; margin:0.2rem 0 0.5rem; }   /* v0.381: centrados, encima del botón */
     .gpsem-ent { display:inline-flex; align-items:center; gap:6px; font-family:inherit; font-size:12.5px; font-weight:700;
       padding:4px 11px 4px 4px; border-radius:999px; border:1.5px solid var(--borde); background:var(--blanco);
       color:var(--gris); cursor:pointer; -webkit-tap-highlight-color:transparent; }
@@ -11221,7 +11227,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.380.0';
+    var APP_VERSION = '0.381.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -13188,21 +13194,8 @@
       // eliges un día concreto, se respeta.
       if (!_gpDiaAuto) { _gpDiaAuto = true; _gpSelDia = 'S'; }
 
-      // v0.167: botón de vista SEMANA, encima de la fila de días
-      h += '<button type="button" class="gplan-semana' + (_gpSelDia === 'S' ? ' sel' : '') +
-           '" onclick="gpSelDia(\'S\')">🗓 Toda la semana · alumnos</button>';
-      // v0.87: fila horizontal de días (mismo formato de siempre) + drill-down
-      h += '<div class="gpplan-diarow' + (_gpSelDia != null && _gpSelDia !== 'S' ? ' condia' : '') + '">';
-      diasPlan.forEach(function(dia){
-        h += '<button type="button" class="gplan-day' + (_gpSelDia === dia ? ' sel' : '') +
-             '" onclick="gpSelDia(' + dia + ')">' + _GDIAS[dia] + '</button>';
-      });
-      h += '</div>';
-
       if (_gpSelDia === 'S') {
-        // ── Vista de TODA LA SEMANA: cada día con sus entrenadores y sus
-        // alumnos, sin los días del mes ni contadores. Visión de escuela.
-        h += '<div class="gpplan-panel">';
+        // v0.381: los chips van ENCIMA del botón «Toda la semana», centrados
         // v0.380: fila de chips con los entrenadores de la semana. Tocar uno
         // lo añade o lo quita de la vista; «Todos» vuelve a enseñarlos todos.
         var entsSem = {};
@@ -13226,6 +13219,22 @@
           });
           h += '</div>';
         }
+      }
+      // v0.167: botón de vista SEMANA, encima de la fila de días
+      h += '<button type="button" class="gplan-semana' + (_gpSelDia === 'S' ? ' sel' : '') +
+           '" onclick="gpSelDia(\'S\')">🗓 Toda la semana · alumnos</button>';
+      // v0.87: fila horizontal de días (mismo formato de siempre) + drill-down
+      h += '<div class="gpplan-diarow' + (_gpSelDia != null && _gpSelDia !== 'S' ? ' condia' : '') + '">';
+      diasPlan.forEach(function(dia){
+        h += '<button type="button" class="gplan-day' + (_gpSelDia === dia ? ' sel' : '') +
+             '" onclick="gpSelDia(' + dia + ')">' + _GDIAS[dia] + '</button>';
+      });
+      h += '</div>';
+
+      if (_gpSelDia === 'S') {
+        // ── Vista de TODA LA SEMANA: cada día con sus entrenadores y sus
+        // alumnos, sin los días del mes ni contadores. Visión de escuela.
+        h += '<div class="gpplan-panel">';
         // v0.168: los días van uno AL LADO del otro (columnas)
         h += '<div class="gpsem-cols">';
         var huboAlgo = false;
