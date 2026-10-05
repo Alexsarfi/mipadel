@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.378.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.380.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,38 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.380.0 — Gestor: elegir qué entrenadores se ven en «Toda la semana» (2026-10)
+    (sin migraciones)
+    · En la vista «🗓 Toda la semana · alumnos», encima de los días, una fila
+      de chips con los entrenadores de esa semana (inicial con su color de
+      siempre + nombre) y un chip «Todos».
+    · Tocar un entrenador lo añade a la vista; tocar más, para comparar.
+      Los elegidos salen rellenos de su color; los demás en gris. Con alguno
+      elegido, la semana enseña SOLO sus franjas, con el mismo diseño de
+      siempre (columnas por día, bloques de color, alumnos). Si desmarcas a
+      todos, o tocas «Todos», vuelven a salir todos.
+    · La elección se recuerda mientras navegas por el panel; al recargar la
+      app vuelven a salir todos.
+
+  v0.379.0 — El buscador de alumnos encuentra a todos (2026-10)
+    (sin migraciones)
+    · EL FALLO PRINCIPAL: la lista del buscador agrupaba SOLO por el nombre.
+      «María García» y «María Fernández» eran la misma persona para él y la
+      segunda no salía nunca. Ahora se distingue por nombre + apellidos (sin
+      acentos ni mayúsculas). Una entrada vieja sin apellidos («María») se
+      omite si ya hay alguna María con apellidos.
+    · LA LISTA DEL CLUB SE DESCARGA AL BUSCAR: antes solo se bajaba de
+      Supabase al abrir «Todos los alumnos» del panel; hasta entonces el
+      buscador usaba la copia guardada en ese aparato (vieja o vacía). Ahora
+      se descarga al abrir el formulario de la clase y, si aún no estaba, en
+      la primera búsqueda (y la búsqueda se repite sola al llegar).
+    · AL ELEGIR UNA SUGERENCIA se rellenan los apellidos y el teléfono de ESA
+      persona (antes volvía a buscar por nombre y cogía los de la primera
+      María). Al teclear un nombre repetido ya no se autorrellena nada.
+    · «YA ESTÁ EN ESTA CLASE» mira nombre + apellidos: se puede meter a
+      María Fernández en un grupo donde ya está María García.
+    · Hasta 12 sugerencias (antes 8). Los alumnos archivados ya no salen.
 
   v0.378.0 — Barra nueva con Sesiones e Inicio en el centro; semana de Inicio más pro; Avanzado sin el mes (2026-10)
     (sin migraciones)
@@ -6881,6 +6913,17 @@
     /* v0.87: drill-down del planning (día → entrenadores → franjas) */
     .gpplan-diarow { display:flex; gap:6px; margin:0.3rem 0 0.6rem; }
     /* v0.167: botón de vista "toda la semana" (encima de los días) */
+    /* v0.380 — chips de entrenadores en «Toda la semana» */
+    .gpsem-ents { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 10px; }
+    .gpsem-ent { display:inline-flex; align-items:center; gap:6px; font-family:inherit; font-size:12.5px; font-weight:700;
+      padding:4px 11px 4px 4px; border-radius:999px; border:1.5px solid var(--borde); background:var(--blanco);
+      color:var(--gris); cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .gpsem-ent:not(.on) .gpsem-ent-av { filter:grayscale(1); opacity:.45; }
+    .gpsem-ent-av { width:22px; height:22px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+      color:#fff; font-size:11px; font-weight:800; }
+    .gpsem-ent.todos { padding:4px 12px; }
+    .gpsem-ent.todos.on { background:var(--verde); border-color:var(--verde); color:#fff; }
+    .gpsem-ent:active { transform:scale(.96); }
     .gplan-semana { display:block; width:100%; margin:0.3rem 0 0; padding:9px 10px; border-radius:11px;
       border:1.5px solid var(--borde); background:var(--blanco); color:var(--texto);
       font-family:inherit; font-size:13px; font-weight:800; cursor:pointer; -webkit-tap-highlight-color:transparent; }
@@ -10921,7 +10964,7 @@
           <div class="asist-form-alumnos-lista" id="asist-form-alumnos"></div>
           <div class="asist-form-add-alumno" style="flex-wrap:wrap;">
             <input id="asist-form-nuevo-alumno" class="form-input" type="text" placeholder="Nombre *" style="flex:1;min-width:105px;" autocomplete="off"
-                   onkeydown="if(event.key==='Enter'){event.preventDefault();asistAnadirAlumno();}" oninput="asistAutoRellenar(this.value);alSugerir(this,function(a){asistAutoRellenar(a.nombre);})" onblur="alSugCerrar(this)">
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();asistAnadirAlumno();}" oninput="asistAutoRellenar(this.value);alSugerir(this,function(a){_alPickRellenar(a,'asist-form-nuevo-apellidos','asist-form-nuevo-telefono');})" onblur="alSugCerrar(this)">
             <input id="asist-form-nuevo-apellidos" class="form-input" type="text" placeholder="Apellidos" style="flex:1;min-width:105px;"
                    onkeydown="if(event.key==='Enter'){event.preventDefault();asistAnadirAlumno();}">
             <input id="asist-form-nuevo-telefono" class="form-input" type="tel" placeholder="Teléfono" style="flex:1;min-width:105px;"
@@ -11178,7 +11221,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.378.0';
+    var APP_VERSION = '0.380.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -13160,6 +13203,29 @@
         // ── Vista de TODA LA SEMANA: cada día con sus entrenadores y sus
         // alumnos, sin los días del mes ni contadores. Visión de escuela.
         h += '<div class="gpplan-panel">';
+        // v0.380: fila de chips con los entrenadores de la semana. Tocar uno
+        // lo añade o lo quita de la vista; «Todos» vuelve a enseñarlos todos.
+        var entsSem = {};
+        diasPlan.forEach(function(dia){
+          var sd = slots[dia] || {};
+          Object.keys(sd).forEach(function(fr){ sd[fr].forEach(function(e){ entsSem[e.uid] = e.ent; }); });
+        });
+        var uidsSem = Object.keys(entsSem).sort(function(a,b){ return entsSem[a].localeCompare(entsSem[b]); });
+        if (_gpSemEnts) Object.keys(_gpSemEnts).forEach(function(u){ if (!entsSem[u]) delete _gpSemEnts[u]; });
+        if (_gpSemEnts && !Object.keys(_gpSemEnts).length) _gpSemEnts = null;
+        if (uidsSem.length > 1) {
+          h += '<div class="gpsem-ents">';
+          h += '<button type="button" class="gpsem-ent todos' + (!_gpSemEnts ? ' on' : '') + '" onclick="gpSemEntTodos()">Todos</button>';
+          uidsSem.forEach(function(u){
+            var on = !!(_gpSemEnts && _gpSemEnts[u]);
+            var cc = _entColor(u);
+            h += '<button type="button" class="gpsem-ent' + (on ? ' on' : '') + '" onclick="gpSemEnt(\'' + u + '\')"' +
+                 ' style="' + (on ? 'background:' + cc.bg + ';border-color:' + cc.bar + ';color:' + cc.tx + ';' : '') + '">' +
+                 '<span class="gpsem-ent-av" style="background:' + cc.bar + ';">' + _gEsc((entsSem[u] || '?').charAt(0).toUpperCase()) + '</span>' +
+                 _gEsc(entsSem[u]) + '</button>';
+          });
+          h += '</div>';
+        }
         // v0.168: los días van uno AL LADO del otro (columnas)
         h += '<div class="gpsem-cols">';
         var huboAlgo = false;
@@ -13170,6 +13236,7 @@
             slotsD[fr].forEach(function(e){ entsD[e.uid] = e.ent; });
           });
           var uidsD = Object.keys(entsD).sort(function(a,b){ return entsD[a].localeCompare(entsD[b]); });
+          if (_gpSemEnts) uidsD = uidsD.filter(function(u){ return _gpSemEnts[u]; });   // v0.380
           if (!uidsD.length) return;
           huboAlgo = true;
           h += '<div class="gpsem-dia">';
@@ -14537,6 +14604,17 @@
     var _gpDiaAuto = false;
     // v0.173: entrenadores plegados en la vista de semana ('dia|uid' → true)
     var _gpSemCol = {};
+    // ── v0.380 — Elegir qué entrenadores se ven en «Toda la semana» ──────
+    // null = todos (lo de siempre). Si no, { uid:true } de los elegidos.
+    // Se recuerda mientras navegas; al recargar vuelven a salir todos.
+    var _gpSemEnts = null;
+    function gpSemEnt(u) {
+      if (!_gpSemEnts) _gpSemEnts = {};
+      if (_gpSemEnts[u]) delete _gpSemEnts[u]; else _gpSemEnts[u] = true;
+      if (!Object.keys(_gpSemEnts).length) _gpSemEnts = null;   // ninguno = todos
+      renderGestor();
+    }
+    function gpSemEntTodos() { _gpSemEnts = null; renderGestor(); }
     function gpSemToggle(k) {
       if (_gpSemCol[k]) delete _gpSemCol[k]; else _gpSemCol[k] = true;
       renderGestor();
@@ -29855,25 +29933,33 @@
     // gestor tiene el panel cargado, toda la academia (todas las clases
     // de todos los entrenadores); si no, las clases propias/gestionadas.
     function _alumnosAcademia() {
+      // v0.379 — Antes se agrupaba SOLO por el nombre: «María García» y
+      // «María Fernández» eran la misma para el buscador y la segunda no
+      // salía nunca. Ahora la clave es nombre + apellidos (sin acentos ni
+      // mayúsculas). Una entrada SIN apellidos («María» de una franja vieja)
+      // se descarta al final si ya hay alguna María con apellidos.
       var vistos = {}, out = [];
       function add(a) {
         var n = alNom(a);
         if (!n) return;
-        if (vistos[n]) {  // completar datos si otra entrada los tiene
-          if (!vistos[n].apellidos && alApe(a)) vistos[n].apellidos = alApe(a);
-          if (!vistos[n].telefono  && alTel(a)) vistos[n].telefono  = alTel(a);
+        var k = _alSugNorm(n) + '|' + _alSugNorm(alApe(a));
+        if (vistos[k]) {  // completar datos si otra entrada los tiene
+          if (!vistos[k].telefono && alTel(a)) vistos[k].telefono = alTel(a);
           return;
         }
-        vistos[n] = { nombre:n, apellidos:alApe(a), telefono:alTel(a) };
-        out.push(vistos[n]);
+        vistos[k] = { nombre:n, apellidos:alApe(a), telefono:alTel(a) };
+        out.push(vistos[k]);
       }
       if (_gestorData && _gestorData.clases) {
         _gestorData.clases.forEach(function(c){ (c.alumnos || []).forEach(add); });
       }
       (leerAsistConfig().clases || []).forEach(function(c){ (c.alumnos || []).forEach(add); });
       // v0.138: fichas de academia (aún sin franja) → también autocompletan
-      _acFichas().forEach(add);
-      out.sort(function(a,b){ return a.nombre.localeCompare(b.nombre); });
+      _acFichas().forEach(function(a){ if (!a.archivado) add(a); });   // v0.379: sin los archivados
+      var conApe = {};
+      out.forEach(function(a){ if (a.apellidos) conApe[_alSugNorm(a.nombre)] = true; });
+      out = out.filter(function(a){ return a.apellidos || !conApe[_alSugNorm(a.nombre)]; });
+      out.sort(function(a,b){ return a.nombre.localeCompare(b.nombre) || (a.apellidos||'').localeCompare(b.apellidos||''); });
       return out;
     }
     // Rellena el <datalist> compartido de autocompletado de alumnos
@@ -29898,11 +29984,18 @@
       var caja = inp.parentNode.querySelector('.al-sug[data-for="' + inp.id + '"]');
       var q = _alSugNorm(inp.value);
       if (!q) { if (caja) caja.remove(); return; }
+      // v0.379: la lista de alumnos del club se bajaba SOLO al abrir «Todos
+      // los alumnos» del panel. Ahora la primera búsqueda la descarga y
+      // repite la búsqueda cuando llega.
+      if (typeof _acCargado !== 'undefined' && !_acCargado && typeof _acCargarSb === 'function' && !alSugerir._cargando) {
+        alSugerir._cargando = true;
+        _acCargarSb(false, function(){ alSugerir._cargando = false; if (document.activeElement === inp) alSugerir(inp, onPick); });
+      }
       var toks = q.split(' ');
       var hits = _alumnosAcademia().filter(function(a){
         var full = _alSugNorm((a.nombre || '') + ' ' + (a.apellidos || ''));
         return toks.every(function(t){ return full.indexOf(t) >= 0; });
-      }).slice(0, 8);
+      }).slice(0, 12);   // v0.379: 12 en vez de 8
       if (!hits.length) { if (caja) caja.remove(); return; }
       if (!caja) {
         caja = document.createElement('div'); caja.className = 'al-sug'; caja.setAttribute('data-for', inp.id);
@@ -29924,6 +30017,27 @@
       caja.style.top = (inp.offsetTop + inp.offsetHeight + 2) + 'px';
       caja.style.left = inp.offsetLeft + 'px';
       caja.style.width = Math.max(inp.offsetWidth, 220) + 'px';
+    }
+    // v0.379: al tocar una sugerencia se rellenan los apellidos y el
+    // teléfono DE ESA PERSONA (antes se buscaba otra vez por el nombre y,
+    // con dos Marías, salían los apellidos de la primera).
+    function _alPickRellenar(a, idApe, idTel) {
+      var iA = document.getElementById(idApe), iT = document.getElementById(idTel);
+      if (iA) iA.value = a.apellidos || '';
+      if (iT) iT.value = a.telefono || '';
+    }
+    // v0.379: autorrelleno al teclear SOLO si el nombre es de una única
+    // persona; con dos «María» no se adivina cuál es.
+    function _alUnicoPorNombre(n) {
+      var m = _alumnosAcademia().filter(function(a){ return a.nombre === n; });
+      return m.length === 1 ? m[0] : null;
+    }
+    // v0.379: ¿es la misma persona? Mismo nombre y mismos apellidos (o
+    // alguno de los dos sin apellidos, por los datos viejos).
+    function _alMismaPersona(a, nombre, ape) {
+      if (_alSugNorm(alNom(a)) !== _alSugNorm(nombre)) return false;
+      var x = _alSugNorm(alApe(a)), y = _alSugNorm(ape);
+      return !x || !y || x === y;
     }
     function alSugCerrar(inp) {
       setTimeout(function(){ var c = inp && inp.parentNode && inp.parentNode.querySelector('.al-sug[data-for="' + inp.id + '"]'); if (c) c.remove(); }, 150);
@@ -31300,7 +31414,7 @@
             '<div style="font-size:12px;font-weight:700;color:var(--texto);margin-bottom:4px;">＋ Añadir alumno a la clase (alta el ' + formatFechaCorta(asistFechaActiva) + ')</div>' +
             '<div class="asist-form-add-alumno" style="flex-wrap:wrap;">' +
               '<input id="asist-alta-nombre" class="form-input" type="text" placeholder="Nombre *" style="flex:1;min-width:100px;" autocomplete="off" ' +
-                'oninput="asistAltaAutoRellenar(this.value);alSugerir(this,function(a){asistAltaAutoRellenar(a.nombre);})" onblur="alSugCerrar(this)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();asistAltaRapida();}">' +
+                'oninput="asistAltaAutoRellenar(this.value);alSugerir(this,function(a){_alPickRellenar(a,\'asist-alta-apellidos\',\'asist-alta-telefono\');})" onblur="alSugCerrar(this)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();asistAltaRapida();}">' +
               '<input id="asist-alta-apellidos" class="form-input" type="text" placeholder="Apellidos" style="flex:1;min-width:100px;">' +
               '<input id="asist-alta-telefono" class="form-input" type="tel" placeholder="Teléfono" style="flex:1;min-width:100px;">' +
               '<button class="btn btn-verde btn-sm" style="flex-shrink:0;" onclick="asistAltaRapida()">＋ Alta</button>' +
@@ -31357,7 +31471,7 @@
     function asistAltaAutoRellenar(v) {
       var n = (v || '').trim();
       if (!n) return;
-      var m = _alumnosAcademia().filter(function(a){ return a.nombre === n; })[0];
+      var m = _alUnicoPorNombre(n);   // v0.379
       if (!m) return;
       var iA = document.getElementById('asist-alta-apellidos');
       var iT = document.getElementById('asist-alta-telefono');
@@ -31377,7 +31491,7 @@
       var clase = (cfg.clases||[]).filter(function(c){ return c.id===asistClaseActivaId; })[0];
       if (!clase) return;
       var idxYa = -1;
-      (clase.alumnos||[]).forEach(function(a, i){ if (alNom(a) === nombre) idxYa = i; });
+      (clase.alumnos||[]).forEach(function(a, i){ if (_alMismaPersona(a, nombre, ape)) idxYa = i; });   // v0.379
       if (idxYa >= 0) {
         var ya = clase.alumnos[idxYa];
         // v0.135: activo = ya está de alta (todo alumno lleva baja de fin
@@ -31696,6 +31810,7 @@
       // se sigue rellenando abajo, así que al guardar NO se pierden.
       var _grAls = document.getElementById('asist-form-grupo-alumnos');
       if (_grAls) _grAls.style.display = _esGestor ? '' : 'none';
+      try { _acCargarSb(false); } catch (e) {}   // v0.379: lista del club lista para buscar
 
       if (clase) {
         document.getElementById('asist-form-dia').value    = clase.diaSemana;
@@ -31837,7 +31952,7 @@
     function asistAutoRellenar(v) {
       var n = (v || '').trim();
       if (!n) return;
-      var m = _alumnosAcademia().filter(function(a){ return a.nombre === n; })[0];
+      var m = _alUnicoPorNombre(n);   // v0.379
       if (!m) return;
       var inpApe = document.getElementById('asist-form-nuevo-apellidos');
       var inpTel = document.getElementById('asist-form-nuevo-telefono');
@@ -31851,7 +31966,7 @@
       var inpTel = document.getElementById('asist-form-nuevo-telefono');
       var nombre = input.value.trim();
       if (!nombre) return;
-      var ya = asistAlumnosForm.filter(function(a){ return alNom(a) === nombre; })[0];
+      var ya = asistAlumnosForm.filter(function(a){ return _alMismaPersona(a, nombre, inpApe.value.trim()); })[0];   // v0.379
       if (ya) {
         // v0.63: si vuelve al mismo grupo, se CONTINÚA su historial — el
         // periodo cerrado pasa a hist y se abre uno nuevo desde hoy.
