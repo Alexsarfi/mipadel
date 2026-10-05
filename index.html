@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.374.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.375.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,24 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.375.0 — Asistencia: solo los días con clase, la fecha de hoy y nada de lista antes de hora (2026-10)
+    (sin migraciones)
+    · LA TIRA DE LA SEMANA ya no enseña L–V con huecos: solo los días de esa
+      semana en que el entrenador tiene clase. Si hoy no hay clase, se elige
+      el siguiente día con clase (o el último si ya pasaron). Semana sin
+      clases → «Sin clases esta semana». Las flechas ‹ › siguen para ir a
+      otras semanas, e «Ir a hoy» solo sale si te has ido de la semana actual.
+    · ENCIMA, una línea informativa: «📅 Hoy es lunes, 5 de octubre de 2026».
+    · NO SE PASA LISTA ANTES DE QUE EMPIECE LA CLASE. La hora sale de la
+      franja («18:00-19:30» → 18:00) o de la hora de la recuperación. Antes de
+      esa hora (o en un día futuro) la lista se abre para mirarla, pero marcar
+      presente/ausente o J/IJ avisa «Podrás pasar lista hoy a las 18:00».
+      Guardar antes de hora solo guarda lo que se prepara con antelación
+      (sustituto, recuperaciones previstas) con la lista vacía; «Sin clase»
+      sigue pudiéndose marcar cuando sea. Días pasados: sin cambios.
+    · La tarjeta de una clase de hoy que aún no ha empezado dice «A las 18:00»
+      en vez de «Pendiente».
 
   v0.374.0 — La ficha del alumno dice en qué franja está, aunque no tenga clases dadas (2026-10)
     (sin migraciones)
@@ -6926,6 +6944,11 @@
     .asist-tira-d.on .atd-w, .asist-tira-d.on .atd-n { color:#fff; }
     .atd-m { display:flex; align-items:center; justify-content:center; height:9px; }
     .asist-tira-d.on .acal-dot { box-shadow:0 0 0 1.5px rgba(255,255,255,.85); }
+    /* v0.375 — fecha de hoy encima y tira solo con días de clase */
+    .asist-hoy-linea { font-size:12.5px; font-weight:700; color:var(--gris); text-align:center; margin:0 0 8px; }
+    .asist-tira-d { max-width:72px; }
+    .asist-tira { justify-content:center; }
+    .asist-tira-vacia { flex:1; text-align:center; font-size:12px; font-weight:700; color:var(--gris); padding:12px 0; }
     .asist-hoy-link { display:block; margin:-4px auto 0.8rem; font-family:inherit; font-size:11.5px;
       font-weight:700; color:var(--verde); background:none; border:none; cursor:pointer; padding:4px 10px; }
     .acal-cell.elegido .acal-num { box-shadow:0 0 0 2px var(--verde); }
@@ -11052,7 +11075,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.374.0';
+    var APP_VERSION = '0.375.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -30281,6 +30304,23 @@
       if (!asistDiaSel) asistDiaSel = hoy;
       asistSemSel = _asistLunesDe(asistDiaSel);
 
+      // ── v0.375 — La tira solo lleva los días de ESA semana en los que hay
+      // clase (antes, L–V siempre, con huecos vacíos). Si el día elegido no
+      // tiene clase (p. ej. hoy es un día libre), se salta al siguiente día
+      // con clase de la semana, o al último si ya pasaron todos.
+      function _hayClaseEn(f) {
+        var dw = new Date(+f.slice(0,4), +f.slice(5,7)-1, +f.slice(8,10)).getDay();
+        return (diasMap[dw] || []).some(function(c){ return _claseEnFecha(c, f); });
+      }
+      var colsSem = cols.filter(function(d){
+        return _hayClaseEn(addDiasISO(asistSemSel, (d === 0) ? 6 : d - 1));
+      });
+      var fechasSem = colsSem.map(function(d){ return addDiasISO(asistSemSel, (d === 0) ? 6 : d - 1); });
+      if (fechasSem.length && fechasSem.indexOf(asistDiaSel) < 0) {
+        var _sig = fechasSem.filter(function(f){ return f >= asistDiaSel; })[0];
+        asistDiaSel = _sig || fechasSem[fechasSem.length - 1];
+      }
+
       // ── Barra del mes: plegada, con lo que hay que saber de un vistazo ──
       var nSemDia = 0;
       [0,1,2,3,4,5,6].forEach(function(off){
@@ -30288,7 +30328,12 @@
         var dw = new Date(+f.slice(0,4), +f.slice(5,7)-1, +f.slice(8,10)).getDay();
         nSemDia += (diasMap[dw] || []).filter(function(c){ return _claseEnFecha(c, f); }).length;
       });
-      var cal = '<button type="button" class="asist-mesbar' + (asistCalAbierto ? ' abierta' : '') +
+      // v0.375 — Línea informativa con la fecha de hoy, encima de todo.
+      var _dHoy = new Date(+hoy.slice(0,4), +hoy.slice(5,7)-1, +hoy.slice(8,10));
+      var cal = '<div class="asist-hoy-linea">📅 Hoy es ' +
+        DIAS_NOMBRES_A[_dHoy.getDay()].toLowerCase() + ', ' + _dHoy.getDate() + ' de ' +
+        MESES_NOMBRES_A[_dHoy.getMonth()].toLowerCase() + ' de ' + _dHoy.getFullYear() + '</div>';
+      cal += '<button type="button" class="asist-mesbar' + (asistCalAbierto ? ' abierta' : '') +
         '" onclick="asistCalToggle()">' +
         '<span class="asist-mesbar-t">' + _gEsc(getMesLabelA(_asistMesOffDe(asistDiaSel))) + '</span>' +
         '<span class="asist-mesbar-n">' + nSemDia + (nSemDia === 1 ? ' clase' : ' clases') + ' esta semana</span>' +
@@ -30347,7 +30392,8 @@
       cal += '<div class="asist-tira-wrap">';
       cal += '<button type="button" class="asist-tira-fl" onclick="asistSemNav(-1)" aria-label="Semana anterior">‹</button>';
       cal += '<div class="asist-tira">';
-      cols.forEach(function(d){
+      if (!colsSem.length) cal += '<div class="asist-tira-vacia">Sin clases esta semana</div>';
+      colsSem.forEach(function(d){   // v0.375: solo los días con clase
         var off = (d === 0) ? 6 : d - 1;
         var f   = addDiasISO(asistSemSel, off);
         var e   = _estadoDia(f);
@@ -30364,7 +30410,9 @@
       cal += '</div>';
       cal += '<button type="button" class="asist-tira-fl" onclick="asistSemNav(1)" aria-label="Semana siguiente">›</button>';
       cal += '</div>';
-      if (asistDiaSel !== hoy)
+      // v0.375: «Ir a hoy» solo si te has ido a otra semana (hoy puede no
+      // tener clase, y entonces el día elegido nunca es hoy).
+      if (asistSemSel !== _asistLunesDe(hoy))
         cal += '<button type="button" class="asist-hoy-link" onclick="asistHoy()">Ir a hoy</button>';
 
       document.getElementById('asist-calendario').innerHTML = cal;
@@ -30405,6 +30453,9 @@
             } else if (_regPasada(reg)) {
               // v0.293: sin ✓ — la proporción y el verde ya lo dicen
               badge = '<span class="asist-badge-hecha">' + reg.presentes.length + '/' + numAl + '</span>';
+            } else if (esHoy && _asistListaBloqueo(clase, fecha)) {
+              // v0.375: aún no ha empezado → no está «pendiente» todavía
+              badge = '<span class="asist-badge-futura">A las ' + _asistHoraInicio(clase.franja) + '</span>';
             } else if (esHoy) {
               badge = '<span class="asist-badge-pendiente">Pendiente</span>';
             } else if (esPas) {
@@ -30850,7 +30901,9 @@
       var esRecupSesion = _asistRecupModo || (regExiste && regExiste.recupClase);
       document.getElementById('asist-lista-titulo').textContent = nombre;
       var _horaRec = (esRecupSesion && regExiste && regExiste.recupHora) ? (' · ' + regExiste.recupHora) : '';
-      document.getElementById('asist-lista-sub').textContent    = (esRecupSesion ? '↩ Recuperación · ' : '') + formatFechaCompleta(asistFechaActiva) + _horaRec;
+      var _bloqL = _asistListaBloqueo(clase, asistFechaActiva);   // v0.375
+      document.getElementById('asist-lista-sub').textContent    = (esRecupSesion ? '↩ Recuperación · ' : '') + formatFechaCompleta(asistFechaActiva) + _horaRec +
+        (_bloqL ? ' · ⏳ lista desde ' + _bloqL : '');
       document.getElementById('asist-lista-volver-btn').textContent = _gEditVolverA ? '‹ Volver' : '‹ Asistencia';
       document.getElementById('asist-lista-fecha').value        = asistFechaActiva || hoyLocal();
 
@@ -31191,13 +31244,47 @@
       _asistListaSnap = _asistSnap();   // las recups ya quedaron guardadas
     }
 
+    // ── v0.375 — No se pasa lista antes de que empiece la clase ─────────
+    // Devuelve null si ya se puede, o el texto de cuándo se podrá. La hora
+    // de inicio sale de la franja («18:00-19:30» → 18:00) o, en una
+    // recuperación, de su recupHora. Sin hora legible, basta con que sea el
+    // día. Los días pasados siempre se pueden (pasar lista tarde vale).
+    function _asistHoraInicio(txt) {
+      var m = String(txt || '').match(/(\d{1,2})\s*[:.h]\s*(\d{2})/) || String(txt || '').match(/(\d{1,2})/);
+      if (!m) return null;
+      var h = +m[1], mi = m[2] ? +m[2] : 0;
+      if (h > 23 || mi > 59) return null;
+      return (h < 10 ? '0' : '') + h + ':' + (mi < 10 ? '0' : '') + mi;
+    }
+    function _asistListaBloqueo(clase, fecha, ahora) {
+      if (!fecha) return null;
+      var hoy = hoyLocal();
+      var reg = (leerAsistRegistros() || []).filter(function(r){ return clase && r.claseId === clase.id && r.fecha === fecha; })[0];
+      var ini = _asistHoraInicio((reg && reg.recupHora) || (clase && clase.franja));
+      if (fecha > hoy) return 'el ' + formatFechaCorta(fecha) + (ini ? ' a las ' + ini : '');
+      if (fecha < hoy || !ini) return null;
+      var d = ahora || new Date();
+      var hhmm = (d.getHours() < 10 ? '0' : '') + d.getHours() + ':' + (d.getMinutes() < 10 ? '0' : '') + d.getMinutes();
+      return hhmm >= ini ? null : 'hoy a las ' + ini;
+    }
+    function _asistClaseActiva() {
+      return (leerAsistConfig().clases || []).filter(function(c){ return c.id === asistClaseActivaId; })[0];
+    }
+    function _asistAvisoBloqueo() {
+      var b = _asistListaBloqueo(_asistClaseActiva(), asistFechaActiva);
+      if (b) alert('⏳ La clase aún no ha empezado.\nPodrás pasar lista ' + b + '.');
+      return !!b;
+    }
+
     function asistToggleAlumno(nombre) {
+      if (_asistAvisoBloqueo()) return;   // v0.375
       asistEstadoLista[nombre] = !asistEstadoLista[nombre];
       renderToggleAlumnos(null);
     }
 
     // Marca la ausencia como justificada (J) o injustificada (IJ)
     function asistSetJustif(nombre, j) {
+      if (_asistAvisoBloqueo()) return;   // v0.375
       if (j) asistJustifs[nombre] = true; else delete asistJustifs[nombre];
       renderToggleAlumnos(null);
     }
@@ -31254,6 +31341,18 @@
         return !asistEstadoLista[k] && asistRecups.indexOf(k) === -1;
       });
       var justificadas = ausentes.filter(function(n){ return !!asistJustifs[n]; });
+
+      // v0.375 — Antes de que empiece la clase no se guarda asistencia. Sí
+      // lo demás que se prepara con antelación (sustituto, recuperaciones
+      // previstas): se guarda con la lista vacía, que es «sin pasar».
+      var _bloq = _asistListaBloqueo(_asistClaseActiva(), fecha);
+      if (_bloq) {
+        if (!asistImpartida && !asistRecups.length) {
+          alert('⏳ La clase aún no ha empezado.\nPodrás pasar lista ' + _bloq + '.');
+          return;
+        }
+        presentes = []; ausentes = []; justificadas = [];
+      }
 
       var regs = leerAsistRegistros();
       var idx  = -1;
