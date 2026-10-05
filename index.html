@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.375.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.376.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,19 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.376.0 — Inicio: los días de la semana con clase, y un toque te lleva a ese día (2026-10)
+    (sin migraciones)
+    · ENCIMA DEL BLOQUE HOY, «ESTA SEMANA»: una fila con solo los días de la
+      semana en curso en que tienes clase (letra, número y cuántas franjas).
+      Color de cada día: ROJO con ✕ si es festivo/cierre del club o todas sus
+      clases están marcadas «sin clase»; verde si ya están todas las listas
+      pasadas; ámbar si quedó alguna sin pasar; blanco si está por venir. Hoy
+      va con borde verde.
+    · UN TOQUE = ESE DÍA: pulsar un día abre Asistencia directamente en ese
+      día con sus franjas (sin pasar por el calendario), y de ahí la franja
+      abre la lista.
+    · En la tira de Asistencia los festivos también salen en rojo.
 
   v0.375.0 — Asistencia: solo los días con clase, la fecha de hoy y nada de lista antes de hora (2026-10)
     (sin migraciones)
@@ -9444,6 +9457,24 @@
     /* v0.326 — La cabecera de HOY pasa a ser una banda navy con el dorado
        de la marca. Es el único sitio de Inicio que lo lleva, así que hace de
        ancla: la vista siempre empieza ahí. */
+    /* v0.376 — la semana en Inicio */
+    .hsem { margin:0 0 10px; }
+    .hsem-lbl { font-size:10.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--gris); margin:0 0 5px 2px; }
+    .hsem-fila { display:flex; gap:6px; }
+    .hsem-d { flex:1; max-width:72px; display:flex; flex-direction:column; align-items:center; gap:1px; font-family:inherit;
+      padding:6px 2px 5px; border:1.5px solid var(--borde); border-radius:11px; background:var(--blanco);
+      cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .hsem-d:active { transform:scale(.96); }
+    .hsem-w { font-size:9px; font-weight:800; color:var(--gris); text-transform:uppercase; letter-spacing:.04em; }
+    .hsem-n { font-size:16px; font-weight:800; color:var(--texto); line-height:1.15; }
+    .hsem-m { font-size:10px; font-weight:800; color:var(--gris); }
+    .hsem-d.ok     { background:var(--ac-dada-sv); border-color:#86efac; } .hsem-d.ok .hsem-m { color:#15803d; }
+    .hsem-d.pend   { background:var(--ac-hoy-sv); border-color:#fcd34d; } .hsem-d.pend .hsem-m { color:#b45309; }
+    .hsem-d.fiesta { background:#fef2f2; border-color:#fca5a5; }
+    .hsem-d.fiesta .hsem-n, .hsem-d.fiesta .hsem-m, .hsem-d.fiesta .hsem-w { color:#dc2626; }
+    .hsem-d.hoy { box-shadow:0 0 0 2px var(--verde); }
+    .asist-tira-d.fiesta:not(.on) { background:#fef2f2; border-color:#fca5a5; }
+    .asist-tira-d.fiesta:not(.on) .atd-n, .asist-tira-d.fiesta:not(.on) .atd-w { color:#dc2626; }
     .hhoy { border:1px solid var(--borde); border-radius:var(--r-md); background:var(--blanco);
       margin-bottom:0.7rem; box-shadow:var(--el-2); overflow:hidden; }
     .hhoy-cab { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap;
@@ -11075,7 +11106,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.375.0';
+    var APP_VERSION = '0.376.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -25201,13 +25232,13 @@
       var hoy   = hoyLocal();
       var lista = _homeClasesDe(hoy);
       var ahora = _ahoraMin();
-      var h = '';
+      var h = _homeSemanaHTML(hoy);   // v0.376: la semana, encima de todo
 
       if (!lista.length) {
         var pr = _homeProxima();
         // v0.324: tocable — con la tarjeta de Control retirada, esta es la
         // entrada al calendario los días que no hay clase.
-        h = '<div class="hhoy hhoy-vacio" onclick="irA(\'pantalla-asistencia\')">' +
+        h += '<div class="hhoy hhoy-vacio" onclick="irA(\'pantalla-asistencia\')">' +
             '<div class="hhoy-tit">Hoy no tienes clase</div>' +
             (pr ? '<div class="hhoy-sub">La siguiente, <b>' + _gEsc(_diaSemanaNombre(pr.fecha)) + ' ' +
                   parseInt(pr.fecha.slice(8), 10) + ' a las ' + _gEsc(pr.rango ? '' : '') +
@@ -25219,7 +25250,7 @@
       } else {
         var iToca = _homeQueToca(lista, ahora);
         var nPas  = lista.filter(function(x){ return x.pasada; }).length;
-        h = '<div class="hhoy">';
+        h += '<div class="hhoy">';
         h += '<div class="hhoy-cab"><span class="hhoy-tit">Hoy</span>' +
              '<span class="hhoy-sub">' + _gEsc(_diaSemanaNombre(hoy)) + ' ' +
              parseInt(hoy.slice(8), 10) + ' de ' + _gEsc(MESES_NOMBRES_A[+hoy.slice(5,7)-1].toLowerCase()) + '</span>' +
@@ -25275,6 +25306,53 @@
           '<span class="ct-chev">›</span></div>';
       }
       cont.innerHTML = h;
+    }
+    // ── v0.376 — LA SEMANA EN INICIO ──────────────────────────────────
+    // Una fila con los días de ESTA semana en que hay clase. Color por día:
+    //   rojo  → festivo/cierre del club, o todas sus clases marcadas «sin clase»
+    //   verde → todas las listas pasadas
+    //   ámbar → día pasado (u hoy, ya empezada alguna) con listas sin pasar
+    //   gris  → por venir
+    // Hoy va con borde. Tocar un día lleva DIRECTO a ese día en Asistencia,
+    // con sus franjas (sin pasar por el calendario).
+    function _homeSemanaDias(hoy) {
+      var lun = _asistLunesDe(hoy), out = [];
+      for (var off = 0; off < 7; off++) {
+        var f = addDiasISO(lun, off);
+        var l = _homeClasesDe(f);
+        if (!l.length) continue;
+        var st;
+        if (_dscEsSinClase(f) || l.every(function(x){ return x.sinClase; })) st = 'fiesta';
+        else if (l.every(function(x){ return x.sinClase || x.pasada; })) st = 'ok';
+        else if (f < hoy) st = 'pend';
+        else if (f === hoy && l.some(function(x){ return !x.sinClase && !x.pasada && x.rango && _ahoraMin() > x.rango.fin; })) st = 'pend';
+        else st = 'fut';
+        out.push({ f: f, st: st, n: l.length });
+      }
+      return out;
+    }
+    function _homeSemanaHTML(hoy) {
+      var dias = _homeSemanaDias(hoy);
+      if (!dias.length) return '';
+      var h = '<div class="hsem"><div class="hsem-lbl">Esta semana</div><div class="hsem-fila">';
+      dias.forEach(function(d){
+        var dw = new Date(+d.f.slice(0,4), +d.f.slice(5,7)-1, +d.f.slice(8,10)).getDay();
+        h += '<button type="button" class="hsem-d ' + d.st + (d.f === hoy ? ' hoy' : '') +
+          '" onclick="homeIrDia(\'' + d.f + '\')"' +
+          ' title="' + (d.st === 'fiesta' ? 'Sin clase' : d.n + ' clase' + (d.n !== 1 ? 's' : '')) + '">' +
+          '<span class="hsem-w">' + _GALLETRAS[dw] + '</span>' +
+          '<span class="hsem-n">' + parseInt(d.f.slice(8,10), 10) + '</span>' +
+          '<span class="hsem-m">' + (d.st === 'fiesta' ? '✕' : d.n) + '</span></button>';
+      });
+      h += '</div></div>';
+      return h;
+    }
+    function homeIrDia(f) {
+      asistDiaSel     = f;
+      asistSemSel     = _asistLunesDe(f);
+      asistCalMesOff  = _asistMesOffDe(f);
+      asistCalAbierto = false;
+      irA('pantalla-asistencia');
     }
     function _homeResumenReg(x) {
       if (x.sinClase) return 'sin clase';
@@ -30399,6 +30477,7 @@
         var e   = _estadoDia(f);
         var cerrado = _dscEsSinClase(f);
         cal += '<button type="button" class="asist-tira-d' + (f === asistDiaSel ? ' on' : '') +
+          ((cerrado || (e && e.st === 'sc')) ? ' fiesta' : '') +   // v0.376: festivo en rojo
           (f === hoy ? ' hoy' : '') + '" onclick="asistDia(\'' + f + '\',false)">' +
           '<span class="atd-w">' + _GALLETRAS[d] + '</span>' +
           '<span class="atd-n">' + parseInt(f.slice(8,10),10) + '</span>' +
