@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.376.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.377.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,13 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.377.0 — Inicio: fuera la tarjeta «Hoy no tienes clase» (2026-10)
+    (sin migraciones)
+    · Con la fila «Esta semana» encima, la tarjeta repetía lo mismo (la
+      siguiente clase ya se ve en la fila). Ahora, si hoy no hay clase, solo
+      queda la fila. La tarjeta vuelve únicamente si la semana entera no
+      tiene ninguna clase, para que Inicio no quede vacío.
 
   v0.376.0 — Inicio: los días de la semana con clase, y un toque te lleva a ese día (2026-10)
     (sin migraciones)
@@ -11106,7 +11113,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.376.0';
+    var APP_VERSION = '0.377.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -25234,7 +25241,12 @@
       var ahora = _ahoraMin();
       var h = _homeSemanaHTML(hoy);   // v0.376: la semana, encima de todo
 
-      if (!lista.length) {
+      // v0.377: si hoy no hay clase pero la semana sí tiene días, la fila
+      // «Esta semana» ya lo dice todo: fuera la tarjeta «Hoy no tienes clase».
+      // Solo se queda cuando la semana entera está vacía (si no, no habría nada).
+      if (!lista.length && h) {
+        // nada más que pintar
+      } else if (!lista.length) {
         var pr = _homeProxima();
         // v0.324: tocable — con la tarjeta de Control retirada, esta es la
         // entrada al calendario los días que no hay clase.
