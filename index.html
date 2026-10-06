@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.384.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.386.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,28 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.386.0 — Gestor › Toda la semana: un entrenador cada vez y todo plegado al entrar (2026-10)
+    (sin migraciones)
+    · Los chips de entrenadores pasan a ser de UNO EN UNO: al tocar otro, el
+      anterior deja de estar elegido y solo se ve el nuevo. Tocar el que ya
+      está elegido (o «Todos») vuelve a enseñarlos todos.
+    · Al pulsar «🗓 Toda la semana · alumnos», todos los entrenadores salen
+      PLEGADOS: solo su cabecera de color en cada día, para ver de un vistazo
+      quién da clase cuándo. Tocar el nombre lo despliega, como siempre.
+    · Con un entrenador elegido, sus franjas salen ya desplegadas.
+
+  v0.385.0 — Festivo con clase dada: marca «✓ k/n»; Recuperar una clase en ventana (2026-10)
+    (sin migraciones)
+    · Un día marcado como festivo por el gestor SIGUE en rojo con «✕ Fiesta»,
+      pero si aun así se dio clase lleva una marca verde en la esquina:
+      «✓ 1/2» (una de dos franjas) o «✓ 2/2» (todas). Sin clase dada, igual
+      que antes. En la fila del mes de Asistencia y en «Esta semana» de
+      Inicio. El panel del gestor no cambia.
+    · «↩ Recuperar una clase» se abre en VENTANA EMERGENTE (fondo oscurecido,
+      ✕ para cerrar, tocar fuera cierra), en Asistencia y en el detalle del
+      entrenador del gestor. En Asistencia viene preseleccionada la clase del
+      día que tienes elegido en la fila del mes.
 
   v0.384.0 — Pasar lista: la recuperación, en ventana emergente (2026-10)
     (sin migraciones)
@@ -7094,6 +7116,12 @@
     .amf-d.pend { border-color:var(--ac-hoy); }
     .amf-d.fi { background:#fef2f2; border-color:#fecaca; }
     .amf-d.fi .amf-w, .amf-d.fi .amf-n, .amf-d.fi .amf-m { color:#dc2626; }
+    /* v0.385 — marca de clase dada en un festivo */
+    .amf-badge { position:absolute; top:-7px; right:-7px; z-index:1; font-size:10px; font-weight:800;
+      padding:2px 6px; border-radius:999px; background:var(--ac-dada-tx); color:#fff;
+      border:2px solid var(--arena); line-height:1.2; white-space:nowrap; }
+    .amf-fila { padding-top:9px !important; }
+    .hsem-d { overflow:visible !important; }
     .amf-d.hoy::after { content:''; position:absolute; top:5px; right:7px; width:6px; height:6px; border-radius:50%; background:var(--dorado); }
     .amf-d.on { background:linear-gradient(155deg,#16264f,#0c1733); border-color:var(--verde); box-shadow:0 6px 16px rgba(14,27,60,0.28); }
     .amf-d.on .amf-w, .amf-d.on .amf-m { color:rgba(255,255,255,0.78); }
@@ -8284,6 +8312,9 @@
     .asl-modal-tit { font-size:16px; font-weight:800; color:var(--texto); }
     .asl-modal-x { border:none; background:var(--arena); width:32px; height:32px; border-radius:50%;
       font-size:14px; cursor:pointer; color:var(--gris); flex-shrink:0; }
+    .recup-modal-cuerpo { overflow-y:auto; min-height:0; flex:1 1 auto; }
+    .recup-modal .recup-panel { border:none; padding:0; margin:0; background:none; box-shadow:none; }
+    .recup-modal .recup-tit { display:none; }
     .asl-modal-sub { font-size:12px; color:var(--gris); margin:0 0 10px; }
     @keyframes aslFade { from { opacity:0; } to { opacity:1; } }
     @keyframes aslPop { from { opacity:0; transform:translateY(12px) scale(.97); } to { opacity:1; transform:none; } }
@@ -11304,7 +11335,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.384.0';
+    var APP_VERSION = '0.386.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -13345,7 +13376,7 @@
             // franjas de ESE día, para poder limpiar la vista de semana.
             var col = _entColor(u);
             var kCol = dia + '|' + u;
-            var plegado = !!_gpSemCol[kCol];
+            var plegado = _gpSemPlegado(kCol);   // v0.386
             h += '<div class="gpplan-entblock' + (plegado ? ' plegado' : '') + '" style="border-left:4px solid ' + col.bar + ';">' +
               '<div class="gpplan-ent-hdr gpsem-hdr" style="background:' + col.bg + ';" ' +
                    'onclick="gpSemToggle(\'' + kCol + '\')" title="Tocar para plegar o desplegar">' +
@@ -14694,19 +14725,30 @@
     // null = todos (lo de siempre). Si no, { uid:true } de los elegidos.
     // Se recuerda mientras navegas; al recargar vuelven a salir todos.
     var _gpSemEnts = null;
+    // v0.386: UNO cada vez. Tocar otro entrenador sustituye al anterior;
+    // tocar el que ya está elegido vuelve a enseñarlos todos. Al cambiar, los
+    // plegados se reinician (ver _gpSemPlegado).
     function gpSemEnt(u) {
-      if (!_gpSemEnts) _gpSemEnts = {};
-      if (_gpSemEnts[u]) delete _gpSemEnts[u]; else _gpSemEnts[u] = true;
-      if (!Object.keys(_gpSemEnts).length) _gpSemEnts = null;   // ninguno = todos
+      _gpSemEnts = (_gpSemEnts && _gpSemEnts[u]) ? null : (function(){ var o = {}; o[u] = true; return o; })();
+      _gpSemCol = {};
       renderGestor();
     }
-    function gpSemEntTodos() { _gpSemEnts = null; renderGestor(); }
+    function gpSemEntTodos() { _gpSemEnts = null; _gpSemCol = {}; renderGestor(); }
+    // v0.386 — ¿Está plegado este entrenador este día? Con TODOS a la vista
+    // arrancan PLEGADOS (solo cabeceras: se ve quién da clase cada día); con
+    // un entrenador elegido, desplegado. _gpSemCol guarda los que has
+    // invertido a mano tocando su nombre.
+    function _gpSemPlegado(k) {
+      var porDefecto = !_gpSemEnts;
+      return _gpSemCol[k] ? !porDefecto : porDefecto;
+    }
     function gpSemToggle(k) {
       if (_gpSemCol[k]) delete _gpSemCol[k]; else _gpSemCol[k] = true;
       renderGestor();
     }
     function gpSelDia(dia) {
       _gpSelDia = (_gpSelDia === dia) ? null : dia;
+      if (dia === 'S') _gpSemCol = {};   // v0.386: al entrar en la semana, todos plegados
       _gpSelEnt = null;   // al cambiar de día se cierra el entrenador abierto
       renderGestor();
     }
@@ -25581,7 +25623,8 @@
         else if (f < hoy) st = 'pend';
         else if (f === hoy && l.some(function(x){ return !x.sinClase && !x.pasada && x.rango && _ahoraMin() > x.rango.fin; })) st = 'pend';
         else st = 'fut';
-        out.push({ f: f, st: st, n: l.length });
+        out.push({ f: f, st: st, n: l.length,
+                   dadas: st === 'fiesta' ? l.filter(function(x){ return x.pasada; }).length : 0 });   // v0.385
       }
       return out;
     }
@@ -25606,6 +25649,7 @@
                 : d.n + (d.n === 1 ? ' clase' : ' clases');
         h += '<button type="button" class="hsem-d ' + d.st + (d.f === hoy ? ' hoy' : '') +
           '" onclick="homeIrDia(\'' + d.f + '\')">' +
+          (d.dadas ? '<span class="amf-badge">✓ ' + d.dadas + '/' + d.n + '</span>' : '') +   // v0.385
           '<span class="hsem-w">' + DIAS3[dw] + '</span>' +
           '<span class="hsem-n">' + parseInt(d.f.slice(8,10), 10) + '</span>' +
           '<span class="hsem-m">' + est + '</span></button>';
@@ -30763,6 +30807,12 @@
       if (!fechasMes.length) cal += '<div class="asist-tira-vacia">Sin clases este mes</div>';
       fechasMes.forEach(function(f){
         var e = _estadoDia(f), fi = _festivo(f), n = _nClasesEn(f);
+        // v0.385: festivo del gestor en el que aun así se dio clase → sigue
+        // en rojo, pero con una marca verde «✓ k/n» en la esquina.
+        var _dowF = new Date(+f.slice(0,4), +f.slice(5,7)-1, +f.slice(8,10)).getDay();
+        var nDadas = fi ? (diasMap[_dowF] || []).filter(function(c){
+          return _claseEnFecha(c, f) && _regPasada(regs.filter(function(r){ return r.claseId === c.id && r.fecha === f; })[0]);
+        }).length : 0;
         var st = fi ? 'fi' : (e ? e.st : 'fut');
         var txt = fi ? '✕ Fiesta'
                 : st === 'ok'   ? '✓ Hecho'
@@ -30771,6 +30821,7 @@
         var dw = new Date(+f.slice(0,4), +f.slice(5,7)-1, +f.slice(8,10)).getDay();
         cal += '<button type="button" class="amf-d ' + st + (f === asistDiaSel ? ' on' : '') + (f === hoy ? ' hoy' : '') +
           '" data-f="' + f + '" onclick="asistDia(\'' + f + '\',false)">' +
+          (nDadas ? '<span class="amf-badge">✓ ' + nDadas + '/' + n + '</span>' : '') +
           '<span class="amf-w">' + DIAS3[dw] + '</span>' +
           '<span class="amf-n">' + parseInt(f.slice(8,10), 10) + '</span>' +
           '<span class="amf-m">' + txt + (e && e.rec && !fi ? ' ↩' : '') + '</span></button>';
@@ -31106,7 +31157,18 @@
     // cuenta como clase dada ese mes y el alumno la ve como recuperada.
     var _recupClasePanelOn = false;
     var _recupPanelClases = null;   // clases del contexto para la lista de alumnos
+    // v0.385 — «Recuperar una clase» se abre en VENTANA EMERGENTE (antes se
+    // desplegaba debajo). Vale para el entrenador y para el gestor: los dos
+    // pintan aquí. Tocar fuera, la ✕ o Cancelar la cierran.
     function _recupClasePanelHTML(clases, fnCrear, fnPasar) {
+      return '<div class="asl-modal-ov" onclick="if(event.target===this)asistCerrarRecupPanel()">' +
+        '<div class="asl-modal recup-modal" role="dialog" aria-label="Recuperar una clase">' +
+          '<div class="asl-modal-cab"><span class="asl-modal-tit">↩ Recuperar una clase</span>' +
+            '<button type="button" class="asl-modal-x" onclick="asistCerrarRecupPanel()" aria-label="Cerrar">✕</button></div>' +
+          '<div class="recup-modal-cuerpo">' + _recupClasePanelInner(clases, fnCrear, fnPasar) + '</div>' +
+        '</div></div>';
+    }
+    function _recupClasePanelInner(clases, fnCrear, fnPasar) {
       var cursoAct = cursoDeFecha(hoyLocal());
       var ordDia = function(ds){ return ds<0 ? 8 : (ds===0 ? 7 : ds); };
       var cls = clases.filter(function(c){ return _claseCurso(c) === cursoAct && !(c.fin && c.fin < hoyLocal()); })
@@ -31213,6 +31275,16 @@
       el.innerHTML = _recupClasePanelOn
         ? _recupClasePanelHTML((leerAsistConfig().clases||[]), 'asistRecupCrear()', 'asistRecupPasar()')
         : '';
+      // v0.385: viene preseleccionada la clase del día que tienes elegido
+      // en la fila del mes (la que se quiere recuperar).
+      if (_recupClasePanelOn && asistDiaSel) {
+        try {
+          var _dowR = new Date(+asistDiaSel.slice(0,4), +asistDiaSel.slice(5,7)-1, +asistDiaSel.slice(8,10)).getDay();
+          var _cR = (_recupPanelClases || []).filter(function(c){ return Number(c.diaSemana) === _dowR; })[0];
+          var _selR = document.getElementById('recup-clase-sel');
+          if (_cR && _selR) _selR.value = String(_cR.id);
+        } catch (e) {}
+      }
       if (_recupClasePanelOn) recupClaseAlsUpdate();
     }
     function asistRecupCrear() {
