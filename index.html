@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.382.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.383.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,18 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.383.0 — Pasar lista, más limpio (2026-10)
+    (sin migraciones)
+    · Fuera el recuadro «Fecha de la clase»: repetía lo que ya dice la
+      cabecera. La fecha va ahora debajo del nombre de la franja, en su propia
+      línea, más grande y en blanco («📅 Miércoles 7 de octubre de 2026»).
+    · El aviso de hora («⏳ Lista desde hoy a las 17:00») va aparte, en una
+      pastilla dorada, en vez de pegado a la fecha.
+    · «💾 Guardar asistencia» baja DESPUÉS de los alumnos: primero se marca y
+      luego se guarda. Debajo siguen Recuperación y Sin clase.
+    · Ya no se puede cambiar la fecha desde esta pantalla; se elige el día en
+      la fila del mes de Asistencia.
 
   v0.382.0 — Asistencia del entrenador: todo el mes en una fila (2026-10)
     (sin migraciones)
@@ -7051,6 +7063,12 @@
     .asist-tira-d.on .acal-dot { box-shadow:0 0 0 1.5px rgba(255,255,255,.85); }
     /* v0.375 — fecha de hoy encima y tira solo con días de clase */
     /* v0.382 — el mes en una fila (Asistencia del entrenador) */
+    /* v0.383 — cabecera de Pasar lista */
+    #asist-lista-sub { display:flex; flex-direction:column; align-items:flex-start; gap:6px; margin-top:4px; }
+    .asl-fecha { font-size:15px; font-weight:700; color:#fff; letter-spacing:.01em; }
+    .asl-bloq { font-size:12px; font-weight:700; color:var(--verde); background:var(--dorado);
+      border-radius:999px; padding:3px 10px; }
+    .asl-guardar { margin:0.6rem 0 0.8rem; }
     .amf-nav { display:flex; align-items:center; justify-content:center; gap:14px; margin:0 0 10px; }
     .amf-mes { font-size:15px; font-weight:800; color:var(--texto); }
     .amf-fila { display:flex; gap:7px; overflow-x:auto; padding:2px 2px 8px; margin:0 0 0.6rem;
@@ -10906,14 +10924,12 @@
       <div class="cab-sub"   id="asist-lista-sub">—</div>
     </div>
     <div class="contenido">
-      <div class="form-card" style="gap:0.75rem;">
-        <div class="form-grupo">
-          <label class="form-label">Fecha de la clase</label>
-          <input id="asist-lista-fecha" class="form-input" type="date" onchange="asistCambiarFechaLista(this.value)">
-        </div>
-      </div>
-      <button class="btn btn-verde" style="margin-bottom:0.5rem;" onclick="asistGuardarLista()">💾 Guardar asistencia</button>
+      <!-- v0.383: fuera el recuadro de la fecha (la fecha ya va en la
+           cabecera). El campo sigue, oculto, porque Guardar lo lee. Y Guardar
+           baja DESPUÉS de los alumnos: primero se marca, luego se guarda. -->
+      <input id="asist-lista-fecha" type="hidden">
       <div id="asist-lista-alumnos"></div>
+      <button class="btn btn-verde asl-guardar" onclick="asistGuardarLista()">💾 Guardar asistencia</button>
       <div id="asist-recup-zona"></div>
     </div>
   </div>
@@ -11265,7 +11281,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.382.0';
+    var APP_VERSION = '0.383.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -31233,8 +31249,15 @@
       document.getElementById('asist-lista-titulo').textContent = nombre;
       var _horaRec = (esRecupSesion && regExiste && regExiste.recupHora) ? (' · ' + regExiste.recupHora) : '';
       var _bloqL = _asistListaBloqueo(clase, asistFechaActiva);   // v0.375
-      document.getElementById('asist-lista-sub').textContent    = (esRecupSesion ? '↩ Recuperación · ' : '') + formatFechaCompleta(asistFechaActiva) + _horaRec +
-        (_bloqL ? ' · ⏳ lista desde ' + _bloqL : '');
+      // v0.383: la fecha, en su propia línea y más legible (antes iba
+      // pegada al aviso de hora en letra pequeña); el aviso, en una pastilla.
+      var _fA = asistFechaActiva || hoyLocal();
+      var _dA = new Date(+_fA.slice(0,4), +_fA.slice(5,7)-1, +_fA.slice(8,10));
+      var _fechaTxt = DIAS_NOMBRES_A[_dA.getDay()] + ' ' + _dA.getDate() + ' de ' +
+                      MESES_NOMBRES_A[_dA.getMonth()].toLowerCase() + ' de ' + _dA.getFullYear();
+      document.getElementById('asist-lista-sub').innerHTML =
+        '<span class="asl-fecha">📅 ' + (esRecupSesion ? '↩ Recuperación · ' : '') + _gEsc(_fechaTxt + _horaRec) + '</span>' +
+        (_bloqL ? '<span class="asl-bloq">⏳ Lista desde ' + _gEsc(_bloqL) + '</span>' : '');
       document.getElementById('asist-lista-volver-btn').textContent = _gEditVolverA ? '‹ Volver' : '‹ Asistencia';
       document.getElementById('asist-lista-fecha').value        = asistFechaActiva || hoyLocal();
 
