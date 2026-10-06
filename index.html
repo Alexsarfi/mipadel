@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.383.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.384.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,14 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.384.0 — Pasar lista: la recuperación, en ventana emergente (2026-10)
+    (sin migraciones)
+    · «↩ Recuperación» ya no despliega el panel debajo de la lista: abre una
+      ventana emergente encima de la pantalla (fondo oscurecido), con su
+      título, una ✕ para cerrar, el buscador de alumnos y los nombres para
+      tocar. Si hay muchos nombres, la lista de nombres se desplaza dentro
+      de la ventana. Tocar fuera, la ✕ o «Cancelar» la cierran.
 
   v0.383.0 — Pasar lista, más limpio (2026-10)
     (sin migraciones)
@@ -8264,6 +8272,21 @@
     .asist-recup-badge { font-size:9px; font-weight:800; background:#fef3c7; color:var(--ac-hoy-tx); border-radius:10px; padding:2px 6px; margin-left:6px; letter-spacing:.03em; }
     .asist-recup-panel { background:var(--blanco); border:1.5px solid var(--lila-claro); border-radius:12px; padding:10px; margin-bottom:8px; }
     .asist-recup-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+    /* v0.384 — la recuperación, en ventana emergente */
+    .asl-modal-ov { position:fixed; inset:0; z-index:400; background:rgba(12,23,51,0.55);
+      display:flex; align-items:center; justify-content:center; padding:16px;
+      animation:aslFade .15s ease-out; }
+    .asl-modal { width:100%; max-width:440px; max-height:82vh; display:flex; flex-direction:column;
+      margin:0; padding:14px 14px 12px; border-radius:18px; box-shadow:0 18px 50px rgba(0,0,0,0.35);
+      animation:aslPop .18s ease-out; }
+    .asl-modal .asist-recup-chips { overflow-y:auto; min-height:0; flex:1 1 auto; padding:2px; }
+    .asl-modal-cab { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:2px; }
+    .asl-modal-tit { font-size:16px; font-weight:800; color:var(--texto); }
+    .asl-modal-x { border:none; background:var(--arena); width:32px; height:32px; border-radius:50%;
+      font-size:14px; cursor:pointer; color:var(--gris); flex-shrink:0; }
+    .asl-modal-sub { font-size:12px; color:var(--gris); margin:0 0 10px; }
+    @keyframes aslFade { from { opacity:0; } to { opacity:1; } }
+    @keyframes aslPop { from { opacity:0; transform:translateY(12px) scale(.97); } to { opacity:1; transform:none; } }
     .asist-recup-chip { background:var(--lila-suave); border:1px solid var(--lila-claro); border-radius:20px; padding:5px 11px; font-size:12px; font-weight:600; color:#16264f; cursor:pointer; }
     .asist-recup-chip:active { transform:scale(0.96); }
 
@@ -11281,7 +11304,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.383.0';
+    var APP_VERSION = '0.384.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -31457,17 +31480,24 @@
       var chips = candidatos.map(function(n){
         return '<span class="asist-recup-chip" onclick="asistAnadirRecup(\'' + n.replace(/'/g,"\\'") + '\')">' + _gEsc(n) + '</span>';
       }).join('') || '<span style="font-size:12px;color:var(--gris);">No hay otros alumnos; escribe un nombre.</span>';
+      // v0.384: la recuperación ya no se despliega debajo de la lista: sale
+      // en una VENTANA EMERGENTE encima de la pantalla. Tocar fuera, la ✕ o
+      // Cancelar la cierran.
       zona.innerHTML =
-        '<div class="asist-recup-panel">' +
-          '<div style="font-size:12px;font-weight:700;color:var(--texto);margin-bottom:4px;">↩ Añadir recuperación (solo el nombre; la asistencia se marca ese día)</div>' +
+        '<div class="asl-modal-ov" onclick="if(event.target===this)asistToggleRecupPanel()">' +
+        '<div class="asist-recup-panel asl-modal" role="dialog" aria-label="Añadir recuperación">' +
+          '<div class="asl-modal-cab"><span class="asl-modal-tit">↩ Añadir recuperación</span>' +
+            '<button type="button" class="asl-modal-x" onclick="asistToggleRecupPanel()" aria-label="Cerrar">✕</button></div>' +
+          '<div class="asl-modal-sub">Solo se apunta el nombre; la asistencia se marca ese día.</div>' +
           '<div class="asist-form-add-alumno">' +
             '<input id="asist-recup-input" class="form-input" type="text" placeholder="Escribir nombre…" autocomplete="off" ' +
               'oninput="alSugerir(this)" onblur="alSugCerrar(this)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();asistAnadirRecupInput();}">' +
             '<button class="btn btn-verde btn-sm" style="flex-shrink:0;" onclick="asistAnadirRecupInput()">＋</button>' +
           '</div>' +
           '<div class="asist-recup-chips">' + chips + '</div>' +
-          '<button class="btn btn-sec btn-sm" style="margin-top:8px;" onclick="asistToggleRecupPanel()">Cancelar</button>' +
-        '</div>';
+          '<button class="btn btn-sec btn-sm" style="margin-top:10px;width:100%;" onclick="asistToggleRecupPanel()">Cancelar</button>' +
+        '</div></div>';
+      try { var _ri = document.getElementById('asist-recup-input'); if (_ri && window.innerWidth > 700) _ri.focus(); } catch (e) {}
     }
 
     function asistToggleRecupPanel() {
