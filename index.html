@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.388.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.389.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,29 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.389.0 — Avisos del gestor a los entrenadores (2026-10)
+    ⚠️ MIGRACIÓN: ejecutar migraciones/migracion_avisos.sql en Supabase
+       (SQL Editor) ANTES de usar esta versión.
+    · PANEL DEL GESTOR › «📣 Avisos a entrenadores»: lista de los avisos
+      enviados (con «✓ leído por…» y «pendiente: …») y «＋ Nuevo aviso».
+      Solo el gestor puede escribirlos.
+        - Para: todos, unos entrenadores (chips de colores) o una clase y
+          un día (entrenador + franja + fecha).
+        - Tipo: alumno nuevo, cambio de horario o pista, clase cancelada o
+          general (texto libre).
+        - Alumno nuevo: nombre, apellidos y teléfono. Por defecto SOLO SE
+          AVISA (viene a probar). Si es para una clase y un día, se puede
+          marcar «darlo de alta ya»: abre el alta de esa franja con los
+          datos puestos.
+    · ENTRENADOR: arriba en Inicio y en Asistencia, «📣 N avisos nuevos del
+      gestor». Al abrirlos, cada uno con «Entendido». Los avisos con fecha
+      caducan solos pasado ese día.
+        - Si el aviso es de una clase y un día, ese día lleva un puntito azul
+          en la fila del mes, y en Pasar lista sale arriba («👋 Hoy viene
+          Lucía Martín a probar»), con «＋ A la lista de hoy» para marcarla
+          sin que cuente como alumna.
+
 
   v0.388.0 — Incidencias de clase (entrenador → gestor) y día elegido destacado (2026-10)
     ⚠️ MIGRACIÓN: ejecutar migraciones/migracion_incidencias.sql en Supabase
@@ -7136,6 +7159,17 @@
     .asist-tira-d.on .acal-dot { box-shadow:0 0 0 1.5px rgba(255,255,255,.85); }
     /* v0.375 — fecha de hoy encima y tira solo con días de clase */
     /* v0.382 — el mes en una fila (Asistencia del entrenador) */
+    /* v0.389 — avisos del gestor */
+    .av-card { display:flex; align-items:center; gap:8px; width:100%; margin:0 0 10px; padding:11px 14px;
+      border-radius:14px; border:1.5px solid #93c5fd; background:var(--azul-suave); color:var(--azul);
+      font-family:inherit; font-size:14px; font-weight:800; cursor:pointer; text-align:left; }
+    .inc-banner.av { color:var(--azul); }
+    .av-n { font-size:11px; font-weight:800; background:var(--azul-suave); color:var(--azul); border-radius:999px; padding:1px 8px; }
+    .av-lista { display:flex; flex-direction:column; gap:6px; margin:0 0 10px; }
+    .av-lista-it { display:flex; align-items:center; gap:10px; background:var(--azul-suave); border:1px solid #93c5fd;
+      border-radius:12px; padding:9px 11px; font-size:13px; color:var(--texto); }
+    .av-check { display:flex; align-items:flex-start; gap:8px; font-size:12.5px; color:var(--texto); }
+    .amf-d.aviso::before { content:''; position:absolute; top:5px; left:7px; width:6px; height:6px; border-radius:50%; background:var(--azul); }
     /* v0.388 — día elegido en el panel del gestor, bien destacado */
     button.ghd-day.on { background:var(--verde) !important; color:var(--dorado) !important;
       box-shadow:0 0 0 2px var(--dorado), 0 3px 8px rgba(14,27,60,0.25); transform:scale(1.08); }
@@ -11429,7 +11463,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.388.0';
+    var APP_VERSION = '0.389.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -13330,6 +13364,8 @@
       // v0.388: la bandeja de incidencias, lo primero del panel
       if (!_incCargado) _incCargar(false, function(){ if (_incCargado) renderGestor(); });
       h += _incBotonGestorHTML();
+      if (!_avCargado) _avCargar(false, function(){ if (_avCargado) renderGestor(); });   // v0.389
+      h += _avBotonGestorHTML();
       if (!uids.length) {
         h += '<p class="ajustes-desc" style="text-align:center;padding:1rem 0;">Aún no hay datos de asistencia de ningún entrenador.</p>';
         h += '<p class="ajustes-desc" style="text-align:center;">Versión ' + APP_VERSION + '</p>';
@@ -15679,6 +15715,294 @@
           if (sel) { sel.value = String(x.clase_id); recupClaseAlsUpdate(); }
         } catch (e) {}
       }, 60);
+    }
+
+    // ══ v0.389 — AVISOS DEL GESTOR A LOS ENTRENADORES ═══════════════════
+    // Lo contrario de las incidencias: el GESTOR (solo él) escribe un aviso
+    // para todos, para unos entrenadores o para una clase y un día concretos.
+    // El entrenador lo ve arriba en Inicio y en Asistencia, lo marca como
+    // «Entendido», y el gestor ve quién lo ha leído. Tablas `avisos` y
+    // `avisos_leidos` (migracion_avisos.sql).
+    var AV_TIPOS = [
+      { k:'alumno',    ico:'👋', l:'Alumno nuevo' },
+      { k:'horario',   ico:'🕒', l:'Cambio de horario o pista' },
+      { k:'cancelada', ico:'🚫', l:'Clase cancelada' },
+      { k:'general',   ico:'📣', l:'General' }
+    ];
+    var _avCache = [], _avLeidos = [], _avCargado = false, _avCargando = false;
+    var _avForm = null;   // borrador del gestor
+    function _avTipo(k) { return AV_TIPOS.filter(function(t){ return t.k === k; })[0] || AV_TIPOS[AV_TIPOS.length - 1]; }
+    function _avYo() { return _sbUser ? _sbUser.id : null; }
+    function _avCargar(force, cb) {
+      if (!_sb || !_sbUser) { if (cb) cb(); return; }
+      if ((_avCargado && !force) || _avCargando) { if (cb) cb(); return; }
+      _avCargando = true;
+      var fin = function(){ _avCargando = false; _avCargado = true; if (cb) cb(); };
+      _sb.from('avisos').select('*').order('creado_at', { ascending:false }).limit(200).then(function(r){
+        if (r.error) { console.warn('avisos', r.error.message); fin(); return; }
+        _avCache = r.data || [];
+        _sb.from('avisos_leidos').select('*').then(function(r2){
+          if (!r2.error) _avLeidos = r2.data || [];
+          fin();
+        }).catch(fin);
+      }).catch(fin);
+    }
+    function _avLeido(id, uid) {
+      return _avLeidos.some(function(l){ return String(l.aviso_id) === String(id) && String(l.user_id) === String(uid); });
+    }
+    // ¿Va para este entrenador?
+    function _avPara(a, uid) {
+      if (a.destino === 'todos') return true;
+      return (a.destino_uids || []).map(String).indexOf(String(uid)) >= 0;
+    }
+    // Los que el entrenador tiene sin leer (los de fecha pasada caducan solos)
+    function _avPendientes() {
+      var yo = _avYo(), hoy = hoyLocal();
+      if (!yo || _esGestor) return [];
+      return _avCache.filter(function(a){
+        return _avPara(a, yo) && !_avLeido(a.id, yo) && (!a.fecha || a.fecha >= hoy);
+      });
+    }
+    // Avisos de una clase y un día (Pasar lista, fila del mes)
+    function _avDeClase(uid, claseId, fecha) {
+      return _avCache.filter(function(a){
+        return a.destino === 'clase' && a.fecha === fecha && Number(a.clase_id) === Number(claseId) && _avPara(a, uid);
+      });
+    }
+    function _avDeDia(uid, fecha) {
+      return _avCache.filter(function(a){ return a.destino === 'clase' && a.fecha === fecha && _avPara(a, uid); });
+    }
+    function _avTitulo(a) {
+      var d = a.datos || {};
+      if (a.tipo === 'alumno') return 'Alumno nuevo · ' + [d.nombre, d.apellidos].filter(Boolean).join(' ');
+      return _avTipo(a.tipo).l;
+    }
+    function _avDondeTxt(a) {
+      var p = [];
+      if (a.clase_nombre || a.franja) p.push([a.clase_nombre, a.franja].filter(Boolean).join(' · '));
+      if (a.fecha) p.push(_diaSemanaNombre(a.fecha) + ' ' + parseInt(a.fecha.slice(8), 10) + '/' + a.fecha.slice(5, 7));
+      return p.join(' · ');
+    }
+    function _avCuerpoHTML(a) {
+      var d = a.datos || {};
+      var det = [];
+      if (a.tipo === 'alumno') { if (d.telefono) det.push('📞 ' + d.telefono); det.push('viene a probar'); }
+      return '<div class="inc-it-t">' + _avTipo(a.tipo).ico + ' ' + _gEsc(_avTitulo(a)) + '</div>' +
+        (_avDondeTxt(a) ? '<div class="inc-it-s">' + _gEsc(_avDondeTxt(a)) + (det.length ? ' · ' + _gEsc(det.join(' · ')) : '') + '</div>'
+                        : (det.length ? '<div class="inc-it-s">' + _gEsc(det.join(' · ')) + '</div>' : '')) +
+        (a.texto ? '<div class="inc-it-x">' + _gEsc(a.texto) + '</div>' : '');
+    }
+
+    // ── ENTRENADOR: la tarjeta de arriba y la lista ─────────────────────
+    function _avCardHTML() {
+      if (_esGestor) return '';
+      if (!_avCargado) { _avCargar(false, function(){ if (_avCargado) { try { homeHoyRender(); } catch (e) {} try { if (document.getElementById('pantalla-asistencia').classList.contains('activa')) mostrarAsistencia(); } catch (e) {} } }); return ''; }
+      var n = _avPendientes().length;
+      if (!n) return '';
+      return '<button type="button" class="av-card" onclick="avVerMios()">📣 ' + n +
+        (n === 1 ? ' aviso nuevo del gestor' : ' avisos nuevos del gestor') + '<span class="inc-banner-chev">›</span></button>';
+    }
+    function avVerMios() {
+      var yo = _avYo(), hoy = hoyLocal();
+      var lista = _avCache.filter(function(a){ return _avPara(a, yo) && (!a.fecha || a.fecha >= hoy || !_avLeido(a.id, yo)); }).slice(0, 40);
+      var h = '<div class="asl-modal-ov" onclick="if(event.target===this)avCerrar()">' +
+        '<div class="asist-recup-panel asl-modal inc-modal" role="dialog" aria-label="Avisos del gestor">' +
+        '<div class="asl-modal-cab"><span class="asl-modal-tit">📣 Avisos del gestor</span>' +
+          '<button type="button" class="asl-modal-x" onclick="avCerrar()" aria-label="Cerrar">✕</button></div><div class="inc-lista">';
+      if (!lista.length) h += '<div class="plan-bl-vacio">No tienes avisos.</div>';
+      lista.forEach(function(a){
+        var leido = _avLeido(a.id, yo);
+        h += '<div class="inc-it' + (leido ? ' resuelta' : '') + '"><div style="flex:1;min-width:0;">' + _avCuerpoHTML(a) +
+          '<div class="inc-it-b">' + (leido ? '<span class="inc-est ok">entendido ✓</span>'
+            : '<button type="button" class="inc-b prim" onclick="avEntendido(\'' + a.id + '\')">Entendido</button>') +
+          '</div></div></div>';
+      });
+      h += '</div></div></div>';
+      _incOvPintar(h);
+    }
+    function avCerrar() { _avForm = null; var c = document.getElementById('inc-ov'); if (c) c.remove(); }
+    function avEntendido(id) {
+      var yo = _avYo(); if (!yo || !_sb) return;
+      if (!_avLeido(id, yo)) _avLeidos.push({ aviso_id:id, user_id:yo, leido_at:new Date().toISOString() });
+      _sb.from('avisos_leidos').insert({ aviso_id:id, user_id:yo }).then(function(r){
+        if (r.error && !/duplicate|unique/i.test(r.error.message || '')) console.warn('aviso leído', r.error.message);
+      });
+      avVerMios();
+      try { homeHoyRender(); } catch (e) {}
+      try { if (document.getElementById('pantalla-asistencia').classList.contains('activa')) mostrarAsistencia(); } catch (e) {}
+    }
+    // En Pasar lista: los avisos de esta clase y este día, arriba de los botones
+    function _avListaHTML(uid, claseId, fecha) {
+      var l = _avDeClase(uid, claseId, fecha);
+      if (!l.length) return '';
+      return '<div class="av-lista">' + l.map(function(a){
+        var d = a.datos || {};
+        var txt = a.tipo === 'alumno'
+          ? '👋 Hoy viene <b>' + _gEsc([d.nombre, d.apellidos].filter(Boolean).join(' ')) + '</b> a probar' + (d.telefono ? ' · ' + _gEsc(d.telefono) : '')
+          : _avTipo(a.tipo).ico + ' <b>' + _gEsc(_avTipo(a.tipo).l) + '</b>';
+        var btn = (a.tipo === 'alumno' && d.nombre)
+          ? '<button type="button" class="inc-b" onclick="asistAnadirRecup(\'' + _gEsc((d.nombre + (d.apellidos ? ' ' + d.apellidos : '')).replace(/'/g, "\\'")) + '\')">＋ A la lista de hoy</button>' : '';
+        return '<div class="av-lista-it"><div style="flex:1;min-width:0;">' + txt +
+          (a.texto ? '<div class="inc-mini-s">' + _gEsc(a.texto) + '</div>' : '') + '</div>' + btn + '</div>';
+      }).join('') + '</div>';
+    }
+
+    // ── GESTOR: enviados + nuevo aviso ──────────────────────────────────
+    function _avBotonGestorHTML() {
+      var n = _avCache.length;
+      return '<button type="button" class="inc-banner av" onclick="avBandeja()">📣 Avisos a entrenadores' +
+        (n ? ' <span class="av-n">' + n + '</span>' : '') + '<span class="inc-banner-chev">›</span></button>';
+    }
+    function _avEntrenadores() {
+      var by = {}; try { by = _gestorAgrupar(); } catch (e) {}
+      return Object.keys(by).filter(function(u){ return by[u].perfil || by[u].clases.length; })
+        .map(function(u){ return { uid:u, nombre:_gestorNombre(by[u]) || '¿?', d:by[u] }; })
+        .sort(function(a, b){ return a.nombre.localeCompare(b.nombre); });
+    }
+    function avBandeja() {
+      var ents = _avEntrenadores(), nom = {};
+      ents.forEach(function(e){ nom[e.uid] = e.nombre; });
+      var h = '<div class="asl-modal-ov" onclick="if(event.target===this)avCerrar()">' +
+        '<div class="asist-recup-panel asl-modal inc-modal" role="dialog" aria-label="Avisos a entrenadores">' +
+        '<div class="asl-modal-cab"><span class="asl-modal-tit">📣 Avisos a entrenadores</span>' +
+          '<button type="button" class="asl-modal-x" onclick="avCerrar()" aria-label="Cerrar">✕</button></div>' +
+        '<button type="button" class="btn btn-verde" style="width:100%;margin:0 0 8px;" onclick="avNuevo()">＋ Nuevo aviso</button>' +
+        '<div class="inc-lista">';
+      if (!_avCache.length) h += '<div class="plan-bl-vacio">Todavía no has enviado ningún aviso.</div>';
+      _avCache.forEach(function(a){
+        var dest = a.destino === 'todos' ? ents.map(function(e){ return e.uid; }) : (a.destino_uids || []);
+        var leen = dest.filter(function(u){ return _avLeido(a.id, u); }).map(function(u){ return nom[u] || '¿?'; });
+        var pend = dest.filter(function(u){ return !_avLeido(a.id, u); }).map(function(u){ return nom[u] || '¿?'; });
+        var paraTxt = a.destino === 'todos' ? 'Para todos' : 'Para ' + dest.map(function(u){ return nom[u] || '¿?'; }).join(', ');
+        h += '<div class="inc-it"><div style="flex:1;min-width:0;">' + _avCuerpoHTML(a) +
+          '<div class="inc-it-s">' + _gEsc(paraTxt) + '</div>' +
+          (leen.length ? '<div class="inc-it-s" style="color:var(--ac-dada-tx);">✓ leído por ' + _gEsc(leen.join(', ')) + '</div>' : '') +
+          (pend.length ? '<div class="inc-it-s" style="color:#b45309;">pendiente: ' + _gEsc(pend.join(', ')) + '</div>' : '') +
+          '<div class="inc-it-b"><button type="button" class="inc-b" onclick="avBorrar(\'' + a.id + '\')">Borrar</button></div>' +
+          '</div></div>';
+      });
+      h += '</div></div></div>';
+      _incOvPintar(h);
+    }
+    function avBorrar(id) {
+      if (!confirm('¿Borrar este aviso? Desaparece también para los entrenadores.')) return;
+      _avCache = _avCache.filter(function(a){ return String(a.id) !== String(id); });
+      if (_sb) _sb.from('avisos').delete().eq('id', id).then(function(r){ if (r.error) alert('No se ha podido borrar: ' + r.error.message); });
+      avBandeja();
+      try { renderGestor(); } catch (e) {}
+    }
+    function avNuevo() {
+      _avForm = { destino:'todos', uids:{}, uidClase:'', claseId:'', fecha:hoyLocal(), tipo:'alumno', alta:false };
+      _avPintar();
+    }
+    function _avLeer() {
+      var f = _avForm; if (!f) return;
+      ['nombre','apellidos','telefono','texto','fecha'].forEach(function(k){
+        var el = document.getElementById('av-f-' + k); if (el) f[k] = el.value;
+      });
+      var su = document.getElementById('av-f-uid');   if (su) f.uidClase = su.value;
+      var sc = document.getElementById('av-f-clase'); if (sc) f.claseId = sc.value;
+      var ca = document.getElementById('av-f-alta');  if (ca) f.alta = ca.checked;
+    }
+    function avDestino(d) { _avLeer(); _avForm.destino = d; _avPintar(); }
+    function avUid(u)     { _avLeer(); if (_avForm.uids[u]) delete _avForm.uids[u]; else _avForm.uids[u] = true; _avPintar(); }
+    function avTipo(k)    { _avLeer(); _avForm.tipo = k; _avPintar(); }
+    function avRepintar() { _avLeer(); if (_avForm) _avForm.claseId = ''; _avPintar(); }
+    function _avPintar() {
+      var f = _avForm; if (!f) return;
+      var v = function(k){ return _gEsc(f[k] || ''); };
+      var ents = _avEntrenadores();
+      var h = '<div class="asl-modal-ov" onclick="if(event.target===this)avCerrar()">' +
+        '<div class="asist-recup-panel asl-modal inc-modal" role="dialog" aria-label="Nuevo aviso">' +
+        '<div class="asl-modal-cab"><span class="asl-modal-tit">📣 Nuevo aviso</span>' +
+          '<button type="button" class="asl-modal-x" onclick="avBandeja()" aria-label="Volver">‹</button></div>' +
+        '<div class="inc-campos">' +
+        '<div class="inc-lbl">Para</div><div class="inc-opc">' +
+          [['todos','Todos'],['entrenadores','Unos entrenadores'],['clase','Una clase y un día']].map(function(o){
+            return '<button type="button" class="inc-op' + (f.destino === o[0] ? ' on' : '') + '" onclick="avDestino(\'' + o[0] + '\')">' + o[1] + '</button>';
+          }).join('') + '</div>';
+      if (f.destino === 'entrenadores') {
+        h += '<div class="gpsem-ents" style="justify-content:flex-start;margin:0;">' + ents.map(function(e){
+          var on = !!f.uids[e.uid], cc = _entColor(e.uid);
+          return '<button type="button" class="gpsem-ent' + (on ? ' on' : '') + '" onclick="avUid(\'' + e.uid + '\')"' +
+            ' style="' + (on ? 'background:' + cc.bg + ';border-color:' + cc.bar + ';color:' + cc.tx + ';' : '') + '">' +
+            '<span class="gpsem-ent-av" style="background:' + cc.bar + ';">' + _gEsc(e.nombre.charAt(0).toUpperCase()) + '</span>' + _gEsc(e.nombre) + '</button>';
+        }).join('') + '</div>';
+      }
+      if (f.destino === 'clase') {
+        if (!f.uidClase && ents.length) f.uidClase = ents[0].uid;
+        var eSel = ents.filter(function(e){ return e.uid === f.uidClase; })[0];
+        var cls = eSel ? _gestorClasesLocal(eSel.d).filter(function(c){ return _claseCurso(c) === cursoDeFecha(hoyLocal()) && c.diaSemana >= 0; }) : [];
+        cls.sort(function(a, b){ return ((a.diaSemana || 7) - (b.diaSemana || 7)) || (a.franja || '').localeCompare(b.franja || ''); });
+        h += '<select id="av-f-uid" class="form-input" onchange="avRepintar()">' + ents.map(function(e){
+               return '<option value="' + e.uid + '"' + (e.uid === f.uidClase ? ' selected' : '') + '>' + _gEsc(e.nombre) + '</option>';
+             }).join('') + '</select>' +
+             '<select id="av-f-clase" class="form-input">' + cls.map(function(c){
+               return '<option value="' + c.id + '"' + (String(c.id) === String(f.claseId) ? ' selected' : '') + '>' +
+                 _gEsc((_GDIAS[c.diaSemana] || '') + ' ' + (c.franja || '') + (c.nombre ? ' · ' + c.nombre : '')) + '</option>';
+             }).join('') + '</select>' +
+             '<input id="av-f-fecha" class="form-input" type="date" value="' + v('fecha') + '">';
+      }
+      h += '<div class="inc-lbl">Tipo</div><div class="inc-tipos" style="grid-template-columns:repeat(2,minmax(0,1fr));">' + AV_TIPOS.map(function(t){
+             return '<button type="button" class="inc-tipo' + (t.k === f.tipo ? ' on' : '') + '" onclick="avTipo(\'' + t.k + '\')">' +
+                    '<span class="inc-tipo-i">' + t.ico + '</span>' + t.l + '</button>';
+           }).join('') + '</div>';
+      if (f.tipo === 'alumno') {
+        h += '<input id="av-f-nombre" class="form-input" placeholder="Nombre *" value="' + v('nombre') + '">' +
+             '<input id="av-f-apellidos" class="form-input" placeholder="Apellidos" value="' + v('apellidos') + '">' +
+             '<input id="av-f-telefono" class="form-input" type="tel" placeholder="Teléfono" value="' + v('telefono') + '">';
+        if (f.destino === 'clase')
+          h += '<label class="av-check"><input id="av-f-alta" type="checkbox"' + (f.alta ? ' checked' : '') + '> Darlo de alta ya en esa franja (si no, solo se avisa: viene a probar)</label>';
+      }
+      h += '<textarea id="av-f-texto" class="form-input" rows="3" placeholder="' + (f.tipo === 'general' ? 'Qué quieres avisar… *' : 'Nota (opcional)') + '">' + v('texto') + '</textarea>' +
+           '</div><button type="button" class="btn btn-verde" style="width:100%;margin-top:10px;" onclick="avEnviar()">Enviar aviso</button></div></div>';
+      _incOvPintar(h);
+    }
+    function avEnviar() {
+      _avLeer();
+      var f = _avForm; if (!f || !_sb || !_sbUser) return;
+      var uids = [], clase = null, ents = _avEntrenadores();
+      if (f.destino === 'entrenadores') { uids = Object.keys(f.uids); if (!uids.length) { alert('Elige al menos un entrenador.'); return; } }
+      if (f.destino === 'clase') {
+        if (!f.uidClase || !f.claseId) { alert('Elige el entrenador y la clase.'); return; }
+        if (!f.fecha) { alert('Elige el día.'); return; }
+        uids = [f.uidClase];
+        var eSel = ents.filter(function(e){ return e.uid === f.uidClase; })[0];
+        clase = eSel ? _gestorClasesLocal(eSel.d).filter(function(c){ return String(c.id) === String(f.claseId); })[0] : null;
+      }
+      if (f.tipo === 'alumno' && !(f.nombre || '').trim()) { alert('Pon al menos el nombre del alumno.'); return; }
+      if (f.tipo === 'general' && !(f.texto || '').trim()) { alert('Escribe el aviso.'); return; }
+      var perfil = {}; try { perfil = leerPerfil() || {}; } catch (e) {}
+      var fila = {
+        scope_id: _dscScope(), autor_uid: _sbUser.id,
+        autor_nombre: ((perfil.nombre || '') + ' ' + (perfil.apellidos || '')).trim() || _sbUser.email || '',
+        destino: f.destino, destino_uids: uids,
+        clase_id: clase ? clase.id : null, clase_nombre: clase ? (clase.nombre || '') : '', franja: clase ? (clase.franja || '') : '',
+        fecha: f.destino === 'clase' ? f.fecha : null,
+        tipo: f.tipo, texto: (f.texto || '').trim(),
+        datos: f.tipo === 'alumno' ? { nombre:(f.nombre||'').trim(), apellidos:(f.apellidos||'').trim(), telefono:(f.telefono||'').trim() } : {}
+      };
+      var conAlta = f.tipo === 'alumno' && f.destino === 'clase' && f.alta && clase;
+      _sb.from('avisos').insert(fila).select().then(function(r){
+        if (r.error) {
+          console.warn('aviso', r.error.message);
+          alert(/avisos/.test(r.error.message || '') && /exist|relation|schema/.test(r.error.message || '')
+            ? 'Falta preparar la base de datos: hay que ejecutar migraciones/migracion_avisos.sql en Supabase.'
+            : 'No se ha podido enviar el aviso: ' + r.error.message);
+          return;
+        }
+        _avCache.unshift((r.data && r.data[0]) || fila);
+        if (typeof planToast === 'function') planToast('📣 Aviso enviado');
+        if (conAlta) {
+          // Reutiliza el alta rápida de Pasar lista con los datos ya puestos
+          _altaPrefill = { nombre:fila.datos.nombre, apellidos:fila.datos.apellidos, telefono:fila.datos.telefono, incId:null, fecha:fila.fecha };
+          avCerrar();
+          gestorListaPanelU(f.uidClase, Number(clase.id), fila.fecha, 'alta', 'pantalla-gestor');
+          return;
+        }
+        avBandeja();
+        try { renderGestor(); } catch (e) {}
+      }).catch(function(e){ alert('No se ha podido enviar el aviso: ' + (e && e.message)); });
     }
 
     // ── Bloque de un TRAMO horario (compartido, v0.62) ──────────────
@@ -25961,7 +26285,7 @@
           (pend.ultimo ? ' · desde el ' + parseInt(pend.ultimo.slice(8), 10) : '') + '</span>' +
           '<span class="ct-chev">›</span></div>';
       }
-      cont.innerHTML = h;
+      cont.innerHTML = _avCardHTML() + h;   // v0.389: avisos del gestor, arriba
     }
     // ── v0.376 — LA SEMANA EN INICIO ──────────────────────────────────
     // Una fila con los días de ESTA semana en que hay clase. Color por día:
@@ -31158,7 +31482,7 @@
       asistSemSel = _asistLunesDe(asistDiaSel);
 
       var _dHoy = new Date(+hoy.slice(0,4), +hoy.slice(5,7)-1, +hoy.slice(8,10));
-      var cal = '<div class="asist-hoy-linea">📅 Hoy es ' +
+      var cal = _avCardHTML() + '<div class="asist-hoy-linea">📅 Hoy es ' +   /* v0.389 */
         DIAS_NOMBRES_A[_dHoy.getDay()].toLowerCase() + ', ' + _dHoy.getDate() + ' de ' +
         MESES_NOMBRES_A[_dHoy.getMonth()].toLowerCase() + ' de ' + _dHoy.getFullYear() + '</div>';
       var nMes = fechasMes.reduce(function(n, f){ return n + (_festivo(f) ? 0 : _nClasesEn(f)); }, 0);
@@ -31184,7 +31508,8 @@
                 : st === 'pend' ? 'Pendiente'
                 : n + (n === 1 ? ' clase' : ' clases');
         var dw = new Date(+f.slice(0,4), +f.slice(5,7)-1, +f.slice(8,10)).getDay();
-        cal += '<button type="button" class="amf-d ' + st + (f === asistDiaSel ? ' on' : '') + (f === hoy ? ' hoy' : '') +
+        var _avD = _avDeDia(_gEditUid || (_sbUser && _sbUser.id), f).length ? ' aviso' : '';   // v0.389
+        cal += '<button type="button" class="amf-d ' + st + _avD + (f === asistDiaSel ? ' on' : '') + (f === hoy ? ' hoy' : '') +
           '" data-f="' + f + '" onclick="asistDia(\'' + f + '\',false)">' +
           (nDadas ? '<span class="amf-badge">✓ ' + nDadas + '/' + n + '</span>' : '') +
           '<span class="amf-w">' + DIAS3[dw] + '</span>' +
@@ -31856,6 +32181,7 @@
           ? '<button class="btn btn-sec btn-sm asist-acc-btn" style="border-color:#bbf7d0;color:var(--ac-dada-tx);" onclick="asistToggleAltaPanel()">＋ <span class="asist-acc-txt">Añadir alumno</span></button>'
           : '';
         zona.innerHTML =
+          _avListaHTML(_gEditUid || (_sbUser && _sbUser.id), asistClaseActivaId, asistFechaActiva) +   // v0.389
           '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
             altaBtn +
             '<button class="btn btn-sec btn-sm asist-acc-btn" style="border-color:var(--lila-claro);color:var(--lila);" onclick="asistToggleRecupPanel()">↩ <span class="asist-acc-txt">Recuperación</span></button>' +
