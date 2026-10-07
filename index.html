@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.386.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.388.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,49 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.388.0 — Incidencias de clase (entrenador → gestor) y día elegido destacado (2026-10)
+    ⚠️ MIGRACIÓN: ejecutar migraciones/migracion_incidencias.sql en Supabase
+       (SQL Editor) ANTES de usar esta versión. Sin ella, enviar una
+       incidencia avisa de que falta y no se guarda nada.
+    · PASAR LISTA › «⚠️ Incidencia»: ventana emergente para apuntar lo que ha
+      pasado en la clase, con el tipo de un toque: alumno de prueba, clase
+      interrumpida, lesión, material/pista, conducta u otro.
+        - Alumno de prueba: nombre, apellidos, teléfono y de quién viene.
+          No entra en la lista ni cuenta en la asistencia.
+        - Clase interrumpida: motivo (lluvia, luz, pista…), minutos jugados y
+          «cuenta como dada» o «se recupera».
+        - Los demás: un texto con lo que ha pasado.
+      Queda ligada a la clase y al día. Debajo de los botones se ve cada
+      incidencia del día con su estado: enviada → vista ✓ → resuelta ✓.
+    · PANEL DEL GESTOR: arriba, «⚠️ N incidencias nuevas» (en rojo si hay) abre
+      la bandeja. Cada una dice quién, qué día, qué franja y qué pasó, con
+      «Visto» y «Resuelta», y además:
+        - Alumno de prueba → «Dar de alta»: abre el alta en esa franja con
+          nombre, apellidos y teléfono ya puestos. Al dar de alta, el alumno
+          queda marcado como venido de una prueba (campo `prueba` con la
+          fecha) y la incidencia, resuelta.
+        - Clase interrumpida que se recupera → «Programar recuperación»:
+          abre «Recuperar una clase» de ese entrenador con la clase elegida.
+      En los días de las franjas, un puntito rojo marca el día con incidencia
+      y, al abrirlo, se ve debajo.
+    · El día que abres en una franja del panel (gestor) se destaca en azul
+      marino con el número en dorado, en vez de solo un borde.
+
+
+  v0.387.0 — Planificación: la pista arriba, Temporalización en rejilla para ver sesiones, Recorrido debajo (2026-10)
+    (sin migraciones)
+    · LA PISTA SE VE NADA MÁS ENTRAR. En Iniciación y Avanzado sale fuera de
+      la caja «Recorrido», arriba del todo, con la misma estructura de
+      siempre (tocar una zona → su ficha con golpes y sesiones).
+    · Debajo, la TEMPORALIZACIÓN (en rejilla, como ya venía). Tocar una
+      sesión de la rejilla la ABRE PARA VERLA: la pantalla de la sesión con
+      sus ejercicios, sin «✏️ Ordenar» ni «Borrar sesión». Si una celda tiene
+      varias sesiones, cada nombre abre la suya; una celda sin sesión ya no
+      abre el editor del día.
+    · La caja «📍 Recorrido» (cuentas, ⚙ nueva clase, avisos de sesiones sin
+      bloque y, en Competición, la lista de etapas) baja DEBAJO de la
+      Temporalización, como un apartado más.
 
   v0.386.0 — Gestor › Toda la semana: un entrenador cada vez y todo plegado al entrar (2026-10)
     (sin migraciones)
@@ -7093,6 +7136,57 @@
     .asist-tira-d.on .acal-dot { box-shadow:0 0 0 1.5px rgba(255,255,255,.85); }
     /* v0.375 — fecha de hoy encima y tira solo con días de clase */
     /* v0.382 — el mes en una fila (Asistencia del entrenador) */
+    /* v0.388 — día elegido en el panel del gestor, bien destacado */
+    button.ghd-day.on { background:var(--verde) !important; color:var(--dorado) !important;
+      box-shadow:0 0 0 2px var(--dorado), 0 3px 8px rgba(14,27,60,0.25); transform:scale(1.08); }
+    .ghd-day { position:relative; }
+    .ghd-day.inc::after { content:''; position:absolute; top:-3px; right:-3px; width:8px; height:8px; border-radius:50%;
+      background:#dc2626; border:1.5px solid var(--blanco); }
+    /* v0.388 — incidencias */
+    .inc-tipos { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; margin:0 0 10px; }
+    .inc-tipo { display:flex; flex-direction:column; align-items:center; gap:3px; padding:9px 4px; border-radius:12px;
+      border:1.5px solid var(--borde); background:var(--blanco); font-family:inherit; font-size:11.5px; font-weight:700;
+      color:var(--gris); cursor:pointer; text-align:center; line-height:1.2; }
+    .inc-tipo.on { background:var(--verde-suave); border-color:var(--verde); color:var(--verde); }
+    .inc-tipo-i { font-size:20px; }
+    .inc-campos { display:flex; flex-direction:column; gap:7px; overflow-y:auto; min-height:0; }
+    .inc-lbl { font-size:11px; font-weight:800; color:var(--gris); text-transform:uppercase; letter-spacing:.05em; margin-top:2px; }
+    .inc-opc { display:flex; flex-wrap:wrap; gap:6px; }
+    .inc-op { font-family:inherit; font-size:12.5px; font-weight:700; padding:6px 12px; border-radius:999px;
+      border:1.5px solid var(--borde); background:var(--blanco); color:var(--texto); cursor:pointer; }
+    .inc-op.on { background:var(--verde); border-color:var(--verde); color:#fff; }
+    .inc-mini { margin-top:8px; display:flex; flex-direction:column; gap:5px; }
+    .inc-mini-it { display:flex; align-items:flex-start; gap:8px; background:#fff7ed; border:1px solid #fed7aa;
+      border-radius:10px; padding:7px 9px; font-size:12px; }
+    .inc-mini-t { font-weight:800; color:var(--texto); }
+    .inc-mini-s { color:var(--gris); margin-top:1px; }
+    .inc-est { font-size:10.5px; font-weight:800; padding:2px 7px; border-radius:999px; white-space:nowrap; }
+    .inc-est.nueva { background:#fee2e2; color:#b91c1c; }
+    .inc-est.vista { background:var(--azul-suave); color:var(--azul); }
+    .inc-est.ok { background:var(--ac-dada-sv); color:var(--ac-dada-tx); }
+    .inc-banner { display:flex; align-items:center; gap:8px; width:100%; margin:0 0 0.8rem; padding:10px 14px;
+      border-radius:12px; border:1.5px solid var(--borde); background:var(--blanco); font-family:inherit;
+      font-size:13.5px; font-weight:800; color:var(--gris); cursor:pointer; text-align:left; }
+    .inc-banner-chev { margin-left:auto; font-size:18px; }
+    .inc-banner.hay { background:#fef2f2; border-color:#fca5a5; color:#b91c1c; }
+    .inc-lista { overflow-y:auto; min-height:0; flex:1 1 auto; }
+    .inc-it { display:flex; gap:10px; padding:10px 2px; border-top:1px solid var(--borde); }
+    .inc-it:first-child { border-top:none; }
+    .inc-it.resuelta { opacity:.6; }
+    .inc-it-i { font-size:20px; line-height:1.2; }
+    .inc-it-t { font-size:13.5px; font-weight:800; color:var(--texto); }
+    .inc-it-s { font-size:12px; color:var(--gris); margin-top:2px; }
+    .inc-it-x { font-size:12.5px; color:var(--texto); margin-top:4px; }
+    .inc-it-b { display:flex; flex-wrap:wrap; gap:6px; margin-top:7px; }
+    .inc-b { font-family:inherit; font-size:12px; font-weight:700; padding:5px 11px; border-radius:999px;
+      border:1.5px solid var(--borde); background:var(--blanco); color:var(--texto); cursor:pointer; }
+    .inc-b.prim { background:var(--verde); border-color:var(--verde); color:#fff; }
+    /* v0.387 — rejilla: las sesiones se tocan para verlas */
+    .temp-cel.sin-ses { cursor:default; }
+    .temp-cel.con-ses { cursor:pointer; }
+    .temp-cel-n.ses { display:block; cursor:pointer; text-decoration:underline; text-decoration-color:rgba(0,0,0,.18); text-underline-offset:2px; }
+    .temp-cel-n.ses + .temp-cel-n.ses { margin-top:3px; }
+    .rec-pista-arriba { margin-top:0.2rem; }
     /* v0.383 — cabecera de Pasar lista */
     #asist-lista-sub { display:flex; flex-direction:column; align-items:flex-start; gap:6px; margin-top:4px; }
     .asl-fecha { font-size:15px; font-weight:700; color:#fff; letter-spacing:.01em; }
@@ -11335,7 +11429,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.386.0';
+    var APP_VERSION = '0.388.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -13233,6 +13327,9 @@
       uids.forEach(function(u){ totClases += _gestorStats(by[u]).nClases; });
       _gestorHdrPintar();
       var h = '';
+      // v0.388: la bandeja de incidencias, lo primero del panel
+      if (!_incCargado) _incCargar(false, function(){ if (_incCargado) renderGestor(); });
+      h += _incBotonGestorHTML();
       if (!uids.length) {
         h += '<p class="ajustes-desc" style="text-align:center;padding:1rem 0;">Aún no hay datos de asistencia de ningún entrenador.</p>';
         h += '<p class="ajustes-desc" style="text-align:center;">Versión ' + APP_VERSION + '</p>';
@@ -15347,6 +15444,243 @@
       if (btn) btn.classList.toggle('on', abrir);
     }
 
+    // ══ v0.388 — INCIDENCIAS DE CLASE ═══════════════════════════════════
+    // El entrenador apunta desde Pasar lista lo que ha pasado (alumno de
+    // prueba, clase interrumpida, lesión, material, conducta u otro) y le
+    // llega al gestor a una bandeja en su panel. Tabla `incidencias`
+    // (migracion_incidencias.sql). Los tipos se cambian aquí, a mano.
+    var INC_TIPOS = [
+      { k:'prueba',       ico:'🧑‍🤝‍🧑', l:'Alumno de prueba' },
+      { k:'interrumpida', ico:'🌧️', l:'Clase interrumpida' },
+      { k:'lesion',       ico:'🩹', l:'Lesión' },
+      { k:'material',     ico:'🎾', l:'Material / pista' },
+      { k:'conducta',     ico:'🙅', l:'Conducta' },
+      { k:'otro',         ico:'💬', l:'Otro' }
+    ];
+    var INC_MOTIVOS = ['Lluvia', 'Luz', 'Pista', 'Otro'];
+    var _incCache = [], _incCargado = false, _incCargando = false;
+    var _incForm = null;          // { tipo, motivo, decision, nombre, apellidos, telefono, vieneDe, minutos, texto }
+    var _altaPrefill = null;      // { nombre, apellidos, telefono, incId, fecha } — alta desde una prueba
+    function _incTipo(k) { return INC_TIPOS.filter(function(t){ return t.k === k; })[0] || INC_TIPOS[INC_TIPOS.length - 1]; }
+    function _incCargar(force, cb) {
+      if (!_sb || !_sbUser) { if (cb) cb(); return; }
+      if ((_incCargado && !force) || _incCargando) { if (cb) cb(); return; }
+      _incCargando = true;
+      _sb.from('incidencias').select('*').order('creado_at', { ascending:false }).limit(300)
+        .then(function(r){
+          _incCargando = false; _incCargado = true;
+          if (r.error) { console.warn('incidencias', r.error.message); }
+          else if (r.data) _incCache = r.data;
+          if (cb) cb();
+        }).catch(function(){ _incCargando = false; if (cb) cb(); });
+    }
+    function _incDe(uid, claseId, fecha) {
+      return _incCache.filter(function(x){
+        return String(x.entrenador_uid) === String(uid) && Number(x.clase_id) === Number(claseId) && x.fecha === fecha;
+      });
+    }
+    function _incTitulo(x) {
+      var t = _incTipo(x.tipo), d = x.datos || {};
+      if (x.tipo === 'prueba') return t.l + ' · ' + [d.nombre, d.apellidos].filter(Boolean).join(' ');
+      if (x.tipo === 'interrumpida') return t.l + (d.motivo ? ' · ' + d.motivo.toLowerCase() : '');
+      return t.l;
+    }
+    function _incEstadoHTML(x) {
+      return x.estado === 'resuelta' ? '<span class="inc-est ok">resuelta ✓</span>'
+           : x.estado === 'vista'    ? '<span class="inc-est vista">vista ✓</span>'
+           : '<span class="inc-est nueva">enviada</span>';
+    }
+    // Las incidencias de una clase y un día, en pequeño (Pasar lista y
+    // desplegable del día en el panel del gestor).
+    function _incMiniHTML(uid, claseId, fecha) {
+      var l = _incDe(uid, claseId, fecha);
+      if (!l.length) return '';
+      return '<div class="inc-mini">' + l.map(function(x){
+        var d = x.datos || {};
+        var det = x.tipo === 'interrumpida'
+          ? [d.minutos ? 'se jugaron ' + d.minutos + ' min' : '', d.decision === 'recupera' ? 'se recupera' : (d.decision === 'dada' ? 'cuenta como dada' : '')].filter(Boolean).join(' · ')
+          : (x.tipo === 'prueba' ? [d.vieneDe ? 'viene de ' + d.vieneDe : '', d.telefono || ''].filter(Boolean).join(' · ') : '');
+        return '<div class="inc-mini-it"><span>' + _incTipo(x.tipo).ico + '</span><div style="flex:1;min-width:0;">' +
+          '<div class="inc-mini-t">' + _gEsc(_incTitulo(x)) + '</div>' +
+          ((det || x.texto) ? '<div class="inc-mini-s">' + _gEsc([det, x.texto].filter(Boolean).join(' — ')) + '</div>' : '') +
+          '</div>' + _incEstadoHTML(x) + '</div>';
+      }).join('') + '</div>';
+    }
+
+    // ── Entrenador: la ventana para apuntarla ──────────────────────────
+    function incAbrir() {
+      if (!_sb || !_sbUser) { alert('Para enviar una incidencia hace falta haber iniciado sesión.'); return; }
+      _incForm = { tipo:'prueba', motivo:'', decision:'' };
+      _incPintar();
+    }
+    // Capa propia de las incidencias, colgada del body (no es una pantalla)
+    function _incOvPintar(html) {
+      var capa = document.getElementById('inc-ov');
+      if (!capa) { capa = document.createElement('div'); capa.id = 'inc-ov'; document.body.appendChild(capa); }
+      capa.innerHTML = html;
+    }
+    function incCerrar() { _incForm = null; var ov = document.getElementById('inc-ov'); if (ov) ov.remove(); }
+    function _incLeer() {
+      if (!_incForm) return;
+      ['nombre','apellidos','telefono','vieneDe','minutos','texto'].forEach(function(k){
+        var el = document.getElementById('inc-f-' + k);
+        if (el) _incForm[k] = el.value;
+      });
+    }
+    function incTipo(k)     { _incLeer(); _incForm.tipo = k; _incPintar(); }
+    function incMotivo(m)   { _incLeer(); _incForm.motivo = m; _incPintar(); }
+    function incDecision(d) { _incLeer(); _incForm.decision = d; _incPintar(); }
+    function _incPintar() {
+      if (!_incForm) return;
+      var f = _incForm;
+      var v = function(k){ return _gEsc(f[k] || ''); };
+      var h = '<div class="asl-modal-ov" onclick="if(event.target===this)incCerrar()">' +
+        '<div class="asist-recup-panel asl-modal inc-modal" role="dialog" aria-label="Nueva incidencia">' +
+        '<div class="asl-modal-cab"><span class="asl-modal-tit">⚠️ Nueva incidencia</span>' +
+          '<button type="button" class="asl-modal-x" onclick="incCerrar()" aria-label="Cerrar">✕</button></div>' +
+        '<div class="asl-modal-sub">Se envía al gestor, ligada a esta clase y este día.</div>' +
+        '<div class="inc-tipos">' + INC_TIPOS.map(function(t){
+          return '<button type="button" class="inc-tipo' + (t.k === f.tipo ? ' on' : '') + '" onclick="incTipo(\'' + t.k + '\')">' +
+                 '<span class="inc-tipo-i">' + t.ico + '</span>' + t.l + '</button>';
+        }).join('') + '</div><div class="inc-campos">';
+      if (f.tipo === 'prueba') {
+        h += '<input id="inc-f-nombre" class="form-input" placeholder="Nombre *" value="' + v('nombre') + '">' +
+             '<input id="inc-f-apellidos" class="form-input" placeholder="Apellidos" value="' + v('apellidos') + '">' +
+             '<input id="inc-f-telefono" class="form-input" type="tel" placeholder="Teléfono" value="' + v('telefono') + '">' +
+             '<input id="inc-f-vieneDe" class="form-input" placeholder="¿De quién viene? (amiga de Alba)" value="' + v('vieneDe') + '">';
+      } else if (f.tipo === 'interrumpida') {
+        h += '<div class="inc-lbl">Motivo</div><div class="inc-opc">' + INC_MOTIVOS.map(function(m){
+               return '<button type="button" class="inc-op' + (f.motivo === m ? ' on' : '') + '" onclick="incMotivo(\'' + m + '\')">' + m + '</button>';
+             }).join('') + '</div>' +
+             '<input id="inc-f-minutos" class="form-input" type="number" min="0" inputmode="numeric" placeholder="Minutos jugados" value="' + v('minutos') + '">' +
+             '<div class="inc-lbl">¿Qué pasa con la clase?</div><div class="inc-opc">' +
+               '<button type="button" class="inc-op' + (f.decision === 'dada' ? ' on' : '') + '" onclick="incDecision(\'dada\')">Cuenta como dada</button>' +
+               '<button type="button" class="inc-op' + (f.decision === 'recupera' ? ' on' : '') + '" onclick="incDecision(\'recupera\')">Se recupera</button></div>';
+      }
+      h += '<textarea id="inc-f-texto" class="form-input" rows="3" placeholder="' + (f.tipo === 'prueba' || f.tipo === 'interrumpida' ? 'Nota (opcional)' : 'Qué ha pasado… *') + '">' + v('texto') + '</textarea>';
+      h += '</div><button type="button" class="btn btn-verde" style="width:100%;margin-top:10px;" onclick="incEnviar()">Enviar al gestor</button>' +
+           '</div></div>';
+      _incOvPintar(h);
+    }
+    function incEnviar() {
+      _incLeer();
+      var f = _incForm; if (!f) return;
+      if (f.tipo === 'prueba' && !(f.nombre || '').trim()) { alert('Pon al menos el nombre del alumno de prueba.'); return; }
+      if (f.tipo === 'interrumpida' && !f.motivo) { alert('Elige el motivo.'); return; }
+      if (f.tipo !== 'prueba' && f.tipo !== 'interrumpida' && !(f.texto || '').trim()) { alert('Cuenta brevemente qué ha pasado.'); return; }
+      var clase = (leerAsistConfig().clases || []).filter(function(c){ return c.id === asistClaseActivaId; })[0] || {};
+      var entUid = _gEditUid || _sbUser.id;
+      var perfil = {}; try { perfil = leerPerfil() || {}; } catch (e) {}
+      var autor = ((perfil.nombre || '') + ' ' + (perfil.apellidos || '')).trim() || _sbUser.email || '';
+      var datos = {};
+      if (f.tipo === 'prueba') datos = { nombre:(f.nombre||'').trim(), apellidos:(f.apellidos||'').trim(), telefono:(f.telefono||'').trim(), vieneDe:(f.vieneDe||'').trim() };
+      if (f.tipo === 'interrumpida') datos = { motivo:f.motivo, minutos:(f.minutos||'').trim(), decision:f.decision || '' };
+      var fila = {
+        scope_id: _dscScope(), user_id: _sbUser.id, autor_nombre: autor,
+        entrenador_uid: entUid, entrenador_nombre: _gEditUid ? (_gEditNombre() || '') : autor,
+        clase_id: clase.id || asistClaseActivaId, clase_nombre: clase.nombre || '', franja: clase.franja || '',
+        fecha: asistFechaActiva || hoyLocal(), tipo: f.tipo, datos: datos, texto: (f.texto || '').trim()
+      };
+      _sb.from('incidencias').insert(fila).select().then(function(r){
+        if (r.error) {
+          console.warn('incidencia', r.error.message);
+          alert(/incidencias/.test(r.error.message || '') && /exist|relation|schema/.test(r.error.message || '')
+            ? 'Falta preparar la base de datos: hay que ejecutar migraciones/migracion_incidencias.sql en Supabase.'
+            : 'No se ha podido enviar la incidencia: ' + r.error.message);
+          return;
+        }
+        _incCache.unshift((r.data && r.data[0]) || fila);
+        incCerrar();
+        if (typeof planToast === 'function') planToast('⚠️ Incidencia enviada al gestor');
+        renderToggleAlumnos(null);
+      }).catch(function(e){ alert('No se ha podido enviar la incidencia: ' + (e && e.message)); });
+    }
+
+    // ── Gestor: la bandeja ─────────────────────────────────────────────
+    function _incNuevas() { return _incCache.filter(function(x){ return x.estado === 'nueva'; }).length; }
+    function _incBotonGestorHTML() {
+      var n = _incNuevas();
+      return '<button type="button" class="inc-banner' + (n ? ' hay' : '') + '" onclick="incBandeja()">⚠️ ' +
+        (n ? n + (n === 1 ? ' incidencia nueva' : ' incidencias nuevas') : 'Incidencias') + '<span class="inc-banner-chev">›</span></button>';
+    }
+    function incBandeja() {
+      var by = {}; try { by = _gestorAgrupar(); } catch (e) {}
+      var h = '<div class="asl-modal-ov" onclick="if(event.target===this)incCerrar()">' +
+        '<div class="asist-recup-panel asl-modal inc-modal" role="dialog" aria-label="Incidencias">' +
+        '<div class="asl-modal-cab"><span class="asl-modal-tit">⚠️ Incidencias</span>' +
+          '<button type="button" class="asl-modal-x" onclick="incCerrar()" aria-label="Cerrar">✕</button></div>' +
+        '<div class="inc-lista">';
+      if (!_incCache.length) h += '<div class="plan-bl-vacio">No hay incidencias.</div>';
+      _incCache.forEach(function(x){
+        var d = x.datos || {};
+        var ent = (by[x.entrenador_uid] ? _gestorNombre(by[x.entrenador_uid]) : '') || x.entrenador_nombre || x.autor_nombre || '';
+        var fch = x.fecha ? (_diaSemanaNombre(x.fecha) + ' ' + parseInt(x.fecha.slice(8), 10) + '/' + x.fecha.slice(5, 7)) : '';
+        var det = [];
+        if (x.tipo === 'prueba') { if (d.vieneDe) det.push('viene de ' + d.vieneDe); if (d.telefono) det.push(d.telefono); }
+        if (x.tipo === 'interrumpida') { if (d.minutos) det.push('se jugaron ' + d.minutos + ' min'); if (d.decision === 'recupera') det.push('se recupera'); if (d.decision === 'dada') det.push('cuenta como dada'); }
+        var btns = '';
+        if (x.tipo === 'prueba' && !d.alta && x.estado !== 'resuelta')
+          btns += '<button type="button" class="inc-b prim" onclick="incAlta(\'' + x.id + '\')">Dar de alta</button>';
+        if (x.tipo === 'interrumpida' && d.decision === 'recupera' && x.estado !== 'resuelta')
+          btns += '<button type="button" class="inc-b prim" onclick="incRecup(\'' + x.id + '\')">Programar recuperación</button>';
+        if (x.estado === 'nueva') btns += '<button type="button" class="inc-b" onclick="incEstado(\'' + x.id + '\',\'vista\')">Visto</button>';
+        if (x.estado !== 'resuelta') btns += '<button type="button" class="inc-b" onclick="incEstado(\'' + x.id + '\',\'resuelta\')">Resuelta</button>';
+        h += '<div class="inc-it ' + (x.estado || 'nueva') + '"><span class="inc-it-i">' + _incTipo(x.tipo).ico + '</span><div style="flex:1;min-width:0;">' +
+          '<div class="inc-it-t">' + _gEsc(_incTitulo(x)) + ' ' + _incEstadoHTML(x) + '</div>' +
+          '<div class="inc-it-s">' + _gEsc([ent, fch, x.franja].filter(Boolean).join(' · ')) + (det.length ? ' · ' + _gEsc(det.join(' · ')) : '') + '</div>' +
+          (x.texto ? '<div class="inc-it-x">' + _gEsc(x.texto) + '</div>' : '') +
+          (d.alta ? '<div class="inc-it-s" style="color:var(--ac-dada-tx);">✓ Dado de alta</div>' : '') +
+          (btns ? '<div class="inc-it-b">' + btns + '</div>' : '') + '</div></div>';
+      });
+      h += '</div></div></div>';
+      _incOvPintar(h);
+    }
+    function _incActualizar(id, cambios, cb) {
+      var x = _incCache.filter(function(i){ return String(i.id) === String(id); })[0];
+      if (!x || !_sb) return;
+      Object.keys(cambios).forEach(function(k){ x[k] = cambios[k]; });
+      _sb.from('incidencias').update(cambios).eq('id', id).then(function(r){
+        if (r.error) { console.warn('incidencia estado', r.error.message); alert('No se ha podido guardar: ' + r.error.message); }
+        if (cb) cb();
+      });
+    }
+    function incEstado(id, estado) {
+      var c = { estado: estado };
+      if (estado !== 'nueva') c.visto_at = new Date().toISOString();
+      _incActualizar(id, c);
+      incBandeja();
+      try { renderGestor(); } catch (e) {}
+    }
+    function incAlta(id) {
+      var x = _incCache.filter(function(i){ return String(i.id) === String(id); })[0];
+      if (!x) return;
+      var d = x.datos || {};
+      _altaPrefill = { nombre:d.nombre || '', apellidos:d.apellidos || '', telefono:d.telefono || '', incId:x.id, fecha:x.fecha };
+      incCerrar();
+      gestorListaPanelU(x.entrenador_uid, Number(x.clase_id), hoyLocal(), 'alta', 'pantalla-gestor');
+    }
+    function _incMarcarAlta(id) {
+      var x = _incCache.filter(function(i){ return String(i.id) === String(id); })[0];
+      if (!x) return;
+      var d = JSON.parse(JSON.stringify(x.datos || {})); d.alta = hoyLocal();
+      _incActualizar(id, { datos:d, estado:'resuelta', visto_at:new Date().toISOString() });
+    }
+    function incRecup(id) {
+      var x = _incCache.filter(function(i){ return String(i.id) === String(id); })[0];
+      if (!x) return;
+      incCerrar();
+      _gestorUid = x.entrenador_uid;
+      irA('pantalla-gestor-detalle');
+      setTimeout(function(){
+        try {
+          _recupClasePanelOn = false;
+          gestorToggleRecupPanel();
+          var sel = document.getElementById('recup-clase-sel');
+          if (sel) { sel.value = String(x.clase_id); recupClaseAlsUpdate(); }
+        } catch (e) {}
+      }, 60);
+    }
+
     // ── Bloque de un TRAMO horario (compartido, v0.62) ──────────────
     // Cabecera (franja/nombre/duración/alumnos/dadas/✏ Editar) + chips de
     // días del mes + desplegables de asistencia. Lo usan el detalle del
@@ -15385,10 +15719,11 @@
         var _ip = cf[f] && cf[f].impartidaPor;
         var sust = _ip ? (_ip.uid ? ' susti' : ' sust') : '';
         // v0.105: los días sin clase del club (gestor) llevan ✗ delante
-        chips += '<button type="button" class="ghd-day ' + st + (extra?' extra':'') + sust + semana + '" onclick="gestorToggleDet(\'' + did + '\',this)">' +
+        var incM = _incDe(uid, c.id, f).length ? ' inc' : '';   // v0.388: día con incidencia
+        chips += '<button type="button" class="ghd-day ' + st + (extra?' extra':'') + sust + semana + incM + '" onclick="gestorToggleDet(\'' + did + '\',this)">' +
                  (st === 'dsc' ? '✗' : '') + (extra?'+':'') + parseInt(f.split('-')[2],10) + '</button>';
         dets  += '<div class="gdd-det' + sust + '" id="' + did + '" style="display:none;">' +
-                 _gddDetalleHTML(c, f, cf[f] || null, extra, opts) + '</div>';
+                 _gddDetalleHTML(c, f, cf[f] || null, extra, opts) + _incMiniHTML(uid, c.id, f) + '</div>';
       }
       fechas.forEach(function(f){
         // v0.105: día sin clase del club (lo marca el gestor: cerrado,
@@ -21179,8 +21514,23 @@
         e.nodos.forEach(function(nd){ nSesTot += nd.n; });
       });
 
-      h += '<div class="ct-caja' + (_ctCajaOpen ? ' abierto' : '') + '">';
-      h += '<div class="ct-hdr" onclick="ctCajaToggle()"><span class="ct-hdr-t">\u{1F4CD} Recorrido</span>' +
+      // v0.387 — LA PISTA, ARRIBA Y A LA VISTA. En Iniciación y Avanzado la
+      // pista sale fuera de la caja «Recorrido» y se ve nada más entrar,
+      // con la misma estructura (zonas → ficha). Debajo, la Temporalización;
+      // y la caja Recorrido (cuentas, ⚙ nueva clase, avisos y, en
+      // Competición, la lista de etapas) baja DEBAJO de la Temporalización.
+      var hPista = '';
+      if (_recEsMapa(nivelCT)) {
+        var estZ = _recZonasEstado(p, nivelCT);
+        hPista += '<div id="rec-lista" class="rec-pista-caja rec-pista-arriba">' + _recPistaHTML(estZ, p, nivelCT) + '</div>';
+        if (_recZonaSel) {
+          var eZ = estZ.etapas.filter(function(x){ return x.et.key === 'z:' + _recZonaSel; })[0];
+          if (eZ) hPista += _recZonaFichaHTML(eZ, p, nivelCT); else _recZonaSel = null;
+        }
+      }
+      var hRec = '';
+      hRec += '<div class="ct-caja' + (_ctCajaOpen ? ' abierto' : '') + '" style="margin-top:0.8rem;">';
+      hRec += '<div class="ct-hdr" onclick="ctCajaToggle()"><span class="ct-hdr-t">\u{1F4CD} Recorrido</span>' +
            '<span class="ct-hdr-n">' + _gEsc(planNivelLabel(nivelCT)) + '</span>' +
            '<span class="ct-hdr-c">' + nSesTot + (nSesTot === 1 ? ' sesión' : ' sesiones') +
              ' · ' + nBloques + ' bloques</span>' +
@@ -21190,22 +21540,22 @@
       // v0.353: fuera la línea de ayuda de debajo de la cabecera. El
       // Recorrido se explica solo; el texto era ruido en cada entrada.
 
-      h += '<div class="ct-caja-body">';
+      hRec += '<div class="ct-caja-body">';
 
       // ── Aviso: sesiones de este nivel que no caen en ningún bloque ──
       if (huerf.length) {
-        h += '<div class="rec-aviso" onclick="recAvisoToggle()">' +
+        hRec += '<div class="rec-aviso" onclick="recAvisoToggle()">' +
              '<span>⚠️</span><span style="flex:1;">' + huerf.length +
              (huerf.length === 1 ? ' sesión sin bloque' : ' sesiones sin bloque') +
              '</span><span>' + (_recAvisoOpen ? '✕' : '›') + '</span></div>';
         if (_recAvisoOpen) {
-          h += '<div class="rec-aviso-det">Estas sesiones son de este nivel pero no dicen a qué ' +
+          hRec += '<div class="rec-aviso-det">Estas sesiones son de este nivel pero no dicen a qué ' +
                'bloque pertenecen, así que no tienen sitio en el recorrido:' +
                '<ul class="rec-aviso-ses">';
           huerf.forEach(function(c){
-            h += '<li><b>' + _gEsc(nombreSesion(c)) + '</b></li>';
+            hRec += '<li><b>' + _gEsc(nombreSesion(c)) + '</b></li>';
           });
-          h += '</ul><div style="margin-top:7px;">Para colocarlas, añade en su nota del vault ' +
+          hRec += '</ul><div style="margin-top:7px;">Para colocarlas, añade en su nota del vault ' +
                '<code>apartado:</code> y <code>bloque:</code> con el texto exacto del bloque y ' +
                'vuelve a sincronizar. La app no las toca: ese dato nace en el vault.</div></div>';
         }
@@ -21213,7 +21563,7 @@
 
       // ── La lista de etapas, en el orden del entrenador ──────────────
       if (!estRec.etapas.length) {
-        h += '<div class="plan-bl-vacio">Este nivel no tiene etapas en el catálogo.</div>';
+        hRec += '<div class="plan-bl-vacio">Este nivel no tiene etapas en el catálogo.</div>';
       }
       // v0.338: se reordenan ARRASTRANDO desde el tirador ⠿ (mismo gesto que
       // la secuencia de una sesión, v0.315). Las flechas se retiran.
@@ -21242,21 +21592,19 @@
       // debajo se abre la FICHA de la zona, en el sitio, sin ventana ni
       // pestañas. «Toda la pista» es la cuarta zona, como botón bajo la pista.
       if (_recEsMapa(nivelCT)) {
-        var estZ = _recZonasEstado(p, nivelCT);
-        h += '<div id="rec-lista" class="rec-pista-caja">' + _recPistaHTML(estZ, p, nivelCT) + '</div>';
-        if (_recZonaSel) {
-          var eZ = estZ.etapas.filter(function(x){ return x.et.key === 'z:' + _recZonaSel; })[0];
-          if (eZ) h += _recZonaFichaHTML(eZ, p, nivelCT); else _recZonaSel = null;
-        }
+        // v0.387: la pista ya va arriba, fuera de esta caja (hPista)
+        if (!huerf.length) hRec += '<div class="plan-bl-vacio" style="margin:4px 2px;">La pista de arriba es el recorrido: toca una zona.</div>';
       } else {
-        h += '<div id="rec-lista">';
-        estRec.etapas.forEach(function(e){ h += filaEtapa(e); });
-        h += '</div>';
+        hRec += '<div id="rec-lista">';
+        estRec.etapas.forEach(function(e){ hRec += filaEtapa(e); });
+        hRec += '</div>';
       }
-      h += '</div>';   // .ct-caja-body
-      h += '</div>';   // .ct-caja
+      hRec += '</div>';   // .ct-caja-body
+      hRec += '</div>';   // .ct-caja
 
+      h += hPista;                                  // v0.387: la pista, lo primero
       h += _rutaTemporalizacionHTML(p, idsNivel);   // v0.319
+      h += hRec;                                    // v0.387: Recorrido, debajo
       h += '<div class="ruta-leyenda">✓ trabajada · ◉ esta semana · ● planificada · ○ vacía</div>';
       return h;
     }
@@ -21445,15 +21793,27 @@
           // El nombre de la celda es la SESIÓN; si ese día no tiene, el bloque
           // de área, que es lo segundo que identifica la clase.
           var nom = r.ses[0] || r.bloques[0] || 'Sin contenido';
+          // v0.387: tocar la celda abre la SESIÓN para verla (con sus
+          // ejercicios, sin editar). Si el día no tiene sesión, la celda no
+          // se toca. Con varias sesiones, cada nombre abre la suya.
+          var sesIds = _rutaSesArr(_rutaLeeDia(p.rutaSes, nivel, f, _rutaSemanaLibre(f).lunISO))
+                         .filter(function(id){ return todasS.some(function(x){ return x.id === id; }); });
           var extra = [];
           if (r.ses.length > 1)     extra.push('+' + (r.ses.length - 1) + ' ses');
           if (r.bloques.length)     extra.push(r.bloques.length + ' área');
           if (r.nCarro)             extra.push(r.nCarro + ' carro');
           if (estado === 'hoy')     extra.unshift('hoy');
           if (estado === 'prog')    extra.push('programada');
-          h += '<td class="temp-rej-c"><div class="temp-cel ' + estado +
-               '" onclick="rutaAbrirDia(\'' + f + '\')">' +
-               '<span class="temp-cel-n">' + _gEsc(nom) + '</span>' +
+          var nomsHTML = sesIds.length
+            ? sesIds.map(function(id){
+                var c = todasS.filter(function(x){ return x.id === id; })[0];
+                return '<span class="temp-cel-n ses" onclick="event.stopPropagation();verSesion(' + id + ',\'planif\',true)">' + _gEsc(nombreSesion(c)) + '</span>';
+              }).join('')
+            : '<span class="temp-cel-n">' + _gEsc(nom) + '</span>';
+          if (sesIds.length > 1) extra = extra.filter(function(t){ return !/ ses$/.test(t); });
+          h += '<td class="temp-rej-c"><div class="temp-cel ' + estado + (sesIds.length ? ' con-ses' : ' sin-ses') + '"' +
+               (sesIds.length === 1 ? ' onclick="verSesion(' + sesIds[0] + ',\'planif\',true)"' : '') + '>' +
+               nomsHTML +
                (extra.length ? '<span class="temp-cel-m">' + _gEsc(extra.join(' · ')) + '</span>' : '') +
                '</div></td>';
         });
@@ -28003,7 +28363,11 @@
       '</div>';
     }
 
-    function verSesion(id, origen) {
+    // v0.387: tercer parámetro `soloLectura` — desde la Temporalización la
+    // sesión se ABRE PARA VERLA: sin «✏️ Ordenar» ni «Borrar sesión».
+    var _sesSoloLectura = false;
+    function verSesion(id, origen, soloLectura) {
+      _sesSoloLectura = !!soloLectura;
       origenSesionNivel = nivelClasesSel;
       sesionOrigen = origen || 'clases';
       // v0.301 — El atrás de 'planif' iba FIJO a Planificación, pero ese
@@ -28144,8 +28508,9 @@
         _seqCabTecnicaHTML(sesion) +
         '<span class="seq-cab-tag carro">🛒 Carro · ' + (total ? minC + ' min' : nC) + '</span>' +
         '<span class="seq-cab-tag area">🎯 Área · ' + (total ? minA + ' min' : nA) + '</span>' +
+        (_sesSoloLectura ? '' :
         '<button type="button" class="seq-edit' + (ed ? ' on' : '') + '" onclick="seqToggleEdit()">' +
-          (ed ? '✓ Listo' : '✏️ Ordenar') + '</button></div>';
+          (ed ? '✓ Listo' : '✏️ Ordenar') + '</button>') + '</div>';
       if (ed) h += '<div class="seq-aviso">Arrastra ⠿ o usa ▲▼. Se guarda solo.</div>';
       h += _seqExplicacionHTML(sesion);   // v0.369 — fuera de la lista ordenable
 
@@ -28254,7 +28619,7 @@
       var sesion = leerClases().filter(function(c){ return c.id === _sesVista; })[0];
       if (!sesion) return;
       var html = _sesSecuenciaHTML(sesion, _sesEjsOrdenados(sesion, leerEjercicios()));
-      html += '<button class="btn btn-rojo" onclick="borrarSesion(' + sesion.id + ')">Borrar sesión</button>';
+      if (!_sesSoloLectura) html += '<button class="btn btn-rojo" onclick="borrarSesion(' + sesion.id + ')">Borrar sesión</button>';   // v0.387
       cont.innerHTML = html;
     }
     function seqToggleEdit() {
@@ -31496,7 +31861,10 @@
             '<button class="btn btn-sec btn-sm asist-acc-btn" style="border-color:var(--lila-claro);color:var(--lila);" onclick="asistToggleRecupPanel()">↩ <span class="asist-acc-txt">Recuperación</span></button>' +
             sustBtn +
             '<button class="btn btn-sec btn-sm asist-acc-btn" style="border-color:#e2e8f0;color:#64748b;" onclick="asistSinClase()">🚫 <span class="asist-acc-txt">Sin clase</span></button>' +
-          '</div>';
+            '<button class="btn btn-sec btn-sm asist-acc-btn" style="border-color:#fecaca;color:#b91c1c;" onclick="incAbrir()">⚠️ <span class="asist-acc-txt">Incidencia</span></button>' +
+          '</div>' +
+          _incMiniHTML(_gEditUid || (_sbUser && _sbUser.id), asistClaseActivaId, asistFechaActiva);   // v0.388
+        if (!_incCargado) _incCargar(false, function(){ if (_incCargado && document.getElementById('asist-recup-zona')) renderToggleAlumnos(null); });
         return;
       }
       // v0.137: al anular la clase hay que decir qué pasa con ella.
@@ -31539,6 +31907,13 @@
             '</div>' +
             '<button class="btn btn-sec btn-sm" style="margin-top:8px;" onclick="asistToggleAltaPanel()">Cancelar</button>' +
           '</div>';
+        // v0.388: alta desde una incidencia de «alumno de prueba»: los datos ya puestos
+        if (_altaPrefill) {
+          var _ap = _altaPrefill;
+          [['asist-alta-nombre', _ap.nombre], ['asist-alta-apellidos', _ap.apellidos], ['asist-alta-telefono', _ap.telefono]].forEach(function(x){
+            var el = document.getElementById(x[0]); if (el && !el.value) el.value = x[1] || '';
+          });
+        }
         return;
       }
       // ── Recuperación: solo se anota el nombre, SIN asistencia; el
@@ -31579,6 +31954,7 @@
     }
     function asistToggleAltaPanel() {
       asistAltaPanelOn = !asistAltaPanelOn;
+      if (!asistAltaPanelOn) _altaPrefill = null;   // v0.388
       if (asistAltaPanelOn) { asistRecupPanelOn = false; asistSustPanelOn = false; }
       renderToggleAlumnos(null);
     }
@@ -31637,6 +32013,14 @@
                                                       alta:asistFechaActiva,
                                                       baja:finCursoDeAlta(asistFechaActiva) }]);
       }
+      // v0.388: si viene de una incidencia de prueba, se apunta en el alumno
+      // (campo `prueba`: fecha de la prueba) y la incidencia queda resuelta.
+      if (_altaPrefill && _altaPrefill.incId) {
+        var _ult = (clase.alumnos || [])[clase.alumnos.length - 1];
+        if (_ult && typeof _ult === 'object' && alNom(_ult) === nombre) _ult.prueba = _altaPrefill.fecha || '';
+        _incMarcarAlta(_altaPrefill.incId);
+      }
+      _altaPrefill = null;
       escribirAsistConfig(cfg);
       asistAltaPanelOn = false;
       renderizarPasarLista();   // el alumno aparece ya en la lista del día
