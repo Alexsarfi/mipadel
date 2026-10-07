@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.389.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.390.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,14 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.390.0 — Arreglo: la ventana «Recuperar una clase» salía transparente (2026-10)
+    (sin migraciones)
+    · Las ventanas emergentes (v0.384/0.385) cogían el fondo blanco de otra
+      clase que la de «Recuperar una clase» no tenía, así que se veía la
+      pantalla de detrás a través. Ahora todas las ventanas llevan su propio
+      fondo blanco con borde.
+
 
   v0.389.0 — Avisos del gestor a los entrenadores (2026-10)
     ⚠️ MIGRACIÓN: ejecutar migraciones/migracion_avisos.sql en Supabase
@@ -8432,7 +8440,11 @@
     .asl-modal-ov { position:fixed; inset:0; z-index:400; background:rgba(12,23,51,0.55);
       display:flex; align-items:center; justify-content:center; padding:16px;
       animation:aslFade .15s ease-out; }
-    .asl-modal { width:100%; max-width:440px; max-height:82vh; display:flex; flex-direction:column;
+    /* v0.390: fondo blanco PROPIO. La ventana de «Recuperar una clase» no
+       lleva .asist-recup-panel (que era quien ponía el blanco) y salía
+       transparente encima de la pantalla. */
+    .asl-modal { background:var(--blanco); border:1.5px solid var(--borde);
+      width:100%; max-width:440px; max-height:82vh; display:flex; flex-direction:column;
       margin:0; padding:14px 14px 12px; border-radius:18px; box-shadow:0 18px 50px rgba(0,0,0,0.35);
       animation:aslPop .18s ease-out; }
     .asl-modal .asist-recup-chips { overflow-y:auto; min-height:0; flex:1 1 auto; padding:2px; }
@@ -11463,7 +11475,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.389.0';
+    var APP_VERSION = '0.390.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
