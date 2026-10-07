@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.390.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.391.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,17 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.391.0 — Incidencias: el nombre del entrenador, lo primero (2026-10)
+    (sin migraciones)
+    · El aviso del panel dice de quién son: «⚠️ Alex · 1 incidencia nueva»
+      (hasta tres nombres si son de varios entrenadores).
+    · En la bandeja, al lado del icono va el NOMBRE DEL ENTRENADOR (grande, con
+      el estado al lado) y debajo el asunto («Alumno de prueba · Agustín
+      Jurado»), luego día, franja y detalles.
+    · «viene de De parte de Maite»: si lo escrito ya empieza por «de…», no se
+      antepone «viene de».
+
 
   v0.390.0 — Arreglo: la ventana «Recuperar una clase» salía transparente (2026-10)
     (sin migraciones)
@@ -7217,6 +7228,8 @@
     .inc-it.resuelta { opacity:.6; }
     .inc-it-i { font-size:20px; line-height:1.2; }
     .inc-it-t { font-size:13.5px; font-weight:800; color:var(--texto); }
+    .inc-it-ent { font-size:15px; font-weight:800; color:var(--verde); margin-bottom:1px; }   /* v0.391 */
+    .inc-it-ent + .inc-it-t { font-weight:700; }
     .inc-it-s { font-size:12px; color:var(--gris); margin-top:2px; }
     .inc-it-x { font-size:12.5px; color:var(--texto); margin-top:4px; }
     .inc-it-b { display:flex; flex-wrap:wrap; gap:6px; margin-top:7px; }
@@ -11475,7 +11488,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.390.0';
+    var APP_VERSION = '0.391.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -15547,7 +15560,7 @@
         var d = x.datos || {};
         var det = x.tipo === 'interrumpida'
           ? [d.minutos ? 'se jugaron ' + d.minutos + ' min' : '', d.decision === 'recupera' ? 'se recupera' : (d.decision === 'dada' ? 'cuenta como dada' : '')].filter(Boolean).join(' · ')
-          : (x.tipo === 'prueba' ? [d.vieneDe ? 'viene de ' + d.vieneDe : '', d.telefono || ''].filter(Boolean).join(' · ') : '');
+          : (x.tipo === 'prueba' ? [d.vieneDe ? _incVieneTxt(d.vieneDe) : '', d.telefono || ''].filter(Boolean).join(' · ') : '');
         return '<div class="inc-mini-it"><span>' + _incTipo(x.tipo).ico + '</span><div style="flex:1;min-width:0;">' +
           '<div class="inc-mini-t">' + _gEsc(_incTitulo(x)) + '</div>' +
           ((det || x.texto) ? '<div class="inc-mini-s">' + _gEsc([det, x.texto].filter(Boolean).join(' — ')) + '</div>' : '') +
@@ -15646,10 +15659,29 @@
 
     // ── Gestor: la bandeja ─────────────────────────────────────────────
     function _incNuevas() { return _incCache.filter(function(x){ return x.estado === 'nueva'; }).length; }
+    // v0.391: nombre del entrenador de la incidencia (el del panel; si no,
+    // el que se guardó al enviarla)
+    function _incEntNombre(x, by) {
+      by = by || (function(){ try { return _gestorAgrupar(); } catch (e) { return {}; } })();
+      return (by[x.entrenador_uid] ? _gestorNombre(by[x.entrenador_uid]) : '') || x.entrenador_nombre || x.autor_nombre || '';
+    }
+    // «viene de De parte de Maite» → si ya empieza por «de…», no se repite
+    function _incVieneTxt(t) { t = (t || '').trim(); return /^de\b/i.test(t) ? t : 'viene de ' + t; }
     function _incBotonGestorHTML() {
       var n = _incNuevas();
+      // v0.391: con incidencias nuevas, el aviso dice DE QUIÉN son
+      var quien = [];
+      if (n) {
+        var by = {}; try { by = _gestorAgrupar(); } catch (e) {}
+        _incCache.forEach(function(x){
+          if (x.estado !== 'nueva') return;
+          var nm = _incEntNombre(x, by);
+          if (nm && quien.indexOf(nm) < 0) quien.push(nm);
+        });
+      }
       return '<button type="button" class="inc-banner' + (n ? ' hay' : '') + '" onclick="incBandeja()">⚠️ ' +
-        (n ? n + (n === 1 ? ' incidencia nueva' : ' incidencias nuevas') : 'Incidencias') + '<span class="inc-banner-chev">›</span></button>';
+        (n ? (quien.length ? '<b>' + _gEsc(quien.slice(0, 3).join(', ') + (quien.length > 3 ? '…' : '')) + '</b> · ' : '') +
+             n + (n === 1 ? ' incidencia nueva' : ' incidencias nuevas') : 'Incidencias') + '<span class="inc-banner-chev">›</span></button>';
     }
     function incBandeja() {
       var by = {}; try { by = _gestorAgrupar(); } catch (e) {}
@@ -15661,10 +15693,10 @@
       if (!_incCache.length) h += '<div class="plan-bl-vacio">No hay incidencias.</div>';
       _incCache.forEach(function(x){
         var d = x.datos || {};
-        var ent = (by[x.entrenador_uid] ? _gestorNombre(by[x.entrenador_uid]) : '') || x.entrenador_nombre || x.autor_nombre || '';
+        var ent = _incEntNombre(x, by);
         var fch = x.fecha ? (_diaSemanaNombre(x.fecha) + ' ' + parseInt(x.fecha.slice(8), 10) + '/' + x.fecha.slice(5, 7)) : '';
         var det = [];
-        if (x.tipo === 'prueba') { if (d.vieneDe) det.push('viene de ' + d.vieneDe); if (d.telefono) det.push(d.telefono); }
+        if (x.tipo === 'prueba') { if (d.vieneDe) det.push(_incVieneTxt(d.vieneDe)); if (d.telefono) det.push(d.telefono); }
         if (x.tipo === 'interrumpida') { if (d.minutos) det.push('se jugaron ' + d.minutos + ' min'); if (d.decision === 'recupera') det.push('se recupera'); if (d.decision === 'dada') det.push('cuenta como dada'); }
         var btns = '';
         if (x.tipo === 'prueba' && !d.alta && x.estado !== 'resuelta')
@@ -15673,9 +15705,11 @@
           btns += '<button type="button" class="inc-b prim" onclick="incRecup(\'' + x.id + '\')">Programar recuperación</button>';
         if (x.estado === 'nueva') btns += '<button type="button" class="inc-b" onclick="incEstado(\'' + x.id + '\',\'vista\')">Visto</button>';
         if (x.estado !== 'resuelta') btns += '<button type="button" class="inc-b" onclick="incEstado(\'' + x.id + '\',\'resuelta\')">Resuelta</button>';
+        // v0.391: arriba, junto al icono, el ENTRENADOR; debajo, el asunto
         h += '<div class="inc-it ' + (x.estado || 'nueva') + '"><span class="inc-it-i">' + _incTipo(x.tipo).ico + '</span><div style="flex:1;min-width:0;">' +
-          '<div class="inc-it-t">' + _gEsc(_incTitulo(x)) + ' ' + _incEstadoHTML(x) + '</div>' +
-          '<div class="inc-it-s">' + _gEsc([ent, fch, x.franja].filter(Boolean).join(' · ')) + (det.length ? ' · ' + _gEsc(det.join(' · ')) : '') + '</div>' +
+          '<div class="inc-it-ent">' + _gEsc(ent || 'Entrenador') + ' ' + _incEstadoHTML(x) + '</div>' +
+          '<div class="inc-it-t">' + _gEsc(_incTitulo(x)) + '</div>' +
+          '<div class="inc-it-s">' + _gEsc([fch, x.franja].filter(Boolean).join(' · ')) + (det.length ? ' · ' + _gEsc(det.join(' · ')) : '') + '</div>' +
           (x.texto ? '<div class="inc-it-x">' + _gEsc(x.texto) + '</div>' : '') +
           (d.alta ? '<div class="inc-it-s" style="color:var(--ac-dada-tx);">✓ Dado de alta</div>' : '') +
           (btns ? '<div class="inc-it-b">' + btns + '</div>' : '') + '</div></div>';
