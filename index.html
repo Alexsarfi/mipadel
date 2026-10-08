@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.391.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.392.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,16 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.392.0 — Asistencia: días pasados en verde y avisos del gestor más visibles (2026-10)
+    (sin migraciones)
+    · En la fila del mes de Asistencia, un día ya pasado con todas las
+      listas pasadas sale SOMBREADO EN VERDE (fondo y número), como en Inicio.
+    · La tarjeta de la franja que tiene un aviso del gestor para ese día
+      lleva la marca «📣 Aviso» junto a su estado.
+    · En Pasar lista, los avisos del gestor salen ARRIBA, antes de los
+      alumnos (antes iban al final, junto a Recuperación y Sin clase).
+
 
   v0.391.0 — Incidencias: el nombre del entrenador, lo primero (2026-10)
     (sin migraciones)
@@ -7262,6 +7272,14 @@
     .amf-n { font-size:21px; font-weight:800; color:var(--texto); line-height:1.1; }
     .amf-m { font-size:9.5px; font-weight:700; color:var(--gris); white-space:nowrap; }
     .amf-d.ok .amf-m { color:var(--ac-dada-tx); } .amf-d.pend .amf-m { color:var(--ac-hoy-tx); }
+    /* v0.392: día pasado con todo correcto → sombreado verde, como en Inicio */
+    .amf-d.ok:not(.on) { background:var(--ac-dada-sv); border-color:#86efac; }
+    .amf-d.ok:not(.on) .amf-n { color:var(--ac-dada-tx); }
+    /* v0.392: la franja con aviso del gestor */
+    .asist-badge-aviso { font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:999px;
+      background:var(--azul-suave); color:var(--azul); border:1px solid #93c5fd; margin-right:4px; white-space:nowrap; }
+    #asist-lista-avisos:empty { display:none; }
+    #asist-lista-avisos { margin:0 0 0.6rem; }
     .amf-d.pend { border-color:var(--ac-hoy); }
     .amf-d.fi { background:#fef2f2; border-color:#fecaca; }
     .amf-d.fi .amf-w, .amf-d.fi .amf-n, .amf-d.fi .amf-m { color:#dc2626; }
@@ -11135,6 +11153,8 @@
            cabecera). El campo sigue, oculto, porque Guardar lo lee. Y Guardar
            baja DESPUÉS de los alumnos: primero se marca, luego se guarda. -->
       <input id="asist-lista-fecha" type="hidden">
+      <!-- v0.392: los avisos del gestor de esta clase y este día, ARRIBA -->
+      <div id="asist-lista-avisos"></div>
       <div id="asist-lista-alumnos"></div>
       <button class="btn btn-verde asl-guardar" onclick="asistGuardarLista()">💾 Guardar asistencia</button>
       <div id="asist-recup-zona"></div>
@@ -11488,7 +11508,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.391.0';
+    var APP_VERSION = '0.392.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -31631,6 +31651,9 @@
             // v0.139: morado si la cubre otro entrenador del club, ámbar
             // si es un sustituto externo (mismo criterio que en el gestor).
             var sustCls = sust ? (reg.impartidaPor.uid ? ' susti' : ' sust') : '';
+            // v0.392: aviso del gestor para esta franja y este día → marca
+            if (_avDeClase(_gEditUid || (_sbUser && _sbUser.id), clase.id, fecha).length)
+              badge = '<span class="asist-badge-aviso">📣 Aviso</span>' + badge;
 
             var nombre = clase.nombre || (diasNom + ' · ' + (clase.franja||''));
 
@@ -32226,8 +32249,10 @@
         var altaBtn = _esGestor
           ? '<button class="btn btn-sec btn-sm asist-acc-btn" style="border-color:#bbf7d0;color:var(--ac-dada-tx);" onclick="asistToggleAltaPanel()">＋ <span class="asist-acc-txt">Añadir alumno</span></button>'
           : '';
+        // v0.392: los avisos ya no van aquí abajo: suben a #asist-lista-avisos
+        var _avTop = document.getElementById('asist-lista-avisos');
+        if (_avTop) _avTop.innerHTML = _avListaHTML(_gEditUid || (_sbUser && _sbUser.id), asistClaseActivaId, asistFechaActiva);
         zona.innerHTML =
-          _avListaHTML(_gEditUid || (_sbUser && _sbUser.id), asistClaseActivaId, asistFechaActiva) +   // v0.389
           '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
             altaBtn +
             '<button class="btn btn-sec btn-sm asist-acc-btn" style="border-color:var(--lila-claro);color:var(--lila);" onclick="asistToggleRecupPanel()">↩ <span class="asist-acc-txt">Recuperación</span></button>' +
