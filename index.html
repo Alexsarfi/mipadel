@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.395.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.396.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,15 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.396.0 — Avanzado: el título de la zona en franja de color y «Campo medio» centrado (2026-10)
+    (sin migraciones)
+    · Al abrir una zona, su título («‹ FONDO · PISTA») va en una FRANJA de
+      lado a lado del color de la zona (el mismo de la barra vertical), con
+      la letra en blanco.
+    · En la pista, «CAMPO MEDIO» queda centrado en su columna: CAMPO encima
+      de la línea central y MEDIO debajo.
+
 
   v0.395.0 — Avanzado: al elegir una zona, la pista se esconde (2026-10)
     (sin migraciones)
@@ -7242,6 +7251,12 @@
     .avz-oscuro .rec-zc { background:#151517; border-color:#2c2c30; }
     .avz-oscuro .rec-zc-n { color:#f4efe6; font-style:italic; text-transform:uppercase; letter-spacing:.05em; font-size:22px; }
     .avz-oscuro .rec-zc-f { color:#8a8478; }
+    /* v0.396 — la cabecera de la ficha, franja del color de la zona */
+    .avz-oscuro .rec-zc-cab { margin:-12px -12px 10px; padding:12px 12px; border-radius:0 var(--r-md) 0 0; }
+    .avz-oscuro .rec-zc-cab .avz-volver-ic, .avz-oscuro .rec-zc-cab .rec-zc-n { color:#fff; }
+    .avz-oscuro .rec-zc-cab .avz-volver-p { color:#fff; border-color:rgba(255,255,255,.75); }
+    .avz-oscuro .rec-zc-cab .rec-zc-x { background:rgba(0,0,0,.22); border-color:rgba(255,255,255,.35); color:#fff; }
+    .avz-oscuro .rec-zc-cab .rec-zc-int { color:#fff !important; border-color:rgba(255,255,255,.75) !important; }
     /* v0.395 — el título de la zona devuelve a la pista */
     .avz-volver { display:flex; align-items:center; gap:8px; background:none; border:none; padding:0; cursor:pointer;
       font-family:inherit; text-align:left; -webkit-tap-highlight-color:transparent; }
@@ -11619,7 +11634,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.395.0';
+    var APP_VERSION = '0.396.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -22887,7 +22902,7 @@
         '<g pointer-events="none"><line x1="200" y1="-8" x2="200" y2="208" stroke="#c9954f" stroke-width="3.5"/>' +
           '<text x="200" y="222" text-anchor="middle" fill="#c9954f" font-size="9" letter-spacing="2">RED</text></g>' +
         '<g fill="#fff" font-weight="800" letter-spacing="1" pointer-events="none">' +
-          t(30, 104, 'FONDO', 12, -90) + t(98, 58, 'CAMPO', 11) + t(98, 72, 'MEDIO', 11) + t(168, 64, 'RED', 12) +   /* rótulos por encima de la central */
+          t(30, 104, 'FONDO', 12, -90) + t(98, 93, 'CAMPO', 11) + t(98, 116, 'MEDIO', 11) +   /* v0.396: CAMPO encima de la central y MEDIO debajo */ t(168, 64, 'RED', 12) +   /* rótulos por encima de la central */
           t(13, 17, 'ESQ', 7) + t(13, 191, 'ESQ', 7) +
           t(269, 48, 'SAQUE', 12) + t(269, 62, 'Y RESTO', 10) + t(269, 155, 'JUEGOS', 12) + t(370, 104, 'TÁCTICA', 12, 90) +
         '</g>' +
@@ -22981,7 +22996,9 @@
       var z = _recZona(e.et.zona), r = _recZonaResumen(e, p, nivel);
       var intL = (typeof PLAN_INT !== 'undefined' && PLAN_INT[r.int]) ? PLAN_INT[r.int].l : r.int;
       var h = '<div class="rec-zc" style="border-left-color:' + z.color + '">';
-      h += '<div class="rec-zc-cab">' +
+      // v0.396: en Avanzado la cabecera es una FRANJA del color de la zona, de
+      // lado a lado (el mismo color que la barra vertical de la izquierda)
+      h += '<div class="rec-zc-cab"' + (nivel === 'avanzado' ? ' style="background:linear-gradient(90deg,' + z.color + ',' + z.color + 'cc)"' : '') + '>' +
         (nivel === 'avanzado'
           ? '<button type="button" class="rec-zc-n avz-volver" onclick="recZonaSel(\'' + e.et.zona + '\')" title="Volver a la pista">' +
               '<span class="avz-volver-ic">‹</span>' + _gEsc(z.label) + '<span class="avz-volver-p">pista</span></button>'   // v0.395
