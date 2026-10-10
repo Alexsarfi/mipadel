@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.394.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.395.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,14 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.395.0 — Avanzado: al elegir una zona, la pista se esconde (2026-10)
+    (sin migraciones)
+    · Al tocar una zona de la pista, la pista desaparece y la ficha de la
+      zona ocupa su sitio, para no tener la pista grande encima todo el rato.
+    · El título de la zona («‹ FONDO · PISTA») vuelve a la pista al tocarlo
+      (igual que la ✕). Solo en Avanzado.
+
 
   v0.394.0 — Avanzado: pista a escala real y tarjetas de sesión, en oscuro (2026-10)
     (sin migraciones)
@@ -7234,6 +7242,12 @@
     .avz-oscuro .rec-zc { background:#151517; border-color:#2c2c30; }
     .avz-oscuro .rec-zc-n { color:#f4efe6; font-style:italic; text-transform:uppercase; letter-spacing:.05em; font-size:22px; }
     .avz-oscuro .rec-zc-f { color:#8a8478; }
+    /* v0.395 — el título de la zona devuelve a la pista */
+    .avz-volver { display:flex; align-items:center; gap:8px; background:none; border:none; padding:0; cursor:pointer;
+      font-family:inherit; text-align:left; -webkit-tap-highlight-color:transparent; }
+    .avz-volver-ic { font-style:normal; font-size:26px; line-height:1; color:#c9954f; }
+    .avz-volver-p { font-style:normal; font-size:10.5px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+      color:#c9954f; border:1px solid #c9954f; border-radius:999px; padding:2px 8px; margin-left:4px; }
     .avz-oscuro .rec-zc-x { background:#1f1f22; border-color:#3a3a3f; color:#d9d2c4; }
     .avz-oscuro .rec-zt { display:flex; flex-wrap:nowrap; gap:2px; padding:4px; margin:6px 0 0; border-radius:12px; border:1px solid #c9954f;
       background:linear-gradient(180deg,#b07a3a,#7a5124); overflow-x:auto; -webkit-overflow-scrolling:touch; }
@@ -11605,7 +11619,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.394.0';
+    var APP_VERSION = '0.395.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -22077,7 +22091,10 @@
       var hPista = '';
       if (_recEsMapa(nivelCT)) {
         var estZ = _recZonasEstado(p, nivelCT);
-        hPista += '<div id="rec-lista" class="rec-pista-caja rec-pista-arriba">' + _recPistaHTML(estZ, p, nivelCT) + '</div>';
+        // v0.395: en Avanzado, con una zona elegida la pista SE ESCONDE para
+        // dejar sitio a la ficha; tocar el título de la zona la trae de vuelta.
+        if (!(nivelCT === 'avanzado' && _recZonaSel))
+          hPista += '<div id="rec-lista" class="rec-pista-caja rec-pista-arriba">' + _recPistaHTML(estZ, p, nivelCT) + '</div>';
         if (_recZonaSel) {
           var eZ = estZ.etapas.filter(function(x){ return x.et.key === 'z:' + _recZonaSel; })[0];
           if (eZ) hPista += _recZonaFichaHTML(eZ, p, nivelCT); else _recZonaSel = null;
@@ -22965,7 +22982,10 @@
       var intL = (typeof PLAN_INT !== 'undefined' && PLAN_INT[r.int]) ? PLAN_INT[r.int].l : r.int;
       var h = '<div class="rec-zc" style="border-left-color:' + z.color + '">';
       h += '<div class="rec-zc-cab">' +
-        '<div class="rec-zc-n">' + _gEsc(z.label) + '</div>' +
+        (nivel === 'avanzado'
+          ? '<button type="button" class="rec-zc-n avz-volver" onclick="recZonaSel(\'' + e.et.zona + '\')" title="Volver a la pista">' +
+              '<span class="avz-volver-ic">‹</span>' + _gEsc(z.label) + '<span class="avz-volver-p">pista</span></button>'   // v0.395
+          : '<div class="rec-zc-n">' + _gEsc(z.label) + '</div>') +
         (r.int ? '<span class="rec-zc-int" style="color:' + z.color + ';border-color:' + z.color + '">' + _gEsc(intL) + '</span>' : '') +
         '<button type="button" class="rec-zc-x" onclick="recZonaSel(\'' + e.et.zona + '\')" aria-label="Cerrar">✕</button></div>';
       h += '<div class="rec-zc-f">' + _gEsc(z.f) + '</div>';
