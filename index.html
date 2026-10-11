@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.401.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.402.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,20 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.402.0 — Avanzado: pestañas por BLOQUE y botones de intención más pro (2026-10)
+    (sin migraciones)
+    · Dentro de cada zona y su intención, las pestañas son ahora los BLOQUES
+      del plan («Dirección cruzado y paralelo», «Profundidad y ritmo», «Salida
+      de pared»…) en el orden del catálogo, con su número de sesiones; los
+      bloques sin sesiones también salen (con 0) y su tarjeta invita a
+      prepararlos. Las tarjetas dicen CELDA | GOLPE (el bloque ya lo dice la
+      pestaña).
+    · Anular · Dominar · Definir pasan a un control segmentado dentro de la
+      franja: fondo translúcido con borde fino, texto en mayúsculas espaciado,
+      contador en una pastilla cuadrada; el elegido en blanco con el contador
+      del color de la zona.
+
 
   v0.401.0 — Avanzado: la zona se filtra por intención (Anular · Dominar · Definir) (2026-10)
     (sin migraciones)
@@ -7337,13 +7351,21 @@
     .avz-oscuro .rec-zc { background:#151517; border-color:#2c2c30; }
     .avz-oscuro .rec-zc-n { color:#f4efe6; font-style:italic; text-transform:uppercase; letter-spacing:.05em; font-size:22px; }
     .avz-oscuro .rec-zc-f { color:#8a8478; }
-    /* v0.401 — Anular · Dominar · Definir en la franja de la zona */
-    .avz-ints { margin-left:auto; display:flex; gap:3px; padding:3px; border-radius:999px; background:rgba(0,0,0,.22); flex-wrap:nowrap; }
-    .avz-int { font-family:inherit; font-size:11.5px; font-weight:800; padding:5px 11px; border-radius:999px; border:none; background:none;
-      color:#fff; cursor:pointer; white-space:nowrap; -webkit-tap-highlight-color:transparent; }
-    .avz-int b { font-weight:700; opacity:.75; margin-left:4px; }
-    .avz-int.on { background:#fff; color:#111; }
-    .avz-int.cero:not(.on) { opacity:.5; }
+    /* v0.401/v0.402 — Anular · Dominar · Definir en la franja: control segmentado */
+    .avz-ints { margin-left:auto; display:inline-flex; gap:2px; padding:3px; border-radius:12px;
+      background:rgba(6,10,20,.32); border:1px solid rgba(255,255,255,.22);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.08), 0 4px 14px rgba(0,0,0,.18); }
+    .avz-int { display:inline-flex; align-items:center; gap:7px; font-family:inherit; font-size:11px; font-weight:800;
+      letter-spacing:.09em; text-transform:uppercase; padding:7px 11px 7px 12px; border-radius:9px; border:none; background:none;
+      color:rgba(255,255,255,.88); cursor:pointer; white-space:nowrap; transition:background .15s, color .15s;
+      -webkit-tap-highlight-color:transparent; }
+    .avz-int:hover { background:rgba(255,255,255,.10); }
+    .avz-int b { min-width:19px; height:19px; padding:0 5px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center;
+      font-size:10.5px; font-weight:800; letter-spacing:0; background:rgba(255,255,255,.18); color:#fff; }
+    .avz-int.on { background:#fff; color:#0b0b0d; box-shadow:0 2px 10px rgba(0,0,0,.28); }
+    .avz-int.on b { background:var(--zc, #0e1b3c); color:#fff; }
+    .avz-int.cero:not(.on) { color:rgba(255,255,255,.5); }
+    .avz-int.cero:not(.on) b { background:rgba(255,255,255,.08); color:rgba(255,255,255,.55); }
     .avz-ints + .rec-zc-x { margin-left:6px; }
     .avz-celda { color:#f4efe6; font-weight:800; }
     .avz-vacio { text-align:center; color:#8a8478; font-size:13px; line-height:1.5; padding:22px 10px; border:1px dashed #3a3a3f; border-radius:12px; margin-top:6px; }
@@ -11733,7 +11755,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.401.0';
+    var APP_VERSION = '0.402.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -23198,7 +23220,7 @@
       var h = '<div class="rec-zc" style="border-left-color:' + z.color + '">';
       // v0.396: en Avanzado la cabecera es una FRANJA del color de la zona, de
       // lado a lado (el mismo color que la barra vertical de la izquierda)
-      h += '<div class="rec-zc-cab"' + (nivel === 'avanzado' ? ' style="background:linear-gradient(90deg,' + z.color + ',' + z.color + 'cc)"' : '') + '>' +
+      h += '<div class="rec-zc-cab"' + (nivel === 'avanzado' ? ' style="--zc:' + z.color + ';background:linear-gradient(90deg,' + z.color + ',' + z.color + 'cc)"' : '') + '>' +
         (nivel === 'avanzado'
           ? '<button type="button" class="rec-zc-n avz-volver" onclick="recZonaSel(\'' + e.et.zona + '\')" title="Volver a la pista">' +
               '<span class="avz-volver-ic">‹</span>' + _gEsc(z.label) + '<span class="avz-volver-p">pista</span></button>'   // v0.395
@@ -23231,7 +23253,39 @@
     // «Pendientes» a la derecha. Se entra con la primera abierta, así la
     // ficha nunca sale vacía. Debajo, solo las sesiones de ese golpe; tocar
     // una la abre en ventana (recSesVentana), que crece desde la fila.
+    // ── v0.402 — AVANZADO: pestañas por BLOQUE (no por golpe) ──────────────
+    // Dentro de la zona y la intención elegidas, una pestaña por bloque del
+    // plan («Dirección cruzado y paralelo», «Profundidad y ritmo»…) en el
+    // orden del catálogo, con su número de sesiones. Un bloque sin sesiones
+    // también sale (con 0): su tarjeta invita a prepararlo. Las tarjetas
+    // dicen CELDA | GOLPE, porque el bloque ya lo dice la pestaña.
+    function _recBloqueTabsHTML(e, p, nivel, z) {
+      var todosEj = leerEjercicios();
+      var nodos = e.nodos;
+      if (!nodos.length) return '<div class="rec-bl-vacio">Esta zona no tiene todavía ningún bloque.</div>';
+      var sel = _recGolpeSel[e.et.zona] || 0;
+      if (sel >= nodos.length) sel = 0;
+      var h = '<div class="rec-zt">';
+      nodos.forEach(function(nd, i){
+        h += '<button type="button" class="rec-zt-t' + (i === sel ? ' on' : '') + (nd.ses.length ? '' : ' pend') + '"' +
+          ' onclick="recGolpeSel(\'' + e.et.zona + '\',' + i + ')">' + _gEsc(nd.it.t) + '<span>' + nd.ses.length + '</span></button>';
+      });
+      h += '</div><div class="rec-zt-lista">';
+      var nd = nodos[sel];
+      if (!nd.ses.length) {
+        h += '<div class="rec-card" onclick="recSesVentana(\'bl:' + nd.it.id + '\', event)">' +
+          '<span class="rec-card-n">' + _gEsc(nd.it.t) + '</span>' +
+          '<span class="rec-card-d">' + (nd.cts && nd.cts.length ? '⭐ ' + nd.cts.length + (nd.cts.length === 1 ? ' clase' : ' clases') : 'Preparar \uFF0B') + '</span>' +
+          '<span class="rec-card-o">' + _gEsc(nd.it.f || 'Todavía sin sesiones en este bloque.') + '</span></div>';
+      } else {
+        nd.ses.forEach(function(c){
+          h += _avzCardHTML(c, { ap: nd.ap, it: { t: String(c.golpes || '').trim() || 'Sin golpe' } }, z, '', todosEj);
+        });
+      }
+      return h + '</div>';
+    }
     function _recZonaTabsHTML(e, p, nivel, z) {
+      if (nivel === 'avanzado') return _recBloqueTabsHTML(e, p, nivel, z);   // v0.402
       var todosEj = leerEjercicios();
       var grupos = {}, orden = [];
       e.nodos.forEach(function(nd){
