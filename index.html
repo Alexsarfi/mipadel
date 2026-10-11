@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.399.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.400.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,14 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.400.0 — Avanzado: las tarjetas vuelven a decir el bloque de la sesión (2026-10)
+    (sin migraciones)
+    · En la ficha de una zona, la cabecera de cada tarjeta de sesión decía
+      «FONDO | DERECHA» (zona y golpe), y el golpe ya lo dice la pestaña. Ahora
+      dice la CELDA y el BLOQUE: «ANULAR FONDO | DIRECCIÓN CRUZADO Y PARALELO»,
+      que es lo que se veía antes de la v0.394.
+
 
   v0.399.0 — Avanzado: saque en cada celda y bloques de Anular red y Definir fondo (paso 5) (2026-10)
     (sin migraciones)
@@ -11697,7 +11705,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.399.0';
+    var APP_VERSION = '0.400.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -23056,7 +23064,11 @@
               : !conV ? '<span class="avz-tag pend">POR GRABAR</span>'
               : '<span class="avz-tag medio">' + conV + '/' + ejs.length + ' VÍDEO</span>';
       var h = '<div class="avz-card" onclick="recSesVentana(\'ses:' + c.id + '\', event)">' +
-        '<div class="avz-card-cab"><span class="avz-card-z">' + _gEsc(z.label) + ' | ' + _gEsc(golpe) + '</span>' + tag + '</div>' +
+        // v0.400: la cabecera dice la CELDA y el BLOQUE de la sesión (p. ej.
+        // «ANULAR FONDO | DIRECCIÓN CRUZADO Y PARALELO»): el golpe ya lo dice la
+        // pestaña, y el bloque era lo que se veía antes (v0.394 lo había quitado).
+        '<div class="avz-card-cab"><span class="avz-card-z">' +
+          _gEsc((nd && nd.ap) || z.label) + ' | ' + _gEsc((nd && nd.it && nd.it.t) || golpe) + '</span>' + tag + '</div>' +
         '<div class="avz-card-n">' + _gEsc(nombreSesion(c)) + '</div>';
       if (c.objetivo) h += '<div class="avz-card-o">' + _gEsc(c.objetivo) + '</div>';
       ejs.slice(0, 6).forEach(function(ej){
