@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.396.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.399.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,60 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.399.0 — Avanzado: saque en cada celda y bloques de Anular red y Definir fondo (paso 5) (2026-10)
+    (sin migraciones)
+    · Cada celda de la matriz (Anular/Dominar/Definir × fondo/red) lleva su
+      línea de SAQUE, sacada de las cartas: p. ej. Dominar fondo «saque +
+      primera bola para tomar la red»; Definir fondo «resto como arma». Se ve
+      en la cabecera de la celda, debajo de su objetivo. El bloque «Saque» de
+      Juego táctico se conserva.
+    · Bloques nuevos (el plan ya sembrado los recibe solo, por la poda):
+        - Anular red › «Bandeja y volea de contención» (red · bandeja).
+        - Definir fondo › «Passing y globo ganador» (fondo).
+      Así ninguna celda queda vacía.
+
+
+  v0.398.0 — Ejercicios: altura, tiempo y velocidad (filas de la matriz, paso 4) (2026-10)
+    (sin migraciones: viajan dentro de `facetas`, que ya es jsonb)
+    · Tres facetas nuevas en los ejercicios, las filas de la matriz de 6
+      celdas que se entrenan con un ejercicio: ALTURA (baja · media · alta ·
+      globo), TIEMPO (temprano · tarde · punto más alto · cambio de ritmo) y
+      VELOCIDAD (lenta · media · rápida · variable). Vienen del vault
+      (`altura:`, `tiempo:`, `velocidad:`, un valor o una lista) y la app las
+      normaliza (p. ej. «bote pronto» → temprano, «bola muerta» → lenta).
+    · Se ven en la Ficha del ejercicio (↕️ Altura · ⏱️ Tiempo · ⚡ Velocidad).
+    · FILTRO POR FILA DE LA MATRIZ en Carro y en Área › Ejercicios de juego:
+      una fila de pastillas por faceta, solo con los valores que existen y su
+      número. Mientras ningún ejercicio las lleve, no aparece nada.
+    · sync_padel.py lee los tres campos y avisa si un valor no se reconoce.
+
+
+  v0.397.0 — Avanzado: la matriz de 6 celdas (intención × posición) (2026-10)
+    (sin migraciones SQL; migra el plan sembrado al abrirlo)
+    · LAS 7 ETAPAS DE AVANZADO PASAN A SER LA MATRIZ TÁCTICA de Alex: Anular
+      fondo · Anular red · Dominar fondo · Dominar red · Definir fondo ·
+      Definir red, más Juego táctico (transversal). Las claves a1…a7 se
+      conservan, así que el orden del entrenador (et_orden) y las etapas
+      abiertas siguen valiendo; cambian nombre, objetivo y reparto.
+    · LOS 17 BLOQUES SON LOS MISMOS de la poda v0.359, recolocados: Salida de
+      pared, Doble pared, Globo defensivo y Contención van a Anular fondo;
+      Construir desde el fondo, Subida a la red y Globo ofensivo a Dominar
+      fondo; Voleas y Juego aéreo en Dominar red; Remate y Definición fina en
+      Definir red. Anular red (a2) y Definir fondo (a5) nacen VACÍAS: sus
+      bloques se crean cuando haya sesiones que colgar.
+    · _planMatrizAvanzado: al abrir el plan ya sembrado mueve cada bloque a
+      su etapa nueva POR NOMBRE y conservando el id (lo hecho y las ⭐ clases
+      tipo cuelgan del id). Corre ANTES de la poda v0.359, que si no vería
+      huecos y sembraría duplicados. Un bloque creado a mano no se toca.
+    · Las sesiones de Obsidian se colocan por el BLOQUE cuando su nombre es
+      único en el nivel (_bloqueUnicoEnNivel): el apartado que traen (la
+      carpeta vieja del vault) ya no las deja fuera. Con nombre repetido se
+      sigue exigiendo apartado + bloque, como antes.
+    · Vault: carpetas de 03 ÁREAS DE TRABAJO/Avanzado/ renombradas a las
+      celdas; _SCRIPTS/plan_bloques.json regenerado. Propuesta aprobada en
+      07 APP GUÍA INTERACTIVA/Propuesta — Matriz de 6 celdas (Avanzado).md.
+
 
   v0.396.0 — Avanzado: el título de la zona en franja de color y «Campo medio» centrado (2026-10)
     (sin migraciones)
@@ -7243,6 +7297,14 @@
     .asist-tira-d.on .acal-dot { box-shadow:0 0 0 1.5px rgba(255,255,255,.85); }
     /* v0.375 — fecha de hoy encima y tira solo con días de clase */
     /* v0.382 — el mes en una fila (Asistencia del entrenador) */
+    /* v0.399 — la línea de saque de cada celda (Avanzado) */
+    .plan-etapa-saque { display:block; font-size:11.5px; color:var(--ac-hoy-tx); margin-top:3px; line-height:1.35; }
+    /* v0.398 — filtros por fila de la matriz */
+    .mz-filtros { display:flex; flex-direction:column; gap:4px; margin:4px 0 6px; }
+    .mz-fila { display:flex; align-items:center; gap:6px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+    .mz-fila::-webkit-scrollbar { display:none; }
+    .mz-fila-t { flex-shrink:0; font-size:10px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--gris); min-width:78px; }
+    .mz-fila .fpill { flex-shrink:0; }
     /* ══ v0.394 — AVANZADO EN OSCURO ══════════════════════════════════ */
     .pantalla.avz-oscuro { background:#0b0b0d; }
     .avz-oscuro .contenido { background:#0b0b0d; color:#f4efe6; }
@@ -10834,6 +10896,7 @@
              placeholder="🔍 Buscar por nombre o código…" oninput="buscarEjercicios(this.value)"
              style="width:100%;box-sizing:border-box;border:1px solid var(--borde,#d8d8d2);border-radius:10px;padding:9px 12px;font-size:14px;font-family:inherit;background:#fff;color:var(--texto);outline:none;margin-bottom:2px;">
       <div class="filtros" id="filtros-golpe-ej"></div>
+      <div id="filtros-matriz-ej"></div><!-- v0.398: altura · tiempo · velocidad -->
     </div>
     <div class="contenido">
       <div id="lista-ejercicios"></div>
@@ -11634,7 +11697,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.396.0';
+    var APP_VERSION = '0.399.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -19148,32 +19211,38 @@
           {t:'Partidos y evaluación', f:'Jugar partidos y revisar el progreso.', int:'definir', z:'todo-campo', g:'mixto'} ]}
       ],
       avanzado: [
-        // v0.359 — PODADO a 16 bloques, uno por tema real (antes 38, 31 sin
-        // sesión: «¿en cuál de los tres parecidos la puse?»). Los nombres son
-        // ÚNICOS en el nivel, así que el bloque basta para colocar una sesión;
-        // el apartado lo pone la carpeta del vault. Un solo «Saque», en Juego
-        // táctico. Si el plan de una cuenta se sembró con el catálogo viejo,
-        // _planPodaAvanzado lo pone al día conservando los ids.
-        { key:'a1', nombre:'Consolidación de fondo', obj:'Dominar el fondo con dirección, profundidad y cambios de ritmo.', bloques:[
+        // v0.397 — LA MATRIZ: 6 celdas (intención × posición) + Juego táctico.
+        // Las claves a1…a7 SE CONSERVAN (el orden del entrenador, p.etOrden, y
+        // etapasAbiertas cuelgan de ellas); lo que cambia es el nombre de la
+        // etapa y qué bloques van en cada una. Los 17 bloques son los mismos
+        // de la poda v0.359, con nombre ÚNICO en el nivel: _planMatrizAvanzado
+        // los mueve de etapa en el plan ya sembrado conservando sus ids.
+        // Anular red (a2) y Definir fondo (a5) nacieron vacías; v0.399 (paso 5)
+        // les da su primer bloque. Y cada celda lleva su línea de SAQUE
+        // (`saque:`): el saque no es un bloque suelto, es cómo se saca/resta
+        // en esa celda (el bloque «Saque» de Juego táctico se conserva).
+        { key:'a1', nombre:'Anular fondo', obj:'Estoy atrás y me atacan: que no puedan atacar, ganar tiempo y esperar la bola media.', saque:'Colocación y profundidad consistentes; resto profundo que no deje atacar.', bloques:[
           {t:'Dirección cruzado y paralelo', f:'Dominar la diagonal y cambiar a paralelo con criterio.', int:'anular', z:'fondo', g:'fondo'},
           {t:'Profundidad y ritmo', f:'Bola neutra: jugar largo y alto para que no ataquen.', int:'anular', z:'fondo', g:'fondo'},
-          {t:'Construir desde el fondo', f:'Paciencia y construcción para abrir el punto.', int:'dominar', z:'fondo', g:'fondo'} ]},
-        { key:'a2', nombre:'Pared', obj:'Resolver cualquier pared con control y dirección.', bloques:[
           {t:'Salida de pared', f:'Salir de la pared de fondo y de la lateral controlando la dirección.', int:'anular', z:'fondo', g:'pared'},
-          {t:'Doble pared', f:'Dobles paredes: lateral-fondo y fondo-lateral.', int:'anular', z:'esquina', g:'pared'} ]},
-        { key:'a3', nombre:'Neutralización', obj:'Defender bajo presión y quitar el ataque al rival.', bloques:[
+          {t:'Doble pared', f:'Dobles paredes: lateral-fondo y fondo-lateral.', int:'anular', z:'esquina', g:'pared'},
           {t:'Globo defensivo', f:'Globo profundo para neutralizar y quitar la red.', int:'anular', z:'fondo', g:'globo'},
           {t:'Contención y bola neutra', f:'Defender con paciencia desde campo medio y esperar el error.', int:'anular', z:'campo-medio', g:'mixto'} ]},
-        { key:'a4', nombre:'Dominio de la red', obj:'Mandar en la red con volea y juego aéreo, ya en pareja.', bloques:[
-          {t:'Voleas', f:'Voleas a distintas alturas, de presión y con dirección.', int:'dominar', z:'red', g:'volea'},
-          {t:'Juego aéreo', f:'Bandeja, víbora y gancho: mantener la red desde arriba.', int:'dominar', z:'red', g:'bandeja'} ]},
-        { key:'a5', nombre:'Transición y subida', obj:'Ganar la red desde el fondo con criterio.', bloques:[
+        { key:'a2', nombre:'Anular red', obj:'En la red sin poder atacar: no perderla, devolver al fondo sin dar bola media.', saque:'Profundo y cerrado para dificultar el resto.', bloques:[
+          {t:'Bandeja y volea de contención', f:'No perder la red: bandeja y volea baja de contención, devolver al fondo sin dar bola media.', int:'anular', z:'red', g:'bandeja'} ]},
+        { key:'a3', nombre:'Dominar fondo', obj:'Atrás con la bola controlada: incomodar a los de la red, sacar la bola corta y subir.', saque:'Saque + primera bola para tomar la red.', bloques:[
+          {t:'Construir desde el fondo', f:'Paciencia y construcción para abrir el punto.', int:'dominar', z:'fondo', g:'fondo'},
           {t:'Subida a la red', f:'Aprovechar un golpe profundo para subir y bajar a bolear.', int:'dominar', z:'campo-medio', g:'fondo'},
           {t:'Globo ofensivo y transición', f:'Globo que pasa para girar el punto y subir.', int:'dominar', z:'campo-medio', g:'globo'} ]},
-        { key:'a6', nombre:'Definición', obj:'Cerrar puntos con remate y recursos finos.', bloques:[
+        { key:'a4', nombre:'Dominar red', obj:'En la red con la iniciativa: mantener la presión, mover y hundir hasta la bola de definir.', saque:'Sacar y subir con agresividad.', bloques:[
+          {t:'Voleas', f:'Voleas a distintas alturas, de presión y con dirección.', int:'dominar', z:'red', g:'volea'},
+          {t:'Juego aéreo', f:'Bandeja, víbora y gancho: mantener la red desde arriba.', int:'dominar', z:'red', g:'bandeja'} ]},
+        { key:'a5', nombre:'Definir fondo', obj:'Atrás y veo la bola de ganar: passing, globo ganador, bajada de pared al hueco.', saque:'Resto como arma: al cuerpo, al hueco, passing de resto.', bloques:[
+          {t:'Passing y globo ganador', f:'Cerrar desde atrás: passing al pasillo o al cuerpo y globo ganador a la esquina.', int:'definir', z:'fondo', g:'fondo'} ]},
+        { key:'a6', nombre:'Definir red', obj:'En la red con la bola de cerrar: el golpe que pide la bola.', saque:'Táctico bajo marcador, en los puntos importantes.', bloques:[
           {t:'Remate y salida de pista', f:'Remate liftado, por 3 y por 4 para sacar la bola.', int:'definir', z:'red', g:'remate'},
           {t:'Definición fina', f:'Dejada, amago y volea de ángulo: cerrar con sensibilidad.', int:'definir', z:'red', g:'volea'} ]},
-        { key:'a7', nombre:'Juego táctico', obj:'Aplicar el patrón completo en pareja y en partido.', bloques:[
+        { key:'a7', nombre:'Juego táctico', obj:'Enlazar las celdas en un mismo punto, en pareja y en partido.', bloques:[
           {t:'Patrón anular-dominar-definir', f:'Enlazar las tres fases en un mismo punto.', int:'definir', z:'todo-campo', g:'mixto'},
           {t:'Partido evaluado', f:'Jugar partido con análisis y objetivos.', int:'definir', z:'todo-campo', g:'mixto'},
           {t:'Saque', f:'Saque y resto: colocación, variación y saque + primera bola.', int:'dominar', z:'saque', g:'saque'},
@@ -19515,8 +19584,59 @@
         p.etapasAbiertas = {};
         _planGuardar(p);
       }
+      _planMatrizAvanzado(p); // v0.397 — antes de la poda: si no, la poda vería huecos y sembraría duplicados
       _planPodaAvanzado(p);   // v0.359
       return p.contenido;
+    }
+    // ── v0.397 — LA MATRIZ DE AVANZADO, aplicada al plan YA SEMBRADO ───────
+    // Las etapas a1…a7 cambian de nombre y los 17 bloques se reparten entre
+    // ellas por intención × posición. El plan de cada cuenta tiene los
+    // bloques con su id en la etapa VIEJA; esto los lleva a la etapa que dice
+    // el catálogo, POR NOMBRE y conservando el id (hechos y ⭐ clases tipo
+    // cuelgan del id). Un bloque que no esté en el catálogo (creado a mano) se
+    // queda donde estaba. Idempotente: solo guarda si ha movido algo.
+    function _planMatrizAvanzado(p) {
+      var c = p.contenido, av = c && c.avanzado, cat = PLAN_ETAPAS.avanzado;
+      if (!av || !cat) return false;
+      var destino = {};
+      cat.forEach(function(et){ et.bloques.forEach(function(b){ destino[_planNorm(b.t)] = et.key; }); });
+      var mover = [];   // [item, deKey, aKey]
+      Object.keys(av).forEach(function(k){
+        (av[k] || []).forEach(function(it){
+          var a = destino[_planNorm(it.t)];
+          if (a && a !== k) mover.push([it, k, a]);
+        });
+      });
+      if (!mover.length) return false;
+      mover.forEach(function(m){
+        var it = m[0], de = m[1], a = m[2];
+        av[de] = av[de].filter(function(x){ return x !== it; });
+        if (!av[a]) av[a] = [];
+        var ya = av[a].filter(function(x){ return _planNorm(x.t) === _planNorm(it.t); })[0];
+        if (ya) {
+          // ya había uno con ese nombre en el destino (sembrado por la poda):
+          // se queda el que tenga ⭐ clases tipo o hechos; si ninguno, el viejo (su id)
+          var conCt = {};
+          try { _ctDeNivel(p, 'avanzado').forEach(function(ct){ (ct.bloques || []).forEach(function(id){ conCt[id] = true; }); }); } catch (x) {}
+          var h = p.hechos || {};
+          var pesa = function(x){ return (conCt[x.id] ? 2 : 0) + (h[x.id] ? 1 : 0); };
+          if (pesa(ya) >= pesa(it)) return;
+          av[a] = av[a].filter(function(x){ return x !== ya; });
+        }
+        av[a].push(it);
+      });
+      // orden del catálogo dentro de cada etapa (los bloques a mano, al final)
+      cat.forEach(function(et){
+        var pos = {}; et.bloques.forEach(function(b, i){ pos[_planNorm(b.t)] = i; });
+        (av[et.key] || []).sort(function(x, y){
+          var px = pos[_planNorm(x.t)], py = pos[_planNorm(y.t)];
+          if (px == null && py == null) return 0;
+          if (px == null) return 1; if (py == null) return -1;
+          return px - py;
+        });
+      });
+      _planGuardar(p);
+      return true;
     }
     // ── v0.359 — LA PODA DE AVANZADO, aplicada al plan YA SEMBRADO ────────
     // El plan de cada cuenta se sembró una vez del catálogo, con un id
@@ -20047,6 +20167,16 @@
       return _planSesCache.clases.filter(function(c){ return inc.indexOf(c.id) >= 0; });
     }
 
+    // v0.397 — ¿el bloque (título ya en minúsculas) aparece una sola vez en el catálogo del nivel?
+    var _bloqUnicoCache = {};
+    function _bloqueUnicoEnNivel(nivel, bloqT) {
+      if (!_bloqUnicoCache[nivel]) {
+        var n = {};
+        (PLAN_ETAPAS[nivel] || []).forEach(function(et){ et.bloques.forEach(function(b){ var k = b.t.trim().toLowerCase(); n[k] = (n[k] || 0) + 1; }); });
+        _bloqUnicoCache[nivel] = n;
+      }
+      return _bloqUnicoCache[nivel][bloqT] === 1;
+    }
     // Nombre del apartado (etapa) a partir de su clave (a1, a2…) y el nivel.
     function _apartadoNombre(nivel, etapaKey) {
       var ets = PLAN_ETAPAS[nivel] || [];
@@ -20064,11 +20194,15 @@
       var etNom  = _apartadoNombre(nivel, etapaKey).trim().toLowerCase();
       var bloqT  = (it && it.t) ? it.t.trim().toLowerCase() : '';
       var mapEj  = _ejsById();
+      // v0.397: si el nombre del bloque es ÚNICO en el catálogo del nivel, el
+      // bloque basta y el apartado no se mira (las sesiones del vault llevan
+      // el apartado de su carpeta, y al mover bloques de etapa no se pierden).
+      var bloqUnico = bloqT && _bloqueUnicoEnNivel(nivel, bloqT);
       var res = [], vistos = {};
       leerClases().forEach(function(c){
-        var enAuto = etNom && bloqT && c.apartado && c.bloque &&
-                     String(c.apartado).trim().toLowerCase() === etNom &&
+        var enAuto = etNom && bloqT && c.bloque &&
                      String(c.bloque).trim().toLowerCase()   === bloqT &&
+                     (bloqUnico || (c.apartado && String(c.apartado).trim().toLowerCase() === etNom)) &&
                      nivelDeSesion(c, mapEj) === nivel;
         if (enAuto && !vistos[c.id]) { vistos[c.id] = true; res.push(c); }
       });
@@ -25958,7 +26092,8 @@
           '<span class="plan-etapa-num' + (opts.icoClass || '') + '"' + (opts.icoBg ? ' style="background:' + opts.icoBg + ';"' : '') + '>' + (opts.ico || '') + '</span>' +
           '<div class="plan-etapa-tit"><span class="plan-etapa-nom">' + et.nombre +
             (opts.actual ? ' <span class="plan-etapa-badge">en curso</span>' : '') + '</span>' +
-            '<span class="plan-etapa-obj">' + et.obj + '</span></div>' +
+            '<span class="plan-etapa-obj">' + et.obj + '</span>' +
+            (et.saque ? '<span class="plan-etapa-saque">🎾 Saque: ' + _gEsc(et.saque) + '</span>' : '') + '</div>' +   // v0.399
           (opts.noProg ? '' : '<span class="plan-etapa-prog">' +
             (conDiasN ? done + '/' + its.length : its.length) + '</span>') +
           '<span class="plan-etapa-chev">›</span></div>';
@@ -27065,6 +27200,96 @@
     }
     function ejSituacion(ej) { return situacionCanonica(ejFaceta(ej, 'situacion')); }
 
+
+    // ══ v0.398 — LAS FILAS DE LA MATRIZ COMO FACETAS (paso 4) ═══════════════
+    // La propuesta «Matriz de 6 celdas (Avanzado)» describe cada celda con 7
+    // filas; tres de ellas son herramientas que se entrenan con un ejercicio
+    // concreto: ALTURA, TIEMPO y VELOCIDAD. Llegan del vault en `facetas`
+    // (sync_padel.py, campos `altura:`, `tiempo:`, `velocidad:`; uno o una
+    // lista) y aquí se normalizan a un vocabulario corto para poder filtrar
+    // un ejercicio por fila de la matriz. `facetas` ya es jsonb: sin migración.
+    var MATRIZ_FILAS = [
+      { k:'altura', ico:'↕️', l:'Altura', vals:[
+          { k:'baja',  l:'Baja' }, { k:'media', l:'Media' }, { k:'alta', l:'Alta' }, { k:'globo', l:'Globo' } ] },
+      { k:'tiempo', ico:'⏱️', l:'Tiempo', vals:[
+          { k:'temprano', l:'Temprano' }, { k:'tarde', l:'Tarde' }, { k:'punto-alto', l:'Punto más alto' }, { k:'cambio-ritmo', l:'Cambio de ritmo' } ] },
+      { k:'velocidad', ico:'⚡', l:'Velocidad', vals:[
+          { k:'lenta', l:'Lenta' }, { k:'media', l:'Media' }, { k:'rapida', l:'Rápida' }, { k:'variable', l:'Variable' } ] }
+    ];
+    function _mzNorm(t) {
+      return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[_]/g, '-').trim();
+    }
+    // Un valor suelto del vault → su clave canónica (o '' si no se reconoce)
+    function matrizCanon(fila, raw) {
+      var s = _mzNorm(raw);
+      if (!s) return '';
+      if (fila === 'altura') {
+        if (/globo/.test(s)) return 'globo';
+        if (/baj|pies|suelo/.test(s)) return 'baja';
+        if (/medi/.test(s)) return 'media';
+        if (/alt|remate|arriba/.test(s)) return 'alta';
+      } else if (fila === 'tiempo') {
+        if (/tempran|bote.?pronto|antes|pronto/.test(s)) return 'temprano';
+        if (/punto.?(mas.?)?alto|en.?lo.?alto/.test(s)) return 'punto-alto';
+        if (/ritmo|cambi|cadencia/.test(s)) return 'cambio-ritmo';
+        if (/tarde|despues|dejar.?botar|bajando|pared/.test(s)) return 'tarde';
+      } else if (fila === 'velocidad') {
+        if (/variab|cambi|mixt/.test(s)) return 'variable';
+        if (/lent|muert|suave/.test(s)) return 'lenta';
+        if (/rapid|alta|maxim|potenc|fuert/.test(s)) return 'rapida';
+        if (/medi/.test(s)) return 'media';
+      }
+      return '';
+    }
+    // Las claves de una fila para un ejercicio (sin repetir)
+    function ejMatriz(ej, fila) {
+      var v = ejFaceta(ej, fila);
+      var arr = Array.isArray(v) ? v : String(v || '').split(/[,;/]| y /);
+      var out = [];
+      arr.forEach(function(x){ var k = matrizCanon(fila, x); if (k && out.indexOf(k) < 0) out.push(k); });
+      return out;
+    }
+    function _mzLabel(fila, k) {
+      var f = MATRIZ_FILAS.filter(function(x){ return x.k === fila; })[0];
+      var v = f && f.vals.filter(function(x){ return x.k === k; })[0];
+      return v ? v.l : k;
+    }
+    // Filtro activo: una clave por fila (o null). Lo comparten Carro y Área.
+    var _filtroMatriz = { altura:null, tiempo:null, velocidad:null };
+    function _mzPasa(ej) {
+      return MATRIZ_FILAS.every(function(f){
+        var q = _filtroMatriz[f.k];
+        return !q || ejMatriz(ej, f.k).indexOf(q) >= 0;
+      });
+    }
+    function matrizFiltro(fila, k) {
+      _filtroMatriz[fila] = (_filtroMatriz[fila] === k) ? null : k;
+      try { if (document.getElementById('pantalla-ejercicios').classList.contains('activa')) { renderFiltrosMatrizEj(); renderListaEjercicios(); } } catch (e) {}
+      try { if (document.getElementById('pantalla-clases-niveles').classList.contains('activa')) renderClasesNiveles(); } catch (e) {}
+    }
+    // Las filas de pastillas, solo con los valores que aparecen en `lista`.
+    // Si ningún ejercicio trae todavía estas facetas, no se pinta nada.
+    function _matrizFiltrosHTML(lista) {
+      var h = '';
+      MATRIZ_FILAS.forEach(function(f){
+        var n = {};
+        lista.forEach(function(e){ ejMatriz(e, f.k).forEach(function(k){ n[k] = (n[k] || 0) + 1; }); });
+        var vals = f.vals.filter(function(v){ return n[v.k]; });
+        if (!vals.length) return;
+        h += '<div class="mz-fila"><span class="mz-fila-t">' + f.ico + ' ' + f.l + '</span>';
+        vals.forEach(function(v){
+          h += '<div class="fpill' + (_filtroMatriz[f.k] === v.k ? ' activo' : '') +
+               '" onclick="matrizFiltro(\'' + f.k + '\',\'' + v.k + '\')">' + _gEsc(v.l) + ' <b>' + n[v.k] + '</b></div>';
+        });
+        h += '</div>';
+      });
+      return h ? '<div class="mz-filtros">' + h + '</div>' : '';
+    }
+    function renderFiltrosMatrizEj() {
+      var cont = document.getElementById('filtros-matriz-ej');
+      if (cont) cont.innerHTML = _matrizFiltrosHTML(leerEjercicios().filter(_esDeCarro));
+    }
+
     // Copia el código al portapapeles (con fallback para webviews sin clipboard API).
     function copiarCodigo(cod, el) {
       function feedback() {
@@ -27090,7 +27315,8 @@
       var nivel = ejFaceta(ej, 'nivel'), conds = ejFaceta(ej, 'condicionantes') || [];
       var golpe = ejGolpe(ej), golpeRaw = ejFaceta(ej, 'golpe');
       var situacion = ejSituacion(ej);
-      if (!cod && !zona && !formato && !nivel && !golpe && !situacion && (!conds || !conds.length)) return '';
+      var _hayMz = MATRIZ_FILAS.some(function(f){ return ejMatriz(ej, f.k).length; });   // v0.398
+      if (!cod && !zona && !formato && !nivel && !golpe && !situacion && (!conds || !conds.length) && !_hayMz) return '';
 
       var chips = [];
       function chip(txt) {
@@ -27102,6 +27328,10 @@
       if (formato) chips.push(chip('👥 ' + formato));
       if (nivel)   chips.push(chip('📶 ' + (NIVEL_LABEL[nivel] || ('Nivel ' + nivel))));
       (conds || []).forEach(function(c){ chips.push(chip('⚙️ ' + c)); });
+      // v0.398: altura · tiempo · velocidad (filas de la matriz)
+      MATRIZ_FILAS.forEach(function(f){
+        ejMatriz(ej, f.k).forEach(function(k){ chips.push(chip(f.ico + ' ' + f.l + ': ' + _mzLabel(f.k, k))); });
+      });
 
       var html = '<div><div class="detalle-seccion-titulo">Ficha</div>';
       if (cod) {
@@ -27271,6 +27501,7 @@
       if (inp) inp.value = filtroEjTexto;
       renderFiltrosTipoEj();
       renderFiltrosGolpeEj();
+      renderFiltrosMatrizEj();   // v0.398
       renderListaEjercicios();
     }
 
@@ -27293,7 +27524,7 @@
         var pasaZona = filtroEjZona === null || ejFaceta(e, 'zona') === filtroEjZona;
         var pasaGolpe = filtroEjGolpe === null || ejGolpe(e) === filtroEjGolpe;
         var pasaInt   = filtroEjIntencion === null || ejIntencion(e) === filtroEjIntencion;
-        var pasaSit  = filtroEjSituacion === null || ejSituacion(e) === filtroEjSituacion;
+        var pasaSit  = (filtroEjSituacion === null || ejSituacion(e) === filtroEjSituacion) && _mzPasa(e);   // v0.398
         var pasaTxt  = !filtroEjTexto ||
                        (e.nombre || '').toLowerCase().indexOf(filtroEjTexto) !== -1 ||
                        ejCodigo(e).toLowerCase().indexOf(filtroEjTexto) !== -1;
@@ -28328,6 +28559,7 @@
         if (_esDeCarro(e)) return false;
         if (_areaEjSit  !== null && _areaEjGrupo(e) !== _areaEjSit) return false;
         if (_areaEjForm !== null && _areaFormGrupo(e) !== _areaEjForm) return false;
+        if (!_mzPasa(e)) return false;   // v0.398
         return true;
       });
     }
@@ -28380,6 +28612,9 @@
         });
         h += '</div>';
       }
+
+      // ── v0.398: filas de la matriz (altura · tiempo · velocidad), si las hay
+      h += _matrizFiltrosHTML(deArea);
 
       // ── Los ejercicios, agrupados por situación
       var lista = _areaEjLista();
