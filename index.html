@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.402.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.404.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,32 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.404.0 — Avanzado: la franja de la zona en dos líneas (móvil) y sin «pista» (2026-10)
+    (sin migraciones)
+    · En el móvil «‹ FONDO» y Anular · Dominar · Definir se solapaban. Ahora
+      la franja va en dos líneas: arriba «‹ FONDO» con la ✕ al final, y
+      debajo, a todo lo ancho, los tres botones de intención repartidos.
+    · Fuera la etiqueta «PISTA» junto al nombre de la zona: tocar el nombre
+      sigue volviendo a la pista.
+
+
+  v0.403.0 — Avanzado: la carta de cada celda, plegable (2026-10)
+    ⚠️ MIGRACIÓN: ejecutar migraciones/migracion_cartas_celda.sql en Supabase
+       y luego sync_padel.py (cuenta nivel3). Sin eso la carta no sale.
+    · Dentro de una zona, debajo de la frase, una CARTA dorada plegable con
+      la chuleta de la celda elegida (zona × intención). Plegada enseña solo
+      «qué persigues» («Que me tiren bolas sin presión»); al tocarla se abre:
+      zonas, alturas, golpes (los principales en dorado), tiempos,
+      velocidades y conceptos/jugadas, y al pie el saque de la celda y la
+      señal para cambiar de celda.
+    · Fondo, Esquinas y Campo medio usan la carta de «… fondo»; Red, la de
+      «… red». Saque, Táctica y Juegos no tienen carta.
+    · El contenido NACE EN EL VAULT: «Carta — <celda>.md» en la carpeta de
+      cada celda (03 ÁREAS DE TRABAJO/Avanzado/), sacado del cuadro de Alex.
+      sync_padel.py las sube a la tabla nueva cartas_celda; la app las guarda
+      en caché para verlas sin conexión.
+
 
   v0.402.0 — Avanzado: pestañas por BLOQUE y botones de intención más pro (2026-10)
     (sin migraciones)
@@ -7351,6 +7377,25 @@
     .avz-oscuro .rec-zc { background:#151517; border-color:#2c2c30; }
     .avz-oscuro .rec-zc-n { color:#f4efe6; font-style:italic; text-transform:uppercase; letter-spacing:.05em; font-size:22px; }
     .avz-oscuro .rec-zc-f { color:#8a8478; }
+    /* v0.403 — la carta de la celda */
+    .avz-carta { border:1px solid #c9954f; border-radius:12px; background:linear-gradient(180deg,#1d1a14,#151517); overflow:hidden; margin:2px 0 12px; }
+    .avz-carta-cab { display:flex; align-items:center; gap:10px; width:100%; padding:10px 12px; background:none; border:none;
+      font-family:inherit; text-align:left; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .avz-carta-t { flex-shrink:0; font-size:11.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:#c9954f; }
+    .avz-carta-q { flex:1; min-width:0; font-size:13.5px; font-weight:700; color:#f4efe6; }
+    .avz-carta-chev { color:#c9954f; font-size:18px; transition:transform .2s; }
+    .avz-carta.ab .avz-carta-chev { transform:rotate(90deg); }
+    .avz-carta-body { padding:0 12px 12px; }
+    .avz-carta-celda { font-size:10.5px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:#8a8478; margin:2px 0 4px; }
+    .avz-carta-fila { display:grid; grid-template-columns:104px 1fr; gap:10px; padding:8px 0; border-top:1px solid #2c2c30; }
+    .avz-carta-fl { font-size:10.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:#c9954f; padding-top:4px; }
+    .avz-carta-chips { display:flex; flex-wrap:wrap; gap:5px; }
+    .avz-carta-chip { font-size:12px; padding:3px 9px; border-radius:999px; background:#232327; border:1px solid #34343a; color:#e8e2d6; }
+    .avz-carta-chip.p { background:#2b2416; border-color:#7a5124; color:#f0d9b0; font-weight:700; }
+    .avz-carta-pie { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .avz-carta-pp { flex:1 1 220px; font-size:12px; line-height:1.45; background:#1b1b1e; border:1px solid #2c2c30; border-radius:10px; padding:8px 10px; color:#d9d2c4; }
+    .avz-carta-pp b { color:#c9954f; }
+    @media (max-width:420px) { .avz-carta-fila { grid-template-columns:1fr; gap:5px; } }
     /* v0.401/v0.402 — Anular · Dominar · Definir en la franja: control segmentado */
     .avz-ints { margin-left:auto; display:inline-flex; gap:2px; padding:3px; border-radius:12px;
       background:rgba(6,10,20,.32); border:1px solid rgba(255,255,255,.22);
@@ -7367,6 +7412,12 @@
     .avz-int.cero:not(.on) { color:rgba(255,255,255,.5); }
     .avz-int.cero:not(.on) b { background:rgba(255,255,255,.08); color:rgba(255,255,255,.55); }
     .avz-ints + .rec-zc-x { margin-left:6px; }
+    /* v0.404 — dos líneas: «‹ FONDO ……… ✕» y debajo, a lo ancho, Anular · Dominar · Definir
+       (en el móvil se solapaban en una sola línea) */
+    .avz-oscuro .rec-zc-cab .avz-volver { flex:1 1 auto; min-width:0; }
+    .avz-oscuro .rec-zc-cab .rec-zc-x { order:2; margin-left:auto; }
+    .avz-oscuro .rec-zc-cab .avz-ints { order:3; flex:1 1 100%; margin-left:0; display:flex; }
+    .avz-oscuro .rec-zc-cab .avz-int { flex:1 1 0; justify-content:center; padding:8px 6px; }
     .avz-celda { color:#f4efe6; font-weight:800; }
     .avz-vacio { text-align:center; color:#8a8478; font-size:13px; line-height:1.5; padding:22px 10px; border:1px dashed #3a3a3f; border-radius:12px; margin-top:6px; }
     .avz-vacio b { color:#f4efe6; }
@@ -11755,7 +11806,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.402.0';
+    var APP_VERSION = '0.404.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -23188,6 +23239,68 @@
     // sesiones, minutos de pista y dadas este curso. Debajo, los golpes como
     // CHIPS (los pendientes en punteado) que se abren con sus sesiones, o la
     // sesión abierta con su secuencia: el mismo cuerpo que la ventana.
+    // ══ v0.403 — LA CARTA DE LA CELDA (chuleta plegable) ════════════════
+    // Lo que el entrenador quiere recordar en pista para cada celda de la
+    // matriz: qué persigue, zonas, alturas, golpes (principales en dorado),
+    // tiempos, velocidades, conceptos, el saque y la señal para cambiar de
+    // celda. NACE EN EL VAULT («Carta — <celda>.md», 03 ÁREAS DE TRABAJO/
+    // Avanzado/<celda>/) y llega por sync_padel.py a la tabla cartas_celda
+    // (migracion_cartas_celda.sql). La app solo la lee; se guarda en caché
+    // para verla sin conexión.
+    var _cartasCelda = (function(){ try { return JSON.parse(localStorage.getItem('padel-cartas-celda') || '{}') || {}; } catch (e) { return {}; } })();
+    var _cartasPedidas = false, _cartaAbierta = false;
+    var CARTA_FILAS = [
+      { k:'zonas', l:'Zonas' }, { k:'alturas', l:'Alturas' }, { k:'golpes', l:'Golpes' },
+      { k:'tiempos', l:'Tiempos' }, { k:'velocidades', l:'Velocidades' }, { k:'conceptos', l:'Conceptos · jugadas' }
+    ];
+    function _cartasCargar() {
+      if (_cartasPedidas || !_sb || !_sbUser) return;
+      _cartasPedidas = true;
+      var scope = (_sbGrupo && _sbGrupo.id) || _sbUser.id;
+      _sb.from('cartas_celda').select('nivel,celda,data').eq('scope_id', scope).then(function(r){
+        if (r.error || !r.data) { if (r.error) console.warn('cartas_celda', r.error.message); return; }
+        var m = {};
+        r.data.forEach(function(row){ m[row.nivel + '|' + row.celda] = row.data || {}; });
+        _cartasCelda = m;
+        try { localStorage.setItem('padel-cartas-celda', JSON.stringify(m)); } catch (e) {}
+        if (_recZonaSel) { try { _recRepintar(); } catch (e) {} }
+      }).catch(function(){});
+    }
+    // Zona de la pista → posición de la matriz (fondo / red). Saque, Táctica
+    // y Juegos no tienen celda propia.
+    var CARTA_POS = { 'fondo':'fondo', 'esquina':'fondo', 'campo-medio':'fondo', 'red':'red' };
+    function cartaToggle() { _cartaAbierta = !_cartaAbierta; _recRepintar(); }
+    function _cartaCeldaHTML(nivel, zona, intLabel) {
+      var pos = CARTA_POS[zona];
+      if (!pos || !intLabel) return '';
+      var celda = intLabel + ' ' + pos;
+      var d = _cartasCelda[nivel + '|' + celda];
+      if (!d) return '';
+      var et = (PLAN_ETAPAS[nivel] || []).filter(function(x){ return x.nombre === celda; })[0];
+      var h = '<div class="avz-carta' + (_cartaAbierta ? ' ab' : '') + '">' +
+        '<button type="button" class="avz-carta-cab" onclick="cartaToggle()">' +
+          '<span class="avz-carta-t">📋 Carta</span>' +
+          '<span class="avz-carta-q">' + _gEsc(d.persigue || celda) + '</span>' +
+          '<span class="avz-carta-chev">›</span></button>';
+      if (_cartaAbierta) {
+        h += '<div class="avz-carta-body"><div class="avz-carta-celda">' + _gEsc(celda) + '</div>';
+        CARTA_FILAS.forEach(function(f){
+          var items = d[f.k] || [];
+          if (!items.length) return;
+          h += '<div class="avz-carta-fila"><span class="avz-carta-fl">' + f.l + '</span><span class="avz-carta-chips">' +
+            items.map(function(x){
+              var t = (typeof x === 'string') ? x : x.t, pr = (typeof x === 'object') && x.p;
+              return '<span class="avz-carta-chip' + (pr ? ' p' : '') + '">' + _gEsc(t) + '</span>';
+            }).join('') + '</span></div>';
+        });
+        var pie = '';
+        if (et && et.saque) pie += '<span class="avz-carta-pp"><b>🎾 Saque</b> · ' + _gEsc(et.saque) + '</span>';
+        if (d.senal) pie += '<span class="avz-carta-pp"><b>↪ Cambio de celda</b> · ' + _gEsc(d.senal) + '</span>';
+        if (pie) h += '<div class="avz-carta-pie">' + pie + '</div>';
+        h += '</div>';
+      }
+      return h + '</div>';
+    }
     // ── v0.401 — AVANZADO: la ficha de la zona se filtra por INTENCIÓN ──────
     // Zona (dónde) × intención (qué quiero hacer) = la celda de la matriz.
     // Tres botones en la franja: Anular · Dominar · Definir, siempre los tres
@@ -23223,12 +23336,13 @@
       h += '<div class="rec-zc-cab"' + (nivel === 'avanzado' ? ' style="--zc:' + z.color + ';background:linear-gradient(90deg,' + z.color + ',' + z.color + 'cc)"' : '') + '>' +
         (nivel === 'avanzado'
           ? '<button type="button" class="rec-zc-n avz-volver" onclick="recZonaSel(\'' + e.et.zona + '\')" title="Volver a la pista">' +
-              '<span class="avz-volver-ic">‹</span>' + _gEsc(z.label) + '<span class="avz-volver-p">pista</span></button>'   // v0.395
+              '<span class="avz-volver-ic">‹</span>' + _gEsc(z.label) + '</button>'   // v0.395 · v0.404: sin la palabra pista
           : '<div class="rec-zc-n">' + _gEsc(z.label) + '</div>') +
         (nivel === 'avanzado' ? intsH
           : (r.int ? '<span class="rec-zc-int" style="color:' + z.color + ';border-color:' + z.color + '">' + _gEsc(intL) + '</span>' : '')) +
         '<button type="button" class="rec-zc-x" onclick="recZonaSel(\'' + e.et.zona + '\')" aria-label="Cerrar">✕</button></div>';
       h += '<div class="rec-zc-f">' + _gEsc(z.f) + (intAct ? ' · <b class="avz-celda">' + _gEsc(intAct.l + ' · ' + z.label) + '</b>' : '') + '</div>';
+      if (nivel === 'avanzado') { _cartasCargar(); h += _cartaCeldaHTML(nivel, e.et.zona, intAct && intAct.l); }   // v0.403
       if (nivel === 'avanzado' && e.et.zona !== 'juegos' && !eV.nodos.length) {
         h += '<div class="avz-vacio">Todavía no hay sesiones de <b>' + _gEsc(intAct.l.toLowerCase() + ' en ' + z.label.toLowerCase()) + '</b>.<br>' +
              'Se llenará cuando cuelgues una sesión en un bloque de esta celda.</div></div>';
