@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.400.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.401.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,22 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.401.0 — Avanzado: la zona se filtra por intención (Anular · Dominar · Definir) (2026-10)
+    (sin migraciones)
+    · En la franja de color de cada zona, tres botones con su número de
+      sesiones: ANULAR · DOMINAR · DEFINIR. Zona × intención = la celda de la
+      matriz (Fondo + Anular = «Anular fondo»). Están siempre los tres, en
+      todas las zonas, aunque alguno tenga 0 (sale más tenue).
+    · Al abrir una zona se empieza SIEMPRE por Anular. Debajo, solo las
+      sesiones de esa intención, con sus pestañas de golpe recalculadas; junto
+      a la frase de la zona se lee la celda («Anular · Fondo»).
+    · Si no hay sesiones de esa intención en la zona, aviso: «Todavía no hay
+      sesiones de definir en fondo…».
+    · La intención de cada sesión sale de su bloque: no hay que tocar el vault.
+      Los bloques sin intención de la matriz (Juegos) salen con cualquiera.
+    · Sin botón «Todas» (decisión de Alex).
+
 
   v0.400.0 — Avanzado: las tarjetas vuelven a decir el bloque de la sesión (2026-10)
     (sin migraciones)
@@ -7321,6 +7337,18 @@
     .avz-oscuro .rec-zc { background:#151517; border-color:#2c2c30; }
     .avz-oscuro .rec-zc-n { color:#f4efe6; font-style:italic; text-transform:uppercase; letter-spacing:.05em; font-size:22px; }
     .avz-oscuro .rec-zc-f { color:#8a8478; }
+    /* v0.401 — Anular · Dominar · Definir en la franja de la zona */
+    .avz-ints { margin-left:auto; display:flex; gap:3px; padding:3px; border-radius:999px; background:rgba(0,0,0,.22); flex-wrap:nowrap; }
+    .avz-int { font-family:inherit; font-size:11.5px; font-weight:800; padding:5px 11px; border-radius:999px; border:none; background:none;
+      color:#fff; cursor:pointer; white-space:nowrap; -webkit-tap-highlight-color:transparent; }
+    .avz-int b { font-weight:700; opacity:.75; margin-left:4px; }
+    .avz-int.on { background:#fff; color:#111; }
+    .avz-int.cero:not(.on) { opacity:.5; }
+    .avz-ints + .rec-zc-x { margin-left:6px; }
+    .avz-celda { color:#f4efe6; font-weight:800; }
+    .avz-vacio { text-align:center; color:#8a8478; font-size:13px; line-height:1.5; padding:22px 10px; border:1px dashed #3a3a3f; border-radius:12px; margin-top:6px; }
+    .avz-vacio b { color:#f4efe6; }
+    .avz-oscuro .rec-zc-cab { flex-wrap:wrap; row-gap:8px; }
     /* v0.396 — la cabecera de la ficha, franja del color de la zona */
     .avz-oscuro .rec-zc-cab { margin:-12px -12px 10px; padding:12px 12px; border-radius:0 var(--r-md) 0 0; }
     .avz-oscuro .rec-zc-cab .avz-volver-ic, .avz-oscuro .rec-zc-cab .rec-zc-n { color:#fff; }
@@ -11705,7 +11733,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.400.0';
+    var APP_VERSION = '0.401.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -23138,8 +23166,34 @@
     // sesiones, minutos de pista y dadas este curso. Debajo, los golpes como
     // CHIPS (los pendientes en punteado) que se abren con sus sesiones, o la
     // sesión abierta con su secuencia: el mismo cuerpo que la ventana.
+    // ── v0.401 — AVANZADO: la ficha de la zona se filtra por INTENCIÓN ──────
+    // Zona (dónde) × intención (qué quiero hacer) = la celda de la matriz.
+    // Tres botones en la franja: Anular · Dominar · Definir, siempre los tres
+    // y en todas las zonas (aunque alguno tenga 0). Al abrir una zona se
+    // empieza SIEMPRE por Anular. La intención de una sesión es la de su
+    // bloque; los bloques sin intención de la matriz (p. ej. Juegos, «base»)
+    // salen con cualquiera.
+    var REC_INTS = [{ k:'anular', l:'Anular' }, { k:'dominar', l:'Dominar' }, { k:'definir', l:'Definir' }];
+    var _recIntSel = 'anular';
+    function recIntSel(k) {
+      _recIntSel = k;
+      if (_recZonaSel) _recGolpeSel[_recZonaSel] = 0;
+      _recRepintar();
+    }
+    function _recNodoInt(nd) { return String((nd && nd.it && nd.it.int) || '').toLowerCase(); }
     function _recZonaFichaHTML(e, p, nivel) {
       var z = _recZona(e.et.zona), r = _recZonaResumen(e, p, nivel);
+      var eV = e, intsH = '', intAct = null;
+      if (nivel === 'avanzado') {
+        intAct = REC_INTS.filter(function(x){ return x.k === _recIntSel; })[0] || REC_INTS[0];
+        var cnt = {}; REC_INTS.forEach(function(x){ cnt[x.k] = 0; });
+        e.nodos.forEach(function(nd){ var k = _recNodoInt(nd); if (cnt[k] != null) cnt[k] += nd.ses.length; });
+        intsH = '<span class="avz-ints">' + REC_INTS.map(function(x){
+          return '<button type="button" class="avz-int' + (x.k === intAct.k ? ' on' : '') + (cnt[x.k] ? '' : ' cero') + '" onclick="recIntSel(\'' + x.k + '\')">' +
+                 x.l + '<b>' + cnt[x.k] + '</b></button>';
+        }).join('') + '</span>';
+        eV = { et:e.et, nodos:e.nodos.filter(function(nd){ var k = _recNodoInt(nd); return cnt[k] == null || k === intAct.k; }) };
+      }
       var intL = (typeof PLAN_INT !== 'undefined' && PLAN_INT[r.int]) ? PLAN_INT[r.int].l : r.int;
       var h = '<div class="rec-zc" style="border-left-color:' + z.color + '">';
       // v0.396: en Avanzado la cabecera es una FRANJA del color de la zona, de
@@ -23149,9 +23203,15 @@
           ? '<button type="button" class="rec-zc-n avz-volver" onclick="recZonaSel(\'' + e.et.zona + '\')" title="Volver a la pista">' +
               '<span class="avz-volver-ic">‹</span>' + _gEsc(z.label) + '<span class="avz-volver-p">pista</span></button>'   // v0.395
           : '<div class="rec-zc-n">' + _gEsc(z.label) + '</div>') +
-        (r.int ? '<span class="rec-zc-int" style="color:' + z.color + ';border-color:' + z.color + '">' + _gEsc(intL) + '</span>' : '') +
+        (nivel === 'avanzado' ? intsH
+          : (r.int ? '<span class="rec-zc-int" style="color:' + z.color + ';border-color:' + z.color + '">' + _gEsc(intL) + '</span>' : '')) +
         '<button type="button" class="rec-zc-x" onclick="recZonaSel(\'' + e.et.zona + '\')" aria-label="Cerrar">✕</button></div>';
-      h += '<div class="rec-zc-f">' + _gEsc(z.f) + '</div>';
+      h += '<div class="rec-zc-f">' + _gEsc(z.f) + (intAct ? ' · <b class="avz-celda">' + _gEsc(intAct.l + ' · ' + z.label) + '</b>' : '') + '</div>';
+      if (nivel === 'avanzado' && e.et.zona !== 'juegos' && !eV.nodos.length) {
+        h += '<div class="avz-vacio">Todavía no hay sesiones de <b>' + _gEsc(intAct.l.toLowerCase() + ' en ' + z.label.toLowerCase()) + '</b>.<br>' +
+             'Se llenará cuando cuelgues una sesión en un bloque de esta celda.</div></div>';
+        return h;
+      }
       // v0.362: fuera las tres cifras (sesiones · minutos · dadas): no se
       // usaban para elegir. Se quedan en _recZonaResumen por si vuelven.
       // v0.363: los golpes van en PESTAÑAS y la sesión se abre en ventana.
@@ -23160,8 +23220,8 @@
       // v0.364: Juegos también en pestañas, pero de CATEGORÍAS de ejercicio
       // (Calentamiento · Cooperación · Juegos condicionados…), igual que las
       // demás zonas van por golpes.
-      if (e.et.zona === 'juegos') h += _recJuegosTabsHTML(e, p, nivel, z);
-      else h += _recZonaTabsHTML(e, p, nivel, z);
+      if (e.et.zona === 'juegos') h += _recJuegosTabsHTML(eV, p, nivel, z);   // v0.401: eV = filtrada por intención en Avanzado
+      else h += _recZonaTabsHTML(eV, p, nivel, z);
       h += '</div>';
       return h;
     }
@@ -23646,7 +23706,7 @@
     var _recZonaSel = null;
     function recZonaSel(z) {
       if (_recZonaSel === z) { _recZonaSel = null; }
-      else { _recZonaSel = z; _recSel = null; }
+      else { _recZonaSel = z; _recSel = null; _recIntSel = 'anular'; _recGolpeSel[z] = 0; }   // v0.401: siempre empieza por Anular
       _recRepintar();
     }
     // v0.356 — La galería de golpes arranca PLEGADA: al entrar en un apartado
