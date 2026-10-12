@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.405.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.406.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,14 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.406.0 — Gestor: los grupos con nombre y primer apellido (2026-10)
+    (sin migraciones)
+    · En las franjas del panel del gestor (día, toda la semana y detalle del
+      entrenador) cada alumno salía con iniciales («Alba C.D.»). Ahora sale
+      con su nombre y su PRIMER APELLIDO entero («Alba Castillo»), también
+      en los avisos de alumno movido de franja.
+
 
   v0.405.0 — El «‹ Inicio» de arriba, visible y a la derecha (2026-10)
     (sin migraciones)
@@ -11829,7 +11837,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.405.0';
+    var APP_VERSION = '0.406.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -16548,7 +16556,7 @@
         var movDest = alMovidoA(a);
         if (movDest && bajaEf) {
           if (!(bajaEf >= _lunISO && bajaEf <= _domISO)) return;   // pasó su semana
-          var txtMov = _gEsc(alCorto(a)) +
+          var txtMov = _gEsc(alNomAp1(a)) +   // v0.406
             '<span class="ghd-al-mov">' + bajaEf.slice(8,10) + '/' + bajaEf.slice(5,7) +
             ' → ' + _gEsc(movDest) + '</span>';
           nAls++;
@@ -16577,7 +16585,8 @@
         var cls   = 'ghd-al' + (baja ? ' baja' : (nuevo ? ' alta' : ''));
         // v0.184: en la visión de semanas (soloAlumnos), nombre + inicial del
         // PRIMER apellido ("Marta G."). En el resto, iniciales de todos.
-        var _cortoAl = opts.soloAlumnos ? alCorto1(a) : alCorto(a);
+        // v0.406: en los grupos del gestor, nombre + primer apellido entero
+        var _cortoAl = alNomAp1(a);
         var texto = (baja ? '❌ ' : (nuevo ? '🚩 ' : '')) + _gEsc(_cortoAl) +
                     (baja  ? ' · ' + bajaEf.slice(8, 10) + '/' + bajaEf.slice(5, 7) :
                     (nuevo ? ' · ' + alta.slice(8, 10) + '/' + alta.slice(5, 7) : ''));
@@ -31566,6 +31575,14 @@
       if (!ap) return n;
       var p1 = ap.split(/\s+/).filter(Boolean)[0] || '';
       return n + (p1 ? ' ' + p1.charAt(0).toUpperCase() + '.' : '');
+    }
+    // v0.406: nombre + PRIMER APELLIDO entero ("Marta García"), para los
+    // grupos del panel del gestor: con iniciales no se sabía quién era.
+    function alNomAp1(a) {
+      var n = alNom(a), ap = alApe(a);
+      if (!ap) return n;
+      var p1 = ap.split(/\s+/).filter(Boolean)[0] || '';
+      return n + (p1 ? ' ' + p1 : '');
     }
     // Periodos ANTERIORES de alta/baja del alumno en la clase (v0.63):
     // cuando se reincorpora al mismo grupo, el periodo cerrado se guarda
