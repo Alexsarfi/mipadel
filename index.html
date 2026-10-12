@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.404.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.405.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,18 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.405.0 — El «‹ Inicio» de arriba, visible y a la derecha (2026-10)
+    (sin migraciones)
+    · En el iPhone la app va pegada al borde de arriba (modo black-translucent)
+      y la cabecera no dejaba sitio a la barra de estado: el «‹ Inicio» y los
+      botones de arriba quedaban debajo de la hora y la batería. Ahora todas
+      las cabeceras suman la zona segura de arriba.
+    · El botón de volver («‹ Inicio», «‹ Sesiones»…) pasa a la DERECHA, a la
+      altura del título de la pantalla (p. ej. «🔥 Avanzado»). En todas las
+      pantallas. Donde la derecha ya tiene otro botón (Perfil, ⚙ Clases,
+      ✏ Editar, Excel) se queda a la izquierda para no pisarse.
+
 
   v0.404.0 — Avanzado: la franja de la zona en dos líneas (móvil) y sin «pista» (2026-10)
     (sin migraciones)
@@ -6857,6 +6869,17 @@
     .cab-logo { width:58px; height:58px; flex-shrink:0; display:block; border-radius:10px; }
     .cab-sub      { font-size:13px; color:rgba(255,255,255,0.6); margin-top:5px; position:relative; }
     /* Botón Perfil en el encabezado (arriba a la derecha) */
+    /* v0.405 — LA CABECERA RESPETA LA BARRA DE ESTADO DEL IPHONE (modo
+       black-translucent): el «‹ Inicio» y los botones de arriba quedaban debajo
+       de la hora y la batería, casi escondidos. Arriba se suma la zona segura. */
+    .cabecera { padding-top:calc(2.25rem + env(safe-area-inset-top)); }
+    .cab-perfil-btn, .cab-accion-btn, .gest-hdr-perfil { top:calc(1.5rem + env(safe-area-inset-top)) !important; }
+    .cab-mini-btn { top:calc(2.05rem + env(safe-area-inset-top)) !important; }
+    /* v0.405 — y el «‹ Volver» pasa a la DERECHA, a la altura del título
+       («Avanzado», «Asistencia»…). Donde la derecha ya está ocupada por otro
+       botón (Perfil, ⚙ Clases, ✏ Editar…) se queda a la izquierda, como antes. */
+    .cabecera > .btn-volver { float:right; margin:-6px -6px 6px 12px; }
+    .cabecera:has(> .cab-mini-btn, > .cab-accion-btn, > .cab-perfil-btn, > .gest-hdr-perfil) > .btn-volver { float:none; margin:-4px -6px 8px -6px; }
     .cab-perfil-btn { position:absolute; top:1.5rem; right:1.5rem; z-index:2; width:42px; height:42px; border-radius:50%; background:rgba(255,255,255,0.14); border:none; color:#fff; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent; }
     .cab-perfil-btn:hover { background:rgba(255,255,255,0.24); }
     .cab-perfil-btn:active { transform:scale(0.94); }
@@ -11806,7 +11829,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.404.0';
+    var APP_VERSION = '0.405.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
