@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.408.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.409.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,17 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.409.0 — Avanzado: la pista con todo el sitio (2026-10)
+    (sin migraciones)
+    · Temporalización, Recorrido y Archivo dejan de ir debajo de la pista:
+      son tres botones en la cabecera («🗓️ Temporalización · 📍 Recorrido ·
+      📦 Archivo») que abren cada uno su ventana, en oscuro como la
+      pantalla. La pista se queda sola. Solo en Avanzado; Iniciación y
+      Competición siguen igual.
+    · En la pista, la zona de RED se rotula en dos: arriba «RED REVÉS» y
+      abajo «RED DERECHA» (lado de cada uno para un diestro mirando a la red).
+
 
   v0.408.0 — WhatsApp: el grupo de la franja, guardado (2026-10)
     ⚠️ REQUIERE MIGRACIÓN: migraciones/migracion_whatsapp_grupos.sql
@@ -7530,6 +7541,28 @@
     .avz-card-t { font-size:16px; font-weight:800; letter-spacing:.03em; color:#f4efe6; }
     .avz-card-go { width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:20px;
       color:#fff; background:linear-gradient(180deg,#b07a3a,#7a5124); border:1px solid #c9954f; }
+    /* v0.409 — botones de la cabecera de Avanzado y sus ventanas */
+    .plan-cab-btns { display:flex; gap:6px; margin-top:12px; position:relative; }
+    .plan-cab-btns:empty { display:none; }
+    .plan-cab-btn { flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:center; gap:2px;
+      padding:8px 4px; border-radius:12px; border:1px solid rgba(255,255,255,.28); background:rgba(255,255,255,.10);
+      color:#fff; font-family:inherit; font-size:11.5px; font-weight:800; letter-spacing:.02em; cursor:pointer;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; -webkit-tap-highlight-color:transparent; }
+    .plan-cab-btn.on { background:#fff; color:#111; border-color:#fff; }
+    .plan-cab-btn:active { transform:scale(.97); }
+    .plan-cab-ico { font-size:17px; line-height:1; }
+    .avz-pan-ov { z-index:9990; }
+    .ruta-modal.avz-pan { background:#0b0b0d; color:#f4efe6; border-top:1px solid #2c2c30; }
+    .avz-pan .ruta-modal-hdr { border-color:#2c2c30; }
+    .avz-pan .ruta-modal-tit { color:#f4efe6; }
+    .avz-pan .asl-modal-x { background:#1f1f22; color:#d9d2c4; }
+    .avz-pan-cuerpo > .plan-otros, .avz-pan-cuerpo > .ct-caja { margin-top:0 !important; border:none; background:none; }
+    .avz-pan-cuerpo > .plan-otros > .plan-otros-hdr { display:none; }
+    .avz-pan-cuerpo > .plan-otros > .plan-otros-body { display:flex; padding:0; }
+    .avz-pan-cuerpo > .ct-caja > .ct-caja-body { display:block; }
+    .avz-pan-cuerpo > .ct-caja > .ct-hdr { pointer-events:none; padding-left:0; padding-right:0; }
+    .avz-pan-cuerpo > .ct-caja > .ct-hdr .ct-nueva { pointer-events:auto; }
+    .avz-pan-cuerpo > .ct-caja > .ct-hdr .ct-hdr-chev { display:none; }
     /* Temporalización, Recorrido y demás cajas, en oscuro */
     .avz-oscuro .plan-otros, .avz-oscuro .ct-caja { background:#151517; border-color:#2c2c30; }
     .avz-oscuro .plan-otros-hdr, .avz-oscuro .ct-hdr-t { color:#f4efe6; }
@@ -11315,6 +11348,7 @@
       <button class="btn-volver" id="plan-volver" onclick="planVolver()">‹ Inicio</button>
       <div class="cab-titulo" id="plan-titulo">Planificación anual</div>
       <div class="cab-sub" id="plan-sub">Septiembre → Junio</div>
+      <div class="plan-cab-btns" id="plan-cab-btns"></div>
     </div>
     <div class="contenido" id="plan-contenido"></div>
 
@@ -11902,7 +11936,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.408.0';
+    var APP_VERSION = '0.409.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -22529,6 +22563,22 @@
       hRec += '</div>';   // .ct-caja-body
       hRec += '</div>';   // .ct-caja
 
+      // v0.409: en AVANZADO la pantalla es solo la pista. Temporalización,
+      // Recorrido y Archivo pasan a ser botones de la cabecera que abren su
+      // ventana (avzPan). Iniciación y Competición, como estaban.
+      if (nivelCT === 'avanzado') {
+        var tArch = _rutaTemporalizacionHTML(p, idsNivel, 'arch');
+        _avzPanHTML = {
+          temp: _rutaTemporalizacionHTML(p, idsNivel, 'temp') +
+                '<div class="ruta-leyenda">✓ trabajada · ◉ esta semana · ● planificada · ○ vacía</div>',
+          rec:  hRec,
+          arch: tArch || '<div class="plan-bl-vacio">Todavía no hay cursos anteriores: aquí irán cuando termine este.</div>',
+          nSes: nSesTot, nArch: (tArch.match(/🗓️ Curso /g) || []).length
+        };
+        h += hPista;
+        return h;
+      }
+      _avzPanHTML = null;
       h += hPista;                                  // v0.387: la pista, lo primero
       h += _rutaTemporalizacionHTML(p, idsNivel);   // v0.319
       h += hRec;                                    // v0.387: Recorrido, debajo
@@ -22835,7 +22885,9 @@
     // pierde: baja al Archivo, que va justo debajo y arranca plegado.
     // El corte lo da cursoDeFecha(), el mismo que usa el resto de la app, así
     // que no hay que archivar nada a mano ni recordar hacerlo en septiembre.
-    function _rutaTemporalizacionHTML(p, idsNivel) {
+    // v0.409: `solo` = 'temp' (sin el Archivo) | 'arch' (solo el Archivo),
+    // para las ventanas de los botones de la cabecera de Avanzado.
+    function _rutaTemporalizacionHTML(p, idsNivel, solo) {
       var nivel = _compNivel();
       var todos = _rutaDiasConAlgo(p, nivel, idsNivel);
       var cursoAct = _cursoActual();
@@ -22863,6 +22915,8 @@
           : _rutaTempRejillaHTML(p, nivel, deEste);
       }
       h += '</div></div>';
+      if (solo === 'temp') return h;
+      if (solo === 'arch') h = '';
 
       // ── Archivo: los cursos anteriores, cada uno con su árbol ──
       if (cursosPrev.length) {
@@ -23242,7 +23296,7 @@
         '<g pointer-events="none"><line x1="200" y1="-8" x2="200" y2="208" stroke="#c9954f" stroke-width="3.5"/>' +
           '<text x="200" y="222" text-anchor="middle" fill="#c9954f" font-size="9" letter-spacing="2">RED</text></g>' +
         '<g fill="#fff" font-weight="800" letter-spacing="1" pointer-events="none">' +
-          t(30, 104, 'FONDO', 12, -90) + t(98, 93, 'CAMPO', 11) + t(98, 116, 'MEDIO', 11) +   /* v0.396: CAMPO encima de la central y MEDIO debajo */ t(168, 64, 'RED', 12) +   /* rótulos por encima de la central */
+          t(30, 104, 'FONDO', 12, -90) + t(98, 93, 'CAMPO', 11) + t(98, 116, 'MEDIO', 11) +   /* v0.396: CAMPO encima de la central y MEDIO debajo */ t(168, 44, 'RED', 11) + t(168, 58, 'REVÉS', 10) + t(168, 146, 'RED', 11) + t(168, 160, 'DERECHA', 9) +   /* v0.409: arriba revés, abajo derecha (diestro mirando a la red) */
           t(13, 17, 'ESQ', 7) + t(13, 191, 'ESQ', 7) +
           t(269, 48, 'SAQUE', 12) + t(269, 62, 'Y RESTO', 10) + t(269, 155, 'JUEGOS', 12) + t(370, 104, 'TÁCTICA', 12, 90) +
         '</g>' +
@@ -26489,6 +26543,46 @@
         return s;
     }
 
+    // ══ v0.409 — AVANZADO: TEMPORALIZACIÓN · RECORRIDO · ARCHIVO, ARRIBA ══
+    // Tres botones en la cabecera; cada uno abre su caja en una ventana
+    // (oscura, como la pantalla) y la pista se queda con todo el sitio.
+    // La ventana se repinta con el plan, así que lo que se toque dentro
+    // (vista lista/rejilla, abrir un curso…) se ve al momento.
+    var _avzPanHTML = null, _avzPanSel = null;
+    var AVZ_PANS = [
+      { k:'temp', ico:'🗓️', l:'Temporalización' },
+      { k:'rec',  ico:'📍', l:'Recorrido' },
+      { k:'arch', ico:'📦', l:'Archivo' }
+    ];
+    function avzPan(k) { _avzPanSel = k; _avzPanPintar(); }
+    function avzPanCerrar() { _avzPanSel = null; _avzPanPintar(); }
+    function _avzCabPintar(nivel) {
+      var el = document.getElementById('plan-cab-btns');
+      if (!el) return;
+      if (nivel !== 'avanzado' || planEditMode || !_avzPanHTML) { el.innerHTML = ''; return; }
+      el.innerHTML = AVZ_PANS.map(function(b){
+        return '<button type="button" class="plan-cab-btn' + (_avzPanSel === b.k ? ' on' : '') + '" onclick="avzPan(\'' + b.k + '\')">' +
+          '<span class="plan-cab-ico">' + b.ico + '</span>' + b.l + '</button>';
+      }).join('');
+    }
+    function _avzPanPintar() {
+      var ov = document.getElementById('avz-pan-ov');
+      var b = AVZ_PANS.filter(function(x){ return x.k === _avzPanSel; })[0];
+      if (!b || !_avzPanHTML) { if (ov) ov.remove(); _avzCabPintar(_avzPanHTML ? 'avanzado' : ''); return; }
+      if (!ov) {
+        ov = document.createElement('div');
+        ov.id = 'avz-pan-ov'; ov.className = 'ruta-modal-ov avz-pan-ov';
+        ov.onclick = function(ev){ if (ev.target === ov) avzPanCerrar(); };
+        // dentro de la pantalla: al salir de Planificación se esconde con ella
+        (document.getElementById('pantalla-planificacion') || document.body).appendChild(ov);
+      }
+      ov.innerHTML = '<div class="ruta-modal avz-oscuro avz-pan" role="dialog" aria-label="' + b.l + '">' +
+        '<div class="ruta-modal-hdr"><span class="ruta-modal-tit">' + b.ico + ' ' + b.l + '</span>' +
+        '<button type="button" class="asl-modal-x" onclick="avzPanCerrar()" aria-label="Cerrar">✕</button></div>' +
+        '<div class="avz-pan-cuerpo">' + (_avzPanHTML[b.k] || '') + '</div></div>';
+      _avzCabPintar('avanzado');
+    }
+
     function mostrarPlanificacion() {
       _planSesCache = null;   // refresca clases/ejercicios para las sesiones inline
       var p = leerPlan();
@@ -26562,6 +26656,9 @@
       }
 
       cont.innerHTML = h;
+      if (nivel !== 'avanzado' || edit) { _avzPanHTML = null; _avzPanSel = null; }
+      _avzCabPintar(nivel);   // v0.409: Temporalización · Recorrido · Archivo, arriba
+      _avzPanPintar();
       _compDiaOvPintar();   // v0.243: el día abierto va en globo, no aquí dentro
       _recVentanaPintar();  // v0.337: la etapa abierta va en ventana, y se refresca con el plan
     }
