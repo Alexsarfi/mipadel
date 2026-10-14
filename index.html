@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.407.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.408.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,22 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.408.0 — WhatsApp: el grupo de la franja, guardado (2026-10)
+    ⚠️ REQUIERE MIGRACIÓN: migraciones/migracion_whatsapp_grupos.sql
+    · «Avisar al grupo» manda ahora al GRUPO DE WHATSAPP de la franja. Se
+      guarda una vez pegando su enlace de invitación (Info del grupo →
+      Invitar mediante enlace → Copiar). Después, «💬 Enviar al grupo de la
+      franja» copia el mensaje y abre el grupo: pegar y enviar. Lo guarda el
+      entrenador en sus franjas o el gestor desde el modo gestión; cada
+      entrenador solo ve los de sus franjas.
+    · Sin grupo guardado: «📤 Enviar a un grupo de WhatsApp» abre el menú de
+      compartir del móvil con el mensaje puesto.
+    · «Uno por uno» sigue debajo, como en la v0.407.
+    · Fuera las frases predefinidas: el mensaje se escribe siempre.
+    · Sin la migración funciona igual, pero el grupo se queda solo en ese
+      móvil (sale un aviso).
+
 
   v0.407.0 — WhatsApp a los alumnos desde Pasar lista (2026-10)
     (sin migraciones)
@@ -8840,10 +8856,6 @@
       border:1.5px solid #25D366; background:rgba(37,211,102,0.08); color:#128C7E; font-weight:800;
       font-size:14px; cursor:pointer; }
     .wa-modal { gap:8px; }
-    .wa-frases { display:flex; flex-wrap:wrap; gap:6px; }
-    .wa-frase { border:1px solid var(--borde); background:var(--arena); border-radius:16px; padding:6px 10px;
-      font-size:12px; font-weight:600; color:var(--texto); cursor:pointer; }
-    .wa-frase.on { background:#25D366; border-color:#25D366; color:#fff; }
     .wa-texto { width:100%; box-sizing:border-box; resize:vertical; min-height:70px; }
     .wa-go { display:block; text-align:center; text-decoration:none; background:#25D366; color:#fff;
       font-weight:800; font-size:15px; padding:12px; border-radius:12px; }
@@ -8855,6 +8867,19 @@
       padding:6px 10px; border-radius:14px; white-space:nowrap; }
     .wa-mini.hecho { background:var(--arena); color:#128C7E; }
     .wa-sin { font-size:12px; color:var(--gris); }
+    /* v0.408: grupo de WhatsApp de la franja */
+    .wa-gr { display:flex; flex-direction:column; gap:6px; }
+    .wa-gr-tit { font-size:13px; font-weight:800; color:var(--texto); }
+    .wa-gr-acc { display:flex; gap:10px; align-items:center; justify-content:center; flex-wrap:wrap; }
+    .wa-gr-btn { border:none; background:#25D366; color:#fff; font-weight:800; font-size:14px;
+      padding:9px 16px; border-radius:12px; cursor:pointer; }
+    .wa-gr-link { border:none; background:none; color:#128C7E; font-weight:700; font-size:12px;
+      padding:4px 2px; cursor:pointer; text-decoration:underline; }
+    .wa-gr-ok { font-size:12px; font-weight:600; color:#128C7E; background:rgba(37,211,102,0.10);
+      border-radius:10px; padding:8px 10px; }
+    .wa-gr-nota { margin:0; text-align:center; }
+    .wa-sep { text-align:center; font-size:11px; font-weight:700; color:var(--gris); text-transform:uppercase;
+      letter-spacing:.06em; margin-top:4px; }
     @keyframes aslFade { from { opacity:0; } to { opacity:1; } }
     @keyframes aslPop { from { opacity:0; transform:translateY(12px) scale(.97); } to { opacity:1; transform:none; } }
     .asist-recup-chip { background:var(--lila-suave); border:1px solid var(--lila-claro); border-radius:20px; padding:5px 11px; font-size:12px; font-weight:600; color:#16264f; cursor:pointer; }
@@ -11877,7 +11902,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.407.0';
+    var APP_VERSION = '0.408.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -33016,12 +33041,15 @@
     // ══ v0.407 — WHATSAPP A LOS ALUMNOS (desde Pasar lista) ════════════════
     // Cada entrenador ve SOLO los teléfonos de su grupo: salen de la ficha de
     // cada alumno de la franja (los pone el gestor al dar de alta). Un 💬 por
-    // alumno abre una ventanita con frases rápidas y «Abrir WhatsApp» (wa.me,
-    // con el texto ya escrito). «Avisar al grupo»: el mismo texto, uno por
-    // uno (WhatsApp no deja abrir un mensaje a varios desde un enlace), y cada
-    // uno queda marcado «✓ enviado».
-    var WA_FRASES = ['Hoy no hay clase.', 'Llego 10 minutos tarde.', 'Te esperamos el sábado para recuperar la clase.', 'Recuerda traer la pala y agua.'];
+    // alumno abre una ventanita con el mensaje y «Abrir WhatsApp» (wa.me,
+    // con el texto ya escrito).
+    // v0.408: sin frases predefinidas (las quitó Alex: el mensaje se escribe).
+    // «Avisar al grupo» → el GRUPO DE WHATSAPP DE LA FRANJA, guardado una vez
+    // (tabla whatsapp_grupos): la app copia el mensaje y abre el grupo; se
+    // pega y se envía. Sin grupo guardado → menú de compartir del móvil. Y,
+    // debajo, uno por uno como antes, con «✓ enviado».
     var _waEnviados = {}, _waTexto = '', _waModo = null, _waKey = null;
+    var _waGr = null, _waGrCargado = false, _waGrEditar = false, _waCopiado = false;
     function _waClase() {
       return (leerAsistConfig().clases || []).filter(function(c){ return c.id === asistClaseActivaId; })[0] || null;
     }
@@ -33054,24 +33082,133 @@
       var a = clase ? alumnoEnClase(clase, key) : null;
       return a ? alNomAp1(a) : _alClaveNom(clase, key);
     }
-    function _waFrasesHTML() {
-      return '<div class="wa-frases">' + WA_FRASES.map(function(f, i){
-        return '<button type="button" class="wa-frase' + (_waTexto === f ? ' on' : '') + '" onclick="waFrase(' + i + ')">' + _gEsc(f.replace(/\.$/, '')) + '</button>';
-      }).join('') + '</div>' +
-      '<textarea id="wa-texto" class="form-input wa-texto" rows="3" placeholder="Escribe el mensaje…" oninput="waTextoCambia(this.value)">' + _gEsc(_waTexto) + '</textarea>';
+    function _waTextoHTML() {
+      return '<textarea id="wa-texto" class="form-input wa-texto" rows="3" placeholder="Escribe el mensaje…" oninput="waTextoCambia(this.value)">' + _gEsc(_waTexto) + '</textarea>';
     }
-    function waFrase(i) { _waTexto = WA_FRASES[i] || ''; _waPintar(); }
     function waTextoCambia(v) {
       _waTexto = v;
       // se actualizan los enlaces sin repintar (para no perder el foco)
       Array.prototype.forEach.call(document.querySelectorAll('[data-wa-tel]'), function(el){
         el.href = _waLink(el.getAttribute('data-wa-tel'), _waTexto);
       });
+      var sh = document.getElementById('wa-share');
+      if (sh) sh.href = 'https://wa.me/?text=' + encodeURIComponent(_waTexto);
     }
-    function waAbrir(key) { _waModo = 'uno'; _waKey = key; _waPintar(); }
-    function waGrupo() { _waModo = 'grupo'; _waKey = null; _waPintar(); }
+
+    // ── Grupo de WhatsApp de la franja (v0.408) ──────────────────────────
+    // Una fila por franja: dueño (entrenador de la franja) + clase_id.
+    // Lo guardan el entrenador (sus franjas) o el gestor (en modo gestión).
+    function _waGrDueno() { return _gEditUid || (_sbUser && _sbUser.id) || 'local'; }
+    function _waGrClave(claseId) { return _waGrDueno() + '|' + claseId; }
+    function _waGrMapa() {
+      if (!_waGr) { try { _waGr = JSON.parse(_lzGet('padel-wa-grupos') || '{}') || {}; } catch(e) { _waGr = {}; } }
+      return _waGr;
+    }
+    function _waGrGuardaLocal() { try { _lzSet('padel-wa-grupos', JSON.stringify(_waGrMapa())); } catch(e) {} }
+    function _waGrEnlace(claseId) { return _waGrMapa()[_waGrClave(claseId)] || ''; }
+    // Enlace de invitación válido: https://chat.whatsapp.com/<código>
+    function _waGrNormaliza(txt) {
+      var m = String(txt || '').match(/(?:https?:\/\/)?chat\.whatsapp\.com\/(?:invite\/)?([A-Za-z0-9]{10,})/);
+      return m ? 'https://chat.whatsapp.com/' + m[1] : '';
+    }
+    function _waGrCargar(cb) {
+      if (!_sb || !_sbUser || _waGrCargado) { if (cb) cb(); return; }
+      _waGrCargado = true;
+      _sb.from('whatsapp_grupos').select('entrenador_uid,clase_id,enlace').then(function(r){
+        if (r.error) { console.warn('whatsapp_grupos', r.error.message); if (cb) cb(); return; }
+        var m = _waGrMapa();
+        (r.data || []).forEach(function(x){ m[x.entrenador_uid + '|' + x.clase_id] = x.enlace || ''; });
+        _waGrGuardaLocal();
+        if (cb) cb();
+      }).catch(function(){ if (cb) cb(); });
+    }
+    function _waGrFaltaTabla(err) {
+      var msg = String((err && (err.message || err.details)) || '');
+      return /whatsapp_grupos/.test(msg) || /relation|does not exist|schema cache/i.test(msg);
+    }
+    function waGrEditar(on) { _waGrEditar = !!on; _waPintar(); }
+    function waGrGuardar() {
+      var el = document.getElementById('wa-gr-enlace');
+      var enlace = _waGrNormaliza(el ? el.value : '');
+      if (!enlace) { alert('Pega el enlace de invitación del grupo.\n\nEn WhatsApp: abre el grupo → Info del grupo → Invitar mediante enlace → Copiar enlace.\nTiene que empezar por https://chat.whatsapp.com/'); return; }
+      var cid = asistClaseActivaId;
+      _waGrMapa()[_waGrClave(cid)] = enlace;
+      _waGrGuardaLocal();
+      _waGrEditar = false;
+      _waPintar();
+      if (_sb && _sbUser) {
+        _sb.from('whatsapp_grupos').upsert({ scope_id:_dscScope(), entrenador_uid:_waGrDueno(), clase_id:cid, enlace:enlace,
+                                             updated_at:new Date().toISOString() },
+                                           { onConflict:'entrenador_uid,clase_id' }).then(function(r){
+          if (!r.error) return;
+          alert(_waGrFaltaTabla(r.error)
+            ? '⚠️ Falta ejecutar en Supabase migraciones/migracion_whatsapp_grupos.sql.\n\nEl grupo se ha guardado solo en este móvil.'
+            : 'No se ha podido guardar el grupo en el servidor: ' + r.error.message);
+        });
+      }
+    }
+    function waGrQuitar() {
+      if (!confirm('¿Quitar el grupo de WhatsApp de esta franja? (El grupo en WhatsApp no se toca.)')) return;
+      var cid = asistClaseActivaId;
+      delete _waGrMapa()[_waGrClave(cid)];
+      _waGrGuardaLocal();
+      _waPintar();
+      if (_sb && _sbUser) _sb.from('whatsapp_grupos').delete().eq('entrenador_uid', _waGrDueno()).eq('clase_id', cid)
+        .then(function(r){ if (r.error) console.warn('whatsapp_grupos', r.error.message); });
+    }
+    // Copia el mensaje (el enlace del <a> abre el grupo a la vez)
+    function waGrCopiar() {
+      var el = document.getElementById('wa-texto');
+      var t = el ? el.value : _waTexto;
+      _waCopiado = !!t;
+      if (t) {
+        try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t); } catch(e) {}
+      }
+      setTimeout(_waPintar, 400);
+    }
+    // Sin grupo guardado: menú de compartir del móvil con el texto puesto
+    function waCompartir(ev) {
+      var el = document.getElementById('wa-texto');
+      var t = el ? el.value : _waTexto;
+      if (navigator.share) {
+        if (ev) ev.preventDefault();
+        navigator.share({ text: t }).catch(function(){});
+      }
+      // sin navigator.share el <a> abre https://wa.me/?text=… (WhatsApp deja elegir el chat)
+    }
+
+    function waAbrir(key) { _waModo = 'uno'; _waKey = key; _waCopiado = false; _waPintar(); }
+    function waGrupo() {
+      _waModo = 'grupo'; _waKey = null; _waGrEditar = false; _waCopiado = false;
+      _waPintar();
+      _waGrCargar(_waPintar);
+    }
     function waEnviado(key) { _waEnviados[asistClaseActivaId + '|' + asistFechaActiva + '|' + key] = true; setTimeout(_waPintar, 300); }
     function waCerrar() { _waModo = null; var c = document.getElementById('inc-ov'); if (c) c.remove(); }
+    function _waGrBloqueHTML() {
+      var cid = asistClaseActivaId, enlace = _waGrEnlace(cid), h = '<div class="wa-gr">';
+      if (_waGrEditar || !enlace) {
+        if (enlace || _waGrEditar) {
+          h += '<div class="wa-gr-tit">🔗 Grupo de WhatsApp de esta franja</div>';
+        }
+        if (_waGrEditar) {
+          h += '<div class="asl-modal-sub">En WhatsApp: abre el grupo → <b>Info del grupo</b> → <b>Invitar mediante enlace</b> → <b>Copiar enlace</b>, y pégalo aquí.</div>' +
+               '<input id="wa-gr-enlace" class="form-input" type="url" inputmode="url" placeholder="https://chat.whatsapp.com/…" value="' + _gEsc(enlace) + '">' +
+               '<div class="wa-gr-acc"><button type="button" class="wa-gr-btn" onclick="waGrGuardar()">Guardar grupo</button>' +
+               '<button type="button" class="wa-gr-link" onclick="waGrEditar(false)">Cancelar</button></div>';
+        } else {
+          h += '<a id="wa-share" class="wa-go" href="https://wa.me/?text=' + encodeURIComponent(_waTexto) + '" target="_blank" rel="noopener" onclick="waCompartir(event)">📤 Enviar a un grupo de WhatsApp</a>' +
+               '<button type="button" class="wa-gr-link" onclick="waGrEditar(true)">🔗 Guardar el grupo de esta franja (para no buscarlo cada vez)</button>';
+        }
+      } else {
+        h += '<a class="wa-go" href="' + _gEsc(enlace) + '" target="_blank" rel="noopener" onclick="waGrCopiar()">💬 Enviar al grupo de la franja</a>' +
+             (_waCopiado ? '<div class="wa-gr-ok">✓ Mensaje copiado. En el grupo, mantén pulsado el cuadro de escribir → <b>Pegar</b> → enviar.</div>'
+                         : '<div class="asl-modal-sub wa-gr-nota">Copia el mensaje y abre el grupo: allí solo tienes que pegar y enviar.</div>') +
+             '<div class="wa-gr-acc"><button type="button" class="wa-gr-link" onclick="waGrEditar(true)">✎ Cambiar grupo</button>' +
+             '<button type="button" class="wa-gr-link" onclick="waGrQuitar()">Quitar</button></div>';
+      }
+      return h + '</div>';
+    }
     function _waPintar() {
       if (!_waModo) return;
       var clase = _waClase();
@@ -33084,7 +33221,7 @@
         if (!tel) {
           h += '<div class="asl-modal-sub">Sin teléfono. Pídeselo al gestor.</div>';
         } else {
-          h += '<div class="asl-modal-sub">' + _gEsc(tel) + '</div>' + _waFrasesHTML() +
+          h += '<div class="asl-modal-sub">' + _gEsc(tel) + '</div>' + _waTextoHTML() +
                '<a class="wa-go" data-wa-tel="' + _gEsc(tel) + '" href="' + _waLink(tel, _waTexto) + '" target="_blank" rel="noopener" onclick="waEnviado(\'' + _gEsc(String(_waKey)).replace(/'/g, "\\'") + '\')">' +
                '💬 Abrir WhatsApp con ' + _gEsc(nom.split(' ')[0]) + '</a>';
         }
@@ -33092,8 +33229,8 @@
         var keys = (clase ? alumnosActivosKeys(clase, asistFechaActiva) : []).concat(asistRecups || []);
         h += '<div class="asl-modal-cab"><span class="asl-modal-tit">💬 Avisar al grupo</span>' +
              '<button type="button" class="asl-modal-x" onclick="waCerrar()" aria-label="Cerrar">✕</button></div>' +
-             '<div class="asl-modal-sub">WhatsApp no deja enviar a varios a la vez: escribe el mensaje una vez y ve tocando «Enviar» en cada uno.</div>' +
-             _waFrasesHTML() + '<div class="wa-lista">';
+             _waTextoHTML() + _waGrBloqueHTML() +
+             '<div class="wa-sep">o uno por uno</div><div class="wa-lista">';
         keys.forEach(function(k){
           var t = _waTel(k, clase), env = _waEnviados[asistClaseActivaId + '|' + asistFechaActiva + '|' + k];
           h += '<div class="wa-uno"><span class="wa-uno-n">' + _gEsc(_waNombre(k, clase)) + '</span>' +
