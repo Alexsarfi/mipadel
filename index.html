@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.409.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.410.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,19 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.410.0 — Teléfonos del alumno: propio, madre y padre (2026-10)
+    ⚠️ REQUIERE MIGRACIÓN: migraciones/migracion_telefonos_familia.sql
+    · En la ficha del alumno (gestor → Alumnos de la academia → Editar datos,
+      y en el alta) hay tres teléfonos: 📱 Propio, 👩 Madre y 👨 Padre. Todos
+      opcionales. El «Propio» es el teléfono de siempre.
+    · En la cabecera de la ficha se ven los que haya («📱 6… · 👩 Madre 6…»).
+    · WhatsApp en Pasar lista: la ventana del alumno saca un botón por
+      teléfono («Escribir a Alba» · «a la madre» · «al padre»), y «Avisar al
+      grupo» → uno por uno, un botón por cada teléfono.
+    · Sin la migración la app sigue igual: se guardan los datos de siempre y
+      madre/padre se quedan solo en ese móvil.
+
 
   v0.409.0 — Avanzado: la pista con todo el sitio (2026-10)
     (sin migraciones)
@@ -8900,6 +8913,16 @@
       padding:6px 10px; border-radius:14px; white-space:nowrap; }
     .wa-mini.hecho { background:var(--arena); color:#128C7E; }
     .wa-sin { font-size:12px; color:var(--gris); }
+    /* v0.410: varios teléfonos por alumno */
+    .wa-tels { display:flex; flex-direction:column; gap:8px; }
+    .wa-tel-fila { display:flex; flex-direction:column; gap:4px; }
+    .wa-tel-de { font-size:12px; font-weight:700; color:var(--gris); display:flex; gap:6px; align-items:baseline; }
+    .wa-tel-de b { color:var(--texto); font-weight:700; }
+    .wa-uno-b { display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end; }
+    .gta-tels { display:flex; flex-direction:column; gap:6px; margin-top:6px; }
+    .gta-tel { display:flex; align-items:center; gap:8px; }
+    .gta-tel > span { flex:0 0 78px; font-size:12px; font-weight:800; color:var(--gris); }
+    .gta-tel > input { flex:1; min-width:0; }
     /* v0.408: grupo de WhatsApp de la franja */
     .wa-gr { display:flex; flex-direction:column; gap:6px; }
     .wa-gr-tit { font-size:13px; font-weight:800; color:var(--texto); }
@@ -11936,7 +11959,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.409.0';
+    var APP_VERSION = '0.410.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -13506,7 +13529,8 @@
                        // v0.308 — si la migración no está puesta, llegan
                        // undefined y la ficha funciona igual, en blanco.
                        nivel:a.nivel||'', nacimiento:a.nacimiento||'',
-                       observaciones:a.observaciones||'' };
+                       observaciones:a.observaciones||'',
+                       telMadre:a.tel_madre||'', telPadre:a.tel_padre||'' };   // v0.410
             });
             _acGuardarLocal();
           }
@@ -13603,7 +13627,8 @@
       var ex = extra || {};
       var ficha = { nombre:nombre, apellidos:apellidos||'', telefono:telefono||'',
                     nivel:ex.nivel||'', nacimiento:ex.nacimiento||'',
-                    observaciones:ex.observaciones||'' };
+                    observaciones:ex.observaciones||'',
+                    telMadre:ex.telMadre||'', telPadre:ex.telPadre||'' };   // v0.410
       if (!_sb || !_sbUser) {
         // Sin sesión: se guarda solo en local (no se comparte con el club)
         ficha.id = 'loc-' + Date.now();
@@ -13611,12 +13636,15 @@
         if (cb) cb(true, 'local'); return;
       }
       var base = { scope_id:_dscScope(), nombre:ficha.nombre, apellidos:ficha.apellidos, telefono:ficha.telefono };
+      // v0.410: se prueba con todo; si falla, sin los teléfonos de madre y
+      // padre (falta migracion_telefonos_familia.sql); y si no, lo de siempre.
+      var intentos;
       function meter(row, reintento){
         _sb.from('alumnos_club').insert(row).select().then(function(r){
           if (r.error) {
-            if (!reintento) {
+            if (intentos.length) {
               console.warn('alta alumno club (reintento sin campos nuevos)', r.error.message);
-              meter(base, true); return;
+              meter(intentos.shift(), true); return;
             }
             console.warn('alta alumno club', r.error.message);
             if (cb) cb(false, r.error.message); return;
@@ -13624,7 +13652,8 @@
           var nuevo = (r.data && r.data[0]) || row;
           _acLista.push({ id:nuevo.id, nombre:nuevo.nombre, apellidos:nuevo.apellidos||'',
                           telefono:nuevo.telefono||'', nivel:nuevo.nivel||'',
-                          nacimiento:nuevo.nacimiento||'', observaciones:nuevo.observaciones||'' });
+                          nacimiento:nuevo.nacimiento||'', observaciones:nuevo.observaciones||'',
+                          telMadre:nuevo.tel_madre||'', telPadre:nuevo.tel_padre||'' });
           _acGuardarLocal();
           if (cb) cb(true);
         }).catch(function(e){ if (cb) cb(false, e && e.message); });
@@ -13632,7 +13661,11 @@
       var full = { scope_id:base.scope_id, nombre:base.nombre, apellidos:base.apellidos, telefono:base.telefono,
                    nivel:ficha.nivel || null, nacimiento:ficha.nacimiento || null,
                    observaciones:ficha.observaciones || null };
-      meter(full, false);
+      var conTels = {};
+      for (var _k in full) conTels[_k] = full[_k];
+      conTels.tel_madre = ficha.telMadre || ''; conTels.tel_padre = ficha.telPadre || '';
+      intentos = [full, base];
+      meter(conTels, false);
     }
     function _acBorrar(id, cb){
       _acInit();
@@ -18426,9 +18459,8 @@
               'onkeydown="if(event.key===\'Enter\'){event.preventDefault();gtaGuardarAlumno();}">' +
             '<input id="gta-ape" class="form-input" type="text" placeholder="Apellidos" style="flex:1;min-width:110px;" ' +
               'onkeydown="if(event.key===\'Enter\'){event.preventDefault();gtaGuardarAlumno();}">' +
-            '<input id="gta-tel" class="form-input" type="tel" placeholder="Teléfono" style="flex:1;min-width:110px;" ' +
-              'onkeydown="if(event.key===\'Enter\'){event.preventDefault();gtaGuardarAlumno();}">' +
           '</div>' +
+          _gtaTelsHTML('gta', {}) +   // v0.410: propio · madre · padre
           // v0.308 — nivel y nacimiento ya en el alta: es cuando se tienen
           // los datos delante. Lo demás (observaciones) se añade luego.
           '<div class="gta-alta-2">' +
@@ -18475,6 +18507,8 @@
       if (!nom) { if (iN) iN.classList.add('form-error'); alert('El nombre es obligatorio.'); return; }
       var ape = (iA && iA.value || '').trim();
       var tel = (iT && iT.value || '').trim();
+      var tma = ((document.getElementById('gta-tm') || {}).value || '').trim();   // v0.410
+      var tpa = ((document.getElementById('gta-tp') || {}).value || '').trim();
       // v0.308
       var niv = (document.getElementById('gta-niv') || {}).value || '';
       var nac = (document.getElementById('gta-nac') || {}).value || '';
@@ -18489,7 +18523,16 @@
         if (typeof planToast === 'function') planToast('👤 ' + nom + ' añadido a la academia');
         renderGestorTodosAlumnos();
         _gestorHdrPintar();   // v0.302: el contador de la cabecera, al día
-      }, { nivel:niv, nacimiento:nac, observaciones:'' });   // v0.308
+      }, { nivel:niv, nacimiento:nac, observaciones:'', telMadre:tma, telPadre:tpa });   // v0.308 · v0.410
+    }
+    // v0.410 — los tres teléfonos de la ficha (alta y editar). `pre` es el
+    // prefijo de los id: <pre>-tel (propio, el de siempre), <pre>-tm, <pre>-tp.
+    function _gtaTelsHTML(pre, d) {
+      var v = { tel:d.telefono || '', tm:d.telMadre || '', tp:d.telPadre || '' };
+      return '<div class="gta-tels">' + [['tel', '📱 Propio'], ['tm', '👩 Madre'], ['tp', '👨 Padre']].map(function(x){
+        return '<label class="gta-tel"><span>' + x[1] + '</span>' +
+          '<input id="' + pre + '-' + x[0] + '" class="form-input" type="tel" inputmode="tel" placeholder="Teléfono" value="' + _gEsc(v[x[0]]) + '"></label>';
+      }).join('') + '</div>';
     }
     function gtaAltaEdadPreview(v) {
       var el = document.getElementById('gta-alta-edad');
@@ -18851,6 +18894,8 @@
         nombre:    (f && f.nombre)    || al.nombre    || _gtaAlumno,
         apellidos: (f && f.apellidos) || al.apellidos || '',
         telefono:  (f && f.telefono)  || '',
+        telMadre:  (f && f.telMadre)  || '',   // v0.410
+        telPadre:  (f && f.telPadre)  || '',
         // v0.308 — solo viven en la ficha de academia; sin ficha, en blanco
         nivel:         (f && f.nivel)         || '',
         nacimiento:    (f && f.nacimiento)    || '',
@@ -18884,7 +18929,8 @@
           var _cat = alCategoriaTxt(d.nacimiento);
           meta.push(_ed + ' años' + (_cat ? ' · ' + _cat : ''));
         }
-        if (d.telefono)  meta.push('📞 ' + d.telefono);
+        var _tels = alTelsTxt(d);   // v0.410: propio · madre · padre
+        if (_tels) meta.push(_tels);
         sub.textContent = meta.length ? meta.join(' · ') : 'Sin apellidos ni teléfono';
       }
     }
@@ -18919,8 +18965,9 @@
           '<div class="asist-form-add-alumno" style="flex-wrap:wrap;">' +
             '<input id="gta-ed-nom" class="form-input" type="text" placeholder="Nombre *" style="flex:1;min-width:110px;" value="' + _gEsc(d.nombre) + '">' +
             '<input id="gta-ed-ape" class="form-input" type="text" placeholder="Apellidos" style="flex:1;min-width:110px;" value="' + _gEsc(d.apellidos) + '">' +
-            '<input id="gta-ed-tel" class="form-input" type="tel" placeholder="Teléfono" style="flex:1;min-width:110px;" value="' + _gEsc(d.telefono) + '">' +
           '</div>' +
+          // v0.410 — tres teléfonos: el del alumno y los de su madre y su padre
+          '<div class="gta-campo"><span class="gta-lbl">Teléfonos</span>' + _gtaTelsHTML('gta-ed', d) + '</div>' +
           // ── v0.308 — nivel · nacimiento · observaciones ──
           '<div class="gta-campo"><label class="gta-lbl" for="gta-ed-niv">Nivel</label>' +
             '<select id="gta-ed-niv" class="form-select">' +
@@ -19220,6 +19267,8 @@
       var nom = (document.getElementById('gta-ed-nom') || {}).value || '';
       var ape = (document.getElementById('gta-ed-ape') || {}).value || '';
       var tel = (document.getElementById('gta-ed-tel') || {}).value || '';
+      var tma = ((document.getElementById('gta-ed-tm') || {}).value || '').trim();   // v0.410
+      var tpa = ((document.getElementById('gta-ed-tp') || {}).value || '').trim();
       // v0.308 — los tres campos nuevos
       var niv = (document.getElementById('gta-ed-niv') || {}).value || '';
       var nac = (document.getElementById('gta-ed-nac') || {}).value || '';
@@ -19244,6 +19293,7 @@
           if (f.id === d.fichaId) {
             f.nombre = nom; f.apellidos = ape; f.telefono = tel;
             f.nivel = niv; f.nacimiento = nac; f.observaciones = obs;   // v0.308
+            f.telMadre = tma; f.telPadre = tpa;                         // v0.410
           }
         });
         _acGuardarLocal();
@@ -19254,18 +19304,23 @@
           var _base = { nombre:nom, apellidos:ape, telefono:tel };
           var _full = { nombre:nom, apellidos:ape, telefono:tel,
                         nivel:niv || null, nacimiento:nac || null, observaciones:obs || null };
+          // v0.410: primero con madre/padre; si falta su migración, sin ellos
+          var _conTels = { nombre:nom, apellidos:ape, telefono:tel,
+                           nivel:niv || null, nacimiento:nac || null, observaciones:obs || null,
+                           tel_madre:tma, tel_padre:tpa };
+          var _sig = [_full, _base];
           var _upd = function(row, reintento){
             _sb.from('alumnos_club').update(row).eq('id', d.fichaId)
               .then(function(r){
-                if (r.error && !reintento) {
+                if (r.error && _sig.length) {
                   console.warn('editar alumno club (reintento sin campos nuevos)', r.error.message);
-                  _upd(_base, true); return;
+                  _upd(_sig.shift(), true); return;
                 }
                 if (r.error) console.warn('editar alumno club', r.error.message);
                 tras();
               }).catch(tras);
           };
-          _upd(_full, false);
+          _upd(_conTels, false);
           return;
         }
         tras(); return;
@@ -19275,7 +19330,7 @@
       _acAnadir(nom, ape, tel, function(ok, err){
         if (!ok) { alert('No se pudo guardar' + (err ? ': ' + err : '') + '.'); return; }
         tras();
-      }, { nivel:niv, nacimiento:nac, observaciones:obs });
+      }, { nivel:niv, nacimiento:nac, observaciones:obs, telMadre:tma, telPadre:tpa });
     }
     // v0.161: se retira _gtaFranjasHTML ("Sus franjas"). El entrenador de
     // cada día ya se ve en los chips del mes, y el reparto por curso en el
@@ -31687,6 +31742,24 @@
     function alBaja(a) { return (a && typeof a === 'object') ? (a.baja || '') : ''; }
     function alApe(a)  { return (a && typeof a === 'object') ? (a.apellidos || '') : ''; }
     function alTel(a)  { return (a && typeof a === 'object') ? (a.telefono || '') : ''; }
+    // v0.410 — TRES TELÉFONOS EN LA FICHA: propio · madre · padre. `telefono`
+    // sigue siendo el PROPIO (el de siempre, el que usa todo lo demás);
+    // madre y padre viven en la ficha del club (alumnos_club.tel_madre /
+    // tel_padre). Devuelve solo los que tienen número, en ese orden.
+    var AL_TELS = [
+      { k:'propio', l:'Propio', ico:'📱' },
+      { k:'madre',  l:'Madre',  ico:'👩' },
+      { k:'padre',  l:'Padre',  ico:'👨' }
+    ];
+    function alTels(a) {
+      if (!a || typeof a !== 'object') return [];
+      var v = { propio:a.telefono, madre:a.telMadre, padre:a.telPadre };
+      return AL_TELS.filter(function(x){ return String(v[x.k] || '').trim(); })
+        .map(function(x){ return { k:x.k, l:x.l, ico:x.ico, t:String(v[x.k]).trim() }; });
+    }
+    function alTelsTxt(a) {
+      return alTels(a).map(function(x){ return x.ico + ' ' + (x.k === 'propio' ? '' : x.l + ' ') + x.t; }).join(' · ');
+    }
     // v0.135/v0.171: fin de curso = 30 de JUNIO (antes era 30 de julio).
     // Todo alumno nuevo nace con esa fecha de baja (el curso se acaba); una
     // baja MANUAL a mitad de curso la sustituye. Sirve para distinguir "se
@@ -33150,17 +33223,35 @@
     function _waClase() {
       return (leerAsistConfig().clases || []).filter(function(c){ return c.id === asistClaseActivaId; })[0] || null;
     }
-    // Teléfono de un alumno de la lista (los del grupo; las recuperaciones,
-    // por su ficha de la academia)
-    function _waTel(key, clase) {
+    // v0.410 — TELÉFONOS de un alumno de la lista: el propio, de su ficha en
+    // la franja; madre y padre (y el propio si falta), de su ficha del club
+    // por nombre + apellidos. Las recuperaciones, igual, por su nombre.
+    function _waTels(key, clase) {
       var a = clase ? alumnoEnClase(clase, key) : null;
-      var t = a ? alTel(a) : '';
-      if (!t) {
-        var nom = _alClaveNom(clase, key), ape = a ? alApe(a) : '';
-        var m = _alumnosAcademia().filter(function(x){ return x.nombre === nom && (!ape || (x.apellidos || '') === ape); });
-        if (m.length === 1) t = m[0].telefono || '';
+      var nom = a ? (a.nombre || '') : _alClaveNom(clase, key), ape = a ? alApe(a) : '';
+      var r = { telefono: a ? alTel(a) : '', telMadre:'', telPadre:'' };
+      var nn = function(s){ return (typeof _alSugNorm === 'function') ? _alSugNorm(s || '') : String(s || '').toLowerCase(); };
+      var fs = (typeof _acFichas === 'function' ? _acFichas() : []).filter(function(f){
+        return !f.archivado && nn(f.nombre) === nn(nom) && (!ape || nn(f.apellidos) === nn(ape));
+      });
+      if (fs.length === 1) {
+        if (!r.telefono) r.telefono = fs[0].telefono || '';
+        r.telMadre = fs[0].telMadre || ''; r.telPadre = fs[0].telPadre || '';
       }
-      return String(t || '').trim();
+      if (!r.telefono && !r.telMadre && !r.telPadre) {
+        var m = _alumnosAcademia().filter(function(x){ return x.nombre === nom && (!ape || (x.apellidos || '') === ape); });
+        if (m.length === 1) r.telefono = m[0].telefono || '';
+      }
+      return alTels(r);
+    }
+    // El primero que haya (para saber si el 💬 de la fila va encendido)
+    function _waTel(key, clase) {
+      var t = _waTels(key, clase);
+      return t.length ? t[0].t : '';
+    }
+    // «a Alba» · «a la madre» · «al padre»
+    function _waA(x, nom) {
+      return x.k === 'madre' ? 'a la madre' : x.k === 'padre' ? 'al padre' : 'a ' + String(nom || '').split(' ')[0];
     }
     // Número para wa.me: solo cifras, con prefijo (si no lo trae, +34)
     function _waNumero(tel) {
@@ -33274,11 +33365,14 @@
       // sin navigator.share el <a> abre https://wa.me/?text=… (WhatsApp deja elegir el chat)
     }
 
-    function waAbrir(key) { _waModo = 'uno'; _waKey = key; _waCopiado = false; _waPintar(); }
+    function waAbrir(key) { _waModo = 'uno'; _waKey = key; _waCopiado = false; _waPintar(); _waFichas(); }
+    // v0.410: madre y padre están en la ficha del club → se piden al abrir
+    function _waFichas() { if (typeof _acCargarSb === 'function') _acCargarSb(false, function(){ if (_waModo) _waPintar(); }); }
     function waGrupo() {
       _waModo = 'grupo'; _waKey = null; _waGrEditar = false; _waCopiado = false;
       _waPintar();
       _waGrCargar(_waPintar);
+      _waFichas();
     }
     function waEnviado(key) { _waEnviados[asistClaseActivaId + '|' + asistFechaActiva + '|' + key] = true; setTimeout(_waPintar, 300); }
     function waCerrar() { _waModo = null; var c = document.getElementById('inc-ov'); if (c) c.remove(); }
@@ -33312,15 +33406,21 @@
       var h = '<div class="asl-modal-ov" onclick="if(event.target===this)waCerrar()">' +
         '<div class="asl-modal wa-modal" role="dialog" aria-label="WhatsApp">';
       if (_waModo === 'uno') {
-        var tel = _waTel(_waKey, clase), nom = _waNombre(_waKey, clase);
+        var tels = _waTels(_waKey, clase), nom = _waNombre(_waKey, clase);
+        var kS = _gEsc(String(_waKey)).replace(/'/g, "\\'");
         h += '<div class="asl-modal-cab"><span class="asl-modal-tit">💬 ' + _gEsc(nom) + '</span>' +
              '<button type="button" class="asl-modal-x" onclick="waCerrar()" aria-label="Cerrar">✕</button></div>';
-        if (!tel) {
+        if (!tels.length) {
           h += '<div class="asl-modal-sub">Sin teléfono. Pídeselo al gestor.</div>';
         } else {
-          h += '<div class="asl-modal-sub">' + _gEsc(tel) + '</div>' + _waTextoHTML() +
-               '<a class="wa-go" data-wa-tel="' + _gEsc(tel) + '" href="' + _waLink(tel, _waTexto) + '" target="_blank" rel="noopener" onclick="waEnviado(\'' + _gEsc(String(_waKey)).replace(/'/g, "\\'") + '\')">' +
-               '💬 Abrir WhatsApp con ' + _gEsc(nom.split(' ')[0]) + '</a>';
+          // v0.410: un botón por teléfono (propio · madre · padre)
+          h += _waTextoHTML() + '<div class="wa-tels">';
+          tels.forEach(function(x){
+            h += '<div class="wa-tel-fila"><span class="wa-tel-de">' + x.ico + ' ' + x.l + '<b>' + _gEsc(x.t) + '</b></span>' +
+                 '<a class="wa-go" data-wa-tel="' + _gEsc(x.t) + '" href="' + _waLink(x.t, _waTexto) + '" target="_blank" rel="noopener" onclick="waEnviado(\'' + kS + '|' + x.k + '\')">' +
+                 '💬 Escribir ' + _gEsc(_waA(x, nom)) + '</a></div>';
+          });
+          h += '</div>';
         }
       } else {
         var keys = (clase ? alumnosActivosKeys(clase, asistFechaActiva) : []).concat(asistRecups || []);
@@ -33329,11 +33429,17 @@
              _waTextoHTML() + _waGrBloqueHTML() +
              '<div class="wa-sep">o uno por uno</div><div class="wa-lista">';
         keys.forEach(function(k){
-          var t = _waTel(k, clase), env = _waEnviados[asistClaseActivaId + '|' + asistFechaActiva + '|' + k];
-          h += '<div class="wa-uno"><span class="wa-uno-n">' + _gEsc(_waNombre(k, clase)) + '</span>' +
-            (t ? '<a class="wa-mini' + (env ? ' hecho' : '') + '" data-wa-tel="' + _gEsc(t) + '" href="' + _waLink(t, _waTexto) + '" target="_blank" rel="noopener" onclick="waEnviado(\'' + _gEsc(String(k)).replace(/'/g, "\\'") + '\')">' +
-                 (env ? '✓ enviado' : '💬 Enviar') + '</a>'
-               : '<span class="wa-sin">sin teléfono</span>') + '</div>';
+          // v0.410: un botón por teléfono; con uno solo dice «Enviar»
+          var tels = _waTels(k, clase), kS = _gEsc(String(k)).replace(/'/g, "\\'");
+          h += '<div class="wa-uno"><span class="wa-uno-n">' + _gEsc(_waNombre(k, clase)) + '</span><span class="wa-uno-b">';
+          if (!tels.length) h += '<span class="wa-sin">sin teléfono</span>';
+          tels.forEach(function(x){
+            var env = _waEnviados[asistClaseActivaId + '|' + asistFechaActiva + '|' + k + '|' + x.k];
+            var et = tels.length === 1 && x.k === 'propio' ? 'Enviar' : x.l;
+            h += '<a class="wa-mini' + (env ? ' hecho' : '') + '" data-wa-tel="' + _gEsc(x.t) + '" href="' + _waLink(x.t, _waTexto) + '" target="_blank" rel="noopener" onclick="waEnviado(\'' + kS + '|' + x.k + '\')">' +
+                 (env ? '✓ ' + et : '💬 ' + et) + '</a>';
+          });
+          h += '</span></div>';
         });
         if (!keys.length) h += '<div class="plan-bl-vacio">No hay alumnos en esta lista.</div>';
         h += '</div>';
