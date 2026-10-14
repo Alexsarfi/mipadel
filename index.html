@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.406.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.407.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,21 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.407.0 — WhatsApp a los alumnos desde Pasar lista (2026-10)
+    (sin migraciones)
+    · Cada alumno de la lista lleva un botón verde 💬: abre una ventanita con
+      su nombre y teléfono, frases rápidas («Hoy no hay clase», «Llego 10
+      minutos tarde»…), el texto editable y «Abrir WhatsApp con …» (wa.me,
+      con el mensaje ya escrito; si el número no trae prefijo, +34).
+      Tocar el 💬 NO cambia la asistencia. Sin teléfono sale «–» y el aviso
+      «Pídeselo al gestor».
+    · Arriba de la lista, «💬 Avisar al grupo por WhatsApp»: se escribe el
+      mensaje una vez y se va tocando «Enviar» en cada alumno (WhatsApp no
+      deja mandar a varios desde un enlace); cada uno queda «✓ enviado».
+    · Cada entrenador solo ve los teléfonos de SU grupo (los de la ficha de
+      cada alumno; las recuperaciones, por la ficha de la academia).
+
 
   v0.406.0 — Gestor: los grupos con nombre y primer apellido (2026-10)
     (sin migraciones)
@@ -8815,6 +8830,31 @@
     .recup-modal .recup-panel { border:none; padding:0; margin:0; background:none; box-shadow:none; }
     .recup-modal .recup-tit { display:none; }
     .asl-modal-sub { font-size:12px; color:var(--gris); margin:0 0 10px; }
+    /* v0.407: WhatsApp a los alumnos desde Pasar lista */
+    .asist-wa { margin-left:8px; flex-shrink:0; width:34px; height:34px; border-radius:50%; border:none;
+      background:#25D366; color:#fff; font-size:16px; line-height:34px; padding:0; cursor:pointer;
+      box-shadow:0 2px 6px rgba(37,211,102,0.35); }
+    .asist-wa.sin { background:var(--arena); color:var(--gris); box-shadow:none; font-weight:800; }
+    .asist-wa:active { transform:scale(0.92); }
+    .asist-wa-grupo { display:block; width:100%; margin:0 0 10px; padding:10px 12px; border-radius:12px;
+      border:1.5px solid #25D366; background:rgba(37,211,102,0.08); color:#128C7E; font-weight:800;
+      font-size:14px; cursor:pointer; }
+    .wa-modal { gap:8px; }
+    .wa-frases { display:flex; flex-wrap:wrap; gap:6px; }
+    .wa-frase { border:1px solid var(--borde); background:var(--arena); border-radius:16px; padding:6px 10px;
+      font-size:12px; font-weight:600; color:var(--texto); cursor:pointer; }
+    .wa-frase.on { background:#25D366; border-color:#25D366; color:#fff; }
+    .wa-texto { width:100%; box-sizing:border-box; resize:vertical; min-height:70px; }
+    .wa-go { display:block; text-align:center; text-decoration:none; background:#25D366; color:#fff;
+      font-weight:800; font-size:15px; padding:12px; border-radius:12px; }
+    .wa-lista { overflow-y:auto; min-height:0; flex:1 1 auto; display:flex; flex-direction:column; gap:6px; }
+    .wa-uno { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 2px;
+      border-bottom:1px solid var(--borde); }
+    .wa-uno-n { font-size:14px; font-weight:600; color:var(--texto); }
+    .wa-mini { text-decoration:none; background:#25D366; color:#fff; font-size:12px; font-weight:800;
+      padding:6px 10px; border-radius:14px; white-space:nowrap; }
+    .wa-mini.hecho { background:var(--arena); color:#128C7E; }
+    .wa-sin { font-size:12px; color:var(--gris); }
     @keyframes aslFade { from { opacity:0; } to { opacity:1; } }
     @keyframes aslPop { from { opacity:0; transform:translateY(12px) scale(.97); } to { opacity:1; transform:none; } }
     .asist-recup-chip { background:var(--lila-suave); border:1px solid var(--lila-claro); border-radius:20px; padding:5px 11px; font-size:12px; font-weight:600; color:#16264f; cursor:pointer; }
@@ -11837,7 +11877,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.406.0';
+    var APP_VERSION = '0.407.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -32973,6 +33013,101 @@
       renderizarPasarLista();
     }
 
+    // ══ v0.407 — WHATSAPP A LOS ALUMNOS (desde Pasar lista) ════════════════
+    // Cada entrenador ve SOLO los teléfonos de su grupo: salen de la ficha de
+    // cada alumno de la franja (los pone el gestor al dar de alta). Un 💬 por
+    // alumno abre una ventanita con frases rápidas y «Abrir WhatsApp» (wa.me,
+    // con el texto ya escrito). «Avisar al grupo»: el mismo texto, uno por
+    // uno (WhatsApp no deja abrir un mensaje a varios desde un enlace), y cada
+    // uno queda marcado «✓ enviado».
+    var WA_FRASES = ['Hoy no hay clase.', 'Llego 10 minutos tarde.', 'Te esperamos el sábado para recuperar la clase.', 'Recuerda traer la pala y agua.'];
+    var _waEnviados = {}, _waTexto = '', _waModo = null, _waKey = null;
+    function _waClase() {
+      return (leerAsistConfig().clases || []).filter(function(c){ return c.id === asistClaseActivaId; })[0] || null;
+    }
+    // Teléfono de un alumno de la lista (los del grupo; las recuperaciones,
+    // por su ficha de la academia)
+    function _waTel(key, clase) {
+      var a = clase ? alumnoEnClase(clase, key) : null;
+      var t = a ? alTel(a) : '';
+      if (!t) {
+        var nom = _alClaveNom(clase, key), ape = a ? alApe(a) : '';
+        var m = _alumnosAcademia().filter(function(x){ return x.nombre === nom && (!ape || (x.apellidos || '') === ape); });
+        if (m.length === 1) t = m[0].telefono || '';
+      }
+      return String(t || '').trim();
+    }
+    // Número para wa.me: solo cifras, con prefijo (si no lo trae, +34)
+    function _waNumero(tel) {
+      var d = String(tel || '').replace(/[^\d+]/g, '');
+      if (d.indexOf('+') === 0) d = d.slice(1);
+      else if (d.indexOf('00') === 0) d = d.slice(2);
+      d = d.replace(/\D/g, '');
+      if (d.length === 9 && /^[6789]/.test(d)) d = '34' + d;
+      return d;
+    }
+    function _waLink(tel, texto) {
+      var n = _waNumero(tel);
+      return n ? 'https://wa.me/' + n + (texto ? '?text=' + encodeURIComponent(texto) : '') : '';
+    }
+    function _waNombre(key, clase) {
+      var a = clase ? alumnoEnClase(clase, key) : null;
+      return a ? alNomAp1(a) : _alClaveNom(clase, key);
+    }
+    function _waFrasesHTML() {
+      return '<div class="wa-frases">' + WA_FRASES.map(function(f, i){
+        return '<button type="button" class="wa-frase' + (_waTexto === f ? ' on' : '') + '" onclick="waFrase(' + i + ')">' + _gEsc(f.replace(/\.$/, '')) + '</button>';
+      }).join('') + '</div>' +
+      '<textarea id="wa-texto" class="form-input wa-texto" rows="3" placeholder="Escribe el mensaje…" oninput="waTextoCambia(this.value)">' + _gEsc(_waTexto) + '</textarea>';
+    }
+    function waFrase(i) { _waTexto = WA_FRASES[i] || ''; _waPintar(); }
+    function waTextoCambia(v) {
+      _waTexto = v;
+      // se actualizan los enlaces sin repintar (para no perder el foco)
+      Array.prototype.forEach.call(document.querySelectorAll('[data-wa-tel]'), function(el){
+        el.href = _waLink(el.getAttribute('data-wa-tel'), _waTexto);
+      });
+    }
+    function waAbrir(key) { _waModo = 'uno'; _waKey = key; _waPintar(); }
+    function waGrupo() { _waModo = 'grupo'; _waKey = null; _waPintar(); }
+    function waEnviado(key) { _waEnviados[asistClaseActivaId + '|' + asistFechaActiva + '|' + key] = true; setTimeout(_waPintar, 300); }
+    function waCerrar() { _waModo = null; var c = document.getElementById('inc-ov'); if (c) c.remove(); }
+    function _waPintar() {
+      if (!_waModo) return;
+      var clase = _waClase();
+      var h = '<div class="asl-modal-ov" onclick="if(event.target===this)waCerrar()">' +
+        '<div class="asl-modal wa-modal" role="dialog" aria-label="WhatsApp">';
+      if (_waModo === 'uno') {
+        var tel = _waTel(_waKey, clase), nom = _waNombre(_waKey, clase);
+        h += '<div class="asl-modal-cab"><span class="asl-modal-tit">💬 ' + _gEsc(nom) + '</span>' +
+             '<button type="button" class="asl-modal-x" onclick="waCerrar()" aria-label="Cerrar">✕</button></div>';
+        if (!tel) {
+          h += '<div class="asl-modal-sub">Sin teléfono. Pídeselo al gestor.</div>';
+        } else {
+          h += '<div class="asl-modal-sub">' + _gEsc(tel) + '</div>' + _waFrasesHTML() +
+               '<a class="wa-go" data-wa-tel="' + _gEsc(tel) + '" href="' + _waLink(tel, _waTexto) + '" target="_blank" rel="noopener" onclick="waEnviado(\'' + _gEsc(String(_waKey)).replace(/'/g, "\\'") + '\')">' +
+               '💬 Abrir WhatsApp con ' + _gEsc(nom.split(' ')[0]) + '</a>';
+        }
+      } else {
+        var keys = (clase ? alumnosActivosKeys(clase, asistFechaActiva) : []).concat(asistRecups || []);
+        h += '<div class="asl-modal-cab"><span class="asl-modal-tit">💬 Avisar al grupo</span>' +
+             '<button type="button" class="asl-modal-x" onclick="waCerrar()" aria-label="Cerrar">✕</button></div>' +
+             '<div class="asl-modal-sub">WhatsApp no deja enviar a varios a la vez: escribe el mensaje una vez y ve tocando «Enviar» en cada uno.</div>' +
+             _waFrasesHTML() + '<div class="wa-lista">';
+        keys.forEach(function(k){
+          var t = _waTel(k, clase), env = _waEnviados[asistClaseActivaId + '|' + asistFechaActiva + '|' + k];
+          h += '<div class="wa-uno"><span class="wa-uno-n">' + _gEsc(_waNombre(k, clase)) + '</span>' +
+            (t ? '<a class="wa-mini' + (env ? ' hecho' : '') + '" data-wa-tel="' + _gEsc(t) + '" href="' + _waLink(t, _waTexto) + '" target="_blank" rel="noopener" onclick="waEnviado(\'' + _gEsc(String(k)).replace(/'/g, "\\'") + '\')">' +
+                 (env ? '✓ enviado' : '💬 Enviar') + '</a>'
+               : '<span class="wa-sin">sin teléfono</span>') + '</div>';
+        });
+        if (!keys.length) h += '<div class="plan-bl-vacio">No hay alumnos en esta lista.</div>';
+        h += '</div>';
+      }
+      h += '</div></div>';
+      _incOvPintar(h);
+    }
+
     function renderToggleAlumnos(clase) {
       if (!clase) {
         var cfg = leerAsistConfig();
@@ -33004,6 +33139,10 @@
                '<button type="button" class="asist-jij-btn ij' + (!esJ?' on':'') + '" onclick="event.stopPropagation();asistSetJustif(\'' + safe + '\',false)">IJ</button>' +
                '</span>';
         }
+        // v0.407: 💬 WhatsApp (no cambia la asistencia al tocarlo)
+        var tieneTel = !!_waTel(key, clase);
+        h += '<button type="button" class="asist-wa' + (tieneTel ? '' : ' sin') + '" title="' + (tieneTel ? 'WhatsApp' : 'Sin teléfono') +
+             '" aria-label="WhatsApp a ' + _gEsc(nombre) + '" onclick="event.stopPropagation();waAbrir(\'' + safe + '\')">' + (tieneTel ? '💬' : '–') + '</button>';
         h += '</div>';
         return h;
       }
@@ -33012,6 +33151,8 @@
       if (activos.length === 0 && asistRecups.length === 0) {
         html = '<div class="vacio"><div class="vacio-icono">👥</div><p>No hay alumnos activos en esta fecha.<br>Revisa las altas/bajas en "Gestionar clases" o añade una recuperación.</p></div>';
       } else {
+        // v0.407: un mismo mensaje para todo el grupo, uno por uno
+        html += '<button type="button" class="asist-wa-grupo" onclick="waGrupo()">💬 Avisar al grupo por WhatsApp</button>';
         activos.forEach(function(n){ html += fila(n, false); });
         asistRecups.forEach(function(n){ html += fila(n, true); });
       }
