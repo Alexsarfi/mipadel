@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.411.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.413.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,24 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.413.0 — «Listas sin pasar» ya no cuenta los días sin clase (2026-10)
+    (sin migraciones)
+    · En Inicio del entrenador, el aviso «⚠️ N listas sin pasar» contaba
+      también las franjas de los días sin clase del club (festivos y
+      cierres, los que salen en rojo). Esos días no hay lista que pasar:
+      ya no cuentan, y si solo quedaban esos, el aviso desaparece.
+
+
+  v0.412.0 — Avanzado: la franja de las tarjetas, en tono suave (2026-10)
+    (sin migraciones)
+    · La cabecera de cada tarjeta de sesión ya no es del color de la zona a
+      tope: es ese color velado (azul oscuro en Fondo…) con una raya del
+      color fuerte a la izquierda. Pesa menos repetido en todas las tarjetas
+      y se sigue sabiendo la zona. Título y «CON VÍDEO» / «POR GRABAR», igual.
+    · Aparcado a propósito: marcar en cada tarjeta si la sesión se ha dado
+      este curso y cuándo (Alex lo decidirá más adelante).
+
 
   v0.411.0 — Avanzado: la carta, discreta, y tarjetas con la franja de la zona (2026-10)
     (sin migraciones)
@@ -7562,8 +7580,10 @@
     .avz-card:active { transform:scale(.99); }
     .avz-card-cab { display:flex; justify-content:space-between; align-items:center; gap:8px; padding-bottom:10px; border-bottom:1px solid #2c2c30; }
     /* v0.411: la cabecera de la tarjeta, franja del color de la zona de lado a lado */
-    .avz-card > .avz-card-cab { margin:-12px -14px 10px; padding:9px 14px; border-bottom:none; border-radius:13px 13px 0 0; }
-    .avz-card > .avz-card-cab .avz-card-z { color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.25); }
+    .avz-card > .avz-card-cab { margin:-12px -14px 10px; padding:9px 14px 9px 10px; border-bottom:none; border-radius:13px 13px 0 0;
+      /* v0.412: tono suave = el color de la zona con un velo oscuro encima, y la raya fuerte a la izquierda */
+      background:linear-gradient(rgba(21,21,23,.76), rgba(21,21,23,.76)), var(--zc, #2f6fb5); border-left:4px solid var(--zc, #2f6fb5); }
+    .avz-card > .avz-card-cab .avz-card-z { color:#fff; }
     .avz-card-z { font-size:12.5px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:#f4efe6; }
     .avz-tag { flex-shrink:0; font-size:10.5px; font-weight:800; padding:3px 8px; border-radius:6px; background:#fff; color:#111; }
     .avz-tag.pend { background:#2c2c30; color:#c9954f; border:1px solid #c9954f; }
@@ -11984,7 +12004,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.411.0';
+    var APP_VERSION = '0.413.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -23402,7 +23422,9 @@
         // v0.411: fuera la celda («ANULAR FONDO |»): ya la dicen la zona y la
         // intención elegidas. Queda el golpe, en una franja del COLOR DE LA
         // ZONA, con su etiqueta (CON VÍDEO · POR GRABAR…) a la derecha.
-        '<div class="avz-card-cab" style="background:' + z.color + '"><span class="avz-card-z">' +
+        // v0.412: la franja, en tono SUAVE (el color de la zona velado) con
+        // una raya fuerte a la izquierda; el color fuerte cansaba repetido.
+        '<div class="avz-card-cab" style="--zc:' + z.color + '"><span class="avz-card-z">' +
           _gEsc((nd && nd.it && nd.it.t) || golpe || z.label) + '</span>' + tag + '</div>' +
         '<div class="avz-card-n">' + _gEsc(nombreSesion(c)) + '</div>';
       if (c.objetivo) h += '<div class="avz-card-o">' + _gEsc(c.objetivo) + '</div>';
@@ -27201,6 +27223,9 @@
       for (var d = 1; d <= 21; d++) {
         var f = addDiasISO(hoy, -d);
         if (_cursoDe(f) !== _cursoActual()) break;
+        // v0.413: un día sin clase del club (festivo/cierre, en rojo) no deja
+        // listas pendientes: no hay nada que pasar.
+        if (_dscEsSinClase(f)) continue;
         _homeClasesDe(f).forEach(function(x){
           if (!x.sinClase && !x.pasada) { n++; if (!ultimo) ultimo = f; }
         });
