@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.413.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.414.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,15 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.414.0 — Avanzado: las sesiones del bloque, plegadas (2026-10)
+    (sin migraciones)
+    · En cada bloque las tarjetas de sesión salen PLEGADAS: la franja con el
+      golpe y «CON VÍDEO / POR GRABAR», el nombre y los minutos. Más orden a
+      la vista cuando un bloque tiene varias.
+    · Tocar una la despliega (objetivo y ejercicios con sus minutos); tocarla
+      otra vez la pliega. Para ENTRAR en la sesión, la › dorada del pie.
+
 
   v0.413.0 — «Listas sin pasar» ya no cuenta los días sin clase (2026-10)
     (sin migraciones)
@@ -7589,6 +7598,15 @@
     .avz-tag.pend { background:#2c2c30; color:#c9954f; border:1px solid #c9954f; }
     .avz-tag.medio { background:#2c2c30; color:#f4efe6; border:1px solid #6b6b70; }
     .avz-card-n { font-size:15px; font-weight:800; color:#f4efe6; padding:9px 0 2px; }
+    /* v0.414: tarjeta plegada / desplegada */
+    .avz-card-res { display:flex; align-items:center; gap:10px; }
+    .avz-card-res .avz-card-n { flex:1; min-width:0; padding:2px 0; }
+    .avz-card-res .avz-card-t { font-size:13px; color:#d9d2c4; white-space:nowrap; }
+    .avz-card-chev { color:#c9954f; font-size:18px; line-height:1; transform:rotate(90deg); transition:transform .2s; }
+    .avz-card.ab .avz-card-chev { transform:rotate(-90deg); }
+    .avz-card.pleg { padding-bottom:12px; }
+    .avz-oscuro .rec-zt-lista { align-items:start; }
+    button.avz-card-go { cursor:pointer; padding:0; font-family:inherit; }
     .avz-card-o { font-size:12px; color:#8a8478; line-height:1.4; margin-bottom:4px; }
     .avz-ej { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:5px 0; font-size:13px; color:#e8e2d6; }
     .avz-ej.mas { color:#8a8478; font-size:12px; }
@@ -12004,7 +12022,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.413.0';
+    var APP_VERSION = '0.414.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -23415,7 +23433,10 @@
               : conV === ejs.length ? '<span class="avz-tag">CON VÍDEO</span>'
               : !conV ? '<span class="avz-tag pend">POR GRABAR</span>'
               : '<span class="avz-tag medio">' + conV + '/' + ejs.length + ' VÍDEO</span>';
-      var h = '<div class="avz-card" onclick="recSesVentana(\'ses:' + c.id + '\', event)">' +
+      // v0.414: PLEGADA por defecto (cabecera + nombre + minutos); tocarla la
+      // despliega con sus ejercicios, y la › de abajo abre la sesión.
+      var ab = !!_avzAbiertas[c.id];
+      var h = '<div class="avz-card' + (ab ? ' ab' : ' pleg') + '" onclick="avzCardToggle(\'' + c.id + '\')">' +
         // v0.400: la cabecera dice la CELDA y el BLOQUE de la sesión (p. ej.
         // «ANULAR FONDO | DIRECCIÓN CRUZADO Y PARALELO»): el golpe ya lo dice la
         // pestaña, y el bloque era lo que se veía antes (v0.394 lo había quitado).
@@ -23426,7 +23447,10 @@
         // una raya fuerte a la izquierda; el color fuerte cansaba repetido.
         '<div class="avz-card-cab" style="--zc:' + z.color + '"><span class="avz-card-z">' +
           _gEsc((nd && nd.it && nd.it.t) || golpe || z.label) + '</span>' + tag + '</div>' +
-        '<div class="avz-card-n">' + _gEsc(nombreSesion(c)) + '</div>';
+        '<div class="avz-card-res"><span class="avz-card-n">' + _gEsc(nombreSesion(c)) + '</span>' +
+          (ab ? '' : '<span class="avz-card-t">' + (tot ? tot + ' min' : ejs.length + ' ejercicios') + '</span>') +
+          '<span class="avz-card-chev">›</span></div>';
+      if (!ab) return h + '</div>';
       if (c.objetivo) h += '<div class="avz-card-o">' + _gEsc(c.objetivo) + '</div>';
       ejs.slice(0, 6).forEach(function(ej){
         var carro = _sesTipoEj(ej) === 'carro', m = _sesMin(ej);
@@ -23435,9 +23459,11 @@
       });
       if (ejs.length > 6) h += '<div class="avz-ej mas">+' + (ejs.length - 6) + ' ejercicios más</div>';
       h += '<div class="avz-card-pie"><span class="avz-card-t">' + (tot ? tot + ' min' : ejs.length + ' ejercicios') + '</span>' +
-           '<span class="avz-card-go">›</span></div></div>';
+           '<button type="button" class="avz-card-go" onclick="event.stopPropagation();recSesVentana(\'ses:' + c.id + '\', event)" aria-label="Abrir la sesión">›</button></div></div>';
       return h;
     }
+    var _avzAbiertas = {};   // v0.414: tarjetas de sesión desplegadas (por id)
+    function avzCardToggle(id) { _avzAbiertas[id] = !_avzAbiertas[id]; _recRepintar(); }
     function _recPistaHTML(estZ, p, nivel) {
       if (nivel === 'avanzado') return _recPistaAvzHTML();   // v0.394
       var sel = _recZonaSel, mini = !!sel;
