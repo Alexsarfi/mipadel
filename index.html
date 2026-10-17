@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.410.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.411.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,19 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.411.0 — Avanzado: la carta, discreta, y tarjetas con la franja de la zona (2026-10)
+    (sin migraciones)
+    · La CARTA de la celda ya no es una caja debajo de la frase: es un botón
+      pequeño «📋 CARTA ›» justo detrás de la frase de la zona («Defender y
+      construir desde atrás. · Anular · Fondo [CARTA]»). Al tocarlo se
+      despliega debajo, como antes. Igual en Anular, Dominar y Definir.
+    · En el móvil se quita «· Anular · Fondo» de esa línea (se sobrentiende:
+      lo dicen la franja y la intención elegida) para que quepa la carta.
+    · Tarjetas de sesión: el título ya no repite la celda («ANULAR FONDO |
+      PARED DE FONDO» → «PARED DE FONDO») y va en una franja del COLOR DE LA
+      ZONA (azul en Fondo…), con «CON VÍDEO» / «POR GRABAR» a la derecha.
+
 
   v0.410.0 — Teléfonos del alumno: propio, madre y padre (2026-10)
     ⚠️ REQUIERE MIGRACIÓN: migraciones/migracion_telefonos_familia.sql
@@ -7505,6 +7518,15 @@
     .avz-oscuro .rec-zc-cab .avz-ints { order:3; flex:1 1 100%; margin-left:0; display:flex; }
     .avz-oscuro .rec-zc-cab .avz-int { flex:1 1 0; justify-content:center; padding:8px 6px; }
     .avz-celda { color:#f4efe6; font-weight:800; }
+    /* v0.411: en pantallas estrechas «· Anular · Fondo» sobra */
+    @media (max-width:600px) { .avz-celda { display:none; } }
+    .avz-carta-btn { display:inline-flex; align-items:center; gap:4px; margin-left:8px; vertical-align:1px;
+      padding:2px 9px; border-radius:999px; border:1px solid #c9954f; background:transparent; color:#c9954f;
+      font-family:inherit; font-size:10.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase;
+      cursor:pointer; white-space:nowrap; -webkit-tap-highlight-color:transparent; }
+    .avz-carta-btn.on { background:#c9954f; color:#111; }
+    .avz-carta-btn-c { font-size:13px; line-height:1; transition:transform .2s; }
+    .avz-carta-btn.on .avz-carta-btn-c { transform:rotate(90deg); }
     .avz-vacio { text-align:center; color:#8a8478; font-size:13px; line-height:1.5; padding:22px 10px; border:1px dashed #3a3a3f; border-radius:12px; margin-top:6px; }
     .avz-vacio b { color:#f4efe6; }
     .avz-oscuro .rec-zc-cab { flex-wrap:wrap; row-gap:8px; }
@@ -7539,6 +7561,9 @@
     .avz-card:hover { border-color:#c9954f; }
     .avz-card:active { transform:scale(.99); }
     .avz-card-cab { display:flex; justify-content:space-between; align-items:center; gap:8px; padding-bottom:10px; border-bottom:1px solid #2c2c30; }
+    /* v0.411: la cabecera de la tarjeta, franja del color de la zona de lado a lado */
+    .avz-card > .avz-card-cab { margin:-12px -14px 10px; padding:9px 14px; border-bottom:none; border-radius:13px 13px 0 0; }
+    .avz-card > .avz-card-cab .avz-card-z { color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.25); }
     .avz-card-z { font-size:12.5px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:#f4efe6; }
     .avz-tag { flex-shrink:0; font-size:10.5px; font-weight:800; padding:3px 8px; border-radius:6px; background:#fff; color:#111; }
     .avz-tag.pend { background:#2c2c30; color:#c9954f; border:1px solid #c9954f; }
@@ -11959,7 +11984,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.410.0';
+    var APP_VERSION = '0.411.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -23374,8 +23399,11 @@
         // v0.400: la cabecera dice la CELDA y el BLOQUE de la sesión (p. ej.
         // «ANULAR FONDO | DIRECCIÓN CRUZADO Y PARALELO»): el golpe ya lo dice la
         // pestaña, y el bloque era lo que se veía antes (v0.394 lo había quitado).
-        '<div class="avz-card-cab"><span class="avz-card-z">' +
-          _gEsc((nd && nd.ap) || z.label) + ' | ' + _gEsc((nd && nd.it && nd.it.t) || golpe) + '</span>' + tag + '</div>' +
+        // v0.411: fuera la celda («ANULAR FONDO |»): ya la dicen la zona y la
+        // intención elegidas. Queda el golpe, en una franja del COLOR DE LA
+        // ZONA, con su etiqueta (CON VÍDEO · POR GRABAR…) a la derecha.
+        '<div class="avz-card-cab" style="background:' + z.color + '"><span class="avz-card-z">' +
+          _gEsc((nd && nd.it && nd.it.t) || golpe || z.label) + '</span>' + tag + '</div>' +
         '<div class="avz-card-n">' + _gEsc(nombreSesion(c)) + '</div>';
       if (c.objetivo) h += '<div class="avz-card-o">' + _gEsc(c.objetivo) + '</div>';
       ejs.slice(0, 6).forEach(function(ej){
@@ -23476,12 +23504,22 @@
     // y Juegos no tienen celda propia.
     var CARTA_POS = { 'fondo':'fondo', 'esquina':'fondo', 'campo-medio':'fondo', 'red':'red' };
     function cartaToggle() { _cartaAbierta = !_cartaAbierta; _recRepintar(); }
+    // v0.411 — el botón discreto de la carta, detrás de la frase de la zona
+    function _cartaBtnHTML(nivel, zona, intLabel) {
+      var pos = CARTA_POS[zona];
+      if (!pos || !intLabel || !_cartasCelda[nivel + '|' + intLabel + ' ' + pos]) return '';
+      return '<button type="button" class="avz-carta-btn' + (_cartaAbierta ? ' on' : '') + '" onclick="cartaToggle()" aria-expanded="' + _cartaAbierta + '">' +
+             '📋 Carta<span class="avz-carta-btn-c">›</span></button>';
+    }
     function _cartaCeldaHTML(nivel, zona, intLabel) {
       var pos = CARTA_POS[zona];
       if (!pos || !intLabel) return '';
       var celda = intLabel + ' ' + pos;
       var d = _cartasCelda[nivel + '|' + celda];
       if (!d) return '';
+      // v0.411: plegada no ocupa nada: el botón «CARTA» va en la línea de la
+      // frase de la zona (_cartaBtnHTML). Aquí solo se pinta abierta.
+      if (!_cartaAbierta) return '';
       var et = (PLAN_ETAPAS[nivel] || []).filter(function(x){ return x.nombre === celda; })[0];
       var h = '<div class="avz-carta' + (_cartaAbierta ? ' ab' : '') + '">' +
         '<button type="button" class="avz-carta-cab" onclick="cartaToggle()">' +
@@ -23547,8 +23585,13 @@
         (nivel === 'avanzado' ? intsH
           : (r.int ? '<span class="rec-zc-int" style="color:' + z.color + ';border-color:' + z.color + '">' + _gEsc(intL) + '</span>' : '')) +
         '<button type="button" class="rec-zc-x" onclick="recZonaSel(\'' + e.et.zona + '\')" aria-label="Cerrar">✕</button></div>';
-      h += '<div class="rec-zc-f">' + _gEsc(z.f) + (intAct ? ' · <b class="avz-celda">' + _gEsc(intAct.l + ' · ' + z.label) + '</b>' : '') + '</div>';
-      if (nivel === 'avanzado') { _cartasCargar(); h += _cartaCeldaHTML(nivel, e.et.zona, intAct && intAct.l); }   // v0.403
+      // v0.411: «· Anular · Fondo» solo si hay sitio (en el móvil se
+      // sobrentiende: lo dicen la franja y la intención elegida) y, detrás,
+      // el botón discreto de la CARTA.
+      if (nivel === 'avanzado') _cartasCargar();
+      h += '<div class="rec-zc-f">' + _gEsc(z.f) + (intAct ? '<b class="avz-celda"> · ' + _gEsc(intAct.l + ' · ' + z.label) + '</b>' : '') +
+           (nivel === 'avanzado' ? _cartaBtnHTML(nivel, e.et.zona, intAct && intAct.l) : '') + '</div>';
+      if (nivel === 'avanzado') h += _cartaCeldaHTML(nivel, e.et.zona, intAct && intAct.l);   // v0.403 · v0.411: solo abierta
       if (nivel === 'avanzado' && e.et.zona !== 'juegos' && !eV.nodos.length) {
         h += '<div class="avz-vacio">Todavía no hay sesiones de <b>' + _gEsc(intAct.l.toLowerCase() + ' en ' + z.label.toLowerCase()) + '</b>.<br>' +
              'Se llenará cuando cuelgues una sesión en un bloque de esta celda.</div></div>';
