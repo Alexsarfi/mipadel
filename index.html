@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.414.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.415.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,14 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.415.0 — Pasar lista: nombre y primer apellido (2026-10)
+    (sin migraciones)
+    · En Pasar lista cada alumno sale con su nombre y su PRIMER APELLIDO
+      («Lucía Martín»), también los de recuperación. Así, si en la franja
+      hay dos con el mismo nombre, se sabe quién es quién. Sin apellidos en
+      la ficha, sale solo el nombre, como antes.
+
 
   v0.414.0 — Avanzado: las sesiones del bloque, plegadas (2026-10)
     (sin migraciones)
@@ -12022,7 +12030,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.414.0';
+    var APP_VERSION = '0.415.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -32082,6 +32090,21 @@
       if (e && _alKey(e) === key) return alNom(e);
       return _alNomGlobal(key);
     }
+    // v0.415: nombre + PRIMER APELLIDO de una key de lista (para Pasar lista:
+    // dos «Lucía» en la misma franja se distinguen). Busca primero en la
+    // clase y luego en las demás (recuperaciones); si no hay ficha, el nombre.
+    function _alClaveNomAp1(clase, key) {
+      if (!key) return '';
+      var e = clase ? alumnoEnClase(clase, key) : null;
+      if (e && _alKey(e) === key) return alNomAp1(e);
+      var fuentes = [];
+      try { fuentes = (leerAsistConfig().clases) || []; } catch (er) {}
+      for (var i = 0; i < fuentes.length; i++) {
+        var en = alumnoEnClase(fuentes[i], key);
+        if (en && _alKey(en) === key) return alNomAp1(en);
+      }
+      return _alClaveNom(clase, key);
+    }
     function _alNomGlobal(key) {
       if (!key) return '';
       var fuentes = [];
@@ -33554,7 +33577,7 @@
       // v0.189: `key` es el id del alumno (o el nombre en recups tecleadas).
       // El estado y los callbacks van por key; el nombre solo para pintar.
       function fila(key, esRecup) {
-        var nombre = _alClaveNom(clase, key);
+        var nombre = _alClaveNomAp1(clase, key);   // v0.415: nombre + primer apellido
         var presente = asistEstadoLista[key] !== false;
         var safe = _gEsc(key).replace(/'/g,"\\'");   // v0.61: escapado HTML + comillas
         var h = '<div class="asist-al-toggle ' + (presente?'presente':'ausente') + (esRecup?' recup':'') +
