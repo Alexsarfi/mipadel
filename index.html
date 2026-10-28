@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.415.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.416.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,15 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.416.0 — Pasar lista: los botones de abajo, con su explicación (2026-10)
+    (sin migraciones)
+    · Debajo de «Guardar asistencia», «¿Algo más en esta clase?» con los
+      botones a todo el ancho: icono, nombre y una línea de para qué sirve.
+      ↩ Recuperación · 🚫 Sin clase · ⚠️ Incidencia (y, para el gestor,
+      ＋ Añadir alumno y 🔁 Entrenador sustituto). En el móvil antes solo se
+      veían los iconos y no se entendían. Hacen lo mismo que antes.
+
 
   v0.415.0 — Pasar lista: nombre y primer apellido (2026-10)
     (sin migraciones)
@@ -7260,6 +7269,19 @@
     .galm-baja-ok:active { background:#fee2e2; }
     /* v0.118: fila de acciones al pasar lista. En móvil, solo iconos */
     .asist-acc-btn { flex:1; min-width:120px; }
+    /* v0.416 — acciones de Pasar lista a todo el ancho, con explicación */
+    .asist-acc-tit { font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--gris); margin:6px 2px 8px; }
+    .asist-acc-lista { display:flex; flex-direction:column; gap:8px; }
+    .asist-acc { display:flex; align-items:center; gap:12px; width:100%; text-align:left; padding:11px 12px; border-radius:14px;
+      border:1.5px solid var(--borde); background:var(--blanco); font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .asist-acc:active { transform:scale(.99); }
+    .asist-acc.on { background:var(--bg); }
+    .asist-acc-ic { width:36px; height:36px; border-radius:10px; background:var(--bg); color:var(--c); display:flex; align-items:center;
+      justify-content:center; font-size:18px; font-weight:800; flex-shrink:0; }
+    .asist-acc-tx { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+    .asist-acc-tx b { font-size:14.5px; color:var(--c); }
+    .asist-acc-tx small { font-size:12px; color:var(--gris); line-height:1.3; }
+    .asist-acc-ch { color:var(--c); font-size:20px; }
     @media (max-width:600px) {
       .asist-acc-btn { min-width:0; flex:1 1 0; font-size:18px; padding-left:6px; padding-right:6px; }
       .asist-acc-txt { display:none; }
@@ -12030,7 +12052,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.415.0';
+    var APP_VERSION = '0.416.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -33618,6 +33640,14 @@
     }
 
     // Botones + paneles de recuperación y de alta rápida
+    // v0.416 — un botón de acción de Pasar lista: icono, nombre y una línea
+    // que dice para qué sirve. `on` = ya activo (p. ej. con sustituto puesto).
+    function _asistAccHTML(ic, tit, desc, col, bg, fn, on) {
+      return '<button type="button" class="asist-acc' + (on ? ' on' : '') + '" style="--c:' + col + ';--bg:' + bg + '" onclick="' + fn + '">' +
+        '<span class="asist-acc-ic">' + ic + '</span>' +
+        '<span class="asist-acc-tx"><b>' + tit + '</b><small>' + desc + '</small></span>' +
+        '<span class="asist-acc-ch">›</span></button>';
+    }
     function renderRecupZona(clase) {
       var zona = document.getElementById('asist-recup-zona');
       if (!zona) return;
@@ -33637,24 +33667,26 @@
         var sustBtn = '';
         if (_sb && _sbUser && _esGestor) {
           var sustOn = !!asistImpartida;
-          sustBtn =
-            '<button class="btn btn-sec btn-sm asist-acc-btn" style="border-color:#fde68a;color:var(--ac-hoy-tx);' +
-              (sustOn ? 'background:var(--ac-hoy-sv);font-weight:700;' : '') + '" onclick="asistToggleSustPanel()">🔁 <span class="asist-acc-txt">' +
-              (sustOn ? _gEsc(asistImpartida.nombre) : 'Entrenador sustituto') + '</span></button>';
+          sustBtn = _asistAccHTML('🔁', sustOn ? 'Impartida por ' + _gEsc(asistImpartida.nombre) : 'Entrenador sustituto',
+            sustOn ? 'Toca para cambiarlo o volver al titular' : 'La da otro entrenador ese día',
+            'var(--ac-hoy-tx)', 'var(--ac-hoy-sv)', 'asistToggleSustPanel()', sustOn);
         }
         var altaBtn = _esGestor
-          ? '<button class="btn btn-sec btn-sm asist-acc-btn" style="border-color:#bbf7d0;color:var(--ac-dada-tx);" onclick="asistToggleAltaPanel()">＋ <span class="asist-acc-txt">Añadir alumno</span></button>'
+          ? _asistAccHTML('＋', 'Añadir alumno', 'Da de alta a un alumno en esta franja', 'var(--ac-dada-tx)', 'var(--ac-dada-sv, #f0fdf4)', 'asistToggleAltaPanel()')
           : '';
         // v0.392: los avisos ya no van aquí abajo: suben a #asist-lista-avisos
         var _avTop = document.getElementById('asist-lista-avisos');
         if (_avTop) _avTop.innerHTML = _avListaHTML(_gEditUid || (_sbUser && _sbUser.id), asistClaseActivaId, asistFechaActiva);
+        // v0.416: los botones, a todo el ancho con su nombre y para qué sirven
+        // (en el móvil solo se veían los iconos y no se entendían).
         zona.innerHTML =
-          '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+          '<div class="asist-acc-tit">¿Algo más en esta clase?</div>' +
+          '<div class="asist-acc-lista">' +
             altaBtn +
-            '<button class="btn btn-sec btn-sm asist-acc-btn" style="border-color:var(--lila-claro);color:var(--lila);" onclick="asistToggleRecupPanel()">↩ <span class="asist-acc-txt">Recuperación</span></button>' +
+            _asistAccHTML('↩', 'Recuperación', 'Viene un alumno de otra franja a recuperar', 'var(--lila)', 'var(--lila-suave)', 'asistToggleRecupPanel()') +
             sustBtn +
-            '<button class="btn btn-sec btn-sm asist-acc-btn" style="border-color:#e2e8f0;color:#64748b;" onclick="asistSinClase()">🚫 <span class="asist-acc-txt">Sin clase</span></button>' +
-            '<button class="btn btn-sec btn-sm asist-acc-btn" style="border-color:#fecaca;color:#b91c1c;" onclick="incAbrir()">⚠️ <span class="asist-acc-txt">Incidencia</span></button>' +
+            _asistAccHTML('🚫', 'Sin clase', 'Hoy no se da (lluvia, pista…). Eliges si se recupera', '#475569', '#f1f5f9', 'asistSinClase()') +
+            _asistAccHTML('⚠️', 'Incidencia', 'Avisa al gestor: alumno de prueba, lesión, material…', '#b91c1c', '#fef2f2', 'incAbrir()') +
           '</div>' +
           _incMiniHTML(_gEditUid || (_sbUser && _sbUser.id), asistClaseActivaId, asistFechaActiva);   // v0.388
         if (!_incCargado) _incCargar(false, function(){ if (_incCargado && document.getElementById('asist-recup-zona')) renderToggleAlumnos(null); });
