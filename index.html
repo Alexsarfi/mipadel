@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.420.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.421.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,17 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.421.0 — Notificaciones del gestor: grandes en Inicio y 🔔 con las anteriores (2026-10)
+    (sin migraciones)
+    · En Inicio, las notificaciones nuevas del gestor (los avisos) salen
+      abiertas y con LETRA GRANDE, nada más entrar, con su «Entendido».
+    · Arriba a la derecha, junto al Perfil, una 🔔: abre las ANTERIORES (las
+      ya leídas), en «Esta semana» y «Antes», para volver a leerlas; cada
+      una dice cuándo se envió y cuándo se marcó Entendido.
+    · Se guardan 30 días: las más antiguas las borra la app del gestor al
+      cargar (las de una clase con fecha futura esperan a que pase el día).
+
 
   v0.420.0 — El botón «‹ Volver» de arriba, fácil de tocar (2026-10)
     (sin migraciones)
@@ -7746,6 +7757,14 @@
     /* v0.418 — avisos del gestor, abiertos en Inicio */
     .av-ini { margin:0 0 12px; border-radius:14px; border:1.5px solid #93c5fd; background:var(--azul-suave); padding:10px 12px; }
     .av-ini-cab { font-size:13px; font-weight:800; color:var(--azul); margin-bottom:4px; }
+    /* v0.421: en Inicio, la notificación con letra GRANDE */
+    .av-ini { padding:14px 16px; }
+    .av-ini-cab { font-size:15px; letter-spacing:.01em; }
+    .av-ini-it .inc-it-t { font-size:18px; line-height:1.3; }
+    .av-ini-it .inc-it-s { font-size:14px; }
+    .av-ini-it .inc-it-x { font-size:16.5px; line-height:1.45; margin-top:6px; }
+    .av-ini-it .inc-b { font-size:14px; padding:8px 16px; }
+    .cab-perfil-btn.cab-campana { right:calc(1.5rem + 52px); }
     .av-ini-it { padding:8px 0; border-top:1px solid #bfdbfe; }
     .av-ini-cab + .av-ini-it { border-top:none; padding-top:2px; }
     .av-ini-mas { display:block; width:100%; margin-top:4px; padding:7px; border:none; background:none; font-family:inherit;
@@ -10908,6 +10927,7 @@
   <div id="pantalla-inicio" class="pantalla activa">
     <div class="cabecera">
       <button id="cab-perfil-btn" class="cab-perfil-btn" onclick="irA('pantalla-ajustes')" title="Perfil" aria-label="Perfil">👤</button>
+      <button id="cab-campana-btn" class="cab-perfil-btn cab-campana" onclick="avAnteriores()" title="Notificaciones anteriores" aria-label="Notificaciones anteriores" style="display:none;">🔔</button>
       <div class="cab-etiqueta">Mi aplicación · <span id="cab-version"></span></div>
       <div class="cab-titulo cab-titulo-marca">
         <img src="./icon-192.png" alt="" class="cab-logo" onerror="this.style.display='none';">
@@ -12130,7 +12150,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.420.0';
+    var APP_VERSION = '0.421.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -16513,11 +16533,76 @@
       _sb.from('avisos').select('*').order('creado_at', { ascending:false }).limit(200).then(function(r){
         if (r.error) { console.warn('avisos', r.error.message); fin(); return; }
         _avCache = r.data || [];
+        _avLimpiar();   // v0.421: el gestor borra las de más de 30 días
         _sb.from('avisos_leidos').select('*').then(function(r2){
           if (!r2.error) _avLeidos = r2.data || [];
           fin();
         }).catch(fin);
       }).catch(fin);
+    }
+    // ══ v0.421 — NOTIFICACIONES: se guardan 30 días ═════════════════════
+    // Los avisos del gestor son las notificaciones del entrenador. Las nuevas
+    // salen abiertas en Inicio (con letra grande); las ya leídas quedan en
+    // la 🔔 de arriba («Anteriores») para volver a leerlas. A los 30 días se
+    // borran: lo hace el GESTOR al cargar (la RLS solo le deja a él), una vez
+    // por sesión; los de una clase con fecha futura se respetan hasta que
+    // pasa ese día. Mientras tanto el entrenador ya no ve las de > 30 días.
+    var AV_DIAS = 30, _avLimpiado = false;
+    function _avCorte() { return addDiasISO(hoyLocal(), -AV_DIAS); }
+    function _avVigente(a) {
+      var c = _avCorte();
+      return String(a.creado_at || '').slice(0, 10) >= c || (a.fecha && a.fecha >= c);
+    }
+    function _avLimpiar() {
+      if (_avLimpiado || !_esGestor || !_sb || !_sbUser) return;
+      _avLimpiado = true;
+      var c = _avCorte();
+      _sb.from('avisos').delete().lt('creado_at', c + 'T00:00:00').or('fecha.is.null,fecha.lt.' + c)
+        .then(function(r){ if (r.error) console.warn('limpiar avisos', r.error.message); });
+      _avCache = _avCache.filter(_avVigente);
+    }
+    function _avLeidoEn(id, uid) {
+      var l = _avLeidos.filter(function(x){ return String(x.aviso_id) === String(id) && String(x.user_id) === String(uid); })[0];
+      return l ? String(l.leido_at || '').slice(0, 10) : '';
+    }
+    // Las ANTERIORES del entrenador: ya leídas (o de una clase que ya pasó)
+    function _avAnterioresLista() {
+      var yo = _avYo(), hoy = hoyLocal();
+      if (!yo) return [];
+      return _avCache.filter(function(a){
+        return _avPara(a, yo) && _avVigente(a) && (_avLeido(a.id, yo) || (a.fecha && a.fecha < hoy));
+      });
+    }
+    var _avAntAb = {};
+    function avAntToggle(id) { _avAntAb[id] = !_avAntAb[id]; avAnteriores(); }
+    function avAnteriores() {
+      var yo = _avYo(), l = _avAnterioresLista(), lun = _asistLunesDe(hoyLocal());
+      var h = '<div class="asl-modal-ov" onclick="if(event.target===this)avCerrar()">' +
+        '<div class="asist-recup-panel asl-modal inc-modal" role="dialog" aria-label="Notificaciones anteriores">' +
+        '<div class="asl-modal-cab"><span class="asl-modal-tit">🔔 Notificaciones anteriores</span>' +
+          '<button type="button" class="asl-modal-x" onclick="avCerrar()" aria-label="Cerrar">✕</button></div>' +
+        '<div class="asl-modal-sub">Las que ya leíste, para volver a mirarlas. Se guardan ' + AV_DIAS + ' días.</div>' +
+        '<div class="inc-lista">';
+      if (!l.length) h += '<div class="plan-bl-vacio">No hay notificaciones anteriores.</div>';
+      var grupos = [
+        { t:'Esta semana', l: l.filter(function(a){ return String(a.creado_at || '').slice(0, 10) >= lun; }) },
+        { t:'Antes',       l: l.filter(function(a){ return String(a.creado_at || '').slice(0, 10) < lun; }) }
+      ];
+      grupos.forEach(function(g){
+        if (!g.l.length) return;
+        h += '<div class="inc-grupo">' + g.t + ' · ' + g.l.length + '</div>';
+        g.l.forEach(function(a){
+          var ab = !!_avAntAb[a.id], le = _avLeidoEn(a.id, yo), cr = String(a.creado_at || '').slice(0, 10);
+          var fTxt = function(f){ return f ? parseInt(f.slice(8), 10) + '/' + f.slice(5, 7) : ''; };
+          h += '<div class="inc-it' + (ab ? ' ab' : '') + '" onclick="avAntToggle(\'' + a.id + '\')"><div style="flex:1;min-width:0;">' +
+            (ab ? _avCuerpoHTML(a)
+                : '<div class="inc-it-t">' + _avTipo(a.tipo).ico + ' ' + _gEsc(_avTitulo(a)) + '</div>') +
+            '<div class="inc-it-s">Enviada el ' + fTxt(cr) + (le ? ' · entendido el ' + fTxt(le) : '') + '</div>' +
+            '</div><span class="inc-it-chev">›</span></div>';
+        });
+      });
+      h += '</div></div></div>';
+      _incOvPintar(h);
     }
     function _avLeido(id, uid) {
       return _avLeidos.some(function(l){ return String(l.aviso_id) === String(id) && String(l.user_id) === String(uid); });
@@ -16532,7 +16617,7 @@
       var yo = _avYo(), hoy = hoyLocal();
       if (!yo || _esGestor) return [];
       return _avCache.filter(function(a){
-        return _avPara(a, yo) && !_avLeido(a.id, yo) && (!a.fecha || a.fecha >= hoy);
+        return _avPara(a, yo) && !_avLeido(a.id, yo) && (!a.fecha || a.fecha >= hoy) && _avVigente(a);   // v0.421
       });
     }
     // Avisos de una clase y un día (Pasar lista, fila del mes)
@@ -16583,7 +16668,7 @@
       if (!_avCargado) return _avCardHTML();   // pide la carga y repinta Inicio
       var l = _avPendientes();
       if (!l.length) return '';
-      var h = '<div class="av-ini"><div class="av-ini-cab">📣 ' + (l.length === 1 ? 'Aviso del gestor' : l.length + ' avisos del gestor') + '</div>';
+      var h = '<div class="av-ini"><div class="av-ini-cab">📣 ' + (l.length === 1 ? 'Notificación del gestor' : l.length + ' notificaciones del gestor') + '</div>';
       l.slice(0, 3).forEach(function(a){
         h += '<div class="av-ini-it">' + _avCuerpoHTML(a) +
           '<div class="inc-it-b"><button type="button" class="inc-b prim" onclick="avEntendido(\'' + a.id + '\', true)">Entendido</button></div></div>';
@@ -27615,6 +27700,9 @@
           '<span class="ct-chev">›</span></div>';
       }
       cont.innerHTML = _avInicioHTML() + h;   // v0.389: avisos del gestor, arriba · v0.418: ya abiertos
+      // v0.421: la 🔔 de las notificaciones anteriores, con sesión iniciada
+      var _camp = document.getElementById('cab-campana-btn');
+      if (_camp) _camp.style.display = (_sb && _sbUser && !_esGestor) ? 'flex' : 'none';
     }
     // ── v0.376 — LA SEMANA EN INICIO ──────────────────────────────────
     // Una fila con los días de ESTA semana en que hay clase. Color por día:
