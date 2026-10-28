@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.416.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.420.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,50 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.420.0 — El botón «‹ Volver» de arriba, fácil de tocar (2026-10)
+    (sin migraciones)
+    · El botón de arriba a la derecha («‹ Panel», «‹ Inicio», «‹ Alumnos»…)
+      costaba pulsarlo en el móvil y en el ordenador: el título de la
+      pantalla quedaba por encima y se llevaba el toque. Ahora el botón está
+      por encima y con algo más de zona de toque, en todas las pantallas.
+
+
+  v0.419.0 — Gestor: deshacer un cambio de clase (2026-10)
+    (sin migraciones)
+    · Tras «🔄 Cambiar de clase», en la ficha del alumno sale arriba
+      «🔄 Movido hoy a las HH:MM a … · ↩ Deshacer». Deshacer deja sus franjas
+      EXACTAMENTE como estaban antes de moverlo: vuelve a la de origen con
+      su periodo intacto y sale de la nueva, sin tramos de un día. Solo toca
+      a ese alumno; el resto de alumnos de esas franjas no cambia.
+    · Vale hasta que acaba el día y solo para el último cambio hecho desde
+      este dispositivo. Si en la franja nueva ya se pasó lista con él, ese
+      registro se queda (se avisa al confirmar).
+
+
+  v0.418.0 — Avisos del gestor, ya abiertos en Inicio (2026-10)
+    (sin migraciones)
+    · En Inicio del entrenador los avisos nuevos del gestor salen ENTEROS
+      (qué es, clase y día, texto) con su botón «Entendido», sin tener que
+      tocar nada para leerlos. Al darle a Entendido desaparece de Inicio.
+      Con más de 3, se ven los 3 más recientes y «Ver todos».
+    · En Asistencia sigue la tarjeta «📣 N avisos nuevos» y, en Pasar lista,
+      los de esa clase arriba, como hasta ahora.
+
+
+  v0.417.0 — Gestor: la bandeja de incidencias, ordenada (2026-10)
+    (sin migraciones)
+    · Dos pestañas: «Pendientes» (se entra siempre aquí) y «Resueltas».
+    · Pendientes, por urgencia: «Te toca hacer algo» (alumno de prueba por
+      dar de alta, clase interrumpida por recuperar, con su botón a mano),
+      «Nuevas» y «Vistas, sin cerrar». Botón «Marcar todas como vistas».
+    · Cada incidencia, plegada en una línea (icono, entrenador, asunto,
+      fecha); tocarla la abre con el detalle y los botones.
+    · Resueltas, agrupadas por mes (el último abierto); se ven los dos
+      últimos meses y «Ver meses anteriores» para el resto.
+    · Sin filtros por tipo o entrenador a propósito: se decidirán con la
+      práctica.
+
 
   v0.416.0 — Pasar lista: los botones de abajo, con su explicación (2026-10)
     (sin migraciones)
@@ -6999,6 +7043,13 @@
        («Avanzado», «Asistencia»…). Donde la derecha ya está ocupada por otro
        botón (Perfil, ⚙ Clases, ✏ Editar…) se queda a la izquierda, como antes. */
     .cabecera > .btn-volver { float:right; margin:-6px -6px 6px 12px; }
+    /* v0.420 — EL «‹ VOLVER» SE PODÍA TOCAR MAL. Al flotar a la derecha (v0.405),
+       el título y el subtítulo (position:relative) se pintaban POR ENCIMA del
+       botón: su caja ocupa todo el ancho aunque el texto lo esquive, así que
+       el toque se lo llevaba el título y solo respondía el borde. Se sube el
+       botón por encima y se agranda un poco la zona de toque. */
+    .cabecera > .btn-volver { z-index:5; touch-action:manipulation; }
+    .cabecera > .btn-volver::after { content:''; position:absolute; inset:-8px -8px -8px -8px; }
     .cabecera:has(> .cab-mini-btn, > .cab-accion-btn, > .cab-perfil-btn, > .gest-hdr-perfil) > .btn-volver { float:none; margin:-4px -6px 8px -6px; }
     .cab-perfil-btn { position:absolute; top:1.5rem; right:1.5rem; z-index:2; width:42px; height:42px; border-radius:50%; background:rgba(255,255,255,0.14); border:none; color:#fff; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent; }
     .cab-perfil-btn:hover { background:rgba(255,255,255,0.24); }
@@ -7197,6 +7248,12 @@
     @media (max-width:360px){ .dsc-anio { grid-template-columns:1fr; } }
     /* ── v0.308 — ficha del alumno ampliada ── */
     .gta-campo { margin-top:9px; }
+    /* v0.419 — deshacer el último cambio de clase */
+    .gta-desh { display:flex; align-items:center; gap:10px; margin:0 0 10px; padding:10px 12px; border-radius:12px;
+      background:var(--ac-hoy-sv); border:1.5px solid #fde68a; color:var(--ac-hoy-tx); font-size:13px; }
+    .gta-desh > span { flex:1; min-width:0; }
+    .gta-desh-b { flex-shrink:0; border:none; border-radius:999px; padding:7px 13px; background:var(--ac-hoy-tx); color:#fff;
+      font-family:inherit; font-size:12.5px; font-weight:800; cursor:pointer; }
     .gta-lbl { display:block; font-size:11px; font-weight:800; color:var(--gris);
       text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; }
     .gta-edad { font-size:12px; font-weight:700; color:var(--ac-carro-tx); margin-top:5px; }
@@ -7686,6 +7743,13 @@
     .avz-oscuro .temp-cel.prog { border-color:#3a3a3f; }
     .avz-oscuro .temp-leyenda, .avz-oscuro .temp-vista { color:#8a8478; }
     /* v0.389 — avisos del gestor */
+    /* v0.418 — avisos del gestor, abiertos en Inicio */
+    .av-ini { margin:0 0 12px; border-radius:14px; border:1.5px solid #93c5fd; background:var(--azul-suave); padding:10px 12px; }
+    .av-ini-cab { font-size:13px; font-weight:800; color:var(--azul); margin-bottom:4px; }
+    .av-ini-it { padding:8px 0; border-top:1px solid #bfdbfe; }
+    .av-ini-cab + .av-ini-it { border-top:none; padding-top:2px; }
+    .av-ini-mas { display:block; width:100%; margin-top:4px; padding:7px; border:none; background:none; font-family:inherit;
+      font-size:12.5px; font-weight:800; color:var(--azul); cursor:pointer; text-align:right; }
     .av-card { display:flex; align-items:center; gap:8px; width:100%; margin:0 0 10px; padding:11px 14px;
       border-radius:14px; border:1.5px solid #93c5fd; background:var(--azul-suave); color:var(--azul);
       font-family:inherit; font-size:14px; font-weight:800; cursor:pointer; text-align:left; }
@@ -7734,6 +7798,20 @@
     .inc-it { display:flex; gap:10px; padding:10px 2px; border-top:1px solid var(--borde); }
     .inc-it:first-child { border-top:none; }
     .inc-it.resuelta { opacity:.6; }
+    /* v0.417 — bandeja ordenada: pestañas, grupos, filas plegadas, meses */
+    .inc-tabs { display:flex; gap:4px; padding:4px; margin:4px 0 8px; border-radius:12px; background:var(--arena); }
+    .inc-tab { flex:1; border:none; background:none; border-radius:9px; padding:8px 6px; font-family:inherit; font-size:13px;
+      font-weight:800; color:var(--gris); cursor:pointer; }
+    .inc-tab b { margin-left:4px; font-size:11px; padding:1px 7px; border-radius:999px; background:rgba(0,0,0,.07); }
+    .inc-tab.on { background:var(--blanco); color:var(--texto); box-shadow:0 1px 4px rgba(0,0,0,.08); }
+    .inc-grupo { font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--gris); margin:10px 2px 2px; }
+    .inc-it { cursor:pointer; align-items:flex-start; }
+    .inc-it-chev { color:var(--gris); font-size:18px; line-height:1.2; transform:rotate(90deg); transition:transform .2s; flex-shrink:0; }
+    .inc-it.ab .inc-it-chev, .inc-mes.ab .inc-it-chev { transform:rotate(-90deg); }
+    .inc-todas { display:block; width:100%; margin:4px 0 2px; padding:8px; border-radius:10px; border:1.5px dashed var(--borde);
+      background:none; font-family:inherit; font-size:12.5px; font-weight:700; color:var(--verde); cursor:pointer; }
+    .inc-mes { display:flex; justify-content:space-between; align-items:center; width:100%; margin-top:8px; padding:8px 10px;
+      border:none; border-radius:10px; background:var(--arena); font-family:inherit; font-size:13px; font-weight:800; color:var(--texto); cursor:pointer; }
     .inc-it-i { font-size:20px; line-height:1.2; }
     .inc-it-t { font-size:13.5px; font-weight:800; color:var(--texto); }
     .inc-it-ent { font-size:15px; font-weight:800; color:var(--verde); margin-bottom:1px; }   /* v0.391 */
@@ -12052,7 +12130,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.416.0';
+    var APP_VERSION = '0.420.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -16258,37 +16336,110 @@
         (n ? (quien.length ? '<b>' + _gEsc(quien.slice(0, 3).join(', ') + (quien.length > 3 ? '…' : '')) + '</b> · ' : '') +
              n + (n === 1 ? ' incidencia nueva' : ' incidencias nuevas') : 'Incidencias') + '<span class="inc-banner-chev">›</span></button>';
     }
+    // ══ v0.417 — LA BANDEJA DE INCIDENCIAS, ORDENADA ══════════════════════
+    // Dos pestañas: PENDIENTES (se entra siempre aquí) y RESUELTAS (archivo).
+    // Pendientes, por urgencia: «Te toca hacer algo» (prueba sin alta,
+    // clase interrumpida que se recupera), «Nuevas» y «Vistas, sin cerrar».
+    // Cada incidencia, plegada en una línea; tocarla la abre con su detalle
+    // y sus botones. Resueltas, por mes (los dos últimos; el resto, a mano).
+    // Sin filtros por tipo/entrenador a propósito: Alex decidirá con la
+    // práctica cuáles hacen falta.
+    var _incTab = 'pend', _incAbiertas = {}, _incMesAb = {}, _incVerTodo = false;
+    function incTab(t) { _incTab = t === 'res' ? 'res' : 'pend'; incBandeja(); }
+    function incItToggle(id) { _incAbiertas[id] = !_incAbiertas[id]; incBandeja(); }
+    function incMesToggle(m, ab) { _incMesAb[m] = !ab; incBandeja(); }
+    function incVerTodo() { _incVerTodo = true; incBandeja(); }
+    // ¿Pide una acción del gestor?
+    function _incPideAccion(x) {
+      var d = x.datos || {};
+      if (x.estado === 'resuelta') return false;
+      return (x.tipo === 'prueba' && !d.alta) || (x.tipo === 'interrumpida' && d.decision === 'recupera');
+    }
+    function incTodasVistas() {
+      _incCache.forEach(function(x){
+        if (x.estado === 'nueva') _incActualizar(x.id, { estado:'vista', visto_at:new Date().toISOString() });
+      });
+      incBandeja();
+      try { renderGestor(); } catch (e) {}
+    }
+    function _incItHTML(x, by) {
+      var d = x.datos || {};
+      var ent = _incEntNombre(x, by);
+      var fch = x.fecha ? (_diaSemanaNombre(x.fecha) + ' ' + parseInt(x.fecha.slice(8), 10) + '/' + x.fecha.slice(5, 7)) : '';
+      var det = [];
+      if (x.tipo === 'prueba') { if (d.vieneDe) det.push(_incVieneTxt(d.vieneDe)); if (d.telefono) det.push(d.telefono); }
+      if (x.tipo === 'interrumpida') { if (d.minutos) det.push('se jugaron ' + d.minutos + ' min'); if (d.decision === 'recupera') det.push('se recupera'); if (d.decision === 'dada') det.push('cuenta como dada'); }
+      var prim = '';
+      if (x.tipo === 'prueba' && !d.alta && x.estado !== 'resuelta')
+        prim = '<button type="button" class="inc-b prim" onclick="event.stopPropagation();incAlta(\'' + x.id + '\')">Dar de alta</button>';
+      if (x.tipo === 'interrumpida' && d.decision === 'recupera' && x.estado !== 'resuelta')
+        prim = '<button type="button" class="inc-b prim" onclick="event.stopPropagation();incRecup(\'' + x.id + '\')">Programar recuperación</button>';
+      var btns = prim;
+      if (x.estado === 'nueva') btns += '<button type="button" class="inc-b" onclick="event.stopPropagation();incEstado(\'' + x.id + '\',\'vista\')">Visto</button>';
+      if (x.estado !== 'resuelta') btns += '<button type="button" class="inc-b" onclick="event.stopPropagation();incEstado(\'' + x.id + '\',\'resuelta\')">Resuelta</button>';
+      var ab = !!_incAbiertas[x.id];
+      // v0.391: arriba, junto al icono, el ENTRENADOR; debajo, el asunto
+      var h = '<div class="inc-it ' + (x.estado || 'nueva') + (ab ? ' ab' : '') + '" onclick="incItToggle(\'' + x.id + '\')">' +
+        '<span class="inc-it-i">' + _incTipo(x.tipo).ico + '</span><div style="flex:1;min-width:0;">' +
+        '<div class="inc-it-ent">' + _gEsc(ent || 'Entrenador') + ' ' + _incEstadoHTML(x) + '</div>' +
+        '<div class="inc-it-t">' + _gEsc(_incTitulo(x)) + '</div>' +
+        '<div class="inc-it-s">' + _gEsc([fch, x.franja].filter(Boolean).join(' · ')) + (ab && det.length ? ' · ' + _gEsc(det.join(' · ')) : '') + '</div>';
+      if (ab) {
+        if (x.texto) h += '<div class="inc-it-x">' + _gEsc(x.texto) + '</div>';
+        if (d.alta) h += '<div class="inc-it-s" style="color:var(--ac-dada-tx);">✓ Dado de alta</div>';
+        if (btns) h += '<div class="inc-it-b">' + btns + '</div>';
+      } else if (prim) {
+        h += '<div class="inc-it-b">' + prim + '</div>';   // plegada, la acción a mano
+      }
+      return h + '</div><span class="inc-it-chev">›</span></div>';
+    }
     function incBandeja() {
       var by = {}; try { by = _gestorAgrupar(); } catch (e) {}
+      var pend = _incCache.filter(function(x){ return x.estado !== 'resuelta'; });
+      var res  = _incCache.filter(function(x){ return x.estado === 'resuelta'; });
       var h = '<div class="asl-modal-ov" onclick="if(event.target===this)incCerrar()">' +
         '<div class="asist-recup-panel asl-modal inc-modal" role="dialog" aria-label="Incidencias">' +
         '<div class="asl-modal-cab"><span class="asl-modal-tit">⚠️ Incidencias</span>' +
           '<button type="button" class="asl-modal-x" onclick="incCerrar()" aria-label="Cerrar">✕</button></div>' +
+        '<div class="inc-tabs">' +
+          '<button type="button" class="inc-tab' + (_incTab === 'pend' ? ' on' : '') + '" onclick="incTab(\'pend\')">Pendientes <b>' + pend.length + '</b></button>' +
+          '<button type="button" class="inc-tab' + (_incTab === 'res' ? ' on' : '') + '" onclick="incTab(\'res\')">Resueltas <b>' + res.length + '</b></button>' +
+        '</div>' +
         '<div class="inc-lista">';
-      if (!_incCache.length) h += '<div class="plan-bl-vacio">No hay incidencias.</div>';
-      _incCache.forEach(function(x){
-        var d = x.datos || {};
-        var ent = _incEntNombre(x, by);
-        var fch = x.fecha ? (_diaSemanaNombre(x.fecha) + ' ' + parseInt(x.fecha.slice(8), 10) + '/' + x.fecha.slice(5, 7)) : '';
-        var det = [];
-        if (x.tipo === 'prueba') { if (d.vieneDe) det.push(_incVieneTxt(d.vieneDe)); if (d.telefono) det.push(d.telefono); }
-        if (x.tipo === 'interrumpida') { if (d.minutos) det.push('se jugaron ' + d.minutos + ' min'); if (d.decision === 'recupera') det.push('se recupera'); if (d.decision === 'dada') det.push('cuenta como dada'); }
-        var btns = '';
-        if (x.tipo === 'prueba' && !d.alta && x.estado !== 'resuelta')
-          btns += '<button type="button" class="inc-b prim" onclick="incAlta(\'' + x.id + '\')">Dar de alta</button>';
-        if (x.tipo === 'interrumpida' && d.decision === 'recupera' && x.estado !== 'resuelta')
-          btns += '<button type="button" class="inc-b prim" onclick="incRecup(\'' + x.id + '\')">Programar recuperación</button>';
-        if (x.estado === 'nueva') btns += '<button type="button" class="inc-b" onclick="incEstado(\'' + x.id + '\',\'vista\')">Visto</button>';
-        if (x.estado !== 'resuelta') btns += '<button type="button" class="inc-b" onclick="incEstado(\'' + x.id + '\',\'resuelta\')">Resuelta</button>';
-        // v0.391: arriba, junto al icono, el ENTRENADOR; debajo, el asunto
-        h += '<div class="inc-it ' + (x.estado || 'nueva') + '"><span class="inc-it-i">' + _incTipo(x.tipo).ico + '</span><div style="flex:1;min-width:0;">' +
-          '<div class="inc-it-ent">' + _gEsc(ent || 'Entrenador') + ' ' + _incEstadoHTML(x) + '</div>' +
-          '<div class="inc-it-t">' + _gEsc(_incTitulo(x)) + '</div>' +
-          '<div class="inc-it-s">' + _gEsc([fch, x.franja].filter(Boolean).join(' · ')) + (det.length ? ' · ' + _gEsc(det.join(' · ')) : '') + '</div>' +
-          (x.texto ? '<div class="inc-it-x">' + _gEsc(x.texto) + '</div>' : '') +
-          (d.alta ? '<div class="inc-it-s" style="color:var(--ac-dada-tx);">✓ Dado de alta</div>' : '') +
-          (btns ? '<div class="inc-it-b">' + btns + '</div>' : '') + '</div></div>';
-      });
+      if (_incTab === 'pend') {
+        if (!pend.length) h += '<div class="plan-bl-vacio">No hay nada pendiente. 👌</div>';
+        if (pend.some(function(x){ return x.estado === 'nueva'; }))
+          h += '<button type="button" class="inc-todas" onclick="incTodasVistas()">✓ Marcar todas como vistas</button>';
+        var grupos = [
+          { t:'Te toca hacer algo',  l: pend.filter(_incPideAccion) },
+          { t:'Nuevas',              l: pend.filter(function(x){ return !_incPideAccion(x) && x.estado !== 'vista'; }) },
+          { t:'Vistas, sin cerrar',  l: pend.filter(function(x){ return !_incPideAccion(x) && x.estado === 'vista'; }) }
+        ];
+        grupos.forEach(function(g){
+          if (!g.l.length) return;
+          h += '<div class="inc-grupo">' + g.t + ' · ' + g.l.length + '</div>';
+          g.l.forEach(function(x){ h += _incItHTML(x, by); });
+        });
+      } else {
+        if (!res.length) h += '<div class="plan-bl-vacio">Todavía no hay incidencias resueltas.</div>';
+        var meses = {}, orden = [];
+        res.forEach(function(x){
+          var m = String(x.fecha || x.creado_at || '').slice(0, 7) || '—';
+          if (!meses[m]) { meses[m] = []; orden.push(m); }
+          meses[m].push(x);
+        });
+        orden.sort().reverse();
+        var ver = _incVerTodo ? orden : orden.slice(0, 2);
+        ver.forEach(function(m, i){
+          var ab = (_incMesAb[m] != null) ? _incMesAb[m] : (i === 0);   // el mes más reciente, abierto
+          var nom = /^\d{4}-\d{2}$/.test(m) ? MESES_NOMBRES_A[+m.slice(5, 7) - 1] + ' ' + m.slice(0, 4) : m;
+          h += '<button type="button" class="inc-mes' + (ab ? ' ab' : '') + '" onclick="incMesToggle(\'' + m + '\',' + ab + ')">' +
+               '<span>' + _gEsc(nom) + ' · ' + meses[m].length + '</span><span class="inc-it-chev">›</span></button>';
+          if (ab) meses[m].forEach(function(x){ h += _incItHTML(x, by); });
+        });
+        if (orden.length > ver.length)
+          h += '<button type="button" class="inc-todas" onclick="incVerTodo()">Ver meses anteriores (' + (orden.length - ver.length) + ')</button>';
+      }
       h += '</div></div></div>';
       _incOvPintar(h);
     }
@@ -16423,6 +16574,23 @@
       return '<button type="button" class="av-card" onclick="avVerMios()">📣 ' + n +
         (n === 1 ? ' aviso nuevo del gestor' : ' avisos nuevos del gestor') + '<span class="inc-banner-chev">›</span></button>';
     }
+    // v0.418 — EN INICIO, LOS AVISOS SE VEN YA ABIERTOS: cada aviso nuevo
+    // del gestor sale entero (qué, dónde, texto) con su «Entendido», sin
+    // tener que tocar nada para leerlo. Al darle a Entendido desaparece.
+    // Si hay más de 3, se ven los 3 más recientes y «Ver todos».
+    function _avInicioHTML() {
+      if (_esGestor) return '';
+      if (!_avCargado) return _avCardHTML();   // pide la carga y repinta Inicio
+      var l = _avPendientes();
+      if (!l.length) return '';
+      var h = '<div class="av-ini"><div class="av-ini-cab">📣 ' + (l.length === 1 ? 'Aviso del gestor' : l.length + ' avisos del gestor') + '</div>';
+      l.slice(0, 3).forEach(function(a){
+        h += '<div class="av-ini-it">' + _avCuerpoHTML(a) +
+          '<div class="inc-it-b"><button type="button" class="inc-b prim" onclick="avEntendido(\'' + a.id + '\', true)">Entendido</button></div></div>';
+      });
+      if (l.length > 3) h += '<button type="button" class="av-ini-mas" onclick="avVerMios()">Ver todos (' + l.length + ') ›</button>';
+      return h + '</div>';
+    }
     function avVerMios() {
       var yo = _avYo(), hoy = hoyLocal();
       var lista = _avCache.filter(function(a){ return _avPara(a, yo) && (!a.fecha || a.fecha >= hoy || !_avLeido(a.id, yo)); }).slice(0, 40);
@@ -16442,13 +16610,13 @@
       _incOvPintar(h);
     }
     function avCerrar() { _avForm = null; var c = document.getElementById('inc-ov'); if (c) c.remove(); }
-    function avEntendido(id) {
+    function avEntendido(id, desdeInicio) {   // v0.418: desde Inicio no abre la ventana
       var yo = _avYo(); if (!yo || !_sb) return;
       if (!_avLeido(id, yo)) _avLeidos.push({ aviso_id:id, user_id:yo, leido_at:new Date().toISOString() });
       _sb.from('avisos_leidos').insert({ aviso_id:id, user_id:yo }).then(function(r){
         if (r.error && !/duplicate|unique/i.test(r.error.message || '')) console.warn('aviso leído', r.error.message);
       });
-      avVerMios();
+      if (!desdeInicio) avVerMios();
       try { homeHoyRender(); } catch (e) {}
       try { if (document.getElementById('pantalla-asistencia').classList.contains('activa')) mostrarAsistencia(); } catch (e) {}
     }
@@ -19278,6 +19446,63 @@
         ? null : { uid: uid, claseId: claseId };
       renderGestorTodosAlumno();
     }
+    // ══ v0.419 — DESHACER EL ÚLTIMO CAMBIO DE CLASE ═════════════════════
+    // Al mover a un alumno se guarda cómo estaba en cada franja tocada (su
+    // entrada de alumno tal cual, o que no estaba). Hasta que acabe el día,
+    // en su ficha sale «↩ Deshacer el cambio a …»: deja esas franjas EXACTAMENTE
+    // como estaban, sin tramos de un día ni periodos partidos. Solo toca a ese
+    // alumno: lo demás de esas franjas (otros alumnos) no se mueve.
+    // Se guarda en este dispositivo (padel-gta-deshacer) y solo el último.
+    var _GTA_DESH_LS = 'padel-gta-deshacer';
+    function _gtaFotoAlumno(uid, claseId, nombre) {
+      var c = ((_gestorData && _gestorData.clases) || []).filter(function(x){ return x.user_id === uid && x.id === claseId; })[0];
+      var arr = (c && c.alumnos) || [], idx = -1;
+      for (var i = 0; i < arr.length; i++) if (alNom(arr[i]) === nombre) { idx = i; break; }
+      return { uid:uid, claseId:claseId, idx:idx, antes: idx >= 0 ? JSON.parse(JSON.stringify(arr[idx])) : null };
+    }
+    function _gtaDeshacerGuardar(f) { try { localStorage.setItem(_GTA_DESH_LS, JSON.stringify(f)); } catch (e) {} }
+    function _gtaDeshacerLeer() {
+      try {
+        var f = JSON.parse(localStorage.getItem(_GTA_DESH_LS) || 'null');
+        return (f && f.fecha === hoyLocal()) ? f : null;   // solo el mismo día
+      } catch (e) { return null; }
+    }
+    // La entrada del alumno vuelve a como estaba (o se quita si no estaba)
+    function _gtaRestaurarAlumnos(arr, nombre, cam) {
+      var out = (arr || []).filter(function(a){ return alNom(a) !== nombre; });
+      if (cam.antes) out.splice(Math.max(0, Math.min(cam.idx, out.length)), 0, JSON.parse(JSON.stringify(cam.antes)));
+      return out;
+    }
+    function _gtaDeshacerHTML() {
+      var f = _gtaDeshacerLeer();
+      if (!f || f.key !== _gtaAlumno) return '';
+      var hh = new Date(f.cuando), hora = ('0' + hh.getHours()).slice(-2) + ':' + ('0' + hh.getMinutes()).slice(-2);
+      return '<div class="gta-desh"><span>🔄 Movido hoy a las ' + hora + ' a <b>' + _gEsc(f.lbl) + '</b></span>' +
+             '<button type="button" class="gta-desh-b" onclick="gtaDeshacerCambio()">↩ Deshacer</button></div>';
+    }
+    function gtaDeshacerCambio() {
+      var f = _gtaDeshacerLeer();
+      if (!f || !_gestorData) return;
+      if (!confirm('¿Deshacer el cambio de clase de "' + f.nombre + '"?\n\nVuelve a estar exactamente como antes de moverlo y sale de:\n' + f.lbl +
+                   '\n\nSi en esa franja ya se pasó lista con él hoy, ese registro se queda.')) return;
+      f.cambios.forEach(function(cam){
+        _gEditUid = (_sbUser && cam.uid === _sbUser.id) ? null : cam.uid;
+        try {
+          var cfg = leerAsistConfig();
+          (cfg.clases || []).forEach(function(c){
+            if (c.id === cam.claseId) c.alumnos = _gtaRestaurarAlumnos(c.alumnos, f.nombre, cam);
+          });
+          escribirAsistConfig(cfg);
+        } finally { _gEditUid = null; }
+        (_gestorData.clases || []).forEach(function(c){
+          if (c.user_id === cam.uid && c.id === cam.claseId) c.alumnos = _gtaRestaurarAlumnos(c.alumnos, f.nombre, cam);
+        });
+      });
+      try { localStorage.removeItem(_GTA_DESH_LS); } catch (e) {}
+      _gtaCache = _gtaIndex();
+      if (typeof planToast === 'function') planToast('↩ Cambio deshecho: ' + f.nombre + ' vuelve a donde estaba');
+      renderGestorTodosAlumno();
+    }
     function gtaMoverA(uidDest, claseIdDest) {
       var al = (_gtaCache && _gtaCache.al[_gtaAlumno]) || {};
       var d  = _gtaDatosDe(al);
@@ -19299,6 +19524,12 @@
           '\n\nLos registros anteriores no se tocan.'
         : 'Se le dará de alta hoy (' + _gFecha(hoy) + ').';
       if (!confirm(msg)) return;
+
+      // v0.419: foto de cómo estaba el alumno en cada franja que se va a
+      // tocar (origen/es y destino), para poder DESHACER el cambio hoy.
+      var _foto = { key:_gtaAlumno, nombre:d.nombre, fecha:hoy, cuando:Date.now(), lbl:lblDest, cambios:[] };
+      act.map(function(a){ return { uid:a.uid, claseId:a.claseId }; }).concat([{ uid:uidDest, claseId:claseIdDest }])
+        .forEach(function(x){ _foto.cambios.push(_gtaFotoAlumno(x.uid, x.claseId, d.nombre)); });
 
       // 1) Baja en las franjas actuales, anotando A DÓNDE se le mueve
       //    (v0.162: así esa franja se pinta distinta y dice su destino)
@@ -19338,6 +19569,7 @@
         if (ya) { _alReactivar(ya, hoy); } else { c.alumnos = (c.alumnos || []).concat([nuevo]); }
       });
 
+      _gtaDeshacerGuardar(_foto);   // v0.419
       _gtaMoverOn = false;
       _gtaDestSel = null; _gtaOrigenSel = null;
       _gtaCache = _gtaIndex();
@@ -19444,7 +19676,7 @@
       // v0.308 — las observaciones se ven SIEMPRE, sin tener que abrir
       // «Editar datos»: es una nota sobre la persona (lesiones, material,
       // con quién juega) y si hay que buscarla no sirve de nada.
-      var fichaHTML = _gtaFichaHTML(al) + _gtaObsHTML(al);
+      var fichaHTML = _gtaDeshacerHTML() + _gtaFichaHTML(al) + _gtaObsHTML(al);   // v0.419: ↩ Deshacer, arriba
       if (!al.sesiones.length) {
         // v0.374: sin clases dadas todavía, pero puede estar YA en una franja
         // (lo normal con un alumno recién metido). Se dice dónde está.
@@ -27382,7 +27614,7 @@
           (pend.ultimo ? ' · desde el ' + parseInt(pend.ultimo.slice(8), 10) : '') + '</span>' +
           '<span class="ct-chev">›</span></div>';
       }
-      cont.innerHTML = _avCardHTML() + h;   // v0.389: avisos del gestor, arriba
+      cont.innerHTML = _avInicioHTML() + h;   // v0.389: avisos del gestor, arriba · v0.418: ya abiertos
     }
     // ── v0.376 — LA SEMANA EN INICIO ──────────────────────────────────
     // Una fila con los días de ESTA semana en que hay clase. Color por día:
