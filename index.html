@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.421.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.422.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,26 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.422.0 — Sin rol confirmado, la app no enseña nada de más (2026-10)
+    (sin migraciones)
+    · EL FALLO (Fran, EN1): al abrir la app tras horas en segundo plano le
+      salían los apartados de nivel 3 vacíos y no le llevaba a Asistencia.
+      Se arreglaba reiniciando el móvil.
+    · LA CAUSA: al despertar, la consulta del rol (grupo_miembros) salía con
+      la sesión caducada o sin red y fallaba. Supabase no lanza el error, lo
+      devuelve en r.error, y _fetchGrupo no lo miraba: lo trataba como «sin
+      rol», y sin rol nivelPermitido() lo dejaba ver TODO, como un EN3. Y
+      el rol no se volvía a pedir hasta recargar la página.
+    · AHORA: mientras el rol no está confirmado por Supabase (_rolConocido),
+      la cuenta ve lo mínimo: solo Inicio y su Perfil, sin barra inferior ni
+      niveles, con un aviso arriba «Conectando con tu cuenta…».
+    · Si la consulta falla, el rol que hubiera NO se toca y se reintenta
+      sola (2 s, 4 s, 8 s, 15 s y luego cada 30 s), y también en cuanto
+      Supabase renueva la sesión (TOKEN_REFRESHED) o se vuelve a la app.
+    · Mientras tanto no se sincroniza nada (ni bajar ni subir): sin saber el
+      grupo, las tablas compartidas se habrían pedido por cuenta y no por
+      grupo, y eso podía dar por borrados datos del grupo en el móvil.
 
   v0.421.0 — Notificaciones del gestor: grandes en Inicio y 🔔 con las anteriores (2026-10)
     (sin migraciones)
@@ -12150,7 +12170,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.421.0';
+    var APP_VERSION = '0.422.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -12183,6 +12203,11 @@
     var _sbGrupoId = null; // grupo_id del usuario para CUALQUIER rol (incl. gestor), para datos compartidos del club
     var _esEN1 = false; // true si la cuenta tiene rol 'en1' (antes 'monitor'; acceso solo a Asistencia)
     var _esGestor  = false; // true si la cuenta tiene rol 'gestor' (panel de asistencia global, solo lectura)
+    // v0.422 — true SOLO cuando Supabase ha contestado de verdad sobre el rol
+    // de la cuenta actual. Mientras sea false (con sesión), la app enseña lo
+    // mínimo: sin rol confirmado no se presupone ninguno.
+    var _rolConocido = false;
+    var _rolReintentoT = null, _rolReintentos = 0;
 
     function _sbConfigurado() {
       return SUPABASE_URL && !SUPABASE_URL.includes('TU-PROYECTO');
@@ -12198,8 +12223,17 @@
       try {
         _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         _sb.auth.onAuthStateChange(function(event, session) {
+          var _uidAntes = _sbUser ? _sbUser.id : null;
           _sbUser = session ? { id: session.user.id, email: session.user.email } : null;
           if (!_sbUser) { _sbGrupo = null; _sbGrupoId = null; _esEN1 = false; _esGestor = false; _planSyncOK = false; _diasSyncOK = false; }
+          // v0.422: otra cuenta (o ninguna) → el rol de la anterior no vale
+          if (!_sbUser || (_uidAntes && _uidAntes !== _sbUser.id)) { _rolConocido = false; _rolReintentos = 0; }
+          if (!_sbUser) { _rolAviso(false); if (_rolReintentoT) { clearTimeout(_rolReintentoT); _rolReintentoT = null; } }
+          // v0.422: sesión renovada y el rol aún sin confirmar → pedirlo ya
+          // (fuera del callback: Supabase no quiere llamadas suyas dentro).
+          if (event === 'TOKEN_REFRESHED' && _sbUser && !_rolConocido) {
+            setTimeout(_rolReintentarYa, 0);
+          }
           if (event === 'SIGNED_IN') {
             _authActualizarBadge();
             _fetchGrupo(_sbUser.id).then(function() {
@@ -12308,6 +12342,13 @@
       return _sb.from('grupo_miembros').select('grupo_id, rol')
         .eq('user_id', uid).maybeSingle()
         .then(function(r) {
+          // v0.422: un error NO es «sin rol». Supabase no lanza: devuelve
+          // r.error. Antes se leía como rol null y la app enseñaba todo.
+          if (r.error) { _rolPendiente(uid, r.error); return; }
+          _rolConocido = true;
+          _rolReintentos = 0;
+          if (_rolReintentoT) { clearTimeout(_rolReintentoT); _rolReintentoT = null; }
+          _rolAviso(false);
           var rol = r.data ? r.data.rol : null;
           _esEN1 = (rol === 'en1');
           _esGestor  = (rol === 'gestor');
@@ -12318,6 +12359,7 @@
                        ? { id: r.data.grupo_id, rol: rol } : null;
           _authActualizarBadge();
           renderBottomNav();   // v0.69: barra según rol (nivel3 lleva Ejercicios)
+          try { updateBottomNav(_pantallaActivaId()); } catch(e){}   // v0.422: enseñarla si estaba oculta
           _cargarGestos();     // v0.197: gesto técnico del vault (solo EN3)
           // El perfil (correo/nombre) se guarda en Supabase para que un gestor
           // pueda identificar a cada entrenador. El gestor no aporta datos.
@@ -12344,7 +12386,63 @@
                      document.getElementById('pantalla-inicio').classList.contains('activa')) {
             actualizarInicio();
           }
-        }).catch(function() { _sbGrupo = null; _esEN1 = false; _esGestor = false; });
+        }).catch(function(e) { _rolPendiente(uid, e); });
+    }
+
+    // ── v0.422: rol sin confirmar ─────────────────────────────
+    // Con sesión pero sin respuesta válida de Supabase sobre el rol.
+    function _rolSinConfirmar() { return !!(_sb && _sbUser && !_rolConocido); }
+
+    // La consulta del rol ha fallado: no se toca el rol que hubiera, se
+    // deja la interfaz en lo mínimo y se reintenta sola.
+    function _rolPendiente(uid, err) {
+      console.warn('No se pudo leer el rol de la cuenta:', err && (err.message || err));
+      if (_rolConocido) return;   // ya se sabía: se conserva tal cual
+      _rolAviso(true);
+      try { renderBottomNav(); updateBottomNav(_pantallaActivaId()); } catch(e){}
+      try {
+        var act = _pantallaActivaId();
+        if (act && act !== 'pantalla-inicio' && act !== 'pantalla-ajustes' && act !== 'pantalla-login') irA('pantalla-inicio');
+        else if (act === 'pantalla-inicio') actualizarInicio();
+      } catch(e){}
+      if (_rolReintentoT) return;
+      var esperas = [2000, 4000, 8000, 15000];
+      var ms = _rolReintentos < esperas.length ? esperas[_rolReintentos] : 30000;
+      _rolReintentos++;
+      _rolReintentoT = setTimeout(function(){ _rolReintentoT = null; _rolIntento(uid); }, ms);
+    }
+    function _rolIntento(uid) {
+      if (!_sbUser || _sbUser.id !== uid || _rolConocido) return;
+      _fetchGrupo(uid).then(function() {
+        if (!_rolConocido) return;
+        _syncDownload().then(function() {
+          var id = _pantallaActivaId();
+          try {
+            if (PANTALLAS_REFRESH[id]) PANTALLAS_REFRESH[id]();
+            else if (id === 'pantalla-asistencia') mostrarAsistencia();
+          } catch(e){}
+        });
+      });
+    }
+    function _rolReintentarYa() {
+      if (!_rolSinConfirmar()) return;
+      if (_rolReintentoT) { clearTimeout(_rolReintentoT); _rolReintentoT = null; }
+      _rolIntento(_sbUser.id);
+    }
+    // Franja fina arriba mientras no se conoce el rol.
+    function _rolAviso(ver) {
+      var el = document.getElementById('rol-aviso');
+      if (!ver) { if (el) el.style.display = 'none'; return; }
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'rol-aviso';
+        el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;padding:8px 16px;' +
+          'text-align:center;font-size:14px;background:var(--ambar);color:var(--texto);' +
+          'border-bottom:1px solid var(--borde);';
+        el.textContent = '⏳ Conectando con tu cuenta… (se reintenta solo)';
+        document.body.appendChild(el);
+      }
+      el.style.display = 'block';
     }
 
     // Guarda en Supabase la ficha del usuario (correo + nombre) para que un
@@ -12416,6 +12514,7 @@
 
     function _syncDownload() {
       if (!_sb || !_sbUser) return Promise.resolve();
+      if (!_rolConocido) return Promise.resolve(); // v0.422: sin rol no se sabe el grupo
       if (_esGestor) return Promise.resolve(); // el gestor no tiene datos propios
       var uid = _sbUser.id;
       // ── Cambio de cuenta en el mismo dispositivo ──
@@ -12675,6 +12774,7 @@
     }
     function _autoResync() {
       if (!_sb || !_sbUser) return;
+      if (!_rolConocido) { _rolReintentarYa(); return; }   // v0.422: primero el rol
       if (document.visibilityState && document.visibilityState !== 'visible') return;
       var ahora = Date.now();
       if (ahora - _lastAutoSync < 60000) return;
@@ -12702,6 +12802,7 @@
 
     function _syncUpload() {
       if (!_sb || !_sbUser) return Promise.resolve();
+      if (!_rolConocido) return Promise.resolve(); // v0.422: sin rol no se sabe el grupo
       var uid = _sbUser.id;
       var gid = _sbGrupo ? _sbGrupo.id : null;
       // Primero los borrados pendientes, luego los upserts
@@ -13356,6 +13457,7 @@
     var NIVELES_EN2 = ['iniciacion','avanzado'];
     var NIVELES_EN1 = [];   // v0.232: el EN1 no entra al entrenamiento, solo Asistencia
     function nivelPermitido(key) {
+      if (_rolSinConfirmar()) return false;   // v0.422: sin rol confirmado, ningún nivel
       if (esEN1Cuenta()) return NIVELES_EN1.indexOf(key) >= 0;
       if (esEN2Cuenta()) return NIVELES_EN2.indexOf(key) >= 0;
       return true;
@@ -27256,7 +27358,7 @@
       var nav = document.getElementById('appnav');
       if (!nav) return;
       var restringido = false;
-      try { restringido = _esGestor || (typeof monitorActivo==='function' && monitorActivo()) || (typeof esEN1Cuenta==='function' && esEN1Cuenta()); } catch(e){}
+      try { restringido = _esGestor || (typeof monitorActivo==='function' && monitorActivo()) || (typeof esEN1Cuenta==='function' && esEN1Cuenta()) || _rolSinConfirmar(); } catch(e){}
       var ocultar = (id === 'pantalla-login') || restringido;
       nav.classList.toggle('oculto', !!ocultar);
       var grupo = null;
@@ -27351,6 +27453,9 @@
         var okGestor = GESTOR_PANTALLAS.indexOf(id) >= 0 ||
                        (_gEditUid && GESTION_ASIST_OK.indexOf(id) >= 0);
         if (!okGestor) { id = 'pantalla-gestor'; }
+      } else if (_rolSinConfirmar() && ['pantalla-inicio','pantalla-ajustes','pantalla-login'].indexOf(id) < 0) {
+        // v0.422: sin rol confirmado, solo Inicio y el perfil
+        id = 'pantalla-inicio';
       } else if (esEN1Cuenta() && EN1_PANTALLAS_OK.indexOf(id) < 0) {
         id = 'pantalla-inicio';
       } else if (monitorActivo() && MONITOR_PANTALLAS_OK.indexOf(id) < 0) {
@@ -27439,7 +27544,7 @@
     function actualizarInicio() {
       var monCuenta = esEN1Cuenta();
       var monLocal  = monitorActivo();
-      var mon = monLocal || monCuenta;
+      var mon = monLocal || monCuenta || _rolSinConfirmar();   // v0.422: sin rol, lo mínimo
       // v0.84: el EN1 ve Asistencia + Entrenamiento (solo Iniciación) +
       // apartado Competición. El monitor LOCAL (PIN) sigue viendo solo
       // Asistencia. Partido y Ajustes ocultos para ambos.
