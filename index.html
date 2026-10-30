@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.425.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.426.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,19 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.426.0 — Gestor › Entrenadores: el mes de cada uno, completo (2026-10)
+    (sin migraciones)
+    · Cada recuadro de entrenador, además de las clases por duración, dice
+      «X de Y clases dadas · %», una barra de colores (dadas · sin pasar
+      lista · sin clase que se recupera / se pierde · la dio un sustituto ·
+      por venir) y cinco cifras: programadas, dadas, sin pasar lista, sin
+      clase y cubrió a otros.
+    · Programadas = las franjas que le tocaban ese mes, sin los días sin
+      clase del club. Las sesiones de recuperación no cuentan como franja.
+    · Debajo, solo si hay: «⚠️ Sin pasar lista» con cada día (tocarlo abre
+      esa lista) y «🚫 Sin clase» con el día y si se recupera o se pierde.
+
 
   v0.425.0 — Pasar lista: Incidencia y Recuperación, lado a lado (2026-10)
     (sin migraciones)
@@ -7236,6 +7249,34 @@
     .gta-arch-chip:active { background:#e5e7eb; }
     /* v0.106: letrero mensual por entrenador (clases dadas por duración) */
     .gent-mes { display:flex; gap:6px; align-items:stretch; flex-shrink:0; margin-left:auto; }
+    /* v0.426 — el mes de cada entrenador: barra, cifras y lo pendiente */
+    .gestor-card.gent-card { flex-wrap:wrap; }
+    .gent-est { flex:1 1 100%; min-width:0; margin-top:4px; }
+    .gent-est-res { font-size:12.5px; color:var(--gris); margin-bottom:8px; }
+    .gent-bar { display:flex; gap:2px; height:10px; border-radius:99px; overflow:hidden; background:#eef0f4; margin-bottom:9px; }
+    .gent-seg.dada, .gent-ley i.dada { background:#22c55e; }
+    .gent-seg.pend, .gent-ley i.pend { background:#f59e0b; }
+    .gent-seg.rec,  .gent-ley i.rec  { background:#a78bfa; }
+    .gent-seg.perd, .gent-ley i.perd { background:#94a3b8; }
+    .gent-seg.sust, .gent-ley i.sust { background:#60a5fa; }
+    .gent-seg.fut,  .gent-ley i.fut  { background:#e2e8f0; }
+    .gent-sts { display:grid; grid-template-columns:repeat(5, 1fr); gap:6px; }
+    .gent-st { border-radius:10px; padding:6px 3px; text-align:center; }
+    .gent-st b { display:block; font-size:18px; font-weight:800; line-height:1.15; }
+    .gent-st span { font-size:10px; font-weight:800; line-height:1.15; display:block; }
+    .gent-st.prog { background:#eef2ff; color:#1e3a8a; }
+    .gent-st.dada { background:var(--ac-dada-sv); color:var(--ac-dada-tx); }
+    .gent-st.pend { background:#fffbeb; color:#b45309; }
+    .gent-st.rec  { background:#f5f3ff; color:#6d28d9; }
+    .gent-st.sust { background:#eff6ff; color:#1d4ed8; }
+    .gent-pend { margin-top:9px; display:flex; flex-wrap:wrap; align-items:center; gap:6px; font-size:12.5px; font-weight:700;
+      color:#92400e; background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:7px 10px; }
+    .gent-pend button { border:1px solid #fde68a; background:#fff; color:#92400e; border-radius:99px; padding:3px 10px;
+      font-family:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+    .gent-sin { margin-top:6px; font-size:12.5px; color:#5b21b6; background:#f5f3ff; border-radius:10px; padding:7px 10px; }
+    .gent-ley { display:flex; flex-wrap:wrap; justify-content:center; gap:4px 12px; font-size:11.5px; color:var(--gris); margin:0 0 0.8rem; }
+    .gent-ley i { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:4px; vertical-align:-1px; }
+    @media (max-width:420px) { .gent-st span { font-size:9px; } .gent-st b { font-size:16px; } }
     .gent-dur { display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:10px; padding:4px 9px; min-width:50px; }
     .gent-dur b { font-size:21px; font-weight:800; line-height:1.05; }
     .gent-dur span { font-size:10px; font-weight:800; letter-spacing:0.03em; opacity:0.8; }
@@ -12208,7 +12249,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.425.0';
+    var APP_VERSION = '0.426.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -15237,6 +15278,82 @@
       out.sort(function(a,b){ return a.nombre.localeCompare(b.nombre); });
       return out;
     }
+    // ══ v0.426 — EL MES DE CADA ENTRENADOR, DÍA A DÍA ══════════════════
+    // Para cada franja suya del curso, cada día que le tocaba ese mes (sin
+    // los días sin clase del club) queda en UNO de estos estados:
+    //   dada   → lista pasada por él        · sust → la dio un sustituto
+    //   rec    → sin clase, se recupera     · perd → sin clase, se pierde
+    //   pend   → ya pasó y no hay lista     · fut  → todavía no ha llegado
+    // Las sesiones de recuperación (recupClase) no son franjas programadas:
+    // no entran aquí.
+    function _gEntEstadoMes(uid, mesISO) {
+      var d = _gestorAgrupar()[uid];
+      if (!d) return null;
+      var hoy = hoyLocal(), cursoMes = cursoDeFecha(mesISO);
+      var clases = _gestorClasesLocal(d).filter(function(c){ return _claseCurso(c) === cursoMes && c.diaSemana >= 0; });
+      var regs = _gestorRegsLocal(d).filter(function(r){ return r.fecha && r.fecha.slice(0, 7) === mesISO && !r.recupClase; });
+      var o = { prog:0, dada:0, sust:0, rec:0, perd:0, pend:0, fut:0, pendL:[], sinL:[] };
+      clases.forEach(function(c){
+        fechasClaseEnMes(c, mesISO).forEach(function(f){
+          if (!_claseEnFecha(c, f) || _dscEsSinClase(f)) return;
+          o.prog++;
+          var r = regs.filter(function(x){ return x.claseId === c.id && x.fecha === f; })[0] || null;
+          var it = { f:f, uid:uid, claseId:c.id, franja:c.franja || '' };
+          if (r && r.sinClase) {
+            if (r.sinClaseRecup) o.rec++; else o.perd++;
+            it.rec = !!r.sinClaseRecup; o.sinL.push(it);
+          } else if (r && _regPasada(r)) {
+            if (r.impartidaPor && r.impartidaPor.uid !== uid) o.sust++; else o.dada++;
+          } else if (f < hoy) {
+            o.pend++; o.pendL.push(it);
+          } else {
+            o.fut++;
+          }
+        });
+      });
+      var ord = function(a, b){ return a.f.localeCompare(b.f) || a.franja.localeCompare(b.franja); };
+      o.pendL.sort(ord); o.sinL.sort(ord);
+      o.hastaHoy = o.prog - o.fut;
+      return o;
+    }
+    function _gEntFechaTxt(it) {
+      return _diaSemanaNombre(it.f).toLowerCase() + ' ' + parseInt(it.f.slice(8), 10) + (it.franja ? ' · ' + it.franja : '');
+    }
+    function gentAbrirLista(uid, cid, f) { gestorEditarListaU(uid, cid, f, 'pantalla-gestor-entrenadores'); }
+    function _gEntEstadoHTML(f, e) {
+      if (!e || !e.prog) return '';
+      var base = e.hastaHoy, pct = base ? Math.round(e.dada / base * 100) : 100;
+      var col = pct >= 95 ? 'var(--ac-dada-tx)' : (pct >= 85 ? 'var(--ac-hoy-tx)' : '#b91c1c');
+      var seg = function(n, cls, t){ return n ? '<span class="gent-seg ' + cls + '" style="flex:' + n + '" title="' + t + ': ' + n + '"></span>' : ''; };
+      var st = function(n, l, cls){ return '<div class="gent-st ' + cls + '"><b>' + n + '</b><span>' + l + '</span></div>'; };
+      var h = '<div class="gent-est">';
+      h += '<div class="gent-est-res">' + e.dada + ' de ' + base + ' clase' + (base !== 1 ? 's' : '') + ' dada' + (base !== 1 ? 's' : '') +
+           (base ? ' · <b style="color:' + col + '">' + pct + '%</b>' : '') +
+           ' · ' + _gEntHorasTxt(f.horas) + (e.fut ? ' · quedan ' + e.fut : '') + '</div>';
+      h += '<div class="gent-bar">' + seg(e.dada, 'dada', 'Dadas') + seg(e.pend, 'pend', 'Sin pasar lista') +
+           seg(e.rec, 'rec', 'Sin clase · se recupera') + seg(e.perd, 'perd', 'Sin clase · se pierde') +
+           seg(e.sust, 'sust', 'La dio un sustituto') + seg(e.fut, 'fut', 'Por venir') + '</div>';
+      h += '<div class="gent-sts">' + st(e.prog, 'programadas', 'prog') + st(e.dada, 'dadas', 'dada') +
+           st(e.pend, 'sin pasar lista', 'pend') + st(e.rec + e.perd, 'sin clase', 'rec') +
+           st(f.sust ? '+' + f.sust : 0, 'cubrió a otros', 'sust') + '</div>';
+      if (e.pendL.length) {
+        h += '<div class="gent-pend">⚠️ Sin pasar lista:' + e.pendL.map(function(it){
+          return '<button type="button" onclick="gentAbrirLista(\'' + it.uid + '\',' + it.claseId + ',\'' + it.f + '\')">' + _gEsc(_gEntFechaTxt(it)) + '</button>';
+        }).join('') + '</div>';
+      }
+      if (e.sinL.length) {
+        h += '<div class="gent-sin">🚫 Sin clase: ' + e.sinL.map(function(it){
+          return _gEsc(_gEntFechaTxt(it)) + ' → ' + (it.rec ? 'se recupera' : 'se pierde');
+        }).join(' · ') + (e.sust ? ' · 🔁 ' + e.sust + ' la dio un sustituto' : '') + '</div>';
+      } else if (e.sust) {
+        h += '<div class="gent-sin">🔁 ' + e.sust + (e.sust === 1 ? ' clase la dio un sustituto' : ' clases las dio un sustituto') + '</div>';
+      }
+      return h + '</div>';
+    }
+    function _gEntHorasTxt(hs) {
+      var m = Math.round((hs || 0) * 60), hh = Math.floor(m / 60), mm = m % 60;
+      return hh + 'h' + (mm ? ' ' + mm : '');
+    }
     function _gEntResumenHTML() {
       if (!_gestorData) { return '<p class="ajustes-desc">Sin datos. Vuelve al panel para cargarlos.</p>'; }
 
@@ -15252,12 +15369,17 @@
         '<span class="gestor-mes-lbl">' + _gEsc(mesLabel) + '</span>' +
         '<button class="gestor-mes-btn" onclick="gentMesNav(1)">›</button>' +
       '</div>';
-      h += '<p class="ajustes-desc" style="text-align:center;margin:-2px 0 0.6rem;">Clases dadas por cada entrenador ese mes (incluye las que cubrió como sustituto).</p>';
+      h += '<p class="ajustes-desc" style="text-align:center;margin:-2px 0 0.6rem;">Clases dadas por cada entrenador ese mes (incluye las que cubrió como sustituto). «Programadas» = las franjas que le tocaban, sin los días sin clase del club.</p>';
+      // v0.426: leyenda de la barra
+      h += '<div class="gent-ley"><span><i class="dada"></i>dadas</span><span><i class="pend"></i>sin pasar lista</span>' +
+           '<span><i class="rec"></i>sin clase · se recupera</span><span><i class="perd"></i>sin clase · se pierde</span>' +
+           '<span><i class="sust"></i>la dio un sustituto</span><span><i class="fut"></i>por venir</span></div>';
       // v0.170: una sola fuente (_gEntDatosMes) para la pantalla y el
       // export, e incluye a los EXTERNOS que han cubierto clases.
       var filasEnt = _gEntDatosMes(mesISO);
       filasEnt.forEach(function(f){
-        h += '<div class="gestor-card plana">' +
+        var _est = f.uid ? _gEntEstadoMes(f.uid, mesISO) : null;   // v0.426
+        h += '<div class="gestor-card plana gent-card">' +
           '<div class="gestor-card-ava"' + (f.ext ? ' style="background:#fef3c7;color:var(--ac-hoy-tx);"' : '') + '>' +
             (f.ext ? '🔁' : _gEsc(f.nombre.charAt(0).toUpperCase())) + '</div>' +
           '<div class="gestor-card-body">' +
@@ -15273,6 +15395,7 @@
             '<div class="gent-dur h15"><b>' + f.m90 + '</b><span>1h 30</span></div>' +
             (f.otras ? '<div class="gent-dur ot"><b>' + f.otras + '</b><span>otras</span></div>' : '') +
           '</div>' +
+          _gEntEstadoHTML(f, _est) +   // v0.426: programadas, dadas, sin pasar lista, sin clase…
         '</div>';
       });
       if (!filasEnt.length) h += '<p class="ajustes-desc" style="text-align:center;padding:1rem 0;">Aún no hay entrenadores con datos.</p>';
