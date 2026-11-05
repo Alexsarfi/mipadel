@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.427.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.428.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,14 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.428.0 — Pasar lista: «Sin clase» ya se ve entero (2026-11)
+    (sin migraciones)
+    · Abajo del todo de Pasar lista, el botón «🚫 Sin clase» quedaba medio
+      tapado por la barra de navegación en el iPhone: la barra crece con la
+      zona de la raya de inicio y el margen de abajo no lo tenía en cuenta.
+      Ahora todas las pantallas suman ese espacio, y Pasar lista un poco más.
+
 
   v0.427.0 — Gestor: cambiar el horario de una franja desde una fecha (2026-11)
     (sin migraciones)
@@ -12166,6 +12174,12 @@
     .appnav-btn.centro{ color:rgba(255,255,255,0.85); }
     /* hueco para que la barra no tape el contenido */
     .pantalla .contenido{ padding-bottom:88px; }
+    /* v0.428: en el iPhone la barra de abajo crece con la zona de la raya de
+       inicio (safe-area), así que tapaba lo último de cada pantalla. Se suma
+       esa zona; y en Pasar lista, un margen más para que «Sin clase» se vea
+       entero al subir. */
+    .pantalla .contenido{ padding-bottom:calc(88px + env(safe-area-inset-bottom)); }
+    #pantalla-asistencia-lista .contenido{ padding-bottom:calc(140px + env(safe-area-inset-bottom)); }
     .pantalla .pie{ padding-bottom:84px; }
   </style>
   <!-- ══ PULIDO PRO (rediseño, pase 2) ══════════ -->
@@ -12275,7 +12289,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.427.0';
+    var APP_VERSION = '0.428.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
