@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.426.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.427.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,24 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.427.0 — Gestor: cambiar el horario de una franja desde una fecha (2026-11)
+    (sin migraciones)
+    · En el panel, «−» de un entrenador en un día → elegir la franja → nueva
+      opción «🕒 Cambiar el horario desde una fecha (conserva historial)».
+      Se escribe la hora nueva y desde qué día vale.
+    · La franja de antes se cierra el día anterior y su historial queda TAL
+      CUAL (p. ej. octubre sigue contando como 1h30). Se crea una nueva con
+      la hora nueva desde esa fecha, con los mismos alumnos (su ficha, así
+      su historial sigue siendo uno), el mismo nombre, nivel y grupo de
+      WhatsApp. Lo ya apuntado desde esa fecha (recuperaciones previstas,
+      «sin clase») pasa a la nueva.
+    · Casilla «Hacer lo mismo en las N franjas del viernes a las …»: cambia
+      de una vez todas las franjas de ese día y esa hora, de todos los
+      entrenadores.
+    · Antes, cambiar la hora de una franja sin más rehacía todo su
+      historial con la duración nueva.
+
 
   v0.426.0 — Gestor › Entrenadores: el mes de cada uno, completo (2026-10)
     (sin migraciones)
@@ -7646,6 +7664,14 @@
     .gp-del-opcion.fin { border:1.5px solid #bbf7d0; background:var(--ac-dada-sv); color:var(--ac-dada-tx); }
     .gp-del-opcion.borrar { border:1.5px solid #fecaca; background:#fee2e2; color:#b91c1c; }
     .gp-del-opcion.cancel { border:1.5px solid var(--borde); background:#fff; color:var(--gris); }
+    /* v0.427 — cambiar el horario desde una fecha */
+    .gp-del-opcion.horario { border:1.5px solid #bfdbfe; background:#eff6ff; color:#1d4ed8; }
+    .gp-hor-lbl { display:block; font-size:12px; font-weight:800; color:var(--gris); margin:0 0 9px; }
+    .gp-hor-lbl input { display:block; width:100%; box-sizing:border-box; margin-top:4px; }
+    .gp-hor-todas { display:flex; align-items:flex-start; gap:8px; font-size:13px; color:var(--texto); margin:2px 0 12px;
+      padding:9px 10px; border-radius:10px; background:var(--arena); }
+    .gp-hor-todas input { margin-top:2px; }
+    .gp-hor-todas small { color:var(--gris); }
     @keyframes gpSheetUp { from { transform:translateY(40px); opacity:.5; } to { transform:translateY(0); opacity:1; } }
     .alquitar-panel { background:var(--arena); border:1.5px solid var(--borde); border-radius:10px; padding:0.7rem 0.75rem; margin-top:8px; }
     /* Botón pequeño en la cabecera (⚙ Clases, v0.65) */
@@ -12249,7 +12275,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.426.0';
+    var APP_VERSION = '0.427.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -15925,8 +15951,8 @@
       if (!clases.length) { alert('Este entrenador no tiene franjas ese día.'); return; }
       _gDelCtx = { uid: uid, dia: dia, cid: null };
       var ent = _gestorNombre(d).split(' ')[0];
-      var h = '<p class="gp-del-titulo">− Quitar franja · ' + _gEsc(ent) + ' · ' + _gEsc(_GDIASL[dia]) + '</p>' +
-        '<p class="gp-del-sub">Elige la franja que quieres quitar.</p>';
+      var h = '<p class="gp-del-titulo">− Quitar o cambiar franja · ' + _gEsc(ent) + ' · ' + _gEsc(_GDIASL[dia]) + '</p>' +
+        '<p class="gp-del-sub">Elige la franja que quieres quitar o cambiar de horario.</p>';
       clases.forEach(function(c){
         var na = (c.alumnos||[]).filter(function(a){ return alNom(a); }).length;
         h += '<button type="button" class="gp-del-item" onclick="gpDelElegir(' + c.id + ')">🕐 ' + _gEsc(c.franja||'—') +
@@ -15946,6 +15972,7 @@
       var c = d ? _gestorClasesLocal(d).filter(function(x){ return x.id === cid; })[0] : null;
       var h = '<p class="gp-del-titulo">¿Por qué se quita la franja ' + _gEsc(c ? (c.franja||'—') : '') + '?</p>' +
         '<p class="gp-del-sub">Con "finalización" la clase deja de aparecer desde hoy pero CONSERVA todo su historial de asistencia. Con "otra causa" se borra la clase y todos sus registros.</p>' +
+        '<button type="button" class="gp-del-opcion horario" onclick="gpHorarioAbrir()">🕒 Cambiar el horario desde una fecha (conserva historial)</button>' +   // v0.427
         '<button type="button" class="gp-del-opcion fin" onclick="gpDelFinalizar()">🏁 Finalización de la clase (conserva historial)</button>' +
         '<button type="button" class="gp-del-opcion borrar" onclick="gpDelBorrar()">🗑 Otra causa (borrar clase y registros)</button>' +
         '<button type="button" class="gp-del-opcion cancel" onclick="gpDelCerrar()">Cancelar</button>';
@@ -15959,6 +15986,118 @@
     function _gpDelEntrar(uid) {
       _gestorUid = uid;
       _gEditUid  = (_sbUser && uid === _sbUser.id) ? null : uid;
+    }
+    // ══ v0.427 — CAMBIAR EL HORARIO DE UNA FRANJA DESDE UNA FECHA ════════
+    // La duración de una clase se calcula de la hora que tiene la franja
+    // AHORA, así que editar «19:00-20:30» → «19:00-20:00» rehacía todo el
+    // historial como de 1 h. Esto, en cambio: la franja vieja se FINALIZA el
+    // día antes (conserva su historial tal cual) y se crea una NUEVA con la
+    // hora nueva desde esa fecha, con los mismos alumnos (su ficha, así su
+    // historial sigue siendo el mismo), nombre, nivel y grupo de WhatsApp.
+    // Lo ya apuntado desde esa fecha en la vieja (recuperaciones previstas,
+    // «sin clase») pasa a la nueva. Opción de hacerlo en TODAS las franjas
+    // de ese día con la misma hora, de todos los entrenadores.
+    function _gpProxFechaDia(dia) {
+      var f = hoyLocal();
+      for (var i = 0; i < 7; i++) {
+        var d = new Date(+f.slice(0, 4), +f.slice(5, 7) - 1, +f.slice(8, 10));
+        if (d.getDay() === dia) return f;
+        f = addDiasISO(f, 1);
+      }
+      return hoyLocal();
+    }
+    function _gpNormFranja(s) { return String(s || '').replace(/\s+/g, '').toLowerCase(); }
+    // Las franjas iguales (mismo día y misma hora), vivas, de este curso
+    function _gpFranjasIguales(dia, franja) {
+      var by = _gestorAgrupar(), hoy = hoyLocal(), cur = cursoDeFecha(hoy), out = [];
+      Object.keys(by).forEach(function(u){
+        _gestorClasesLocal(by[u]).forEach(function(c){
+          if (_claseCurso(c) === cur && c.diaSemana === dia && !(c.fin && c.fin < hoy) &&
+              _gpNormFranja(c.franja) === _gpNormFranja(franja)) out.push({ uid:u, cid:c.id, ent:_gestorNombre(by[u]) });
+        });
+      });
+      return out;
+    }
+    function gpHorarioAbrir() {
+      if (!_gDelCtx || !_gDelCtx.cid) return;
+      var by = _gestorAgrupar(), d = by[_gDelCtx.uid];
+      var c = d ? _gestorClasesLocal(d).filter(function(x){ return x.id === _gDelCtx.cid; })[0] : null;
+      if (!c) return;
+      var iguales = _gpFranjasIguales(c.diaSemana, c.franja);
+      var h = '<p class="gp-del-titulo">🕒 Cambiar el horario · ' + _gEsc(_GDIASL[c.diaSemana]) + ' ' + _gEsc(c.franja || '') + '</p>' +
+        '<p class="gp-del-sub">La franja actual se cierra el día antes y su historial no cambia. Desde la fecha elegida, una franja nueva con la hora nueva y los mismos alumnos.</p>' +
+        '<label class="gp-hor-lbl">Nuevo horario<input id="gp-hor-franja" class="form-input" type="text" value="' + _gEsc(c.franja || '') + '" placeholder="19:00-20:00"></label>' +
+        '<label class="gp-hor-lbl">Desde el día<input id="gp-hor-desde" class="form-input" type="date" value="' + _gpProxFechaDia(c.diaSemana) + '"></label>';
+      if (iguales.length > 1) {
+        h += '<label class="gp-hor-todas"><input id="gp-hor-todas" type="checkbox"> Hacer lo mismo en las <b>' + iguales.length +
+             '</b> franjas del ' + _gEsc(_GDIASL[c.diaSemana].toLowerCase()) + ' a las ' + _gEsc(c.franja || '') +
+             ' <small>(' + _gEsc(iguales.map(function(x){ return x.ent.split(' ')[0]; }).join(', ')) + ')</small></label>';
+      }
+      h += '<button type="button" class="gp-del-opcion horario" onclick="gpHorarioAplicar()">🕒 Cambiar horario</button>' +
+           '<button type="button" class="gp-del-opcion cancel" onclick="gpDelElegir(' + c.id + ')">Volver</button>';
+      document.getElementById('gp-del-sheet').innerHTML = h;
+    }
+    // Cambia UNA franja. Devuelve el id de la nueva (o null).
+    function _gpCambiarHorario(uid, cid, franjaNueva, desde) {
+      var ayer = addDiasISO(desde, -1), nuevoId = null;
+      _gpDelEntrar(uid);
+      try {
+        var cfg = leerAsistConfig();
+        var c = (cfg.clases || []).filter(function(x){ return x.id === cid; })[0];
+        if (!c || (c.inicio && c.inicio >= desde)) return null;
+        nuevoId = (cfg.clases || []).reduce(function(m, x){ return Math.max(m, x.id || 0); }, 0) + 1;
+        var als = (c.alumnos || []).filter(function(a){ return alNom(a) && alActivo(a, desde); }).map(function(a){
+          var o = (typeof a === 'object') ? JSON.parse(JSON.stringify(a)) : { id:_alIdPersona(a, ''), nombre:a };
+          delete o.hist; delete o.movidoA;
+          o.alta = desde;
+          if (o.baja && o.baja < desde) delete o.baja;
+          return o;
+        });
+        cfg.clases.push({ id:nuevoId, diaSemana:c.diaSemana, franja:franjaNueva, nombre:c.nombre || '', alumnos:als,
+                          curso:_claseCurso(c), inicio:desde, nivel:c.nivel || '', fin:c.fin || '', finMotivo:c.finMotivo || '' });
+        c.fin = ayer; c.finMotivo = 'finalizacion';
+        escribirAsistConfig(cfg);
+        // Lo apuntado desde esa fecha en la franja vieja pasa a la nueva
+        var regs = leerAsistRegistros(), mov = [];
+        regs.forEach(function(r){ if (r.claseId === cid && r.fecha >= desde) { r.claseId = nuevoId; mov.push(r); } });
+        if (mov.length) escribirAsistRegistros(regs, false, mov);
+      } finally { _gEditUid = null; }
+      // El grupo de WhatsApp de la franja, también a la nueva
+      try {
+        var m = _waGrMapa(), en = m[uid + '|' + cid];
+        if (en) {
+          m[uid + '|' + nuevoId] = en; _waGrGuardaLocal();
+          if (_sb && _sbUser) _sb.from('whatsapp_grupos').upsert({ scope_id:_dscScope(), entrenador_uid:uid, clase_id:nuevoId, enlace:en,
+            updated_at:new Date().toISOString() }, { onConflict:'entrenador_uid,clase_id' }).then(function(){});
+        }
+      } catch (e) {}
+      return nuevoId;
+    }
+    function gpHorarioAplicar() {
+      if (!_gDelCtx || !_gDelCtx.cid) return;
+      var fr = ((document.getElementById('gp-hor-franja') || {}).value || '').trim();
+      var desde = (document.getElementById('gp-hor-desde') || {}).value || '';
+      var todas = !!((document.getElementById('gp-hor-todas') || {}).checked);
+      var by = _gestorAgrupar(), d = by[_gDelCtx.uid];
+      var c = d ? _gestorClasesLocal(d).filter(function(x){ return x.id === _gDelCtx.cid; })[0] : null;
+      if (!c) return;
+      if (!fr) { alert('Escribe el nuevo horario (por ejemplo 19:00-20:00).'); return; }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(desde)) { alert('Elige desde qué día vale el nuevo horario.'); return; }
+      if (_gpNormFranja(fr) === _gpNormFranja(c.franja)) { alert('El horario nuevo es igual al actual.'); return; }
+      var dw = new Date(+desde.slice(0, 4), +desde.slice(5, 7) - 1, +desde.slice(8, 10)).getDay();
+      if (dw !== c.diaSemana && !confirm('Ese día no es ' + _GDIASL[c.diaSemana].toLowerCase() + '. ¿Seguir igualmente?')) return;
+      var lista = todas ? _gpFranjasIguales(c.diaSemana, c.franja) : [{ uid:_gDelCtx.uid, cid:c.id, ent:_gestorNombre(d) }];
+      if (!confirm('¿Cambiar ' + (lista.length === 1 ? 'la franja' : 'las ' + lista.length + ' franjas') + ' del ' + _GDIASL[c.diaSemana].toLowerCase() +
+                   ' ' + (c.franja || '') + ' a ' + fr + ' desde el ' + formatFechaCorta(desde) + '?\n\n' +
+                   'Hasta el ' + formatFechaCorta(addDiasISO(desde, -1)) + ' se conserva todo tal cual (con su duración de antes).')) return;
+      var hechas = 0, fallos = [];
+      lista.forEach(function(x){
+        if (_gpCambiarHorario(x.uid, x.cid, fr, desde)) hechas++; else fallos.push(x.ent);
+      });
+      gpDelCerrar();
+      renderGestor();
+      planToast('🕒 ' + hechas + (hechas === 1 ? ' franja cambiada' : ' franjas cambiadas') + ' a ' + fr + ' desde el ' + formatFechaCorta(desde));
+      if (fallos.length) alert('No se pudo cambiar (la franja empieza ese día o después): ' + fallos.join(', '));
     }
     function gpDelFinalizar() {
       if (!_gDelCtx || !_gDelCtx.cid) return;
