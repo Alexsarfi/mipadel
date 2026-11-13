@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.430.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.431.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,21 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.431.0 — Las bajas que no quitaban al alumno de la lista (2026-11)
+    (sin migraciones)
+    · EL FALLO (caso Antonio Molina, Paulano martes 18:30): un alumno que se
+      había vuelto a dar de alta en una franja guardaba su periodo anterior
+      con la baja de fin de curso, es decir, todavía «abierto». Al darle de
+      baja después, ese periodo viejo le seguía contando como activo y
+      seguía saliendo en la lista del entrenador.
+    · AHORA: los periodos anteriores acaban, como tarde, el día antes del
+      periodo actual (se aplica solo, también a los datos que ya están mal,
+      sin tocar Supabase), y al volver a dar de alta el periodo viejo se
+      cierra el día anterior.
+    · El aviso de «Dar de baja» dice ya lo que hace de verdad: la fecha
+      elegida es su ÚLTIMO día en la franja; desde el día siguiente no sale.
+
 
   v0.430.0 — Gestor: cambiar de pestaña ya no te devuelve al Panel (2026-11)
     (sin migraciones)
@@ -12317,7 +12332,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.430.0';
+    var APP_VERSION = '0.431.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -18574,7 +18589,7 @@
       if (!alu || !_gestorData) return;
       var hoy = fecha || hoyLocal();
       if (!/^\d{4}-\d{2}-\d{2}$/.test(hoy)) { alert('Elige una fecha de baja válida.'); return; }
-      if (!confirm('¿Dar de baja a "' + alu + '" en esta franja el ' + _gFecha(hoy) + '?\n\nSe marca su fin de clases ese día y deja de aparecer desde esa fecha. Los meses y registros ANTERIORES no se tocan.')) return;
+      if (!confirm('¿Dar de baja a "' + alu + '" en esta franja el ' + _gFecha(hoy) + '?\n\nEse día será su ÚLTIMO día en esta franja (aún sale en la lista de ese día); desde el día siguiente ya no aparece. Los meses y registros ANTERIORES no se tocan.')) return;
       _gEditUid = (_sbUser && uid === _sbUser.id) ? null : uid;
       try {
         var cfg = leerAsistConfig();
@@ -32749,6 +32764,12 @@
         return true;
       }
       if (dentro(alAlta(a), alBaja(a))) return true;
+      // v0.431: los periodos ANTERIORES (hist) acaban, como tarde, el día antes
+      // del periodo actual. Al volver a dar de alta a un alumno el periodo
+      // viejo se guardaba con su baja de fin de curso (aún «abierto») y lo
+      // seguía dando por activo: una baja posterior no lo quitaba de la lista.
+      var altaAct = alAlta(a);
+      if (altaAct && fecha >= altaAct) return false;
       var hs = alHist(a);
       for (var i = 0; i < hs.length; i++) {
         if (dentro(hs[i].alta || '', hs[i].baja || '')) return true;
@@ -35166,7 +35187,11 @@
     // reincorporación NO cuenta como faltas (alActivo mira los periodos).
     function _alReactivar(a, fecha) {
       a.hist = alHist(a).slice();
-      a.hist.push({ alta: alAlta(a) || '', baja: alBaja(a) || '' });
+      // v0.431: el periodo que se cierra acaba el día ANTES de volver (si no,
+      // quedaba abierto hasta fin de curso y el alumno no salía nunca)
+      var _bajaAnt = alBaja(a) || '';
+      if (!_bajaAnt || _bajaAnt >= fecha) _bajaAnt = addDiasISO(fecha, -1);
+      a.hist.push({ alta: alAlta(a) || '', baja: _bajaAnt });
       a.alta = fecha;
       // v0.135: el periodo nuevo también acaba, por defecto, al fin de curso.
       a.baja = finCursoDeAlta(fecha);
