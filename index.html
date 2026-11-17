@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.435.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.436.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,16 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.436.0 — 🎬 Vídeos: apartado «Mis ejercicios» (2026-11)
+    (sin migraciones)
+    · Arriba de Vídeos, dos apartados: «De redes» (el repositorio de enlaces
+      de siempre) y «Mis ejercicios»: los ejercicios del vault que tienen
+      vídeo, con la misma interfaz (pestañas por golpe, una línea ▶ por
+      ejercicio). Al tocar uno se abre su ficha con el vídeo y la
+      explicación. No se copia nada: salen de los ejercicios de siempre.
+    · La app recuerda en qué apartado estabas.
+
 
   v0.435.0 — Vídeos y Técnica: una línea por vídeo y visor encajado (2026-11)
     (sin migraciones)
@@ -8739,6 +8749,13 @@
       border-radius:999px; border:1px solid rgba(201,149,79,.7); background:rgba(255,255,255,.06); color:#e8c48e;
       font-family:inherit; font-size:12px; font-weight:800; letter-spacing:.04em; cursor:pointer; }
     .cabecera > .vid-cab-add:active { transform:scale(.97); }
+    /* v0.436 — De redes | Mis ejercicios */
+    .vid-secs { display:flex; gap:4px; padding:4px; margin:0 0 10px; border-radius:12px; background:#151517; border:1px solid #2c2c30; }
+    .vid-sec { flex:1; border:none; background:none; border-radius:9px; padding:8px 6px; font-family:inherit; font-size:13px;
+      font-weight:800; color:#8a8478; cursor:pointer; }
+    .vid-sec b { margin-left:6px; font-size:11px; padding:1px 7px; border-radius:99px; background:#2c2c30; color:#d9d2c4; }
+    .vid-sec.on { background:#f4efe6; color:#111; }
+    .vid-sec.on b { background:#111; color:#f4efe6; }
     /* v0.435 — una línea por vídeo, y visor encajado en el móvil */
     .vp-lista { display:flex; flex-direction:column; gap:7px; margin-top:12px; }
     .vp-fila { display:flex; align-items:center; gap:12px; width:100%; text-align:left; padding:10px 12px 10px 10px;
@@ -12493,7 +12510,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.435.0';
+    var APP_VERSION = '0.436.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -27988,11 +28005,49 @@
       if (!l.length) return '<div class="plan-bl-vacio">' + (_vidLocal().length ? 'Ningún vídeo de este golpe.' : 'Todavía no hay vídeos. Toca «＋ Añadir» arriba y pega el enlace de Instagram.') + '</div>';
       return l.map(_vidCardHTML).join('');
     }
+    // ══ v0.436 — «MIS EJERCICIOS» dentro de Vídeos ═════════════════════
+    // Segundo apartado: los ejercicios del vault QUE TIENEN VÍDEO, con la
+    // misma interfaz (pestañas por golpe, una línea ▶ por ejercicio). No se
+    // copia nada: salen de los ejercicios de siempre, y al tocar uno se abre
+    // su ficha (recEjAbrir), con el vídeo y la explicación.
+    var _vidSec = 'redes', _vidGolpeMios = null;
+    try { _vidSec = localStorage.getItem('padel-vid-sec') === 'mios' ? 'mios' : 'redes'; } catch (e) {}
+    function vidSeccion(s) { _vidSec = s === 'mios' ? 'mios' : 'redes'; try { localStorage.setItem('padel-vid-sec', _vidSec); } catch (e) {} mostrarVideos(true); }
+    function vidGolpeMios(k) { _vidGolpeMios = k; mostrarVideos(true); }
+    var MIS_COLOR = { fondo:'#1c8f6a', pared:'#d0821a', globo:'#0f8a8a', bajada:'#3b6b9e', bandeja:'#c2417a', vibora:'#7a4fc9',
+      remate:'#b8432a', rulo:'#8a4f9e', volea:'#2f6fb5', chiquita:'#5f8a3a', dejada:'#6b9e7a', saque:'#a3751f', mixto:'#6b7a2f', '':'#5f5e5a' };
+    function _misEjercicios() {
+      try { return leerEjercicios().filter(_ejConVideo); } catch (e) { return []; }
+    }
+    function _vidMiosHTML() {
+      var ejs = _misEjercicios(), por = {};
+      ejs.forEach(function(ej){ var g = ejGolpe(ej) || ''; (por[g] = por[g] || []).push(ej); });
+      var keys = GOLPE_ORDEN_EJ.filter(function(k){ return por[k]; }).concat(por[''] ? [''] : []);
+      if (!keys.length) return '<div class="plan-bl-vacio">Ningún ejercicio tiene vídeo todavía.</div>';
+      if (keys.indexOf(_vidGolpeMios) < 0) _vidGolpeMios = keys[0];
+      var h = '<div class="rec-zt">' + keys.map(function(k){
+        return '<button type="button" class="rec-zt-t' + (_vidGolpeMios === k ? ' on' : '') + '" onclick="vidGolpeMios(\'' + k + '\')">' +
+          (k ? (GOLPE_LABEL[k] || k) : 'Sin golpe') + '<span>' + por[k].length + '</span></button>';
+      }).join('') + '</div><div class="vp-lista">';
+      por[_vidGolpeMios].slice().sort(function(a, b){ return String(a.nombre).localeCompare(String(b.nombre), 'es'); }).forEach(function(ej){
+        h += _vpFilaHTML(MIS_COLOR[_vidGolpeMios] || MIS_COLOR[''], ej.nombre || 'Ejercicio', 'recEjAbrir(' + ej.id + ')');
+      });
+      return h + '</div>';
+    }
     function mostrarVideos(sinRecargar) {
       var cont = document.getElementById('vid-contenido');
       if (!cont) return;
       if (!_vidPermitido()) { cont.innerHTML = '<div class="plan-bl-vacio">Esta sección es solo para entrenadores de nivel 3.</div>'; return; }
       if (!sinRecargar) _vidCargar(function(){ mostrarVideos(true); });
+      var _nMios = _misEjercicios().length;
+      var _seg = '<div class="vid-secs"><button type="button" class="vid-sec' + (_vidSec === 'redes' ? ' on' : '') + '" onclick="vidSeccion(\'redes\')">De redes<b>' + _vidLocal().length + '</b></button>' +
+        '<button type="button" class="vid-sec' + (_vidSec === 'mios' ? ' on' : '') + '" onclick="vidSeccion(\'mios\')">Mis ejercicios<b>' + _nMios + '</b></button></div>';
+      if (_vidSec === 'mios') {
+        var _sub = document.getElementById('vid-sub');
+        if (_sub) _sub.textContent = _nMios + (_nMios === 1 ? ' ejercicio con vídeo' : ' ejercicios con vídeo') + ' · por golpe';
+        cont.innerHTML = _seg + _vidMiosHTML();
+        return;
+      }
       var todos = _vidLocal(), cnt = {};
       todos.forEach(function(v){ var k = v.golpe || 'otro'; cnt[k] = (cnt[k] || 0) + 1; });
       var golpes = VID_GOLPES.filter(function(g){ return cnt[g.k]; });
@@ -28000,7 +28055,7 @@
       if (!cnt[_vidGolpe]) _vidGolpe = golpes.length ? golpes[0].k : 'otro';
       var sub = document.getElementById('vid-sub');
       if (sub) sub.textContent = todos.length + (todos.length === 1 ? ' vídeo' : ' vídeos') + ' · por golpe';
-      var h = '';
+      var h = _seg;   // v0.436: De redes | Mis ejercicios
       if (_vidAvisoTabla) h += '<div class="vid-aviso">⚠️ Falta ejecutar en Supabase <b>migracion_videos_ejercicios.sql</b>: de momento los vídeos solo se guardan en este dispositivo.</div>';
       if (golpes.length) {
         h += '<div class="rec-zt">' + golpes.map(function(g){
