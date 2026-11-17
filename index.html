@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.434.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.435.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,19 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.435.0 — Vídeos y Técnica: una línea por vídeo y visor encajado (2026-11)
+    (sin migraciones)
+    · 🎬 Vídeos: en la lista, solo el NOMBRE en una línea con ▶ delante (y la
+      raya del color del golpe). Autor, nota, etiquetas y estado, dentro.
+    · Al abrir un vídeo, el visor está encajado para el móvil: el vídeo ocupa
+      como mucho la mitad de la pantalla y se ve todo sin mover nada; los
+      estados en una sola fila.
+    · 🎯 TÉCNICA (nivel 3) con la misma interfaz: pantalla en oscuro,
+      pestañas por golpe en la barra dorada y una línea por vídeo («▶») o
+      nota («📝»). Al abrir un vídeo de gesto, el mismo visor con la
+      explicación de su nota debajo (llega con el próximo sync_padel.py).
+
 
   v0.434.0 — 🎬 Vídeos, al estilo de Avanzado (2026-11)
     (sin migraciones)
@@ -8726,6 +8739,28 @@
       border-radius:999px; border:1px solid rgba(201,149,79,.7); background:rgba(255,255,255,.06); color:#e8c48e;
       font-family:inherit; font-size:12px; font-weight:800; letter-spacing:.04em; cursor:pointer; }
     .cabecera > .vid-cab-add:active { transform:scale(.97); }
+    /* v0.435 — una línea por vídeo, y visor encajado en el móvil */
+    .vp-lista { display:flex; flex-direction:column; gap:7px; margin-top:12px; }
+    .vp-fila { display:flex; align-items:center; gap:12px; width:100%; text-align:left; padding:10px 12px 10px 10px;
+      border-radius:12px; border:1px solid #2c2c30; border-left:4px solid var(--zc, #c9954f); background:#151517;
+      font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .vp-fila:active { transform:scale(.99); }
+    .vp-play { width:28px; height:28px; border-radius:8px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+      font-size:12px; color:#fff; background:linear-gradient(180deg,#b07a3a,#7a5124); border:1px solid #c9954f; }
+    .vp-tit { flex:1; min-width:0; font-size:14.5px; font-weight:700; color:#f4efe6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .asl-modal.vp-modal { max-height:92vh; padding:12px 12px 10px; }
+    .vp-modal .asl-modal-tit { font-size:15px; }
+    .vid-embed.vp-embed.instagram { height:min(46vh, 430px); }
+    .vid-embed.vp-embed.youtube { aspect-ratio:16/9; height:auto; max-height:46vh; }
+    .vid-embed.vp-embed.youtube.vert { aspect-ratio:9/16; width:auto; height:46vh; margin-left:auto; margin-right:auto; }
+    .vp-modal .vid-abrir { margin:0 0 8px; }
+    .vp-modal .vid-tags { margin:0 0 6px; }
+    .vp-texto { max-height:18vh; overflow-y:auto; font-size:13px; line-height:1.45; margin:0 0 8px; }
+    .vp-texto-largo { max-height:70vh; }
+    .vp-modal .md-contenido { background:var(--arena); border-radius:10px; padding:8px 10px; }
+    .vid-estados.vp-estados { grid-template-columns:repeat(4, 1fr); gap:5px; margin:0 0 8px; }
+    .vp-estados .vid-estbtn { display:flex; flex-direction:column; align-items:center; gap:1px; padding:5px 2px; font-size:15px; }
+    .vp-estados .vid-estbtn small { font-size:10px; font-weight:800; }
     .vid-acard-aut { font-size:12px; font-weight:700; color:#c9954f; margin:0 0 4px; }
     .vid-acard-nota { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
     .vid-acard-pie { font-size:12.5px; font-weight:700; color:#d9d2c4; }
@@ -11330,6 +11365,16 @@
     <div class="contenido" id="vid-contenido"></div>
   </div>
 
+  <!-- ══ TÉCNICA (v0.435) — gesto técnico con la interfaz de Vídeos ═══ -->
+  <div id="pantalla-tecnica" class="pantalla avz-oscuro">
+    <div class="cabecera">
+      <button class="btn-volver" onclick="irA('pantalla-inicio')">‹ Inicio</button>
+      <div class="cab-titulo">🎯 Técnica</div>
+      <div class="cab-sub" id="tec-sub">—</div>
+    </div>
+    <div class="contenido" id="tec-contenido"></div>
+  </div>
+
   <!-- ══ PARTIDO (Marcador + Actas) ═══════════════ -->
   <div id="pantalla-partido" class="pantalla">
     <div class="cabecera">
@@ -12448,7 +12493,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.434.0';
+    var APP_VERSION = '0.435.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -27786,6 +27831,7 @@
       partido:    ['pantalla-partido','pantalla-marcador','pantalla-actas','pantalla-stats-jugador'],
       sesiones:   ['pantalla-sesiones'],   // v0.378
       videos:     ['pantalla-videos'],     // v0.433
+      tecnica:    ['pantalla-tecnica'],    // v0.435
       clases:     ['pantalla-clases-niveles','pantalla-clases','pantalla-clases-grupo']
       // v0.323: Técnica ya no es un botón — vive dentro de Área, así que sus
       // pantallas iluminan Área. Y el catálogo del Plan se pinta en
@@ -27819,7 +27865,7 @@
       ejercicios: '<button class="appnav-btn" data-nav="ejercicios" onclick="irA(\'pantalla-ejercicios\')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none"/></svg></span><span>Ejercicios</span></button>',
       // v0.222 — Aspectos técnicos, con icono de cerebro: es el saber técnico
       // (el gesto y sus matices), no una sesión.
-      tecnica:    '<button class="appnav-btn" data-nav="tecnica" onclick="irClasesNivel(\'tecnica\')"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4a3 3 0 0 0-5.7-1.2A2.8 2.8 0 0 0 4 7a2.9 2.9 0 0 0 .6 1.8A3 3 0 0 0 5 14.3V15a3 3 0 0 0 4.5 2.6A2.6 2.6 0 0 0 12 20Z"/><path d="M12 5.4a3 3 0 0 1 5.7-1.2A2.8 2.8 0 0 1 20 7a2.9 2.9 0 0 1-.6 1.8A3 3 0 0 1 19 14.3V15a3 3 0 0 1-4.5 2.6A2.6 2.6 0 0 1 12 20Z"/><path d="M12 5.4V20"/></svg></span><span>Técnica</span></button>'
+      tecnica:    '<button class="appnav-btn" data-nav="tecnica" onclick="navTecnica()"><span class="d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4a3 3 0 0 0-5.7-1.2A2.8 2.8 0 0 0 4 7a2.9 2.9 0 0 0 .6 1.8A3 3 0 0 0 5 14.3V15a3 3 0 0 0 4.5 2.6A2.6 2.6 0 0 0 12 20Z"/><path d="M12 5.4a3 3 0 0 1 5.7-1.2A2.8 2.8 0 0 1 20 7a2.9 2.9 0 0 1-.6 1.8A3 3 0 0 1 19 14.3V15a3 3 0 0 1-4.5 2.6A2.6 2.6 0 0 1 12 20Z"/><path d="M12 5.4V20"/></svg></span><span>Técnica</span></button>'
     };
     // ── v0.323 — LA BARRA, EN EL ORDEN DE LA CLASE ───────────────────
     //   Asistencia · Partido · Plan · Área · Carro
@@ -27928,20 +27974,14 @@
     var VID_COLOR = { volea:'#2f6fb5', bandeja:'#c2417a', vibora:'#7a4fc9', remate:'#b8432a', globo:'#0f8a8a',
       pared:'#d0821a', fondo:'#1c8f6a', saque:'#5f5e5a', defensa:'#3b6b9e', transicion:'#a3751f', tactica:'#6b7a2f', otro:'#5f5e5a' };
     var VID_TAG = { nuevo:['POR PROBAR', 'pend'], probado:['PROBADO', ''], favorito:['★ FAVORITO', ''], ejercicio:['📝 EJERCICIO', 'medio'] };
+    // v0.435: en la lista, SOLO el nombre en una línea, con ▶ delante. Todo
+    // lo demás (autor, nota, etiquetas, estado) va dentro, al abrirlo.
+    function _vpFilaHTML(color, titulo, onclick, ico) {
+      return '<button type="button" class="vp-fila" style="--zc:' + color + '" onclick="' + onclick + '">' +
+        '<span class="vp-play">' + (ico || '▶') + '</span><span class="vp-tit">' + _gEsc(titulo) + '</span></button>';
+    }
     function _vidCardHTML(v) {
-      var g = _vidMeta(VID_GOLPES, v.golpe) || _vidMeta(VID_GOLPES, 'otro');
-      var t = _vidMeta(VID_TIPOS, v.tipo), n = _vidMeta(VID_NIVELES, v.nivel);
-      var tg = VID_TAG[v.estado || 'nuevo'] || VID_TAG.nuevo;
-      var cab = v.celda || (t ? t.l : g.l);
-      var pie = [t && v.celda ? t.l : '', n ? n.l : ''].filter(Boolean).join(' · ');
-      return '<div class="avz-card vid-acard" onclick="vidVer(\'' + v.id + '\')">' +
-        '<div class="avz-card-cab" style="--zc:' + (VID_COLOR[v.golpe] || VID_COLOR.otro) + '"><span class="avz-card-z">' + _gEsc(cab) + '</span>' +
-          '<span class="avz-tag ' + tg[1] + '">' + tg[0] + '</span></div>' +
-        '<div class="avz-card-n">' + _gEsc(v.titulo || 'Sin título') + '</div>' +
-        (v.autor ? '<div class="vid-acard-aut">' + _gEsc(v.autor) + '</div>' : '') +
-        (v.nota ? '<div class="avz-card-o vid-acard-nota">' + _gEsc(v.nota) + '</div>' : '') +
-        '<div class="avz-card-pie"><span class="vid-acard-pie">' + _gEsc(pie || g.l) + '</span>' +
-          '<span class="avz-card-go">▶</span></div></div>';
+      return _vpFilaHTML(VID_COLOR[v.golpe] || VID_COLOR.otro, v.titulo || 'Sin título', 'vidVer(\'' + v.id + '\')');
     }
     function _vidListaHTML() {
       var l = _vidFiltrados();
@@ -27967,7 +28007,7 @@
           return '<button type="button" class="rec-zt-t' + (_vidGolpe === g.k ? ' on' : '') + '" onclick="vidGolpe(\'' + g.k + '\')">' + g.l + '<span>' + cnt[g.k] + '</span></button>';
         }).join('') + '</div>';
       }
-      h += '<div id="vid-lista" class="rec-zt-lista vid-alista">' + _vidListaHTML() + '</div>';
+      h += '<div id="vid-lista" class="vp-lista">' + _vidListaHTML() + '</div>';
       cont.innerHTML = h;
     }
     // ── Ventanas: ver · añadir/editar ──────────────────────────────────
@@ -27977,29 +28017,34 @@
       ov.innerHTML = html;
     }
     function vidCerrar() { _vidForm = null; _vidVer = null; var ov = document.getElementById('vid-ov'); if (ov) ov.remove(); }
+    // v0.435: visor COMÚN de Vídeos y Técnica, encajado para el móvil: el
+    // vídeo ocupa como mucho ~la mitad de la pantalla y lo demás se ve sin
+    // mover nada (lo largo, en su propia cajita con scroll).
+    function _vpModalHTML(titulo, url, cuerpo) {
+      var inf = _vidInfo(url);
+      var h = '<div class="asl-modal-ov" onclick="if(event.target===this)vidCerrar()"><div class="asl-modal vid-modal vp-modal" role="dialog" aria-label="Vídeo">' +
+        '<div class="asl-modal-cab"><span class="asl-modal-tit">' + _gEsc(titulo) + '</span>' +
+        '<button type="button" class="asl-modal-x" onclick="vidCerrar()" aria-label="Cerrar">✕</button></div>';
+      if (inf.embed) h += '<div class="vid-embed vp-embed ' + inf.red + (/\/shorts\//.test(url || '') ? ' vert' : '') + '"><iframe src="' + _gEsc(inf.embed) + '" allowfullscreen loading="lazy" allow="autoplay; encrypted-media; picture-in-picture"></iframe></div>';
+      if (url) h += '<a class="vid-abrir" href="' + _gEsc(url) + '" target="_blank" rel="noopener">↗ Abrir en ' + (inf.red === 'youtube' ? 'YouTube' : inf.red === 'tiktok' ? 'TikTok' : 'Instagram') + '</a>';
+      return h + cuerpo + '</div></div>';
+    }
     function vidVer(id) {
       var v = _vidLocal().filter(function(x){ return String(x.id) === String(id); })[0];
       if (!v) return;
       _vidVer = v.id;
-      var inf = _vidInfo(v.url), g = _vidMeta(VID_GOLPES, v.golpe) || _vidMeta(VID_GOLPES, 'otro');
-      var h = '<div class="asl-modal-ov" onclick="if(event.target===this)vidCerrar()"><div class="asl-modal vid-modal" role="dialog" aria-label="Vídeo">' +
-        '<div class="asl-modal-cab"><span class="asl-modal-tit">' + g.ico + ' ' + _gEsc(v.titulo || 'Vídeo') + '</span>' +
-        '<button type="button" class="asl-modal-x" onclick="vidCerrar()" aria-label="Cerrar">✕</button></div>' +
-        '<div class="vid-modal-cuerpo">';
-      if (inf.embed) h += '<div class="vid-embed ' + inf.red + '"><iframe src="' + _gEsc(inf.embed) + '" allowfullscreen loading="lazy" allow="autoplay; encrypted-media; picture-in-picture"></iframe></div>';
-      h += '<a class="vid-abrir" href="' + _gEsc(v.url) + '" target="_blank" rel="noopener">↗ Abrir en ' + (inf.red === 'youtube' ? 'YouTube' : inf.red === 'tiktok' ? 'TikTok' : 'Instagram') + '</a>';
+      var g = _vidMeta(VID_GOLPES, v.golpe) || _vidMeta(VID_GOLPES, 'otro');
       var tags = [g.l]; if (v.celda) tags.push(v.celda);
       var t = _vidMeta(VID_TIPOS, v.tipo); if (t) tags.push(t.l);
       var n = _vidMeta(VID_NIVELES, v.nivel); if (n) tags.push(n.l);
-      h += '<div class="vid-tags">' + (v.autor ? '<span>' + _gEsc(v.autor) + '</span>' : '') + tags.map(function(x){ return '<span>' + _gEsc(x) + '</span>'; }).join('') + '</div>';
-      if (v.nota) h += '<div class="vid-nota">' + _gEsc(v.nota) + '</div>';
-      h += '<div class="vid-estados">' + VID_ESTADOS.map(function(e){
-        return '<button type="button" class="vid-estbtn' + ((v.estado || 'nuevo') === e.k ? ' on' : '') + '" onclick="vidEstado(\'' + v.id + '\',\'' + e.k + '\')">' + e.ico + ' ' + e.l + '</button>';
+      var c = '<div class="vid-tags">' + (v.autor ? '<span>' + _gEsc(v.autor) + '</span>' : '') + tags.map(function(x){ return '<span>' + _gEsc(x) + '</span>'; }).join('') + '</div>';
+      if (v.nota) c += '<div class="vid-nota vp-texto">' + _gEsc(v.nota) + '</div>';
+      c += '<div class="vid-estados vp-estados">' + VID_ESTADOS.map(function(e){
+        return '<button type="button" class="vid-estbtn' + ((v.estado || 'nuevo') === e.k ? ' on' : '') + '" onclick="vidEstado(\'' + v.id + '\',\'' + e.k + '\')">' + e.ico + '<small>' + e.l.replace('Pasado a ejercicio', 'Ejercicio') + '</small></button>';
       }).join('') + '</div>';
-      h += '<div class="vid-acc"><button type="button" class="btn btn-sec btn-sm" onclick="vidEditar(\'' + v.id + '\')">✏️ Editar</button>' +
+      c += '<div class="vid-acc"><button type="button" class="btn btn-sec btn-sm" onclick="vidEditar(\'' + v.id + '\')">✏️ Editar</button>' +
            '<button type="button" class="btn btn-sec btn-sm vid-borrar" onclick="vidBorrar(\'' + v.id + '\')">🗑 Quitar</button></div>';
-      h += '</div></div></div>';
-      _vidOv(h);
+      _vidOv(_vpModalHTML(v.titulo || 'Vídeo', v.url, c));
     }
     function vidNuevo() {
       _vidForm = { id:null, url:'', titulo:'', autor:'', golpe:'', celda:'', tipo:'', nivel:'avanzado', estado:'nuevo', nota:'' };
@@ -28208,7 +28253,7 @@
         id = 'pantalla-inicio';
       } else if (monitorActivo() && MONITOR_PANTALLAS_OK.indexOf(id) < 0) {
         id = 'pantalla-inicio';
-      } else if (id === 'pantalla-videos' && !_vidPermitido()) {
+      } else if ((id === 'pantalla-videos' && !_vidPermitido()) || (id === 'pantalla-tecnica' && !_gtEsN3())) {   // v0.435
         // v0.433: el repositorio de vídeos es solo para nivel 3
         id = 'pantalla-inicio';
       } else if (GESTOR_PANTALLAS.indexOf(id) >= 0) {
@@ -28250,6 +28295,7 @@
       if (id === 'pantalla-importar')        resetImport();
       if (id === 'pantalla-normativa')       mostrarNormativa();
       if (id === 'pantalla-videos')          mostrarVideos();   // v0.433
+      if (id === 'pantalla-tecnica')         mostrarTecnica();  // v0.435
 
       if (id === 'pantalla-gestor')                 cargarDatosGestor();
       if (id === 'pantalla-gestor-detalle')         renderGestorDetalle();
@@ -30619,9 +30665,60 @@
         r.data.forEach(function(row){ m[row.golpe] = row.data || {}; });
         _gtGesto = m;
         var act = document.querySelector('.pantalla.activa');
-        if (act && act.id === 'pantalla-clases' && nivelClasesSel === 'tecnica') mostrarClases();
+        if (act && act.id === 'pantalla-tecnica') mostrarTecnica();   // v0.435
+        else if (act && act.id === 'pantalla-clases' && nivelClasesSel === 'tecnica') mostrarClases();
         else if (act && act.id === 'pantalla-clases-grupo' && nivelClasesSel === 'tecnica') mostrarClasesGrupo();
       }).catch(function(){});
+    }
+    // ══ v0.435 — TÉCNICA CON LA INTERFAZ DE VÍDEOS ═════════════════════
+    // Pantalla propia en oscuro: pestañas por golpe en la barra dorada (solo
+    // los que tienen algo) y una línea por vídeo («▶ nombre») o nota («📝»).
+    // Al tocar, el mismo visor encajado de Vídeos, con la explicación de la
+    // nota GT debajo (el sync la manda en `texto`).
+    var _tecGolpe = null;
+    var TEC_COLOR = { comun:'#5f5e5a', derecha:'#1c8f6a', reves:'#3b6b9e', volea:'#2f6fb5', bandeja:'#c2417a',
+      remate:'#b8432a', vibora:'#7a4fc9', globo:'#0f8a8a', pared:'#d0821a', saque:'#a3751f' };
+    function navTecnica() { if (_gtEsN3()) irA('pantalla-tecnica'); else irClasesNivel('tecnica'); }
+    // «Volea - chancletazo…» en la pestaña Volea → «Chancletazo…»
+    function _tecTitulo(t, g) {
+      var s = String(t || ''), pre = (g.label || '').split(' ')[0].toLowerCase();
+      var i = s.indexOf(' - ');
+      if (i > 0 && s.slice(0, i).toLowerCase() === pre) s = s.slice(i + 3);
+      return s.charAt(0).toUpperCase() + s.slice(1);
+    }
+    function tecGolpe(k) { _tecGolpe = k; mostrarTecnica(); }
+    function mostrarTecnica() {
+      var cont = document.getElementById('tec-contenido');
+      if (!cont) return;
+      if (!_gtEsN3()) { cont.innerHTML = '<div class="plan-bl-vacio">Esta sección es solo para entrenadores de nivel 3.</div>'; return; }
+      if (!Object.keys(_gtGesto).length) _cargarGestos();
+      var golpes = GT_GOLPES.filter(function(g){ var d = _gtDe(g.key); return (d.videos || []).length || (d.notas || []).length; });
+      var sub = document.getElementById('tec-sub');
+      var nTot = 0; golpes.forEach(function(g){ var d = _gtDe(g.key); nTot += (d.videos || []).length + (d.notas || []).length; });
+      if (sub) sub.textContent = nTot + (nTot === 1 ? ' vídeo o nota' : ' vídeos y notas') + ' · por golpe';
+      if (!golpes.length) { cont.innerHTML = '<div class="plan-bl-vacio">Aún no hay gesto técnico sincronizado. Ejecuta sync_padel.py con la cuenta nivel3.</div>'; return; }
+      if (!golpes.some(function(g){ return g.key === _tecGolpe; })) _tecGolpe = golpes[0].key;
+      var h = '<div class="rec-zt">' + golpes.map(function(g){
+        var d = _gtDe(g.key), n = (d.videos || []).length + (d.notas || []).length;
+        return '<button type="button" class="rec-zt-t' + (_tecGolpe === g.key ? ' on' : '') + '" onclick="tecGolpe(\'' + g.key + '\')">' + g.label.replace(' (fundamentos)', '') + '<span>' + n + '</span></button>';
+      }).join('') + '</div>';
+      var g = GT_GOLPES.filter(function(x){ return x.key === _tecGolpe; })[0], d = _tecGolpe ? _gtDe(_tecGolpe) : { videos:[], notas:[] };
+      var col = TEC_COLOR[_tecGolpe] || '#5f5e5a';
+      h += '<div class="vp-lista">';
+      (d.videos || []).forEach(function(v, i){ h += _vpFilaHTML(col, _tecTitulo(v.titulo, g), 'tecVer(' + i + ')'); });
+      (d.notas || []).forEach(function(nt, i){ h += _vpFilaHTML(col, _tecTitulo(nt.titulo, g), 'tecNota(' + i + ')', '📝'); });
+      cont.innerHTML = h + '</div>';
+    }
+    function tecVer(i) {
+      var g = GT_GOLPES.filter(function(x){ return x.key === _tecGolpe; })[0] || {}, v = (_gtDe(_tecGolpe).videos || [])[i];
+      if (!v) return;
+      var c = v.texto ? '<div class="vp-texto md-contenido">' + renderMd(v.texto) + '</div>' : '';
+      _vidOv(_vpModalHTML(_tecTitulo(v.titulo, g), v.video, c));
+    }
+    function tecNota(i) {
+      var g = GT_GOLPES.filter(function(x){ return x.key === _tecGolpe; })[0] || {}, nt = (_gtDe(_tecGolpe).notas || [])[i];
+      if (!nt) return;
+      _vidOv(_vpModalHTML('📝 ' + _tecTitulo(nt.titulo, g), '', '<div class="vp-texto vp-texto-largo md-contenido">' + renderMd(nt.texto || '') + '</div>'));
     }
     function _gtGolpeCardsHTML() {
       var vacio = !Object.keys(_gtGesto).length;   // aún sin datos del sync
