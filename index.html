@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.433.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.434.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,21 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.434.0 — 🎬 Vídeos, al estilo de Avanzado (2026-11)
+    (sin migraciones)
+    · Pantalla en oscuro, como Avanzado. «＋ Añadir» pasa a ser un botón
+      discreto en la cabecera, debajo de «‹ Inicio».
+    · Pestañas por golpe en la barra dorada (fuera «Todos»): se entra en el
+      primer golpe que tenga vídeos.
+    · Fuera el buscador y los filtros de etiquetas.
+    · Tarjetas como las de las sesiones: franja del color del golpe con la
+      celda (o el tipo) y el estado a la derecha (POR PROBAR · PROBADO ·
+      ★ FAVORITO · 📝 EJERCICIO), título, autor, nota y, al pie, tipo · nivel
+      y la ▶ dorada.
+    · Técnica: los vídeos de gesto técnico que son reels de Instagram ya se
+      ven dentro de la app (antes el visor solo entendía YouTube).
+
 
   v0.433.0 — 🎬 Vídeos de ejercicios · Partido pasa a Inicio (2026-11)
     ⚠️ REQUIERE MIGRACIÓN: migraciones/migracion_videos_ejercicios.sql
@@ -8706,6 +8721,16 @@
     .home-sec-bar.p { background:#1e3a8a; }
     /* v0.433 — Vídeos de ejercicios */
     .vid-add { width:100%; margin:0 0 10px; }
+    /* v0.434 — Vídeos al estilo de Avanzado */
+    .cabecera > .vid-cab-add { float:right; clear:right; position:relative; z-index:5; margin:0 -6px 6px 12px; padding:5px 12px;
+      border-radius:999px; border:1px solid rgba(201,149,79,.7); background:rgba(255,255,255,.06); color:#e8c48e;
+      font-family:inherit; font-size:12px; font-weight:800; letter-spacing:.04em; cursor:pointer; }
+    .cabecera > .vid-cab-add:active { transform:scale(.97); }
+    .vid-acard-aut { font-size:12px; font-weight:700; color:#c9954f; margin:0 0 4px; }
+    .vid-acard-nota { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+    .vid-acard-pie { font-size:12.5px; font-weight:700; color:#d9d2c4; }
+    .avz-oscuro .vid-alista { margin-top:12px; }
+    #pantalla-videos .rec-zt { margin-top:0; }
     .vid-buscar { width:100%; box-sizing:border-box; margin:0 0 10px; }
     .vid-tabs { display:flex; gap:6px; overflow-x:auto; padding:2px 0 8px; scrollbar-width:none; }
     .vid-tabs::-webkit-scrollbar { display:none; }
@@ -11295,9 +11320,10 @@
   </div>
 
   <!-- ══ VÍDEOS DE EJERCICIOS (v0.433) — solo nivel 3 ═══════════════ -->
-  <div id="pantalla-videos" class="pantalla">
+  <div id="pantalla-videos" class="pantalla avz-oscuro">
     <div class="cabecera">
       <button class="btn-volver" onclick="irA('pantalla-inicio')">‹ Inicio</button>
+      <button type="button" class="vid-cab-add" onclick="vidNuevo()" aria-label="Añadir vídeo">＋ Añadir</button>
       <div class="cab-titulo">🎬 Vídeos de ejercicios</div>
       <div class="cab-sub" id="vid-sub">—</div>
     </div>
@@ -12422,7 +12448,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.433.0';
+    var APP_VERSION = '0.434.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -27883,7 +27909,7 @@
     function _vidFiltrados() {
       var q = _vidQ.trim().toLowerCase();
       return _vidLocal().filter(function(v){
-        if (_vidGolpe !== 'todos' && (v.golpe || 'otro') !== _vidGolpe) return false;
+        if (_vidGolpe !== 'todos' && (v.golpe || 'otro') !== _vidGolpe) return false;   // v0.434: los filtros de abajo ya no se ven (se quedan vacíos)
         if (_vidFiltro.tipo && v.tipo !== _vidFiltro.tipo) return false;
         if (_vidFiltro.nivel && v.nivel !== _vidFiltro.nivel) return false;
         if (_vidFiltro.estado && (v.estado || 'nuevo') !== _vidFiltro.estado) return false;
@@ -27895,22 +27921,31 @@
     function vidGolpe(k) { _vidGolpe = k; mostrarVideos(true); }
     function vidFiltro(campo, val) { _vidFiltro[campo] = val; mostrarVideos(true); }
     function vidBuscar(v) { _vidQ = v; var l = document.getElementById('vid-lista'); if (l) l.innerHTML = _vidListaHTML(); }
+    // v0.434: AL ESTILO DE AVANZADO — pantalla en oscuro, pestañas por golpe
+    // (sin «Todos»), sin filtros a la vista y tarjetas como las de sesión:
+    // franja del color del golpe con su celda/tipo y el estado a la derecha,
+    // título, autor y nota, y al pie el nivel y la ▶ dorada.
+    var VID_COLOR = { volea:'#2f6fb5', bandeja:'#c2417a', vibora:'#7a4fc9', remate:'#b8432a', globo:'#0f8a8a',
+      pared:'#d0821a', fondo:'#1c8f6a', saque:'#5f5e5a', defensa:'#3b6b9e', transicion:'#a3751f', tactica:'#6b7a2f', otro:'#5f5e5a' };
+    var VID_TAG = { nuevo:['POR PROBAR', 'pend'], probado:['PROBADO', ''], favorito:['★ FAVORITO', ''], ejercicio:['📝 EJERCICIO', 'medio'] };
     function _vidCardHTML(v) {
       var g = _vidMeta(VID_GOLPES, v.golpe) || _vidMeta(VID_GOLPES, 'otro');
-      var e = _vidMeta(VID_ESTADOS, v.estado || 'nuevo');
-      var tags = [];
-      if (v.celda) tags.push(v.celda);
-      var t = _vidMeta(VID_TIPOS, v.tipo); if (t) tags.push(t.l);
-      var n = _vidMeta(VID_NIVELES, v.nivel); if (n) tags.push(n.l);
-      return '<button type="button" class="vid-card" onclick="vidVer(\'' + v.id + '\')">' +
-        '<span class="vid-card-ic">' + g.ico + '</span>' +
-        '<span class="vid-card-tx"><b>' + _gEsc(v.titulo || 'Sin título') + '</b>' +
-          '<small>' + (v.autor ? _gEsc(v.autor) + ' · ' : '') + _gEsc(g.l) + (tags.length ? ' · ' + _gEsc(tags.join(' · ')) : '') + '</small></span>' +
-        '<span class="vid-est e-' + (v.estado || 'nuevo') + '" title="' + e.l + '">' + e.ico + '</span></button>';
+      var t = _vidMeta(VID_TIPOS, v.tipo), n = _vidMeta(VID_NIVELES, v.nivel);
+      var tg = VID_TAG[v.estado || 'nuevo'] || VID_TAG.nuevo;
+      var cab = v.celda || (t ? t.l : g.l);
+      var pie = [t && v.celda ? t.l : '', n ? n.l : ''].filter(Boolean).join(' · ');
+      return '<div class="avz-card vid-acard" onclick="vidVer(\'' + v.id + '\')">' +
+        '<div class="avz-card-cab" style="--zc:' + (VID_COLOR[v.golpe] || VID_COLOR.otro) + '"><span class="avz-card-z">' + _gEsc(cab) + '</span>' +
+          '<span class="avz-tag ' + tg[1] + '">' + tg[0] + '</span></div>' +
+        '<div class="avz-card-n">' + _gEsc(v.titulo || 'Sin título') + '</div>' +
+        (v.autor ? '<div class="vid-acard-aut">' + _gEsc(v.autor) + '</div>' : '') +
+        (v.nota ? '<div class="avz-card-o vid-acard-nota">' + _gEsc(v.nota) + '</div>' : '') +
+        '<div class="avz-card-pie"><span class="vid-acard-pie">' + _gEsc(pie || g.l) + '</span>' +
+          '<span class="avz-card-go">▶</span></div></div>';
     }
     function _vidListaHTML() {
       var l = _vidFiltrados();
-      if (!l.length) return '<div class="plan-bl-vacio">' + (_vidLocal().length ? 'Ningún vídeo con estos filtros.' : 'Todavía no hay vídeos. Toca «＋ Añadir vídeo» y pega el enlace de Instagram.') + '</div>';
+      if (!l.length) return '<div class="plan-bl-vacio">' + (_vidLocal().length ? 'Ningún vídeo de este golpe.' : 'Todavía no hay vídeos. Toca «＋ Añadir» arriba y pega el enlace de Instagram.') + '</div>';
       return l.map(_vidCardHTML).join('');
     }
     function mostrarVideos(sinRecargar) {
@@ -27920,23 +27955,19 @@
       if (!sinRecargar) _vidCargar(function(){ mostrarVideos(true); });
       var todos = _vidLocal(), cnt = {};
       todos.forEach(function(v){ var k = v.golpe || 'otro'; cnt[k] = (cnt[k] || 0) + 1; });
+      var golpes = VID_GOLPES.filter(function(g){ return cnt[g.k]; });
+      // sin «Todos»: si el golpe elegido ya no tiene vídeos, el primero que tenga
+      if (!cnt[_vidGolpe]) _vidGolpe = golpes.length ? golpes[0].k : 'otro';
       var sub = document.getElementById('vid-sub');
-      if (sub) sub.textContent = todos.length + (todos.length === 1 ? ' vídeo' : ' vídeos') + ' · ordenados por golpe';
+      if (sub) sub.textContent = todos.length + (todos.length === 1 ? ' vídeo' : ' vídeos') + ' · por golpe';
       var h = '';
       if (_vidAvisoTabla) h += '<div class="vid-aviso">⚠️ Falta ejecutar en Supabase <b>migracion_videos_ejercicios.sql</b>: de momento los vídeos solo se guardan en este dispositivo.</div>';
-      h += '<button type="button" class="btn btn-verde vid-add" onclick="vidNuevo()">＋ Añadir vídeo</button>';
-      h += '<input class="form-input vid-buscar" type="search" placeholder="Buscar por título, autor o nota…" value="' + _gEsc(_vidQ) + '" oninput="vidBuscar(this.value)">';
-      h += '<div class="vid-tabs"><button type="button" class="vid-tab' + (_vidGolpe === 'todos' ? ' on' : '') + '" onclick="vidGolpe(\'todos\')">Todos<b>' + todos.length + '</b></button>' +
-        VID_GOLPES.filter(function(g){ return cnt[g.k]; }).map(function(g){
-          return '<button type="button" class="vid-tab' + (_vidGolpe === g.k ? ' on' : '') + '" onclick="vidGolpe(\'' + g.k + '\')">' + g.ico + ' ' + g.l + '<b>' + cnt[g.k] + '</b></button>';
+      if (golpes.length) {
+        h += '<div class="rec-zt">' + golpes.map(function(g){
+          return '<button type="button" class="rec-zt-t' + (_vidGolpe === g.k ? ' on' : '') + '" onclick="vidGolpe(\'' + g.k + '\')">' + g.l + '<span>' + cnt[g.k] + '</span></button>';
         }).join('') + '</div>';
-      var sel = function(campo, ops, txt){
-        return '<select class="form-select vid-sel" onchange="vidFiltro(\'' + campo + '\',this.value)"><option value="">' + txt + '</option>' +
-          ops.map(function(o){ var k = o.k || o, l = o.l || o; return '<option value="' + _gEsc(k) + '"' + (_vidFiltro[campo] === k ? ' selected' : '') + '>' + _gEsc((o.ico ? o.ico + ' ' : '') + l) + '</option>'; }).join('') + '</select>';
-      };
-      h += '<div class="vid-filtros">' + sel('estado', VID_ESTADOS, 'Estado: todos') + sel('tipo', VID_TIPOS, 'Tipo: todos') +
-           sel('nivel', VID_NIVELES, 'Nivel: todos') + sel('celda', VID_CELDAS, 'Celda: todas') + '</div>';
-      h += '<div id="vid-lista" class="vid-lista">' + _vidListaHTML() + '</div>';
+      }
+      h += '<div id="vid-lista" class="rec-zt-lista vid-alista">' + _vidListaHTML() + '</div>';
       cont.innerHTML = h;
     }
     // ── Ventanas: ver · añadir/editar ──────────────────────────────────
@@ -29768,6 +29799,9 @@
         inner.innerHTML = '<div class="' + cls + '"><iframe src="https://www.youtube-nocookie.com/embed/' +
           ytId + '?autoplay=1&rel=0&playsinline=1" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>';
       } else if (url) {
+        // v0.434: un reel de Instagram no se deja meter tal cual: va por su /embed, en vertical
+        var _ig = (typeof _vidInfo === 'function') ? _vidInfo(url) : null;
+        if (_ig && _ig.red === 'instagram') { url = _ig.embed; cls = 'lb-video vert ig'; }
         inner.innerHTML = '<div class="' + cls + '"><iframe src="' + url + '" allow="autoplay; fullscreen" allowfullscreen></iframe></div>';
       } else { return; }
       document.getElementById('lightbox').classList.add('activa');
