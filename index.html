@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.436.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.438.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,28 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.438.0 — Avanzado: el Recorrido como camino (2026-11)
+    ⚠️ REQUIERE MIGRACIÓN: migraciones/migracion_bloques_dados.sql
+    · 📍 Recorrido de Avanzado: columna vertical de rombos, uno por bloque,
+      con su icono de golpe y un separador dorado por celda. A la derecha,
+      el bloque y sus sesiones, una por línea con ▶: primero el GOLPE y, en
+      gris, un apellido corto. Tocar una línea abre la sesión.
+    · «Marcar dado» lo pulsa el entrenador: el rombo se vuelve dorado con ✓
+      (y se puede desmarcar). Es de cada entrenador (fila privada, como sus
+      días): lo que marca uno no se lo cambia a otro.
+    · Bloques sin sesiones: rombo punteado y «Sin sesiones · preparar ＋».
+
+
+  v0.437.0 — Vídeos de Instagram: un botón, no un recuadro gigante (2026-11)
+    (sin migraciones)
+    · El reproductor de Instagram dentro de la app salía enorme y, al
+      tocarlo, mandaba a Instagram de todas formas. Ahora, en Vídeos y en
+      Técnica, un vídeo de Instagram es un botón «▶ Ver el vídeo en
+      Instagram» que lo abre directamente; la ventana queda pequeña, con la
+      nota y la explicación a la vista. Los de YouTube se siguen viendo
+      dentro de la app.
+
 
   v0.436.0 — 🎬 Vídeos: apartado «Mis ejercicios» (2026-11)
     (sin migraciones)
@@ -7957,6 +7979,36 @@
     .avz-card-t { font-size:16px; font-weight:800; letter-spacing:.03em; color:#f4efe6; }
     .avz-card-go { width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:20px;
       color:#fff; background:linear-gradient(180deg,#b07a3a,#7a5124); border:1px solid #c9954f; }
+    /* v0.438 — Recorrido de Avanzado como camino vertical */
+    .cam { position:relative; padding:2px 0 10px; }
+    .cam:before { content:''; position:absolute; left:35px; top:0; bottom:0; width:4px; background:#2a1f12; border-radius:2px; }
+    .cam-celda { position:relative; margin:14px 0 4px; padding-left:76px; font-size:11.5px; font-weight:800; letter-spacing:.1em;
+      text-transform:uppercase; color:#c9954f; }
+    .cam-bl { position:relative; display:flex; gap:16px; align-items:flex-start; margin:8px 0 14px; }
+    .cam-t { position:relative; flex-shrink:0; width:50px; height:50px; margin:9px 0 0 12px; transform:rotate(45deg); border-radius:12px;
+      background:#7a5124; box-shadow:0 5px 0 #4a3015, 0 9px 14px rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; }
+    .cam-t i { transform:rotate(-45deg); font-style:normal; font-size:21px; }
+    .cam-t.dado { background:#b07a3a; box-shadow:0 5px 0 #7a5124, 0 9px 14px rgba(0,0,0,.5); }
+    .cam-t.dado:after { content:'✓'; position:absolute; right:-7px; bottom:-7px; transform:rotate(-45deg); width:20px; height:20px; border-radius:50%;
+      background:#22c55e; color:#fff; font-size:12px; font-weight:900; display:flex; align-items:center; justify-content:center; }
+    .cam-t.vacio { background:#1b1b1e; box-shadow:0 5px 0 #111; border:2px dashed #3a3a3f; }
+    .cam-t.vacio i { opacity:.35; }
+    .cam-der { flex:1; min-width:0; padding-top:2px; }
+    .cam-nom { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:800; color:#f4efe6; margin-bottom:5px; }
+    .cam-nom span { flex:1; min-width:0; }
+    .cam-chk { flex-shrink:0; font-family:inherit; font-size:11px; font-weight:800; padding:3px 9px; border-radius:99px; border:1px solid #3a3a3f;
+      color:#8a8478; background:none; cursor:pointer; }
+    .cam-chk.on { border-color:#22c55e; color:#22c55e; background:rgba(34,197,94,.1); }
+    .cam-s { display:flex; align-items:center; gap:8px; width:100%; text-align:left; padding:6px 8px; margin-bottom:4px; border-radius:9px;
+      background:#151517; border:1px solid #2c2c30; font-family:inherit; font-size:12.5px; cursor:pointer; }
+    .cam-p { width:20px; height:20px; border-radius:6px; flex-shrink:0; background:linear-gradient(180deg,#b07a3a,#7a5124); font-size:9px;
+      display:flex; align-items:center; justify-content:center; color:#fff; }
+    .cam-st { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .cam-st b { color:#f4efe6; font-weight:800; }
+    .cam-st em { font-style:normal; color:#8a8478; font-weight:600; margin-left:6px; }
+    .cam-prep { width:100%; text-align:left; font-family:inherit; font-size:12px; color:#8a8478; border:1px dashed #3a3a3f; border-radius:9px;
+      padding:6px 8px; background:none; cursor:pointer; }
+    .cam-huerf { font-size:12px; color:#c9954f; margin:6px 0 0; }
     /* v0.409 — botones de la cabecera de Avanzado y sus ventanas */
     .plan-cab-btns { display:flex; gap:6px; margin-top:12px; position:relative; }
     .plan-cab-btns:empty { display:none; }
@@ -8749,6 +8801,13 @@
       border-radius:999px; border:1px solid rgba(201,149,79,.7); background:rgba(255,255,255,.06); color:#e8c48e;
       font-family:inherit; font-size:12px; font-weight:800; letter-spacing:.04em; cursor:pointer; }
     .cabecera > .vid-cab-add:active { transform:scale(.97); }
+    /* v0.437 — Instagram: botón para abrir el vídeo (no se incrusta) */
+    .vp-ig { display:flex; align-items:center; gap:12px; margin:4px 0 10px; padding:14px; border-radius:14px; text-decoration:none;
+      background:linear-gradient(135deg,#833ab4,#c13584 45%,#f77737); color:#fff; font-size:15px; font-weight:800; }
+    .vp-ig-play { width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,.25); display:flex; align-items:center;
+      justify-content:center; font-size:14px; flex-shrink:0; }
+    .vp-ig span:nth-child(2) { flex:1; }
+    .vp-ig-ext { font-size:18px; opacity:.9; }
     /* v0.436 — De redes | Mis ejercicios */
     .vid-secs { display:flex; gap:4px; padding:4px; margin:0 0 10px; border-radius:12px; background:#151517; border:1px solid #2c2c30; }
     .vid-sec { flex:1; border:none; background:none; border-radius:9px; padding:8px 6px; font-family:inherit; font-size:13px;
@@ -12510,7 +12569,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.436.0';
+    var APP_VERSION = '0.438.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -13044,6 +13103,7 @@
             if (diasServ.ruta_ses   != null) pD.rutaSes   = diasServ.ruta_ses   || {};
             if (diasServ.ruta_carro != null) pD.rutaCarro = diasServ.ruta_carro || {};   // v0.216
             if (diasServ.notas_dia  != null) pD.notasDia  = diasServ.notas_dia  || {};   // v0.274/v0.282
+            if (diasServ.bl_dados   != null) pD.blDado    = diasServ.bl_dados   || {};   // v0.438
             escribirPlan(pD, true);
           } else {
             // Primera vez para esta cuenta: si hay marcado local previo
@@ -13393,6 +13453,7 @@
         ruta_ses:   p.rutaSes || {},
         ruta_carro: p.rutaCarro || {},
         notas_dia:  p.notasDia || {},
+        bl_dados:   p.blDado || {},      // v0.438: bloques que el entrenador marca como dados
         updated_at: base.updated_at
       };
       setTimeout(function() {
@@ -13400,10 +13461,17 @@
           .then(function(r){
             if (!r.error) return;
             console.warn('bg sync comp_dias', r.error);
-            // Falta ruta_ses o ruta_carro (migración sin ejecutar): se reintenta
-            // sin ellas para no llevarse por delante el resto del sincronizado.
-            _sb.from('plan_dias_usuario').upsert(base, { onConflict: 'user_id' })
-              .then(function(r2){ if (r2.error) console.warn('bg sync comp_dias (2º intento)', r2.error); });
+            // v0.438: primero se reintenta solo sin bl_dados (migración de
+            // bloques dados sin ejecutar); si aún falla, con lo mínimo.
+            var sinBl = {}; for (var k in row) if (k !== 'bl_dados') sinBl[k] = row[k];
+            _sb.from('plan_dias_usuario').upsert(sinBl, { onConflict: 'user_id' })
+              .then(function(r1){
+                if (!r1.error) return;
+                // Falta ruta_ses o ruta_carro (migración sin ejecutar): se reintenta
+                // sin ellas para no llevarse por delante el resto del sincronizado.
+                _sb.from('plan_dias_usuario').upsert(base, { onConflict: 'user_id' })
+                  .then(function(r2){ if (r2.error) console.warn('bg sync comp_dias (2º intento)', r2.error); });
+              });
           });
       }, 0);
     }
@@ -23704,7 +23772,7 @@
         _avzPanHTML = {
           temp: _rutaTemporalizacionHTML(p, idsNivel, 'temp') +
                 '<div class="ruta-leyenda">✓ trabajada · ◉ esta semana · ● planificada · ○ vacía</div>',
-          rec:  hRec,
+          rec:  _recCaminoHTML(estRec) + (huerf.length ? '<div class="cam-huerf">⚠️ ' + huerf.length + (huerf.length === 1 ? ' sesión' : ' sesiones') + ' de Avanzado sin bloque: añade <code>bloque:</code> en su nota del vault.</div>' : ''),   // v0.438
           arch: tArch || '<div class="plan-bl-vacio">Todavía no hay cursos anteriores: aquí irán cuando termine este.</div>',
           nSes: nSesTot, nArch: (tArch.match(/🗓️ Curso /g) || []).length
         };
@@ -24326,6 +24394,57 @@
     // en p.compDias en un día que ya pasó. No hay un interruptor nuevo a
     // propósito — si lo hubiera, el mismo hecho tendría dos dueños y
     // acabarían diciendo cosas distintas.
+    // ══ v0.438 — AVANZADO: EL RECORRIDO COMO CAMINO ══════════════════════
+    // Columna vertical de rombos, uno por bloque, con su icono de golpe y un
+    // separador por celda. A la derecha, el bloque y sus sesiones, una por
+    // línea: primero el GOLPE (campo golpes: de la sesión) y, en gris, un
+    // apellido corto. «Marcar dado» lo pulsa el ENTRENADOR (no se deduce del
+    // calendario) y es suyo: viaja en su fila privada plan_dias_usuario
+    // (columna bl_dados, migracion_bloques_dados.sql), como comp_dias.
+    function _camSesTxt(c) {
+      var n = String(nombreSesion(c) || ''), g = String(c.golpes || '').trim();
+      if (!g) return { g: n, a: '' };
+      var a = n, i = n.indexOf(' — ');
+      if (i > 0) a = n.slice(i + 3);
+      else if (n.toLowerCase().indexOf(g.toLowerCase()) === 0) a = n.slice(g.length).replace(/^[\s—\-:·]+/, '');
+      if (a.trim().toLowerCase() === g.toLowerCase()) a = '';
+      return { g: g, a: a.trim() };
+    }
+    function _recCaminoHTML(estRec) {
+      var dados = (leerPlan().blDado) || {};
+      var h = '<div class="cam">';
+      estRec.etapas.forEach(function(e){
+        if (!e.nodos.length) return;
+        h += '<div class="cam-celda">' + _gEsc(e.et.nombre) + '</div>';
+        e.nodos.forEach(function(nd){
+          var it = nd.it, id = String(it.id), dado = !!dados[id], vacio = !nd.ses.length;
+          var ico = (typeof GOLPE_ICONO !== 'undefined' && GOLPE_ICONO[it.g]) || '🎾';
+          h += '<div class="cam-bl">' +
+            '<div class="cam-t' + (dado ? ' dado' : '') + (vacio ? ' vacio' : '') + '"><i>' + ico + '</i></div>' +
+            '<div class="cam-der"><div class="cam-nom"><span>' + _gEsc(it.t) + '</span>' +
+              (vacio ? '' : '<button type="button" class="cam-chk' + (dado ? ' on' : '') + '" onclick="recBlDado(\'' + id.replace(/'/g, "\\'") + '\')">' + (dado ? '✓ Dado' : 'Marcar dado') + '</button>') +
+            '</div>';
+          if (vacio) {
+            h += '<button type="button" class="cam-prep" onclick="recSesVentana(\'bl:' + id + '\', event)">Sin sesiones · preparar ＋</button>';
+          } else {
+            nd.ses.forEach(function(c){
+              var t = _camSesTxt(c);
+              h += '<button type="button" class="cam-s" onclick="recSesVentana(\'ses:' + c.id + '\', event)"><span class="cam-p">▶</span>' +
+                '<span class="cam-st"><b>' + _gEsc(t.g) + '</b>' + (t.a ? '<em>' + _gEsc(t.a) + '</em>' : '') + '</span></button>';
+            });
+          }
+          h += '</div></div>';
+        });
+      });
+      return h + '</div>';
+    }
+    function recBlDado(id) {
+      var p = leerPlan();
+      p.blDado = p.blDado || {};
+      if (p.blDado[id]) delete p.blDado[id]; else p.blDado[id] = true;
+      escribirPlan(p);
+      mostrarPlanificacion();
+    }
     function _recDados(p) {
       var hoy = hoyLocal(), set = {};
       Object.keys(p.compDias || {}).forEach(function(f){
@@ -28080,8 +28199,16 @@
       var h = '<div class="asl-modal-ov" onclick="if(event.target===this)vidCerrar()"><div class="asl-modal vid-modal vp-modal" role="dialog" aria-label="Vídeo">' +
         '<div class="asl-modal-cab"><span class="asl-modal-tit">' + _gEsc(titulo) + '</span>' +
         '<button type="button" class="asl-modal-x" onclick="vidCerrar()" aria-label="Cerrar">✕</button></div>';
-      if (inf.embed) h += '<div class="vid-embed vp-embed ' + inf.red + (/\/shorts\//.test(url || '') ? ' vert' : '') + '"><iframe src="' + _gEsc(inf.embed) + '" allowfullscreen loading="lazy" allow="autoplay; encrypted-media; picture-in-picture"></iframe></div>';
-      if (url) h += '<a class="vid-abrir" href="' + _gEsc(url) + '" target="_blank" rel="noopener">↗ Abrir en ' + (inf.red === 'youtube' ? 'YouTube' : inf.red === 'tiktok' ? 'TikTok' : 'Instagram') + '</a>';
+      // v0.437: Instagram NO se incrusta. Su reproductor dentro de la app
+      // salía enorme y, al tocarlo, mandaba a Instagram igualmente: era un
+      // recuadro gigante que no servía. Ahora es un botón que abre el vídeo.
+      if (inf.red === 'instagram' || (!inf.embed && url)) {
+        h += '<a class="vp-ig" href="' + _gEsc(url) + '" target="_blank" rel="noopener"><span class="vp-ig-play">▶</span>' +
+             '<span>Ver el vídeo en ' + (inf.red === 'tiktok' ? 'TikTok' : inf.red === 'instagram' ? 'Instagram' : 'el navegador') + '</span><span class="vp-ig-ext">↗</span></a>';
+      } else if (inf.embed) {
+        h += '<div class="vid-embed vp-embed ' + inf.red + (/\/shorts\//.test(url || '') ? ' vert' : '') + '"><iframe src="' + _gEsc(inf.embed) + '" allowfullscreen loading="lazy" allow="autoplay; encrypted-media; picture-in-picture"></iframe></div>';
+        h += '<a class="vid-abrir" href="' + _gEsc(url) + '" target="_blank" rel="noopener">↗ Abrir en YouTube</a>';
+      }
       return h + cuerpo + '</div></div>';
     }
     function vidVer(id) {
@@ -29902,7 +30029,8 @@
       } else if (url) {
         // v0.434: un reel de Instagram no se deja meter tal cual: va por su /embed, en vertical
         var _ig = (typeof _vidInfo === 'function') ? _vidInfo(url) : null;
-        if (_ig && _ig.red === 'instagram') { url = _ig.embed; cls = 'lb-video vert ig'; }
+        // v0.437: Instagram no se reproduce dentro de la app: se abre directamente
+        if (_ig && _ig.red === 'instagram') { window.open(url, '_blank', 'noopener'); return; }
         inner.innerHTML = '<div class="' + cls + '"><iframe src="' + url + '" allow="autoplay; fullscreen" allowfullscreen></iframe></div>';
       } else { return; }
       document.getElementById('lightbox').classList.add('activa');
