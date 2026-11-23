@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.438.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.439.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,17 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.439.0 — Avanzado: la pista se queda y debajo, el camino de la zona (2026-11)
+    (sin migraciones)
+    · Al tocar una zona de la pista, la pista ya no desaparece: se queda
+      arriba con la zona marcada y debajo sale su ficha (franja de la zona,
+      Anular · Dominar · Definir y la carta).
+    · El contenido de la zona va con la misma presentación que el
+      Recorrido: rombos por bloque y, a la derecha, sus sesiones por golpe,
+      con «Marcar dado». (Antes eran pestañas por bloque y tarjetas.)
+    · Juegos sigue con sus pestañas de categorías.
+
 
   v0.438.0 — Avanzado: el Recorrido como camino (2026-11)
     ⚠️ REQUIERE MIGRACIÓN: migraciones/migracion_bloques_dados.sql
@@ -8008,6 +8019,7 @@
     .cam-st em { font-style:normal; color:#8a8478; font-weight:600; margin-left:6px; }
     .cam-prep { width:100%; text-align:left; font-family:inherit; font-size:12px; color:#8a8478; border:1px dashed #3a3a3f; border-radius:9px;
       padding:6px 8px; background:none; cursor:pointer; }
+    .rec-zc .cam { margin-top:8px; }
     .cam-huerf { font-size:12px; color:#c9954f; margin:6px 0 0; }
     /* v0.409 — botones de la cabecera de Avanzado y sus ventanas */
     .plan-cab-btns { display:flex; gap:6px; margin-top:12px; position:relative; }
@@ -12569,7 +12581,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.438.0';
+    var APP_VERSION = '0.439.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -23683,7 +23695,9 @@
         var estZ = _recZonasEstado(p, nivelCT);
         // v0.395: en Avanzado, con una zona elegida la pista SE ESCONDE para
         // dejar sitio a la ficha; tocar el título de la zona la trae de vuelta.
-        if (!(nivelCT === 'avanzado' && _recZonaSel))
+        // v0.439: la pista ya NO se esconde al elegir zona (Alex): se queda arriba
+        // con la zona marcada y debajo sale el camino de esa zona.
+        if (true)
           hPista += '<div id="rec-lista" class="rec-pista-caja rec-pista-arriba">' + _recPistaHTML(estZ, p, nivelCT) + '</div>';
         if (_recZonaSel) {
           var eZ = estZ.etapas.filter(function(x){ return x.et.key === 'z:' + _recZonaSel; })[0];
@@ -24415,7 +24429,7 @@
       var h = '<div class="cam">';
       estRec.etapas.forEach(function(e){
         if (!e.nodos.length) return;
-        h += '<div class="cam-celda">' + _gEsc(e.et.nombre) + '</div>';
+        if (e.et.nombre) h += '<div class="cam-celda">' + _gEsc(e.et.nombre) + '</div>';   // v0.439: en la zona, sin separador
         e.nodos.forEach(function(nd){
           var it = nd.it, id = String(it.id), dado = !!dados[id], vacio = !nd.ses.length;
           var ico = (typeof GOLPE_ICONO !== 'undefined' && GOLPE_ICONO[it.g]) || '🎾';
@@ -24788,6 +24802,9 @@
       // (Calentamiento · Cooperación · Juegos condicionados…), igual que las
       // demás zonas van por golpes.
       if (e.et.zona === 'juegos') h += _recJuegosTabsHTML(eV, p, nivel, z);   // v0.401: eV = filtrada por intención en Avanzado
+      // v0.439: Avanzado, la misma presentación que el Recorrido: el camino
+      // con los bloques de la zona y la intención elegidas
+      else if (nivel === 'avanzado') h += _recCaminoHTML({ etapas:[{ et:{ nombre:'' }, nodos:eV.nodos }] });
       else h += _recZonaTabsHTML(eV, p, nivel, z);
       h += '</div>';
       return h;
