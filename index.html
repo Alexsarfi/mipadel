@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.440.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.441.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,22 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.441.0 — Avanzado: bloques nuevos y camino plegable · Técnica, en camino (2026-11)
+    (sin migraciones)
+    · DOMINAR FONDO: Construir desde el fondo → Chiquita a los pies (nuevo) →
+      Bajada de pared para dominar (nuevo) → Subida a la red → Globo
+      ofensivo y transición.
+    · DEFINIR FONDO: «Passing y globo ganador» se parte en cuatro: Passing al
+      pasillo y al cuerpo (conserva su id) → Bajada de pared al hueco →
+      Contraataque tras remate → Globo ganador a la esquina.
+    · El camino es PLEGABLE: cada rombo sale cerrado (solo el bloque y «Marcar
+      dado»); tocar el rombo o su nombre abre sus sesiones.
+    · El mismo camino en TODAS las zonas de la pista, también Juegos (un
+      rombo por categoría de ejercicio y otro por bloque).
+    · 🎯 TÉCNICA con el mismo formato: un rombo por golpe (los diez, con o sin
+      contenido), plegado, y dentro sus vídeos (▶) y notas (📝).
+
 
   v0.440.0 — Avanzado: Anular fondo en orden progresivo (2026-11)
     (sin migraciones)
@@ -8006,6 +8022,12 @@
     .cam-celda { position:relative; margin:14px 0 4px; padding-left:76px; font-size:11.5px; font-weight:800; letter-spacing:.1em;
       text-transform:uppercase; color:#c9954f; }
     .cam-bl { position:relative; display:flex; gap:16px; align-items:flex-start; margin:8px 0 14px; }
+    button.cam-t { border:none; padding:0; cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent; }
+    .cam-nom > span { cursor:pointer; }
+    .cam-chev { font-style:normal; color:#c9954f; margin-left:6px; display:inline-block; transform:rotate(90deg); transition:transform .2s; }
+    .cam-bl.ab .cam-chev { transform:rotate(-90deg); }
+    .cam-bl:not(.ab) { margin-bottom:18px; }
+    .cam-bl:not(.ab) .cam-nom { margin-top:18px; }
     .cam-t { position:relative; flex-shrink:0; width:50px; height:50px; margin:9px 0 0 12px; transform:rotate(45deg); border-radius:12px;
       background:#7a5124; box-shadow:0 5px 0 #4a3015, 0 9px 14px rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; }
     .cam-t i { transform:rotate(-45deg); font-style:normal; font-size:21px; }
@@ -12591,7 +12613,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.440.0';
+    var APP_VERSION = '0.441.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -20695,14 +20717,21 @@
         { key:'a2', nombre:'Anular red', obj:'En la red sin poder atacar: no perderla, devolver al fondo sin dar bola media.', saque:'Profundo y cerrado para dificultar el resto.', bloques:[
           {t:'Bandeja y volea de contención', f:'No perder la red: bandeja y volea baja de contención, devolver al fondo sin dar bola media.', int:'anular', z:'red', g:'bandeja'} ]},
         { key:'a3', nombre:'Dominar fondo', obj:'Atrás con la bola controlada: incomodar a los de la red, sacar la bola corta y subir.', saque:'Saque + primera bola para tomar la red.', bloques:[
+          // v0.441: orden progresivo — construir → chiquita → bajada para dominar → subir → globo ofensivo
           {t:'Construir desde el fondo', f:'Paciencia y construcción para abrir el punto.', int:'dominar', z:'fondo', g:'fondo'},
+          {t:'Chiquita a los pies', f:'Bajar la bola a los pies del que está en la red: que volee desde abajo y poder subir.', int:'dominar', z:'fondo', g:'chiquita'},
+          {t:'Bajada de pared para dominar', f:'Bajada de pared que no busca ganar: a los pies o por el centro, para incomodar y subir.', int:'dominar', z:'fondo', g:'pared'},
           {t:'Subida a la red', f:'Aprovechar un golpe profundo para subir y bajar a bolear.', int:'dominar', z:'campo-medio', g:'fondo'},
           {t:'Globo ofensivo y transición', f:'Globo que pasa para girar el punto y subir.', int:'dominar', z:'campo-medio', g:'globo'} ]},
         { key:'a4', nombre:'Dominar red', obj:'En la red con la iniciativa: mantener la presión, mover y hundir hasta la bola de definir.', saque:'Sacar y subir con agresividad.', bloques:[
           {t:'Voleas', f:'Voleas a distintas alturas, de presión y con dirección.', int:'dominar', z:'red', g:'volea'},
           {t:'Juego aéreo', f:'Bandeja, víbora y gancho: mantener la red desde arriba.', int:'dominar', z:'red', g:'bandeja'} ]},
         { key:'a5', nombre:'Definir fondo', obj:'Atrás y veo la bola de ganar: passing, globo ganador, bajada de pared al hueco.', saque:'Resto como arma: al cuerpo, al hueco, passing de resto.', bloques:[
-          {t:'Passing y globo ganador', f:'Cerrar desde atrás: passing al pasillo o al cuerpo y globo ganador a la esquina.', int:'definir', z:'fondo', g:'fondo'} ]},
+          // v0.441: «Passing y globo ganador» se parte en cuatro, de menos a más difícil
+          {t:'Passing al pasillo y al cuerpo', f:'Desde el fondo con bola media, sin pared: passing al pasillo o al cuerpo.', int:'definir', z:'fondo', g:'fondo'},
+          {t:'Bajada de pared al hueco', f:'Definir saliendo del cristal: bajada de pared al hueco o al cuerpo.', int:'definir', z:'fondo', g:'pared'},
+          {t:'Contraataque tras remate', f:'Remate flojo o bandeja corta del rival: castigar desde atrás al hueco.', int:'definir', z:'fondo', g:'fondo'},
+          {t:'Globo ganador a la esquina', f:'Pareja pegada a la red: globo por encima a la esquina, sin opción de bandeja.', int:'definir', z:'fondo', g:'globo'} ]},
         { key:'a6', nombre:'Definir red', obj:'En la red con la bola de cerrar: el golpe que pide la bola.', saque:'Táctico bajo marcador, en los puntos importantes.', bloques:[
           {t:'Remate y salida de pista', f:'Remate liftado, por 3 y por 4 para sacar la bola.', int:'definir', z:'red', g:'remate'},
           {t:'Definición fina', f:'Dejada, amago y volea de ángulo: cerrar con sensibilidad.', int:'definir', z:'red', g:'volea'} ]},
@@ -21057,18 +21086,21 @@
     // El plan ya sembrado guarda sus bloques en el orden de entonces; esto los
     // coloca UNA vez en el orden nuevo del catálogo (a1), conservando los ids
     // y dejando al final los bloques creados a mano.
-    var PLAN_ORDEN_AVZ_V = 1;
+    var PLAN_ORDEN_AVZ_V = 2;   // v0.441: también Dominar y Definir fondo (todas las etapas)
     function _planOrdenAvanzado(p) {
       if ((p.ordenAvzV || 0) >= PLAN_ORDEN_AVZ_V) return false;
-      var av = p.contenido && p.contenido.avanzado, et = (PLAN_ETAPAS.avanzado || []).filter(function(e){ return e.key === 'a1'; })[0];
-      if (!av || !et || !Array.isArray(av.a1)) { p.ordenAvzV = PLAN_ORDEN_AVZ_V; return false; }
-      var pos = {}; et.bloques.forEach(function(b, i){ pos[_planNorm(b.t)] = i; });
-      av.a1 = av.a1.map(function(x, i){ return [x, i]; }).sort(function(A, B){
-        var pa = pos[_planNorm(A[0].t)], pb = pos[_planNorm(B[0].t)];
-        if (pa == null && pb == null) return A[1] - B[1];
-        if (pa == null) return 1; if (pb == null) return -1;
-        return pa - pb;
-      }).map(function(x){ return x[0]; });
+      var av = p.contenido && p.contenido.avanzado;
+      if (!av) { p.ordenAvzV = PLAN_ORDEN_AVZ_V; return false; }
+      (PLAN_ETAPAS.avanzado || []).forEach(function(et){
+        if (!Array.isArray(av[et.key])) return;
+        var pos = {}; et.bloques.forEach(function(b, i){ pos[_planNorm(b.t)] = i; });
+        av[et.key] = av[et.key].map(function(x, i){ return [x, i]; }).sort(function(A, B){
+          var pa = pos[_planNorm(A[0].t)], pb = pos[_planNorm(B[0].t)];
+          if (pa == null && pb == null) return A[1] - B[1];
+          if (pa == null) return 1; if (pb == null) return -1;
+          return pa - pb;
+        }).map(function(x){ return x[0]; });
+      });
       p.ordenAvzV = PLAN_ORDEN_AVZ_V;
       _planGuardar(p);
       return true;
@@ -21140,6 +21172,7 @@
     // correr en cada lectura sin coste; un bloque creado a mano por el
     // entrenador no está en ninguna lista y no se toca.
     var PLAN_PODA_AV_RENOMBRES = {
+      'passing y globo ganador':        'Passing al pasillo y al cuerpo',   // v0.441 (conserva su id)
       'salida de pared con direccion': 'Salida de pared',
       'doble pared y bote pronto':      'Doble pared',
       'voleas a distintas alturas':     'Voleas',
@@ -24456,33 +24489,90 @@
       if (a.trim().toLowerCase() === g.toLowerCase()) a = '';
       return { g: g, a: a.trim() };
     }
-    function _recCaminoHTML(estRec) {
-      var dados = (leerPlan().blDado) || {};
+    // v0.441: el camino, GENÉRICO (Recorrido, zonas de la pista, Juegos y
+    // Técnica) y PLEGABLE: cada rombo empieza cerrado; tocar el rombo o su
+    // nombre abre sus líneas. Lo abierto se recuerda mientras dura la sesión.
+    // grupos: [{ titulo, nodos:[{ key, ico, nom, vacio, dado (true/false/null
+    //   = sin botón), dadoFn, lineas:[{ g, a, fn, ico }], prepTxt, prepFn }] }]
+    var _camAb = {};
+    function camToggle(k) {
+      _camAb[k] = !_camAb[k];
+      var act = document.querySelector('.pantalla.activa');
+      if (act && act.id === 'pantalla-tecnica') mostrarTecnica(); else mostrarPlanificacion();
+    }
+    function _camHTML(grupos) {
       var h = '<div class="cam">';
-      estRec.etapas.forEach(function(e){
-        if (!e.nodos.length) return;
-        if (e.et.nombre) h += '<div class="cam-celda">' + _gEsc(e.et.nombre) + '</div>';   // v0.439: en la zona, sin separador
-        e.nodos.forEach(function(nd){
-          var it = nd.it, id = String(it.id), dado = !!dados[id], vacio = !nd.ses.length;
-          var ico = (typeof GOLPE_ICONO !== 'undefined' && GOLPE_ICONO[it.g]) || '🎾';
-          h += '<div class="cam-bl">' +
-            '<div class="cam-t' + (dado ? ' dado' : '') + (vacio ? ' vacio' : '') + '"><i>' + ico + '</i></div>' +
-            '<div class="cam-der"><div class="cam-nom"><span>' + _gEsc(it.t) + '</span>' +
-              (vacio ? '' : '<button type="button" class="cam-chk' + (dado ? ' on' : '') + '" onclick="recBlDado(\'' + id.replace(/'/g, "\\'") + '\')">' + (dado ? '✓ Dado' : 'Marcar dado') + '</button>') +
+      grupos.forEach(function(gr){
+        if (!gr.nodos.length) return;
+        if (gr.titulo) h += '<div class="cam-celda">' + _gEsc(gr.titulo) + '</div>';
+        gr.nodos.forEach(function(nd){
+          var ab = !!_camAb[nd.key], kS = String(nd.key).replace(/'/g, "\\'");
+          h += '<div class="cam-bl' + (ab ? ' ab' : '') + '">' +
+            '<button type="button" class="cam-t' + (nd.dado ? ' dado' : '') + (nd.vacio ? ' vacio' : '') + '" onclick="camToggle(\'' + kS + '\')" aria-expanded="' + ab + '"><i>' + nd.ico + '</i></button>' +
+            '<div class="cam-der"><div class="cam-nom"><span onclick="camToggle(\'' + kS + '\')">' + _gEsc(nd.nom) +
+              '<em class="cam-chev">›</em></span>' +
+              (nd.dado === true || nd.dado === false ? '<button type="button" class="cam-chk' + (nd.dado ? ' on' : '') + '" onclick="' + nd.dadoFn + '">' + (nd.dado ? '✓ Dado' : 'Marcar dado') + '</button>' : '') +
             '</div>';
-          if (vacio) {
-            h += '<button type="button" class="cam-prep" onclick="recSesVentana(\'bl:' + id + '\', event)">Sin sesiones · preparar ＋</button>';
-          } else {
-            nd.ses.forEach(function(c){
-              var t = _camSesTxt(c);
-              h += '<button type="button" class="cam-s" onclick="recSesVentana(\'ses:' + c.id + '\', event)"><span class="cam-p">▶</span>' +
-                '<span class="cam-st"><b>' + _gEsc(t.g) + '</b>' + (t.a ? '<em>' + _gEsc(t.a) + '</em>' : '') + '</span></button>';
+          if (ab) {
+            if (!nd.lineas.length) {
+              h += nd.prepFn ? '<button type="button" class="cam-prep" onclick="' + nd.prepFn + '">' + _gEsc(nd.prepTxt || 'Sin contenido') + '</button>'
+                             : '<div class="cam-prep">' + _gEsc(nd.prepTxt || 'Sin contenido todavía') + '</div>';
+            }
+            nd.lineas.forEach(function(l){
+              h += '<button type="button" class="cam-s" onclick="' + l.fn + '"><span class="cam-p">' + (l.ico || '▶') + '</span>' +
+                '<span class="cam-st"><b>' + _gEsc(l.g) + '</b>' + (l.a ? '<em>' + _gEsc(l.a) + '</em>' : '') + '</span></button>';
             });
           }
           h += '</div></div>';
         });
       });
       return h + '</div>';
+    }
+    function _recCaminoHTML(estRec) {
+      var dados = (leerPlan().blDado) || {};
+      return _camHTML(estRec.etapas.map(function(e){
+        return { titulo: e.et.nombre, nodos: e.nodos.map(function(nd){
+          var it = nd.it, id = String(it.id), vacio = !nd.ses.length;
+          return { key:'b:' + id, ico:(typeof GOLPE_ICONO !== 'undefined' && GOLPE_ICONO[it.g]) || '🎾', nom:it.t, vacio:vacio,
+            dado: vacio ? null : !!dados[id], dadoFn:'recBlDado(\'' + id.replace(/'/g, "\\'") + '\')',
+            lineas: nd.ses.map(function(c){ var t = _camSesTxt(c); return { g:t.g, a:t.a, fn:'recSesVentana(\'ses:' + c.id + '\', event)' }; }),
+            prepTxt:'Sin sesiones · preparar ＋', prepFn:'recSesVentana(\'bl:' + id + '\', event)' };
+        }) };
+      }));
+    }
+    // v0.441: JUEGOS (zona de la pista) con el mismo camino: un rombo por
+    // categoría de ejercicio y otro por cada bloque del plan de la zona.
+    function _recJuegosCaminoHTML(e) {
+      var cats = {}; leerCategorias().forEach(function(c){ cats[c.id] = c.nombre; });
+      var grupos = {}, orden = [];
+      leerEjercicios().forEach(function(ej){
+        var nom = cats[ej.categoriaId] || '';
+        if (REC_JUEGOS_CATS.indexOf(String(nom).trim().toLowerCase()) < 0) return;
+        if (!grupos[nom]) { grupos[nom] = []; orden.push(nom); }
+        grupos[nom].push(ej);
+      });
+      orden.sort(function(a, b){ return a.localeCompare(b); });
+      var nodos = orden.map(function(nom){
+        return { key:'j:' + nom, ico: /calent/i.test(nom) ? '🔥' : '🎲', nom:nom, vacio:false, dado:null,
+          lineas: grupos[nom].sort(function(a, b){ return String(a.nombre).localeCompare(String(b.nombre)); }).map(function(ej){
+            var m = _sesMin(ej);
+            return { g:ej.nombre, a: m ? m + '′' : '', fn:'recEjAbrir(' + ej.id + ')', ico: _ejConVideo(ej) ? '▶' : '·' };
+          }) };
+      });
+      var gr = [{ titulo:'', nodos:nodos }];
+      if (e && e.nodos && e.nodos.length) gr = gr.concat(_recCaminoGrupos(e));
+      if (!nodos.length && !(e && e.nodos && e.nodos.length)) return '<div class="rec-bl-vacio">No hay ejercicios de calentamiento ni juegos en el catálogo.</div>';
+      return _camHTML(gr);
+    }
+    function _recCaminoGrupos(e) {
+      var dados = (leerPlan().blDado) || {};
+      return [{ titulo:'', nodos: e.nodos.map(function(nd){
+        var it = nd.it, id = String(it.id), vacio = !nd.ses.length;
+        return { key:'b:' + id, ico:(typeof GOLPE_ICONO !== 'undefined' && GOLPE_ICONO[it.g]) || '🎾', nom:it.t, vacio:vacio,
+          dado: vacio ? null : !!dados[id], dadoFn:'recBlDado(\'' + id.replace(/'/g, "\\'") + '\')',
+          lineas: nd.ses.map(function(c){ var t = _camSesTxt(c); return { g:t.g, a:t.a, fn:'recSesVentana(\'ses:' + c.id + '\', event)' }; }),
+          prepTxt:'Sin sesiones · preparar ＋', prepFn:'recSesVentana(\'bl:' + id + '\', event)' };
+      }) }];
     }
     function recBlDado(id) {
       var p = leerPlan();
@@ -24833,7 +24923,8 @@
       // v0.364: Juegos también en pestañas, pero de CATEGORÍAS de ejercicio
       // (Calentamiento · Cooperación · Juegos condicionados…), igual que las
       // demás zonas van por golpes.
-      if (e.et.zona === 'juegos') h += _recJuegosTabsHTML(eV, p, nivel, z);   // v0.401: eV = filtrada por intención en Avanzado
+      if (e.et.zona === 'juegos' && nivel === 'avanzado') h += _recJuegosCaminoHTML(eV);   // v0.441: Juegos, también camino
+      else if (e.et.zona === 'juegos') h += _recJuegosTabsHTML(eV, p, nivel, z);   // v0.401: eV = filtrada por intención en Avanzado
       // v0.439: Avanzado, la misma presentación que el Recorrido: el camino
       // con los bloques de la zona y la intención elegidas
       else if (nivel === 'avanzado') h += _recCaminoHTML({ etapas:[{ et:{ nombre:'' }, nodos:eV.nodos }] });
@@ -30924,31 +31015,28 @@
       if (!cont) return;
       if (!_gtEsN3()) { cont.innerHTML = '<div class="plan-bl-vacio">Esta sección es solo para entrenadores de nivel 3.</div>'; return; }
       if (!Object.keys(_gtGesto).length) _cargarGestos();
-      var golpes = GT_GOLPES.filter(function(g){ var d = _gtDe(g.key); return (d.videos || []).length || (d.notas || []).length; });
+      var nTot = 0;
+      var nodos = GT_GOLPES.map(function(g){
+        var d = _gtDe(g.key), lineas = [];
+        (d.videos || []).forEach(function(v, i){ lineas.push({ g:_tecTitulo(v.titulo, g), fn:'tecVer(\'' + g.key + '\',' + i + ')' }); });
+        (d.notas || []).forEach(function(nt, i){ lineas.push({ g:_tecTitulo(nt.titulo, g), fn:'tecNota(\'' + g.key + '\',' + i + ')', ico:'📝' }); });
+        nTot += lineas.length;
+        return { key:'t:' + g.key, ico:g.icono, nom:g.label.replace(' (fundamentos)', ''), vacio:!lineas.length, dado:null,
+                 lineas:lineas, prepTxt:'Sin vídeos ni notas todavía' };
+      });
       var sub = document.getElementById('tec-sub');
-      var nTot = 0; golpes.forEach(function(g){ var d = _gtDe(g.key); nTot += (d.videos || []).length + (d.notas || []).length; });
       if (sub) sub.textContent = nTot + (nTot === 1 ? ' vídeo o nota' : ' vídeos y notas') + ' · por golpe';
-      if (!golpes.length) { cont.innerHTML = '<div class="plan-bl-vacio">Aún no hay gesto técnico sincronizado. Ejecuta sync_padel.py con la cuenta nivel3.</div>'; return; }
-      if (!golpes.some(function(g){ return g.key === _tecGolpe; })) _tecGolpe = golpes[0].key;
-      var h = '<div class="rec-zt">' + golpes.map(function(g){
-        var d = _gtDe(g.key), n = (d.videos || []).length + (d.notas || []).length;
-        return '<button type="button" class="rec-zt-t' + (_tecGolpe === g.key ? ' on' : '') + '" onclick="tecGolpe(\'' + g.key + '\')">' + g.label.replace(' (fundamentos)', '') + '<span>' + n + '</span></button>';
-      }).join('') + '</div>';
-      var g = GT_GOLPES.filter(function(x){ return x.key === _tecGolpe; })[0], d = _tecGolpe ? _gtDe(_tecGolpe) : { videos:[], notas:[] };
-      var col = TEC_COLOR[_tecGolpe] || '#5f5e5a';
-      h += '<div class="vp-lista">';
-      (d.videos || []).forEach(function(v, i){ h += _vpFilaHTML(col, _tecTitulo(v.titulo, g), 'tecVer(' + i + ')'); });
-      (d.notas || []).forEach(function(nt, i){ h += _vpFilaHTML(col, _tecTitulo(nt.titulo, g), 'tecNota(' + i + ')', '📝'); });
-      cont.innerHTML = h + '</div>';
+      cont.innerHTML = (Object.keys(_gtGesto).length ? '' : '<div class="plan-bl-vacio" style="margin-bottom:8px;">Aún no hay gesto técnico sincronizado. Ejecuta sync_padel.py con la cuenta nivel3.</div>') +
+        _camHTML([{ titulo:'', nodos:nodos }]);
     }
-    function tecVer(i) {
-      var g = GT_GOLPES.filter(function(x){ return x.key === _tecGolpe; })[0] || {}, v = (_gtDe(_tecGolpe).videos || [])[i];
+    function tecVer(k, i) {
+      var g = GT_GOLPES.filter(function(x){ return x.key === k; })[0] || {}, v = (_gtDe(k).videos || [])[i];
       if (!v) return;
       var c = v.texto ? '<div class="vp-texto md-contenido">' + renderMd(v.texto) + '</div>' : '';
       _vidOv(_vpModalHTML(_tecTitulo(v.titulo, g), v.video, c));
     }
-    function tecNota(i) {
-      var g = GT_GOLPES.filter(function(x){ return x.key === _tecGolpe; })[0] || {}, nt = (_gtDe(_tecGolpe).notas || [])[i];
+    function tecNota(k, i) {
+      var g = GT_GOLPES.filter(function(x){ return x.key === k; })[0] || {}, nt = (_gtDe(k).notas || [])[i];
       if (!nt) return;
       _vidOv(_vpModalHTML('📝 ' + _tecTitulo(nt.titulo, g), '', '<div class="vp-texto vp-texto-largo md-contenido">' + renderMd(nt.texto || '') + '</div>'));
     }
