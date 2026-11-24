@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.441.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.442.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,16 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.442.0 — Asistencia: «💶 Mis cuentas» para el entrenador de nivel 3 (2026-11)
+    (sin migraciones)
+    · Debajo de «⚙ Clases», en la cabecera de Asistencia, el botón «💶 Mis
+      cuentas» (solo nivel 3). Abre el mes con las clases DADAS separadas
+      en 1 h y 1 h 30; escribes lo que vale cada una y sale lo que llevas
+      ganado en el mes. Se puede ir a meses anteriores.
+    · Cuenta las clases con la lista pasada (también recuperaciones); no las
+      que dio un sustituto. Los precios se guardan en el propio móvil.
+
 
   v0.441.0 — Avanzado: bloques nuevos y camino plegable · Técnica, en camino (2026-11)
     (sin migraciones)
@@ -7855,6 +7865,24 @@
     .cab-mini-btn:active { background:rgba(255,255,255,0.28); transform:scale(0.97); }
     /* v0.277: segundo botón en la misma cabecera (Perfil, junto a ⚙ Clases) */
     .cab-mini-btn.cab-mini-2 { right:8.1rem; }
+    /* v0.442: Mis cuentas, debajo de ⚙ Clases */
+    .cab-mini-btn.cab-mini-cuentas { top:calc(2.05rem + 44px + env(safe-area-inset-top)) !important; }
+    .cue-mes { display:flex; align-items:center; justify-content:center; gap:16px; margin:4px 0 12px; }
+    .cue-mes b { font-size:15px; min-width:130px; text-align:center; }
+    .cue-mes button { width:34px; height:34px; border-radius:10px; border:1.5px solid var(--borde); background:var(--blanco); font-size:18px; cursor:pointer; }
+    .cue-mes button:disabled { opacity:.35; }
+    .cue-tab { display:flex; flex-direction:column; gap:8px; }
+    .cue-fila { display:flex; align-items:center; gap:8px; padding:10px; border-radius:12px; background:var(--arena); }
+    .cue-n { font-size:22px; font-weight:800; color:var(--verde); min-width:34px; text-align:center; }
+    .cue-l { flex:1; min-width:0; font-size:13px; font-weight:700; color:var(--texto); }
+    .cue-p { font-size:13px; color:var(--gris); white-space:nowrap; }
+    .cue-p input { width:52px; padding:6px; border-radius:8px; border:1.5px solid var(--borde); font-family:inherit; font-size:14px; text-align:right; }
+    .cue-e { min-width:64px; text-align:right; font-size:14px; font-weight:800; color:var(--texto); }
+    .cue-otras .cue-l { font-weight:600; color:var(--gris); }
+    .cue-total { display:flex; justify-content:space-between; align-items:center; margin:12px 0 8px; padding:12px 14px; border-radius:12px;
+      background:var(--verde); color:#fff; font-weight:700; }
+    .cue-total b { font-size:20px; }
+    .cue-nota { margin:0; }
     @media (max-width: 360px) {
       .cab-mini-btn { padding:8px 10px; font-size:12px; }
       .cab-mini-btn.cab-mini-2 { right:7rem; }
@@ -12226,6 +12254,8 @@
            es la única puerta a perfil, ajustes y salir. -->
       <button class="cab-mini-btn cab-mini-2" id="asist-perfil-btn" onclick="irA('pantalla-ajustes')">👤 Perfil</button>
       <button class="cab-mini-btn" onclick="irA('pantalla-asistencia-config')">⚙ Clases</button>
+      <!-- v0.442: solo nivel 3 — conteo de clases dadas y lo que llevas ganado en el mes -->
+      <button class="cab-mini-btn cab-mini-cuentas" id="asist-cuentas-btn" style="display:none" onclick="cuentasAbrir()">💶 Mis cuentas</button>
       <div class="cab-titulo">Asistencia</div>
       <div class="cab-sub" id="asist-sub">—</div>
     </div>
@@ -12613,7 +12643,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.441.0';
+    var APP_VERSION = '0.442.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -34216,7 +34246,63 @@
     function asistHoy() { asistDiaSel = null; asistCalMesOff = 0; asistCalAbierto = false; mostrarAsistencia(); }
     function asistCalSelSemana(lun) { asistSemSel = lun; mostrarAsistencia(); }
 
+    // ══ v0.442 — MIS CUENTAS (solo entrenador de nivel 3) ══════════════════
+    // Clases DADAS por él en el mes (lista pasada, sin las que dio un
+    // sustituto), separadas por duración, por el precio que pone él para la
+    // clase de 1 h y la de 1 h 30. Los precios se guardan en este dispositivo.
+    var _cueMesOff = 0;
+    function _cuePermitido() { try { return !!(_sbGrupo && _sbGrupo.rol === 'nivel3') && !_gEditUid && !_esGestor; } catch (e) { return false; } }
+    function _cueTarifas() { try { return JSON.parse(localStorage.getItem('padel-tarifas') || '{}') || {}; } catch (e) { return {}; } }
+    function _cueNum(v) { var n = parseFloat(String(v || '').replace(',', '.')); return isFinite(n) && n > 0 ? n : 0; }
+    function _cueEur(n) { return (Math.round(n * 100) / 100).toLocaleString('es-ES', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }) + ' €'; }
+    function _cueDatos(mesISO) {
+      var clases = (leerAsistConfig().clases || []).filter(function(c){ return _claseCurso(c) === cursoDeFecha(mesISO); });
+      var regs = leerAsistRegistros().filter(function(r){ return r.fecha && r.fecha.slice(0, 7) === mesISO; });
+      return _gestorSumaMes(clases, regs, mesISO);
+    }
+    function cuentasAbrir() { _cueMesOff = 0; _cuePintar(); }
+    function cuentasMes(d) { _cueMesOff += d; _cuePintar(); }
+    function cuentasCerrar() { var ov = document.getElementById('cue-ov'); if (ov) ov.remove(); }
+    function cuentasTarifa() {
+      var t = { h1: (document.getElementById('cue-h1') || {}).value || '', h15: (document.getElementById('cue-h15') || {}).value || '' };
+      try { localStorage.setItem('padel-tarifas', JSON.stringify(t)); } catch (e) {}
+      _cueTotales();
+    }
+    function _cueTotales() {
+      var s = _cueDatos(getMesISO_A(_cueMesOff)), t = _cueTarifas();
+      var p1 = _cueNum(t.h1), p15 = _cueNum(t.h15), e1 = s.m60 * p1, e15 = s.m90 * p15;
+      var set = function(id, v){ var el = document.getElementById(id); if (el) el.textContent = v; };
+      set('cue-e1', p1 ? _cueEur(e1) : '—'); set('cue-e15', p15 ? _cueEur(e15) : '—');
+      set('cue-tot', (p1 || p15) ? _cueEur(e1 + e15) : 'Pon el precio de cada clase');
+    }
+    function _cuePintar() {
+      var mes = getMesISO_A(_cueMesOff), s = _cueDatos(mes), t = _cueTarifas();
+      var h = '<div class="asl-modal-ov" onclick="if(event.target===this)cuentasCerrar()"><div class="asl-modal cue-modal" role="dialog" aria-label="Mis cuentas">' +
+        '<div class="asl-modal-cab"><span class="asl-modal-tit">💶 Mis cuentas</span>' +
+        '<button type="button" class="asl-modal-x" onclick="cuentasCerrar()" aria-label="Cerrar">✕</button></div>' +
+        '<div class="cue-mes"><button type="button" onclick="cuentasMes(-1)">‹</button><b>' + _gEsc(getMesLabelA(_cueMesOff)) + '</b>' +
+          '<button type="button" onclick="cuentasMes(1)"' + (_cueMesOff >= 0 ? ' disabled' : '') + '>›</button></div>' +
+        '<div class="cue-tab">' +
+          '<div class="cue-fila"><span class="cue-n">' + s.m60 + '</span><span class="cue-l">clases de 1 h</span>' +
+            '<label class="cue-p">× <input id="cue-h1" type="text" inputmode="decimal" placeholder="€" value="' + _gEsc(t.h1 || '') + '" oninput="cuentasTarifa()"> €</label>' +
+            '<span class="cue-e" id="cue-e1">—</span></div>' +
+          '<div class="cue-fila"><span class="cue-n">' + s.m90 + '</span><span class="cue-l">clases de 1 h 30</span>' +
+            '<label class="cue-p">× <input id="cue-h15" type="text" inputmode="decimal" placeholder="€" value="' + _gEsc(t.h15 || '') + '" oninput="cuentasTarifa()"> €</label>' +
+            '<span class="cue-e" id="cue-e15">—</span></div>' +
+          (s.otras ? '<div class="cue-fila cue-otras"><span class="cue-n">' + s.otras + '</span><span class="cue-l">de otra duración (sin precio: revisa su franja)</span></div>' : '') +
+        '</div>' +
+        '<div class="cue-total"><span>Total del mes</span><b id="cue-tot">—</b></div>' +
+        '<div class="asl-modal-sub cue-nota">Cuenta las clases con la lista pasada, también las recuperaciones. No entran las que dio un sustituto' +
+          (s.sust ? ' (' + s.sust + ' este mes)' : '') + '. Los precios se quedan guardados en este móvil.</div>' +
+        '</div></div>';
+      var capa = document.getElementById('cue-ov');
+      if (!capa) { capa = document.createElement('div'); capa.id = 'cue-ov'; document.body.appendChild(capa); }
+      capa.innerHTML = h;
+      _cueTotales();
+    }
     function mostrarAsistencia() {
+      // v0.442: el botón de Mis cuentas, solo para nivel 3
+      try { var _cb = document.getElementById('asist-cuentas-btn'); if (_cb) _cb.style.display = _cuePermitido() ? '' : 'none'; } catch (e) {}
       if (!_sb || !_sbUser) _asistStampCurso();   // uso solo-local: migración v0.55
       _dscCargarSb();   // v0.79.1: trae los días sin clase del club para pintarlos
       var cfg    = leerAsistConfig();
