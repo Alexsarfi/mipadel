@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.439.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.440.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,16 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.440.0 — Avanzado: Anular fondo en orden progresivo (2026-11)
+    (sin migraciones)
+    · Orden nuevo de los bloques de Anular fondo: Profundidad y ritmo →
+      Dirección cruzado y paralelo → Salida de pared → Doble pared → Globo
+      defensivo → Contención y bola neutra (sin pared → con pared → doble
+      pared → globo → juego de contención, que enlaza con Dominar fondo).
+    · Se aplica solo al abrir la app, sin perder nada: mismos bloques, mismas
+      sesiones y lo marcado como dado.
+
 
   v0.439.0 — Avanzado: la pista se queda y debajo, el camino de la zona (2026-11)
     (sin migraciones)
@@ -12581,7 +12591,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.439.0';
+    var APP_VERSION = '0.440.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -20675,8 +20685,9 @@
         // (`saque:`): el saque no es un bloque suelto, es cómo se saca/resta
         // en esa celda (el bloque «Saque» de Juego táctico se conserva).
         { key:'a1', nombre:'Anular fondo', obj:'Estoy atrás y me atacan: que no puedan atacar, ganar tiempo y esperar la bola media.', saque:'Colocación y profundidad consistentes; resto profundo que no deje atacar.', bloques:[
-          {t:'Dirección cruzado y paralelo', f:'Dominar la diagonal y cambiar a paralelo con criterio.', int:'anular', z:'fondo', g:'fondo'},
+          // v0.440: orden progresivo — sin pared → con pared → doble pared → globo → contención
           {t:'Profundidad y ritmo', f:'Bola neutra: jugar largo y alto para que no ataquen.', int:'anular', z:'fondo', g:'fondo'},
+          {t:'Dirección cruzado y paralelo', f:'Dominar la diagonal y cambiar a paralelo con criterio.', int:'anular', z:'fondo', g:'fondo'},
           {t:'Salida de pared', f:'Salir de la pared de fondo y de la lateral controlando la dirección.', int:'anular', z:'fondo', g:'pared'},
           {t:'Doble pared', f:'Dobles paredes: lateral-fondo y fondo-lateral.', int:'anular', z:'esquina', g:'pared'},
           {t:'Globo defensivo', f:'Globo profundo para neutralizar y quitar la red.', int:'anular', z:'fondo', g:'globo'},
@@ -21039,7 +21050,28 @@
       }
       _planMatrizAvanzado(p); // v0.397 — antes de la poda: si no, la poda vería huecos y sembraría duplicados
       _planPodaAvanzado(p);   // v0.359
+      _planOrdenAvanzado(p);  // v0.440
       return p.contenido;
+    }
+    // ── v0.440 — ORDEN DEL CATÁLOGO en Anular fondo (una vez por dispositivo) ──
+    // El plan ya sembrado guarda sus bloques en el orden de entonces; esto los
+    // coloca UNA vez en el orden nuevo del catálogo (a1), conservando los ids
+    // y dejando al final los bloques creados a mano.
+    var PLAN_ORDEN_AVZ_V = 1;
+    function _planOrdenAvanzado(p) {
+      if ((p.ordenAvzV || 0) >= PLAN_ORDEN_AVZ_V) return false;
+      var av = p.contenido && p.contenido.avanzado, et = (PLAN_ETAPAS.avanzado || []).filter(function(e){ return e.key === 'a1'; })[0];
+      if (!av || !et || !Array.isArray(av.a1)) { p.ordenAvzV = PLAN_ORDEN_AVZ_V; return false; }
+      var pos = {}; et.bloques.forEach(function(b, i){ pos[_planNorm(b.t)] = i; });
+      av.a1 = av.a1.map(function(x, i){ return [x, i]; }).sort(function(A, B){
+        var pa = pos[_planNorm(A[0].t)], pb = pos[_planNorm(B[0].t)];
+        if (pa == null && pb == null) return A[1] - B[1];
+        if (pa == null) return 1; if (pb == null) return -1;
+        return pa - pb;
+      }).map(function(x){ return x[0]; });
+      p.ordenAvzV = PLAN_ORDEN_AVZ_V;
+      _planGuardar(p);
+      return true;
     }
     // ── v0.397 — LA MATRIZ DE AVANZADO, aplicada al plan YA SEMBRADO ───────
     // Las etapas a1…a7 cambian de nombre y los 17 bloques se reparten entre
