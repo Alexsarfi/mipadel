@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.442.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.443.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,16 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.443.0 — 🎬 Vídeos, unificado y con el formato de Técnica (2026-11)
+    (sin migraciones)
+    · Fuera los apartados «De redes» y «Mis ejercicios»: una sola lista.
+    · Mismo formato que Técnica: un rombo por golpe (solo los que tienen
+      vídeos), plegado, y dentro todos los vídeos de ese golpe, de redes y de
+      tus ejercicios juntos, en orden alfabético. Al tocar uno, el de redes
+      abre su visor y el del ejercicio su ficha.
+    · «＋ Añadir» sigue en la cabecera.
+
 
   v0.442.0 — Asistencia: «💶 Mis cuentas» para el entrenador de nivel 3 (2026-11)
     (sin migraciones)
@@ -12643,7 +12653,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.442.0';
+    var APP_VERSION = '0.443.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -24528,7 +24538,9 @@
     function camToggle(k) {
       _camAb[k] = !_camAb[k];
       var act = document.querySelector('.pantalla.activa');
-      if (act && act.id === 'pantalla-tecnica') mostrarTecnica(); else mostrarPlanificacion();
+      if (act && act.id === 'pantalla-tecnica') mostrarTecnica();
+      else if (act && act.id === 'pantalla-videos') mostrarVideos(true);   // v0.443
+      else mostrarPlanificacion();
     }
     function _camHTML(grupos) {
       var h = '<div class="cam">';
@@ -28323,35 +28335,43 @@
       });
       return h + '</div>';
     }
+    // v0.443: VÍDEOS UNIFICADOS con el formato de Técnica — un rombo por
+    // golpe, plegado, y dentro TODOS los vídeos de ese golpe: los de redes
+    // (repositorio) y los de tus ejercicios, sin separarlos. Al tocar una
+    // línea, el de redes abre su visor y el ejercicio su ficha.
+    var VUN_GOLPES = [
+      { k:'volea', l:'Volea', ico:'🎯' }, { k:'bandeja', l:'Bandeja', ico:'🪃' }, { k:'vibora', l:'Víbora', ico:'🐍' },
+      { k:'remate', l:'Remate', ico:'💥' }, { k:'globo', l:'Globo', ico:'🎈' }, { k:'pared', l:'Pared', ico:'🧱' },
+      { k:'fondo', l:'Fondo', ico:'🎾' }, { k:'chiquita', l:'Chiquita', ico:'🤏' }, { k:'saque', l:'Saque y resto', ico:'🚀' },
+      { k:'defensa', l:'Defensa', ico:'🛡️' }, { k:'transicion', l:'Transición', ico:'⏩' }, { k:'mixto', l:'Combinada', ico:'🔀' },
+      { k:'tactica', l:'Juego / táctica', ico:'♟️' }, { k:'otro', l:'Otros', ico:'✳️' }
+    ];
+    var VUN_DE_EJ = { bajada:'pared', rulo:'remate', dejada:'volea' };
+    function _vunGolpeEj(ej) { var g = ejGolpe(ej) || ''; g = VUN_DE_EJ[g] || g; return VUN_GOLPES.some(function(x){ return x.k === g; }) ? g : 'otro'; }
     function mostrarVideos(sinRecargar) {
       var cont = document.getElementById('vid-contenido');
       if (!cont) return;
       if (!_vidPermitido()) { cont.innerHTML = '<div class="plan-bl-vacio">Esta sección es solo para entrenadores de nivel 3.</div>'; return; }
       if (!sinRecargar) _vidCargar(function(){ mostrarVideos(true); });
-      var _nMios = _misEjercicios().length;
-      var _seg = '<div class="vid-secs"><button type="button" class="vid-sec' + (_vidSec === 'redes' ? ' on' : '') + '" onclick="vidSeccion(\'redes\')">De redes<b>' + _vidLocal().length + '</b></button>' +
-        '<button type="button" class="vid-sec' + (_vidSec === 'mios' ? ' on' : '') + '" onclick="vidSeccion(\'mios\')">Mis ejercicios<b>' + _nMios + '</b></button></div>';
-      if (_vidSec === 'mios') {
-        var _sub = document.getElementById('vid-sub');
-        if (_sub) _sub.textContent = _nMios + (_nMios === 1 ? ' ejercicio con vídeo' : ' ejercicios con vídeo') + ' · por golpe';
-        cont.innerHTML = _seg + _vidMiosHTML();
-        return;
-      }
-      var todos = _vidLocal(), cnt = {};
-      todos.forEach(function(v){ var k = v.golpe || 'otro'; cnt[k] = (cnt[k] || 0) + 1; });
-      var golpes = VID_GOLPES.filter(function(g){ return cnt[g.k]; });
-      // sin «Todos»: si el golpe elegido ya no tiene vídeos, el primero que tenga
-      if (!cnt[_vidGolpe]) _vidGolpe = golpes.length ? golpes[0].k : 'otro';
+      var por = {}, n = 0;
+      var meter = function(k, linea){ (por[k] = por[k] || []).push(linea); n++; };
+      _vidLocal().forEach(function(v){
+        var k = VUN_GOLPES.some(function(x){ return x.k === v.golpe; }) ? v.golpe : 'otro';
+        meter(k, { g:v.titulo || 'Sin título', a:'', fn:'vidVer(\'' + String(v.id).replace(/'/g, "\\'") + '\')', ord:String(v.titulo || '') });
+      });
+      _misEjercicios().forEach(function(ej){
+        meter(_vunGolpeEj(ej), { g:ej.nombre || 'Ejercicio', a:'', fn:'recEjAbrir(' + ej.id + ')', ord:String(ej.nombre || '') });
+      });
       var sub = document.getElementById('vid-sub');
-      if (sub) sub.textContent = todos.length + (todos.length === 1 ? ' vídeo' : ' vídeos') + ' · por golpe';
-      var h = _seg;   // v0.436: De redes | Mis ejercicios
-      if (_vidAvisoTabla) h += '<div class="vid-aviso">⚠️ Falta ejecutar en Supabase <b>migracion_videos_ejercicios.sql</b>: de momento los vídeos solo se guardan en este dispositivo.</div>';
-      if (golpes.length) {
-        h += '<div class="rec-zt">' + golpes.map(function(g){
-          return '<button type="button" class="rec-zt-t' + (_vidGolpe === g.k ? ' on' : '') + '" onclick="vidGolpe(\'' + g.k + '\')">' + g.l + '<span>' + cnt[g.k] + '</span></button>';
-        }).join('') + '</div>';
-      }
-      h += '<div id="vid-lista" class="vp-lista">' + _vidListaHTML() + '</div>';
+      if (sub) sub.textContent = n + (n === 1 ? ' vídeo' : ' vídeos') + ' · por golpe';
+      var nodos = VUN_GOLPES.filter(function(g){ return por[g.k]; }).map(function(g){
+        return { key:'v:' + g.k, ico:g.ico, nom:g.l, vacio:false, dado:null,
+                 lineas: por[g.k].sort(function(a, b){ return a.ord.localeCompare(b.ord, 'es'); }) };
+      });
+      var h = '';
+      if (_vidAvisoTabla) h += '<div class="vid-aviso">⚠️ Falta ejecutar en Supabase <b>migracion_videos_ejercicios.sql</b>: de momento los vídeos de redes solo se guardan en este dispositivo.</div>';
+      h += nodos.length ? _camHTML([{ titulo:'', nodos:nodos }])
+                        : '<div class="plan-bl-vacio">Todavía no hay vídeos. Toca «＋ Añadir» arriba y pega el enlace de Instagram.</div>';
       cont.innerHTML = h;
     }
     // ── Ventanas: ver · añadir/editar ──────────────────────────────────
