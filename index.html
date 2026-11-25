@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.443.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.444.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,20 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.444.0 — Asistencia: las franjas como camino y lista en un toque (2026-11)
+    (sin migraciones)
+    · Las franjas del día, con el formato de Avanzado: un rombo por franja
+      con la hora (verde = pasada · dorado = ahora · ámbar = sin registrar ·
+      gris = más tarde o sin clase) y, a la derecha, todos sus alumnos con
+      nombre y primer apellido (los de recuperación con ↩).
+    · «✓ Todos presentes · guardar»: pasa la lista de un toque, directo. Solo
+      sale cuando la clase ya ha empezado.
+    · Si falta alguien o pasa otra cosa, «Abrir ›» entra en Pasar lista como
+      siempre. Ya pasada, la franja se resume («4 de 5 · faltó Hugo (IJ)») y
+      se puede abrir para corregir.
+    · Para todos los entrenadores. El modo gestión del gestor sigue igual.
+
 
   v0.443.0 — 🎬 Vídeos, unificado y con el formato de Técnica (2026-11)
     (sin migraciones)
@@ -8054,6 +8068,37 @@
     .avz-card-t { font-size:16px; font-weight:800; letter-spacing:.03em; color:#f4efe6; }
     .avz-card-go { width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:20px;
       color:#fff; background:linear-gradient(180deg,#b07a3a,#7a5124); border:1px solid #c9954f; }
+    /* v0.444 — Asistencia como camino */
+    .acm { background:#0b0b0d; border-radius:18px; padding:12px 10px 4px; margin:0 0 12px; }
+    .acm-dia { font-size:11.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:#c9954f; margin:2px 4px 4px; }
+    .acm-hoy { font-size:10px; padding:2px 7px; border-radius:99px; background:#c9954f; color:#111; margin-left:4px; }
+    .acm-cam:before { left:34px; }
+    .cam-t.acm-t i { font-size:12px; font-weight:900; color:#fff; letter-spacing:-.02em; }
+    .cam-t.acm-t.ok { background:#1f7a46; box-shadow:0 5px 0 #14532d, 0 9px 14px rgba(0,0,0,.5); }
+    .cam-t.acm-t.ya { background:#b07a3a; box-shadow:0 5px 0 #7a5124, 0 0 18px rgba(240,163,90,.55); }
+    .cam-t.acm-t.pend { background:#7a5124; box-shadow:0 5px 0 #4a3015, 0 0 0 2px #f59e0b; }
+    .cam-t.acm-t.fut, .cam-t.acm-t.sin { background:#1b1b1e; box-shadow:0 5px 0 #111; border:2px solid #3a3a3f; }
+    .cam-t.acm-t.fut i, .cam-t.acm-t.sin i { color:#8a8478; }
+    .acm-nom { display:flex; align-items:center; flex-wrap:wrap; gap:6px; font-size:14px; font-weight:800; color:#f4efe6; margin:2px 0 6px; }
+    .acm-nom > span:first-child { flex:1; min-width:0; cursor:pointer; }
+    .acm-nom small { font-size:11.5px; font-weight:600; color:#8a8478; }
+    .acm-tag { font-size:10.5px; font-weight:800; padding:3px 8px; border-radius:99px; white-space:nowrap; }
+    .acm-tag.ok { color:#86efac; border:1px solid #22c55e88; }
+    .acm-tag.ya { color:#111; background:#f0a35a; }
+    .acm-tag.pend { color:#fbbf24; border:1px solid #f59e0b88; }
+    .acm-tag.fut, .acm-tag.sin { color:#8a8478; border:1px solid #3a3a3f; }
+    .acm-tag.sust { color:#c4b5fd; border:1px solid #a78bfa88; }
+    .acm-tag.aviso { color:#93c5fd; border:1px solid #60a5fa88; }
+    .acm-als { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px; }
+    .acm-al { font-size:12px; font-weight:700; padding:4px 9px; border-radius:99px; background:#151517; border:1px solid #2c2c30; color:#e8e2d6; }
+    .acm-al.rec { border-color:#a78bfa88; color:#c4b5fd; }
+    .acm-vacio { font-size:12px; color:#8a8478; }
+    .acm-res { font-size:12.5px; font-weight:700; color:#86efac; cursor:pointer; margin-bottom:4px; }
+    .acm-acc { display:flex; gap:6px; margin-bottom:4px; }
+    .acm-b { border:none; border-radius:10px; padding:9px 10px; font-family:inherit; font-size:12.5px; font-weight:800; cursor:pointer; }
+    .acm-b.todos { flex:1; background:#22c55e; color:#06210f; }
+    .acm-b.abrir { background:#151517; border:1px solid #3a3a3f; color:#e8c48e; }
+    .acm-b.plan { background:#151517; border:1px solid #3a3a3f; }
     /* v0.438 — Recorrido de Avanzado como camino vertical */
     .cam { position:relative; padding:2px 0 10px; }
     .cam:before { content:''; position:absolute; left:35px; top:0; bottom:0; width:4px; background:#2a1f12; border-radius:2px; }
@@ -12653,7 +12698,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.443.0';
+    var APP_VERSION = '0.444.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -34500,6 +34545,9 @@
           // v0.210: y solo las que ya existían ese día (fecha de alta).
           var clasesCurso = (diasMap[dia] || []).filter(function(c){ return _claseEnFecha(c, fecha); });
           if (!clasesCurso.length) return;
+          // v0.444: el entrenador ve las franjas como camino (formato Avanzado),
+          // con sus alumnos y «Todos presentes · guardar». En modo gestión, como antes.
+          if (!_gEditUid) { html += _asistCaminoDiaHTML(clasesCurso, fecha, regs, diasNom, esHoy, esPas); return; }
 
           html += '<div class="asist-dia-card' + (esHoy ? ' es-hoy' : '') + '">';
           html += '<div class="asist-dia-header">';
@@ -35661,6 +35709,77 @@
       var h = +m[1], mi = m[2] ? +m[2] : 0;
       if (h > 23 || mi > 59) return null;
       return (h < 10 ? '0' : '') + h + ':' + (mi < 10 ? '0' : '') + mi;
+    }
+    // ══ v0.444 — ASISTENCIA COMO CAMINO ═══════════════════════════════════
+    // Un rombo por franja con la hora, en vertical, y a la derecha la franja,
+    // su estado y TODOS sus alumnos. «✓ Todos presentes · guardar» pasa la
+    // lista de un toque (directo, sin preguntar); si falta alguien o pasa otra
+    // cosa, «Abrir ›» entra en Pasar lista como siempre. Ya pasada, se resume
+    // en una línea («4 de 5 · faltó Hugo (IJ)»).
+    function _asistCaminoDiaHTML(clases, fecha, regs, diasNom, esHoy, esPas) {
+      var yo = _sbUser && _sbUser.id;
+      var h = '<div class="acm avz-oscuro"><div class="acm-dia">' + _gEsc(diasNom) + ' · ' + _gEsc(formatFechaDiaMes(fecha)) +
+              (esHoy ? ' <span class="acm-hoy">HOY</span>' : '') + '</div><div class="cam acm-cam">';
+      clases.slice().sort(function(a, b){ return (a.franja || '').localeCompare(b.franja || ''); }).forEach(function(clase){
+        var reg = regs.filter(function(r){ return r.claseId === clase.id && r.fecha === fecha; })[0];
+        var keys = alumnosActivosKeys(clase, fecha), recs = (reg && reg.recups) || [];
+        var pasada = _regPasada(reg), sinCl = !!(reg && reg.sinClase), bloq = _asistListaBloqueo(clase, fecha);
+        var est, tag;
+        if (sinCl)        { est = 'sin'; tag = '<span class="acm-tag sin">🚫 Sin clase</span>'; }
+        else if (pasada)  { est = 'ok';  tag = '<span class="acm-tag ok">✓ Pasada</span>'; }
+        else if (bloq)    { est = 'fut'; tag = '<span class="acm-tag fut">' + (esHoy ? 'A las ' + _gEsc(_asistHoraInicio(clase.franja)) : 'Próxima') + '</span>'; }
+        else if (esHoy)   { est = 'ya';  tag = '<span class="acm-tag ya">Ahora</span>'; }
+        else              { est = 'pend'; tag = '<span class="acm-tag pend">Sin registrar</span>'; }
+        if (reg && reg.impartidaPor) tag = '<span class="acm-tag sust">🔁 ' + _gEsc(reg.impartidaPor.nombre || '') + '</span>' + tag;
+        if (_avDeClase(yo, clase.id, fecha).length) tag = '<span class="acm-tag aviso">📣</span>' + tag;
+        var abrir = 'asistAbrirLista(' + clase.id + ',\'' + fecha + '\')';
+        h += '<div class="cam-bl acm-bl">' +
+          '<button type="button" class="cam-t acm-t ' + est + '" onclick="' + abrir + '"><i>' + _gEsc(_asistHoraInicio(clase.franja) || '—') + '</i></button>' +
+          '<div class="cam-der"><div class="acm-nom"><span onclick="' + abrir + '">' + _gEsc(clase.franja || '—') +
+            (clase.nivel ? ' <small>' + _gEsc(_nivNombre(clase.nivel)) + '</small>' : '') + '</span>' + tag + '</div>';
+        if (pasada) {
+          var aus = (reg.ausentes || []).map(function(k){
+            return _alClaveNomAp1(clase, k).split(' ')[0] + ((reg.justificadas || []).indexOf(k) >= 0 ? ' (J)' : ' (IJ)');
+          });
+          var tot = (reg.presentes || []).length + (reg.ausentes || []).length;
+          h += '<div class="acm-res" onclick="' + abrir + '">' + (reg.presentes || []).length + ' de ' + tot +
+               (aus.length ? ' · faltó ' + _gEsc(aus.slice(0, 3).join(', ')) + (aus.length > 3 ? '…' : '') : ' · todos') + '</div>';
+        } else if (!sinCl) {
+          h += '<div class="acm-als">' + keys.map(function(k){ return '<span class="acm-al">' + _gEsc(_alClaveNomAp1(clase, k)) + '</span>'; }).join('') +
+               recs.map(function(k){ return '<span class="acm-al rec">' + _gEsc(_alClaveNomAp1(clase, k)) + ' ↩</span>'; }).join('') +
+               (!keys.length && !recs.length ? '<span class="acm-vacio">Sin alumnos en esta fecha</span>' : '') + '</div>';
+          h += '<div class="acm-acc">' +
+            (!bloq && (keys.length || recs.length) ? '<button type="button" class="acm-b todos" onclick="asistTodosPresentes(' + clase.id + ',\'' + fecha + '\')">✓ Todos presentes · guardar</button>' : '') +
+            '<button type="button" class="acm-b abrir" onclick="' + abrir + '">Abrir ›</button>' +
+            (clase.nivel ? '<button type="button" class="acm-b plan" onclick="asistVerClase(' + clase.id + ',\'' + fecha + '\')">📋</button>' : '') +
+            '</div>';
+        }
+        h += '</div></div>';
+      });
+      return h + '</div></div>';
+    }
+    // Lista pasada de un toque: todos presentes (también las recuperaciones
+    // apuntadas). Conserva el sustituto y las recuperaciones del registro.
+    function asistTodosPresentes(claseId, fecha) {
+      var clase = (leerAsistConfig().clases || []).filter(function(c){ return c.id === claseId; })[0];
+      if (!clase) return;
+      var b = _asistListaBloqueo(clase, fecha);
+      if (b) { alert('⏳ La clase aún no ha empezado.\nPodrás pasar lista ' + b + '.'); return; }
+      var regs = leerAsistRegistros(), idx = -1;
+      regs.forEach(function(r, i){ if (r.claseId === claseId && r.fecha === fecha) idx = i; });
+      var prev = idx >= 0 ? regs[idx] : null, recs = (prev && prev.recups) || [];
+      var pres = alumnosActivosKeys(clase, fecha).concat(recs.filter(function(k){ return alumnosActivosKeys(clase, fecha).indexOf(k) < 0; }));
+      var nuevo = {
+        id: prev ? prev.id : (regs.length ? Math.max.apply(null, regs.map(function(r){ return r.id || 0; })) + 1 : 1),
+        claseId: claseId, fecha: fecha, presentes: pres, ausentes: [], justificadas: [], recups: recs.slice(),
+        impartidaPor: (prev && prev.impartidaPor) || null, recupClase: !!(prev && prev.recupClase)
+      };
+      if (prev && prev.recupHora) nuevo.recupHora = prev.recupHora;
+      if (prev && prev.recupDe) nuevo.recupDe = prev.recupDe;
+      if (idx >= 0) regs[idx] = nuevo; else regs.push(nuevo);
+      escribirAsistRegistros(regs, false, [nuevo]);
+      if (typeof planToast === 'function') planToast('✓ Lista guardada: todos presentes');
+      mostrarAsistencia();
     }
     function _asistListaBloqueo(clase, fecha, ahora) {
       if (!fecha) return null;
