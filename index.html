@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.444.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.445.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,14 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.445.0 — Pasar lista: borrar una lista pasada por error (2026-11)
+    (sin migraciones)
+    · En Pasar lista, si el día ya tiene la lista pasada (o «sin clase»),
+      abajo sale «🗑 Borrar la lista de este día». La franja vuelve a quedar
+      sin pasar y deja de contar como dada (también en Mis cuentas). Si había
+      recuperaciones previstas o sustituto, se conservan.
+
 
   v0.444.0 — Asistencia: las franjas como camino y lista en un toque (2026-11)
     (sin migraciones)
@@ -8069,6 +8077,8 @@
     .avz-card-go { width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:20px;
       color:#fff; background:linear-gradient(180deg,#b07a3a,#7a5124); border:1px solid #c9954f; }
     /* v0.444 — Asistencia como camino */
+    .asist-borrar-lista { display:block; width:100%; margin:10px 0 0; padding:10px; border-radius:12px; border:1.5px dashed #fca5a5;
+      background:#fff; color:#b91c1c; font-family:inherit; font-size:13px; font-weight:800; cursor:pointer; }
     .acm { background:#0b0b0d; border-radius:18px; padding:12px 10px 4px; margin:0 0 12px; }
     .acm-dia { font-size:11.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:#c9954f; margin:2px 4px 4px; }
     .acm-hoy { font-size:10px; padding:2px 7px; border-radius:99px; background:#c9954f; color:#111; margin-left:4px; }
@@ -12698,7 +12708,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.444.0';
+    var APP_VERSION = '0.445.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
@@ -35459,6 +35469,7 @@
             altaBtn +
             sustBtn +
           '</div>' +
+          _asistBorrarBtnHTML() +   // v0.445: deshacer una lista pasada (o un «sin clase») por error
           _incMiniHTML(_gEditUid || (_sbUser && _sbUser.id), asistClaseActivaId, asistFechaActiva);   // v0.388
         if (!_incCargado) _incCargar(false, function(){ if (_incCargado && document.getElementById('asist-recup-zona')) renderToggleAlumnos(null); });
         return;
@@ -35760,6 +35771,44 @@
     }
     // Lista pasada de un toque: todos presentes (también las recuperaciones
     // apuntadas). Conserva el sustituto y las recuperaciones del registro.
+    // ══ v0.445 — DESHACER LA LISTA DE UN DÍA ══════════════════════════════
+    // Si la lista se pasó por error (p. ej. «Todos presentes» un día sin
+    // clase) o se marcó «sin clase» sin querer, se borra y la franja vuelve
+    // a quedar «sin registrar». Se conservan las recuperaciones previstas y
+    // el sustituto si los había (el registro se queda sin asistencia).
+    function _asistRegActivo() {
+      return (leerAsistRegistros() || []).filter(function(r){ return r.claseId === asistClaseActivaId && r.fecha === asistFechaActiva; })[0] || null;
+    }
+    function _asistBorrarBtnHTML() {
+      var r = _asistRegActivo();
+      if (!r || !(_regPasada(r) || r.sinClase)) return '';
+      return '<button type="button" class="asist-borrar-lista" onclick="asistBorrarLista()">🗑 ' +
+             (r.sinClase ? 'Quitar el «sin clase» de este día' : 'Borrar la lista de este día (dejarla sin pasar)') + '</button>';
+    }
+    function asistBorrarLista() {
+      var regs = leerAsistRegistros(), idx = -1;
+      regs.forEach(function(r, i){ if (r.claseId === asistClaseActivaId && r.fecha === asistFechaActiva) idx = i; });
+      if (idx < 0) return;
+      var r = regs[idx];
+      if (!confirm(r.sinClase ? '¿Quitar el «sin clase» de este día? La clase vuelve a quedar sin registrar.'
+                              : '¿Borrar la lista de este día?\n\nLa franja vuelve a quedar sin pasar y deja de contar como clase dada (también en Mis cuentas).')) return;
+      var guarda = (r.recups || []).length || r.impartidaPor || r.recupClase;
+      if (guarda) {
+        var limpio = { id:r.id, claseId:r.claseId, fecha:r.fecha, presentes:[], ausentes:[], justificadas:[], recups:(r.recups || []).slice(),
+                       impartidaPor:r.impartidaPor || null, recupClase:!!r.recupClase };
+        if (r.recupHora) limpio.recupHora = r.recupHora;
+        if (r.recupDe) limpio.recupDe = r.recupDe;
+        regs[idx] = limpio;
+        escribirAsistRegistros(regs, false, [limpio]);
+      } else {
+        regs.splice(idx, 1);
+        _sbDelete('asistencia_registros', r.id);
+        escribirAsistRegistros(regs, false, []);
+      }
+      if (typeof planToast === 'function') planToast('🗑 Lista borrada: el día queda sin pasar');
+      _asistListaSnap = _asistSnap();
+      _asistSalirForzar();
+    }
     function asistTodosPresentes(claseId, fecha) {
       var clase = (leerAsistConfig().clases || []).filter(function(c){ return c.id === claseId; })[0];
       if (!clase) return;
