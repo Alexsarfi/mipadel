@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   =====================================================
-  TU APP DE PÁDEL — v0.445.0   (⚠ debe coincidir con APP_VERSION más abajo)
+  TU APP DE PÁDEL — v0.446.0   (⚠ debe coincidir con APP_VERSION más abajo)
   =====================================================
 
   ESTRUCTURA DE DATOS (localStorage)
@@ -38,6 +38,13 @@
   }]
 
   HISTORIAL DE VERSIONES
+
+  v0.446.0 — Asistencia: los nombres, más destacados (2026-11)
+    (sin migraciones)
+    · En las franjas de Asistencia, cada alumno va en una pastilla con borde
+      dorado y el nombre en dorado claro, más grande y en negrita. Los que
+      vienen a recuperar, en lila.
+
 
   v0.445.0 — Pasar lista: borrar una lista pasada por error (2026-11)
     (sin migraciones)
@@ -8100,8 +8107,9 @@
     .acm-tag.sust { color:#c4b5fd; border:1px solid #a78bfa88; }
     .acm-tag.aviso { color:#93c5fd; border:1px solid #60a5fa88; }
     .acm-als { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px; }
-    .acm-al { font-size:12px; font-weight:700; padding:4px 9px; border-radius:99px; background:#151517; border:1px solid #2c2c30; color:#e8e2d6; }
-    .acm-al.rec { border-color:#a78bfa88; color:#c4b5fd; }
+    /* v0.446: nombres más destacados (opción B): pastilla oscura con borde dorado y nombre en dorado claro */
+    .acm-al { font-size:13.5px; font-weight:800; padding:6px 11px; border-radius:99px; background:#2a1f12; border:1.5px solid #c9954f; color:#ffe2b0; }
+    .acm-al.rec { background:#241a3a; border-color:#a78bfa; color:#ddd6fe; }
     .acm-vacio { font-size:12px; color:#8a8478; }
     .acm-res { font-size:12.5px; font-weight:700; color:#86efac; cursor:pointer; margin-bottom:4px; }
     .acm-acc { display:flex; gap:6px; margin-bottom:4px; }
@@ -12708,7 +12716,7 @@
   <script>
 
     // Versión de la app (fuente única; se muestra en Inicio y en el panel del gestor)
-    var APP_VERSION = '0.445.0';
+    var APP_VERSION = '0.446.0';
 
     // PWA: registra el service worker (solo sirve para poder "instalar" la app
     // con icono real y para una pantalla mínima si no hay conexión; no cachea
